@@ -10,11 +10,14 @@ export function ErgebnisScreen({
   ergebnis,
   besetzung,
   onNeuerFall,
+  onHauptmenue,
   laedt,
 }: {
   ergebnis: Ergebnis;
   besetzung: Character[];
   onNeuerFall: () => void;
+  /** Zurück zum Startbildschirm, ohne gleich einen neuen Fall zu starten. */
+  onHauptmenue: () => void;
   laedt: boolean;
 }) {
   const taeter = besetzung.find((c) => c.id === ergebnis.taeterId);
@@ -53,6 +56,15 @@ export function ErgebnisScreen({
 
           <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
             {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
+          </button>
+
+          <button
+            className="knopf dezent"
+            style={{ marginTop: 10 }}
+            onClick={onHauptmenue}
+            disabled={laedt}
+          >
+            Zum Hauptmenü
           </button>
         </div>
       </div>

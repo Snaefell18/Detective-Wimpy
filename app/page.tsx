@@ -97,6 +97,7 @@ export default function Home() {
           ergebnis={stand.ergebnis}
           besetzung={stand.fall.besetzung}
           onNeuerFall={() => void fallStarten()}
+          onHauptmenue={spiel.aufgeben}
           laedt={laedt === "fall"}
         />
       </main>
