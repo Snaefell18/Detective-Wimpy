@@ -1,7 +1,11 @@
 "use client";
 
+import NextImage from "next/image";
 import { useEffect, useState } from "react";
 import { bildQuelle, useAdmin } from "@/lib/adminStore";
+
+/** Im Admin hinterlegte Bilder sind Data-URLs - die kann Next nicht optimieren. */
+const istDataUrl = (quelle: string) => quelle.startsWith("data:");
 
 /**
  * Bild mit Platzhalter. Ein im Admin-Menü hinterlegtes Bild gewinnt, sonst wird
@@ -13,12 +17,14 @@ export function Bild({
   alt,
   platzhalter,
   rund,
+  groesse = "(max-width: 520px) 50vw, 260px",
 }: {
   src?: string | null;
   alt: string;
   platzhalter?: string;
   /** Porträts werden mittig oben beschnitten, Szenen mittig. */
   rund?: boolean;
+  groesse?: string;
 }) {
   const { daten } = useAdmin();
   const [fehlt, setFehlt] = useState(false);
@@ -33,11 +39,13 @@ export function Bild({
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <NextImage
       className="bild"
       src={quelle}
       alt={alt}
+      fill
+      sizes={groesse}
+      unoptimized={istDataUrl(quelle)}
       onError={() => setFehlt(true)}
       draggable={false}
       style={rund ? undefined : { objectPosition: "center top" }}
@@ -72,8 +80,17 @@ export function Szene({
   return (
     <div className={`szene szene-${variante}`} aria-hidden>
       {!leer ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={quelle} alt="" onError={() => setFehlt(true)} draggable={false} />
+        <NextImage
+          src={quelle}
+          alt=""
+          fill
+          // Vollbild - und die Szene ist immer als Erstes zu sehen.
+          sizes="100vw"
+          priority
+          unoptimized={istDataUrl(quelle)}
+          onError={() => setFehlt(true)}
+          draggable={false}
+        />
       ) : (
         <div className="szene-platzhalter">{platzhalter ?? alt}</div>
       )}

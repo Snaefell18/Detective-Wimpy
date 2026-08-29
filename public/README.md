@@ -4,6 +4,7 @@
 | ------------------ | --------------------------------------------------------- |
 | `start.png`        | Titelbild des Startbildschirms (Hochformat, z.B. 1080×1920) |
 | `audio/intro.mp3`  | Titelsong - seine Länge bestimmt die Länge des Intros      |
+| `audio/winner.mp3` | Läuft, wenn der Fall richtig gelöst wurde                  |
 | `charaktere/`      | Tierbilder                                                 |
 | `orte/`            | Schauplätze                                                |
 | `items/`           | Gegenstände und Spuren                                     |

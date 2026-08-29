@@ -88,16 +88,19 @@ Ortsbilder heißen `<stadt>-<ort>.png`, also `venedig-markusplatz.png`.
 Groß- und Kleinschreibung: `Fan.PNG` wird unter `/charaktere/fan.png` nicht
 gefunden. Am besten alles kleingeschrieben ablegen.
 
-**Bilder klein halten.** Aus Bildgeneratoren kommen gern 2-3 MB große PNGs -
-auf dem Handy ist das viel zu schwer, gerade im Intro. Einmal
+**Bilder klein halten.** Zwei Dinge sorgen dafür, dass die App auch über
+Mobilfunk schnell bleibt. Erstens liefert Next.js die Bilder automatisch als
+WebP in der Größe aus, die das Gerät wirklich braucht - aus einem 1280-px-PNG
+werden auf dem iPhone rund 70 kB statt 500. Zweitens sollten die Dateien im
+Repository nicht riesig sein; aus Bildgeneratoren kommen gern 2-3 MB. Einmal
 
 ```bash
 npm run bilder:optimieren          # verkleinert alles unter public/
 npm run bilder:optimieren -- --pruefen   # zeigt nur, was passieren würde
 ```
 
-und die Dateien liegen bei ~300 kB, ohne sichtbaren Verlust; Transparenz bleibt
-erhalten.
+und die Dateien liegen bei ~300-500 kB, ohne sichtbaren Verlust; Transparenz
+bleibt erhalten.
 
 ### 2. Zum Ausprobieren: im Admin-Menü
 

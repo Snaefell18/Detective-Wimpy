@@ -20,7 +20,8 @@ const nurPruefen = process.argv.includes("--pruefen");
 /** Maximale Kantenlänge je Ordner - Orte dürfen breiter sein als Gegenstände. */
 const GRENZEN = {
   charaktere: 1100,
-  orte: 1600,
+  // 1280 px reichen für ein randloses Hintergrundbild auf jedem Handy.
+  orte: 1280,
   items: 640,
   ".": 1600, // start.png
 };
@@ -39,7 +40,7 @@ async function bearbeite(datei, grenze) {
       height: info.height && (info.height > (info.width ?? 0)) ? Math.min(info.height, grenze) : undefined,
       withoutEnlargement: true,
     })
-    .png({ compressionLevel: 9, palette: true, quality: 88 })
+    .png({ compressionLevel: 9, palette: true, quality: 82, effort: 9 })
     .toBuffer();
 
   if (daten.length >= vorher) {

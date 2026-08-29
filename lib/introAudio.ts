@@ -11,6 +11,7 @@
  */
 
 let audio: HTMLAudioElement | null = null;
+let jubel: HTMLAudioElement | null = null;
 
 export function introAudio(): HTMLAudioElement {
   if (!audio) {
@@ -18,6 +19,28 @@ export function introAudio(): HTMLAudioElement {
     audio.preload = "auto";
   }
   return audio;
+}
+
+/**
+ * Siegermusik für den gelösten Fall (public/audio/winner.mp3).
+ * Fehlt die Datei, passiert einfach nichts.
+ */
+export function jubelSpielen(): void {
+  if (!jubel) {
+    jubel = new Audio("/audio/winner.mp3");
+    jubel.preload = "auto";
+  }
+  jubel.currentTime = 0;
+  void jubel.play().catch(() => {});
+}
+
+/** Beendet beide Stücke - z.B. beim Verlassen des Ergebnisses. */
+export function musikStoppen(): void {
+  for (const stueck of [audio, jubel]) {
+    if (!stueck) continue;
+    stueck.pause();
+    stueck.currentTime = 0;
+  }
 }
 
 /**

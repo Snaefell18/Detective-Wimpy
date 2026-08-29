@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { Szene } from "./Bild";
+import { jubelSpielen, musikStoppen } from "@/lib/introAudio";
 import type { Character } from "@/lib/types";
 import type { Ergebnis } from "@/lib/useGame";
 
@@ -17,6 +19,12 @@ export function ErgebnisScreen({
 }) {
   const taeter = besetzung.find((c) => c.id === ergebnis.taeterId);
   const beschuldigt = besetzung.find((c) => c.id === ergebnis.beschuldigtId);
+
+  // Gelöster Fall: Siegermusik. Sie hört auf, wenn der Bildschirm verschwindet.
+  useEffect(() => {
+    if (ergebnis.richtig) jubelSpielen();
+    return () => musikStoppen();
+  }, [ergebnis.richtig]);
 
   return (
     <div className="ergebnis">
