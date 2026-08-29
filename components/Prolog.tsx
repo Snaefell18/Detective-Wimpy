@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { spiele, stand, stoppe } from "@/lib/introAudio";
+import { laeuft, spiele, stand, stoppe } from "@/lib/introAudio";
 
 /**
  * Der gesprochene Vorspann (public/audio/introdark.mp3).
@@ -29,6 +29,7 @@ export function Prolog({ onFertig }: { onFertig: () => void }) {
   const startRef = useRef(performance.now());
   const fertigRef = useRef(false);
   const [fortschritt, setFortschritt] = useState(0);
+  const [tonAn, setTonAn] = useState(true);
 
   // Die Rückmeldung liegt in einer Ref: Sonst würde jede neue Funktion aus der
   // Elternkomponente den Effekt neu starten - und die Aufnahme liefe von vorn.
@@ -39,7 +40,10 @@ export function Prolog({ onFertig }: { onFertig: () => void }) {
     let laeuftNoch = true;
     let pause: number | undefined;
 
-    void spiele("prolog");
+    // Meist läuft die Aufnahme schon - sie startet direkt im Klick, damit der
+    // Ton auf dem iPhone erlaubt bleibt.
+    if (laeuft("prolog")) setTonAn(true);
+    else void spiele("prolog").then((geklappt) => laeuftNoch && setTonAn(geklappt));
 
     const beenden = () => {
       if (fertigRef.current) return;
@@ -94,6 +98,15 @@ export function Prolog({ onFertig }: { onFertig: () => void }) {
           </p>
         ))}
       </div>
+
+      {!tonAn && (
+        <button
+          className="intro-ton prolog-ton"
+          onClick={() => void spiele("prolog").then(setTonAn)}
+        >
+          🔈 Ton an
+        </button>
+      )}
 
       <button
         className="intro-skip prolog-skip"

@@ -2709,3 +2709,10 @@ a.zurueck {
   box-shadow: 0 8px 22px rgba(228, 50, 43, 0.3);
   animation: pochen 1.6s ease-in-out infinite;
 }
+
+.prolog-ton {
+  position: absolute;
+  left: 20px;
+  bottom: calc(var(--safe-bottom) + 18px);
+  z-index: 3;
+}

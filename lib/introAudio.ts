@@ -22,12 +22,17 @@ const DATEIEN: Record<Stueck, string> = {
 
 const spieler = new Map<Stueck, HTMLAudioElement>();
 let laufend: Stueck | null = null;
+let freigabe: Promise<void> | null = null;
 
 function hole(stueck: Stueck): HTMLAudioElement {
   let audio = spieler.get(stueck);
   if (!audio) {
     audio = new Audio(DATEIEN[stueck]);
     audio.preload = "auto";
+    audio.dataset.stueck = stueck;
+    // Im Dokument verankert, damit iOS das Element nicht wegräumt.
+    audio.hidden = true;
+    if (typeof document !== "undefined") document.body.appendChild(audio);
     spieler.set(stueck, audio);
   }
   return audio;
@@ -35,22 +40,32 @@ function hole(stueck: Stueck): HTMLAudioElement {
 
 export const audioVon = (stueck: Stueck): HTMLAudioElement => hole(stueck);
 
-/** Im Klick-Handler aufrufen: gibt alle Stücke frei und lädt sie vor. */
-export function tonFreigeben(): void {
-  for (const stueck of Object.keys(DATEIEN) as Stueck[]) {
-    const audio = hole(stueck);
-    audio.muted = true;
-    void audio
-      .play()
-      .then(() => {
-        audio.pause();
-        audio.currentTime = 0;
+/**
+ * Im Klick-Handler aufrufen: gibt alle Stücke frei und lädt sie vor.
+ *
+ * Das Ergebnis wird gemerkt, damit ein späteres spiele() abwarten kann - sonst
+ * könnte die Freigabe ein gerade gestartetes Stück wieder anhalten.
+ */
+export function tonFreigeben(): Promise<void> {
+  freigabe = (async () => {
+    await Promise.all(
+      (Object.keys(DATEIEN) as Stueck[]).map(async (stueck) => {
+        // Ein Stück, das gerade im Klick gestartet wurde, nicht wieder anhalten.
+        if (stueck === laufend) return;
+        const audio = hole(stueck);
+        audio.muted = true;
+        try {
+          await audio.play();
+          audio.pause();
+          audio.currentTime = 0;
+        } catch {
+          // Blockiert der Browser, hilft später der "Ton an"-Knopf.
+        }
         audio.muted = false;
-      })
-      .catch(() => {
-        audio.muted = false;
-      });
-  }
+      }),
+    );
+  })();
+  return freigabe;
 }
 
 /**
@@ -58,19 +73,48 @@ export function tonFreigeben(): void {
  * Gibt zurück, ob der Ton tatsächlich läuft.
  */
 export async function spiele(stueck: Stueck): Promise<boolean> {
-  stoppeAusser(stueck);
-
   const audio = hole(stueck);
+
+  // Läuft es schon (z.B. direkt im Klick gestartet), nicht neu anstoßen.
+  if (!audio.paused && audio.currentTime > 0) {
+    stoppeAusser(stueck);
+    return true;
+  }
+
+  // Erst die Freigabe abwarten - sie pausiert die Stücke absichtlich einmal.
+  if (freigabe) {
+    try {
+      await freigabe;
+    } catch {
+      // egal, gleich wird es ohnehin versucht
+    }
+  }
+
+  stoppeAusser(stueck);
+  audio.muted = false;
   audio.currentTime = 0;
   laufend = stueck;
 
   try {
     await audio.play();
-    return true;
+    return !audio.paused;
   } catch {
     // Blockiert der Browser, läuft die Szene stumm weiter.
     return false;
   }
+}
+
+/**
+ * Startet ein Stück sofort und ohne Umweg - nur direkt aus einem Klick heraus
+ * aufrufen. Auf iOS ist das der einzige verlässliche Weg, Ton zu bekommen.
+ */
+export function spieleSofort(stueck: Stueck): void {
+  const audio = hole(stueck);
+  stoppeAusser(stueck);
+  audio.muted = false;
+  audio.currentTime = 0;
+  laufend = stueck;
+  void audio.play().catch(() => {});
 }
 
 /** Hält ein Stück an (oder alle, wenn keins genannt ist). */

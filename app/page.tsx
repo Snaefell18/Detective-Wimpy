@@ -14,7 +14,7 @@ import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
-import { tonFreigeben } from "@/lib/introAudio";
+import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import { useGame } from "@/lib/useGame";
 
 export default function Home() {
@@ -28,25 +28,32 @@ export default function Home() {
 
   const { stand, geladen, laedt, fehler, setFehler } = spiel;
 
-  /**
-   * Erst den Fall erzeugen lassen, dann das Intro starten - so stehen im Intro
-   * alle Fakten (Stadt, Titel, Tathergang, Verdächtige) von der ersten Sekunde
-   * an fest. Der Ton wird schon im Klick selbst freigegeben, weil Browser das
-   * Abspielen nur direkt aus einer Nutzergeste heraus erlauben.
-   */
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
   const introFertig = useCallback(() => setPhase("aus"), []);
 
+  /**
+   * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
+   * nur direkt aus einer Nutzergeste heraus, ein await davor verwirkt sie.
+   * Der Fall wird parallel erzeugt; ist er beim Ende des Prologs noch nicht da,
+   * wartet die Intro-Phase kurz mit "Die Akte wird geöffnet …".
+   */
   const fallStarten = async () => {
-    if (admin.einstellungen.intro) tonFreigeben();
+    if (admin.einstellungen.intro) {
+      spieleSofort("prolog");
+      void tonFreigeben();
+      setPhase("prolog");
+    }
     const geklappt = await spiel.neuerFall();
-    if (geklappt && admin.einstellungen.intro) setPhase("prolog");
+    if (!geklappt) setPhase("aus");
   };
 
   /** Vorbereiteter Fall aus der Datenbank - startet ohne Modellaufruf. */
   const kampagneStarten = (kampagne: Parameters<typeof spiel.kampagneStarten>[0]) => {
-    if (admin.einstellungen.intro) tonFreigeben();
+    if (admin.einstellungen.intro) {
+      spieleSofort("prolog");
+      void tonFreigeben();
+    }
     spiel.kampagneStarten(kampagne);
     setKampagnenOffen(false);
     if (admin.einstellungen.intro) setPhase("prolog");
@@ -57,13 +64,27 @@ export default function Home() {
   }
 
   // Erst der gesprochene Prolog, dann das Intro mit dem Titelsong.
-  if (phase !== "aus" && stand.fall) {
+  if (phase === "prolog") {
     return (
       <main className="app">
-        {phase === "prolog" ? (
-          <Prolog onFertig={prologFertig} />
-        ) : (
+        <Prolog onFertig={prologFertig} />
+      </main>
+    );
+  }
+
+  if (phase === "intro") {
+    return (
+      <main className="app">
+        {stand.fall ? (
           <IntroSequenz fall={stand.fall} onFertig={introFertig} />
+        ) : (
+          // Der Prolog war schneller als die Fallerzeugung.
+          <div className="prolog">
+            <div className="prolog-vignette" />
+            <p className="prolog-zeile" data-letzte="true">
+              Die Akte wird geöffnet …
+            </p>
+          </div>
         )}
       </main>
     );
