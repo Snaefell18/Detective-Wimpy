@@ -177,6 +177,7 @@ export default function Home() {
       {chatMit && chatCharakter && (
         <ChatOverlay
           charakter={chatCharakter}
+          detektiv={stand.fall.besetzung.find((c) => c.istDetektiv)}
           verlauf={stand.verlauf[chatMit] ?? []}
           onSenden={(modus, text) => spiel.sprich(chatMit, modus, text)}
           onSchliessen={() => {

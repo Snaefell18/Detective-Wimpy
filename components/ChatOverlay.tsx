@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Szene } from "./Bild";
+import { Bild, Szene } from "./Bild";
 import type { Character, ChatTurn, TalkMode } from "@/lib/types";
 
 const MODI: { id: TalkMode; label: string; symbol: string }[] = [
@@ -26,6 +26,7 @@ const VORSCHLAEGE: Record<TalkMode, string[]> = {
 
 export function ChatOverlay({
   charakter,
+  detektiv,
   verlauf,
   onSenden,
   onSchliessen,
@@ -33,6 +34,8 @@ export function ChatOverlay({
   fehler,
 }: {
   charakter: Character;
+  /** Wimpy - er steht als Fragender vorne in der Szene. */
+  detektiv?: Character;
   verlauf: ChatTurn[];
   onSenden: (modus: TalkMode, text: string) => void;
   onSchliessen: () => void;
@@ -101,6 +104,17 @@ export function ChatOverlay({
         {fehler && <p className="fehler">{fehler}</p>}
         <div ref={endeRef} />
       </div>
+
+      {detektiv && (
+        <div className="frager" data-modus={modus}>
+          <Bild
+            src={detektiv.bild}
+            alt={detektiv.name}
+            platzhalter={detektiv.name}
+            groesse="180px"
+          />
+        </div>
+      )}
 
       <div className="chat-fuss">
         <div className="modus-reihe">

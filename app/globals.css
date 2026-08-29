@@ -2377,3 +2377,48 @@ a.zurueck {
   background: rgba(255, 210, 74, 0.12);
   color: var(--gelb);
 }
+
+/* --- Wimpy als Fragender im Gespräch ------------------------------- */
+
+.frager {
+  position: absolute;
+  left: -14px;
+  /* Sitzt direkt über der Eingabeleiste. */
+  bottom: calc(var(--safe-bottom) + 142px);
+  width: 168px;
+  height: 190px;
+  z-index: 1; /* hinter den Sprechblasen, damit Text lesbar bleibt */
+  pointer-events: none;
+  /* Nach unten auslaufend, damit er in der Szene steht statt zu schweben. */
+  mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.75));
+  animation: wippen 4.5s ease-in-out infinite alternate;
+}
+
+.frager .bild {
+  object-fit: contain;
+  object-position: left bottom;
+}
+
+@keyframes wippen {
+  from {
+    transform: translateY(0) rotate(-0.6deg);
+  }
+  to {
+    transform: translateY(-5px) rotate(0.6deg);
+  }
+}
+
+/* Beim Anklagen rückt Wimpy ein Stück vor. */
+.frager[data-modus="beschuldigen"] {
+  animation: none;
+  transform: translateY(-8px) scale(1.05);
+  filter: drop-shadow(0 14px 26px rgba(228, 50, 43, 0.45));
+}
+
+/* Der Chat lässt links Platz, damit Wimpy nicht komplett verdeckt wird. */
+.overlay.gespraech .blase.fremd {
+  margin-left: 96px;
+  max-width: calc(82% - 60px);
+}
