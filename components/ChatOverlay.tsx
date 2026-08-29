@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bild } from "./Bild";
-import { getCharacter } from "@/lib/characters";
-import type { ChatTurn, TalkMode } from "@/lib/types";
+import { Szene } from "./Bild";
+import type { Character, ChatTurn, TalkMode } from "@/lib/types";
 
 const MODI: { id: TalkMode; label: string; symbol: string }[] = [
   { id: "reden", label: "Reden", symbol: "💬" },
   { id: "befragen", label: "Befragen", symbol: "🔎" },
-  { id: "beschuldigen", label: "Beschuldigen", symbol: "☝️" },
+  { id: "beschuldigen", label: "Anklagen", symbol: "☝️" },
 ];
 
 const VORSCHLAEGE: Record<TalkMode, string[]> = {
@@ -26,14 +25,14 @@ const VORSCHLAEGE: Record<TalkMode, string[]> = {
 };
 
 export function ChatOverlay({
-  charakterId,
+  charakter,
   verlauf,
   onSenden,
   onSchliessen,
   laedt,
   fehler,
 }: {
-  charakterId: string;
+  charakter: Character;
   verlauf: ChatTurn[];
   onSenden: (modus: TalkMode, text: string) => void;
   onSchliessen: () => void;
@@ -43,10 +42,9 @@ export function ChatOverlay({
   const [modus, setModus] = useState<TalkMode>("reden");
   const [text, setText] = useState("");
   const endeRef = useRef<HTMLDivElement>(null);
-  const charakter = getCharacter(charakterId);
 
   useEffect(() => {
-    endeRef.current?.scrollIntoView({ behavior: "smooth" });
+    endeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [verlauf.length, laedt]);
 
   const senden = (nachricht: string) => {
@@ -57,25 +55,30 @@ export function ChatOverlay({
   };
 
   return (
-    <div className="overlay einblenden">
-      <div className="kopf">
+    <div className="overlay gespraech einblenden">
+      {/* Das Gegenüber füllt den Bildschirm - der Text liegt darüber. */}
+      <Szene
+        src={charakter.bild}
+        alt={charakter.name}
+        platzhalter={charakter.name}
+        variante="portraet"
+      />
+
+      <div className="gespraech-kopf">
         <button className="zurueck" onClick={onSchliessen} aria-label="Zurück">
           ✕
         </button>
-        <div className="charakter-bild klein">
-          <Bild src={charakter?.bild} alt={charakter?.name ?? charakterId} platzhalter={charakter?.name} />
-        </div>
         <div>
-          <h1>{charakter?.name}</h1>
-          <p className="unterzeile">{charakter?.tierart}</p>
+          <h1>{charakter.name}</h1>
+          <p className="unterzeile">
+            {charakter.tierart}, {charakter.alter} Jahre
+          </p>
         </div>
       </div>
 
       <div className="scroll chat">
         {verlauf.length === 0 && (
-          <p className="leise" style={{ textAlign: "center", marginTop: 24 }}>
-            {charakter?.name} schaut dich erwartungsvoll an.
-          </p>
+          <p className="chat-leer">{charakter.name} schaut dich erwartungsvoll an.</p>
         )}
 
         {verlauf.map((zug, index) => (
@@ -131,7 +134,7 @@ export function ChatOverlay({
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={`${modus === "beschuldigen" ? "Beschuldige" : "Sag etwas zu"} ${charakter?.name} …`}
+            placeholder={`${modus === "beschuldigen" ? "Klage" : "Sag etwas zu"} ${charakter.name}${modus === "beschuldigen" ? " an" : ""} …`}
             maxLength={300}
             enterKeyHint="send"
           />

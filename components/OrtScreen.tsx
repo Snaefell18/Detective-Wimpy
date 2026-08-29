@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Bild } from "./Bild";
-import { SUSPECTS } from "@/lib/characters";
+import { Bild, Szene } from "./Bild";
 import { LOCATIONS, getLocation } from "@/lib/locations";
-import type { PublicCase } from "@/lib/types";
+import type { Character, PublicCase } from "@/lib/types";
 
 export function OrtScreen({
   fall,
@@ -23,8 +22,8 @@ export function OrtScreen({
 }) {
   const [fundText, setFundText] = useState<string | null>(null);
   const ort = getLocation(ortId);
-
-  const anwesend = SUSPECTS.filter((c) => fall.aufenthalt[c.id] === ortId);
+  const verdaechtige: Character[] = fall.besetzung.filter((c) => !c.istDetektiv);
+  const anwesend = verdaechtige.filter((c) => fall.aufenthalt[c.id] === ortId);
 
   const umsehen = async () => {
     setFundText(null);
@@ -33,68 +32,64 @@ export function OrtScreen({
   };
 
   return (
-    <div className="inhalt einblenden">
-      <div className="ort-bild">
-        <Bild src={ort?.bild} alt={ort?.name ?? ortId} platzhalter={ort?.name} />
-        <div className="ort-bild-text">
+    <div className="ort-ansicht">
+      {/* Der Ort füllt den ganzen Bildschirm, alles andere schwebt darüber. */}
+      <Szene src={ort?.bild} alt={ort?.name ?? ortId} platzhalter={ort?.name} />
+
+      <div className="ort-buehne">
+        <div className="ort-titel">
           <h2>{ort?.name}</h2>
           <p>{ort?.beschreibung}</p>
         </div>
+
+        {anwesend.length > 0 && (
+          <div className="figuren">
+            {anwesend.map((c) => (
+              <button key={c.id} className="figur" onClick={() => onCharakter(c.id)}>
+                <div className="figur-bild">
+                  <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
+                </div>
+                <span className="figur-name">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <button className="knopf aktion" onClick={umsehen} disabled={suchtGerade}>
-        {suchtGerade ? "Wimpy sucht …" : "🔍 Umsehen"}
-      </button>
+      <div className="ort-fuss">
+        {fundText && (
+          <div className="fund einblenden" onClick={() => setFundText(null)}>
+            {fundText}
+          </div>
+        )}
 
-      {fundText && (
-        <div className="karte fund einblenden">
-          <p style={{ margin: 0 }}>{fundText}</p>
+        {anwesend.length === 0 && !fundText && (
+          <p className="ort-leer">Keine Menschenseele. Beziehungsweise Tierseele.</p>
+        )}
+
+        <button className="knopf aktion" onClick={umsehen} disabled={suchtGerade}>
+          {suchtGerade ? "Wimpy sucht …" : "🔍 Umsehen"}
+        </button>
+
+        <div className="orte-leiste">
+          {LOCATIONS.map((o) => {
+            const dort = verdaechtige.filter((c) => fall.aufenthalt[c.id] === o.id).length;
+            return (
+              <button
+                key={o.id}
+                className="ort-chip"
+                data-aktiv={o.id === ortId}
+                onClick={() => onOrtWechsel(o.id)}
+              >
+                <div className="ort-chip-bild">
+                  <Bild src={o.bild} alt={o.name} platzhalter={o.name} rund />
+                </div>
+                <span>{o.name}</span>
+                {dort > 0 && <span className="punkt">{dort}</span>}
+              </button>
+            );
+          })}
         </div>
-      )}
-
-      <h3 className="abschnitt">Hier anzutreffen</h3>
-      {anwesend.length === 0 ? (
-        <p className="leise">Keine Menschenseele. Beziehungsweise Tierseele.</p>
-      ) : (
-        <div className="charakter-reihe">
-          {anwesend.map((c) => (
-            <button key={c.id} className="charakter-kachel" onClick={() => onCharakter(c.id)}>
-              <div className="charakter-bild">
-                <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
-              </div>
-              <span className="charakter-name">{c.name}</span>
-              <span className="leise" style={{ fontSize: 12 }}>
-                {c.tierart}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <h3 className="abschnitt">Wohin als Nächstes?</h3>
-      <div className="ort-liste">
-        {LOCATIONS.map((o) => {
-          const dort = SUSPECTS.filter((c) => fall.aufenthalt[c.id] === o.id).length;
-          return (
-            <button
-              key={o.id}
-              className="ort-kachel"
-              data-aktiv={o.id === ortId}
-              onClick={() => onOrtWechsel(o.id)}
-            >
-              <div className="ort-kachel-bild">
-                <Bild src={o.bild} alt={o.name} platzhalter={o.name} />
-              </div>
-              <div className="ort-kachel-text">
-                <strong>{o.name}</strong>
-                <span className="leise">
-                  {dort > 0 ? `${dort} anwesend` : "niemand da"}
-                  {o.id === fall.tatort ? " · Tatort" : ""}
-                </span>
-              </div>
-            </button>
-          );
-        })}
       </div>
     </div>
   );

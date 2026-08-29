@@ -31,6 +31,10 @@ eigenem Icon und korrekten Abständen zu Dynamic Island und Home-Indicator.
 
 ## Bilder einpflegen
 
+Es gibt zwei Wege - der erste ist der richtige, der zweite der schnelle.
+
+### 1. Dauerhaft: ins Projekt legen
+
 Alle Bilder liegen unter `public/`, weil Next.js nur von dort ausliefert. Die
 URLs sind trotzdem genau die gewünschten:
 
@@ -40,9 +44,49 @@ URLs sind trotzdem genau die gewünschten:
 | `public/orte/`       | `/orte/`       | Schauplätze         |
 | `public/items/`      | `/items/`      | Gegenstände/Spuren  |
 
-In jedem Ordner liegt eine `README.md` mit der exakten Liste der erwarteten
-Dateinamen. Solange ein Bild fehlt, zeigt die App einen Platzhalter mit dem
-Namen - das Spiel funktioniert also auch ohne Grafiken schon vollständig.
+Der Dateiname entscheidet, wozu ein Bild gehört: `chat.png` gehört zu Chat,
+`cafe.png` zum Café Mondlicht. In jedem Ordner liegt eine `README.md` mit der
+vollständigen Liste; im Admin-Menü unter **Bilder** steht zu jedem Eintrag der
+erwartete Dateiname.
+
+So kommen die Dateien ins Projekt:
+
+- **Über GitHub im Browser:** Repository öffnen → in den Ordner wechseln →
+  *Add file → Upload files* → PNGs hineinziehen → *Commit changes*. Vercel
+  baut danach automatisch neu.
+- **Lokal:** Dateien in den Ordner kopieren, dann
+  `git add public/charaktere && git commit -m "Bilder" && git push`.
+
+Empfehlung: Charaktere hochkant freigestellt (PNG mit Transparenz, ca.
+900 × 1200 px) - sie werden im Gespräch bildschirmfüllend gezeigt. Orte im
+Querformat (ca. 1600 × 1000 px), Gegenstände quadratisch (512 px).
+
+### 2. Zum Ausprobieren: im Admin-Menü
+
+Unter **Admin → Bilder** kannst du zu jedem Eintrag ein Bild direkt vom Handy
+wählen. Es wird verkleinert, im Browser gespeichert und sofort im Spiel benutzt.
+Praktisch zum Testen, aber es liegt nur auf diesem einen Gerät - für alle
+anderen (und nach dem Leeren der Browserdaten) zählt Weg 1.
+
+Solange ein Bild fehlt, zeigt die App einen Platzhalter mit dem Namen - das
+Spiel funktioniert also auch ganz ohne Grafiken.
+
+## Admin-Menü
+
+Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`):
+
+- **Charaktere** - die Excel-Tabelle als CSV einlesen. Die Datei wird geprüft
+  (genau ein Detektiv, mindestens zwei Verdächtige, keine doppelten Namen) und
+  gilt ab dem nächsten Fall. Darunter die aktuelle Besetzung mit Bildstatus.
+  „Eigene Liste verwerfen“ schaltet zurück auf `data/characters.csv`.
+- **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben).
+- **Spiel** - Erzählton (kindgerecht, spannend, albern), Anzahl der
+  Beschuldigungen, Startverdacht, sowie Zurücksetzen von Einstellungen und
+  Spielstand.
+
+Alles davon liegt im Browser des Geräts, nicht auf dem Server. Beim Start eines
+Falls schickt die App Besetzung und Einstellungen einmal mit; sie werden in den
+verschlüsselten Fall eingebacken und gelten für dessen gesamte Laufzeit.
 
 ## Charaktere aus der Excel/CSV pflegen
 
@@ -105,6 +149,11 @@ Farben und Typografie orientieren sich am Detective-Conan-Keyvisual:
   Hauptaktionen und die eigenen Chatblasen,
 - Eisblau (`#7cc4ff`) für Werte, Fokusrahmen und ruhige Akzente.
 
+Das Layout ist bewusst rahmenlos: Der Ort füllt den ganzen Bildschirm, die Tiere
+stehen frei in der Szene, und im Gespräch ist das Gegenüber bildschirmfüllend zu
+sehen - die Sprechblasen schweben darüber. Statt Kartenrändern gibt es weiche
+Verläufe und Glasflächen.
+
 Alle Farben liegen als CSS-Variablen ganz oben in `app/globals.css` - dort einmal
 ändern reicht, um das ganze Spiel umzufärben.
 
@@ -114,13 +163,17 @@ Alle Farben liegen als CSS-Variablen ganz oben in `app/globals.css` - dort einma
 app/
   layout.tsx            Metadaten, PWA-Einstellungen, Viewport (iPhone-tauglich)
   page.tsx              Hält alles zusammen: Tabs, Overlays, Spielfluss
-  globals.css           Komplettes Styling (Safe-Areas, Dark Noir)
+  admin/page.tsx        Admin-Menü: Charaktere, Bilder, Einstellungen
+  globals.css           Komplettes Styling (Safe-Areas, Szenen-Layout)
   api/case/route.ts     Fall erzeugen (Täter würfeln + Claude)
   api/talk/route.ts     Gespräch mit einem Charakter
   api/search/route.ts   Umsehen an einem Ort
   api/accuse/route.ts   Finale Beschuldigung und Auflösung
 components/             Bildschirme und Overlays
 lib/
+  adminStore.ts         Admin-Daten auf dem Gerät (Besetzung, Bilder, Optionen)
+  csv.ts                Das CSV-Format - benutzt von App und Import-Skript
+  bildUpload.ts         Bilder verkleinern und als Data-URL ablegen
   characters.ts         Charaktere + Helfer (aus der CSV erzeugt)
   locations.ts          Orte
   items.ts              Gegenstände

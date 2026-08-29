@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { Bild } from "./Bild";
-import { DETECTIVE } from "@/lib/characters";
+import { aktuelleCharaktere, useAdmin } from "@/lib/adminStore";
 
 export function StartScreen({
   onStart,
@@ -12,16 +13,25 @@ export function StartScreen({
   laedt: boolean;
   fehler: string | null;
 }) {
+  const { daten } = useAdmin();
+  const besetzung = aktuelleCharaktere(daten);
+  const held = besetzung.find((c) => c.istDetektiv) ?? besetzung[0];
+  const verdaechtige = besetzung.length - 1;
+
   return (
     <div className="start">
+      <Link href="/admin" className="admin-knopf" aria-label="Admin-Menü">
+        ⚙︎
+      </Link>
+
       <div className="start-held">
-        <Bild src={DETECTIVE.bild} alt={DETECTIVE.name} platzhalter="Wimpy" />
+        <Bild src={held.bild} alt={held.name} platzhalter={held.name} />
       </div>
 
-      <h1 className="start-titel">Detective Wimpy</h1>
+      <h1 className="start-titel">Detective {held.name}</h1>
       <p className="start-unter">
-        Ein Bushbaby mit Lupe, sechs Orte, eine Handvoll Verdächtige - und immer
-        genau einer, der lügt.
+        Ein {held.tierart} mit Lupe, sechs Orte, {verdaechtige} Verdächtige - und
+        immer genau einer, der lügt.
       </p>
 
       {fehler && <p className="fehler">{fehler}</p>}

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Bild } from "./Bild";
-import { SUSPECTS } from "@/lib/characters";
+import type { Character } from "@/lib/types";
 
 export function BeschuldigenOverlay({
+  besetzung,
   verdacht,
   onBestaetigen,
   onSchliessen,
@@ -12,6 +13,7 @@ export function BeschuldigenOverlay({
   fehler,
   versucheUebrig,
 }: {
+  besetzung: Character[];
   verdacht: Record<string, number>;
   onBestaetigen: (charakterId: string, begruendung: string) => void;
   onSchliessen: () => void;
@@ -39,22 +41,22 @@ export function BeschuldigenOverlay({
       <div className="scroll">
         <div className="inhalt">
           <div className="wahl-gitter">
-            {SUSPECTS.map((c) => (
-              <button
-                key={c.id}
-                className="wahl-kachel"
-                data-aktiv={gewaehlt === c.id}
-                onClick={() => setGewaehlt(c.id)}
-              >
-                <div className="charakter-bild">
-                  <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
-                </div>
-                <strong>{c.name}</strong>
-                <span className="leise" style={{ fontSize: 12 }}>
-                  Verdacht {verdacht[c.id] ?? 0}%
-                </span>
-              </button>
-            ))}
+            {besetzung
+              .filter((c) => !c.istDetektiv)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  className="wahl-kachel"
+                  data-aktiv={gewaehlt === c.id}
+                  onClick={() => setGewaehlt(c.id)}
+                >
+                  <div className="wahl-bild">
+                    <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
+                  </div>
+                  <strong>{c.name}</strong>
+                  <span className="leise klein">Verdacht {verdacht[c.id] ?? 0}%</span>
+                </button>
+              ))}
           </div>
 
           <label className="feld">

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
-import { getCharacter } from "@/lib/characters";
-import { WORLD_PROMPT, buildTalkPrompt } from "@/lib/prompts";
+import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
 import { unseal } from "@/lib/seal";
 import type { CaseFile, ChatTurn, TalkMode, TalkResult } from "@/lib/types";
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!getCharacter(body.charakterId)) {
+    if (!fall.besetzung.some((c) => c.id === body.charakterId)) {
       return NextResponse.json({ fehler: "Unbekannter Charakter." }, { status: 400 });
     }
     if (!body.nachricht?.trim()) {
@@ -44,7 +43,13 @@ export async function POST(request: Request) {
     const response = await getAnthropic().messages.parse({
       model: MODEL,
       max_tokens: 4000,
-      system: [{ type: "text", text: WORLD_PROMPT, cache_control: { type: "ephemeral" } }],
+      system: [
+        {
+          type: "text",
+          text: buildWorldPrompt(fall.besetzung, fall.ton),
+          cache_control: { type: "ephemeral" },
+        },
+      ],
       thinking: { type: "adaptive" },
       output_config: { effort: "low", format: zodOutputFormat(TalkSchema) },
       messages: [

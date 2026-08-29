@@ -1,7 +1,6 @@
 "use client";
 
 import { Bild } from "./Bild";
-import { SUSPECTS } from "@/lib/characters";
 import { getLocation } from "@/lib/locations";
 import type { PublicCase } from "@/lib/types";
 
@@ -28,54 +27,51 @@ export function VerdaechtigeScreen({
   onBeschuldigen: () => void;
   beschuldigungenUebrig: number;
 }) {
+  const verdaechtige = fall.besetzung.filter((c) => !c.istDetektiv);
+
   return (
     <div className="inhalt einblenden">
-      <div className="karte">
-        <h2>{fall.titel}</h2>
-        <p className="leise" style={{ margin: 0 }}>
-          {fall.tatbeschreibung}
-        </p>
-      </div>
+      <p className="fall-text">{fall.tatbeschreibung}</p>
 
-      {SUSPECTS.map((c) => {
+      {verdaechtige.map((c) => {
         const punkte = verdacht[c.id] ?? 0;
         const ort = getLocation(fall.aufenthalt[c.id] ?? "");
         return (
-          <div key={c.id} className="karte verdaechtig">
-            <button className="verdaechtig-kopf" onClick={() => onCharakter(c.id)}>
-              <div className="charakter-bild gross">
-                <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
-              </div>
-              <div className="verdaechtig-info">
-                <strong>
-                  {c.name} <span className="leise">· {c.tierart}, {c.alter} J.</span>
-                </strong>
-                <span className="leise">{ort ? `zuletzt: ${ort.name}` : ""}</span>
-                <div className="verdacht-balken" aria-label={`Verdacht ${punkte} von 100`}>
-                  <span style={{ width: `${punkte}%` }} />
-                </div>
-                <span className="leise" style={{ fontSize: 12 }}>
-                  Verdacht {punkte}%
+          <button key={c.id} className="dossier" onClick={() => onCharakter(c.id)}>
+            <div className="dossier-bild">
+              <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
+            </div>
+
+            <div className="dossier-text">
+              <div className="dossier-kopf">
+                <strong>{c.name}</strong>
+                <span className="leise">
+                  {c.tierart}, {c.alter} J.
                 </span>
               </div>
-            </button>
 
-            <p className="leise" style={{ marginBottom: 10 }}>
-              {c.beschreibung}
-            </p>
+              <div className="verdacht-balken" aria-label={`Verdacht ${punkte} von 100`}>
+                <span style={{ width: `${punkte}%` }} />
+              </div>
+              <span className="leise klein">
+                Verdacht {punkte}% {ort ? `· zuletzt ${ort.name}` : ""}
+              </span>
 
-            <div className="stats">
-              {Object.entries(c.stats).map(([key, wert]) => (
-                <div key={key} className="stat">
-                  <span className="stat-label">{STAT_LABELS[key] ?? key}</span>
-                  <div className="stat-balken">
-                    <span style={{ width: `${wert * 10}%` }} />
+              <p className="dossier-beschreibung">{c.beschreibung}</p>
+
+              <div className="stats">
+                {Object.entries(c.stats).map(([key, wert]) => (
+                  <div key={key} className="stat">
+                    <span className="stat-label">{STAT_LABELS[key] ?? key}</span>
+                    <div className="stat-balken">
+                      <span style={{ width: `${wert * 10}%` }} />
+                    </div>
+                    <span className="stat-wert">{wert}</span>
                   </div>
-                  <span className="stat-wert">{wert}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </button>
         );
       })}
 

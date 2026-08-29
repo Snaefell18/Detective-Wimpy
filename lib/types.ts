@@ -46,9 +46,29 @@ export type ChatTurn = {
   mode?: TalkMode;
 };
 
+/** Im Admin-Menü einstellbar. */
+export type Einstellungen = {
+  /** Wie viele Beschuldigungen der Spieler pro Fall hat. */
+  beschuldigungen: number;
+  /** Verdachtswert, mit dem jeder Verdächtige startet. */
+  startverdacht: number;
+  /** Erzählton, den Claude anschlägt. */
+  ton: "kindgerecht" | "spannend" | "albern";
+};
+
+export const STANDARD_EINSTELLUNGEN: Einstellungen = {
+  beschuldigungen: 2,
+  startverdacht: 20,
+  ton: "kindgerecht",
+};
+
 /** Alles, was der Fall vorgibt. Wird beim Start einmal erzeugt. */
 export type CaseFile = {
   id: string;
+  /** Die Charaktere, mit denen dieser Fall gespielt wird (inkl. Admin-Änderungen). */
+  besetzung: Character[];
+  /** Erzählton für diesen Fall. */
+  ton: Einstellungen["ton"];
   titel: string;
   tatbeschreibung: string;
   tatort: string; // Location-Id
@@ -127,6 +147,8 @@ export type AccuseResult = {
 /** Der Teil des Falls, den der Browser sehen darf (ohne Täter, Motiv, Alibis). */
 export type PublicCase = {
   id: string;
+  /** Die Besetzung dieses Falls - der Browser braucht sie für die Anzeige. */
+  besetzung: Character[];
   titel: string;
   tatbeschreibung: string;
   tatort: string;

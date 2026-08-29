@@ -1,48 +1,52 @@
 "use client";
 
-import { Bild } from "./Bild";
-import { getCharacter } from "@/lib/characters";
+import { Szene } from "./Bild";
+import type { Character } from "@/lib/types";
 import type { Ergebnis } from "@/lib/useGame";
 
 export function ErgebnisScreen({
   ergebnis,
+  besetzung,
   onNeuerFall,
   laedt,
 }: {
   ergebnis: Ergebnis;
+  besetzung: Character[];
   onNeuerFall: () => void;
   laedt: boolean;
 }) {
-  const taeter = getCharacter(ergebnis.taeterId);
+  const taeter = besetzung.find((c) => c.id === ergebnis.taeterId);
+  const beschuldigt = besetzung.find((c) => c.id === ergebnis.beschuldigtId);
 
   return (
-    <div className="scroll">
-      <div className="inhalt einblenden" style={{ paddingTop: "calc(var(--safe-top) + 24px)" }}>
-        <h1 className="ergebnis-titel" data-richtig={ergebnis.richtig}>
-          {ergebnis.richtig ? "Fall gelöst!" : "Daneben!"}
-        </h1>
+    <div className="ergebnis">
+      <Szene
+        src={taeter?.bild}
+        alt={taeter?.name ?? ""}
+        platzhalter={taeter?.name}
+        variante="portraet"
+      />
 
-        <div className="taeter-bild">
-          <Bild src={taeter?.bild} alt={taeter?.name ?? ""} platzhalter={taeter?.name} />
+      <div className="scroll">
+        <div className="inhalt ergebnis-inhalt einblenden">
+          <h1 className="ergebnis-titel" data-richtig={ergebnis.richtig}>
+            {ergebnis.richtig ? "Fall gelöst!" : "Daneben!"}
+          </h1>
+
+          <p className="ergebnis-name">
+            Der Täter war <strong>{taeter?.name}</strong> ({taeter?.tierart})
+          </p>
+
+          <h2 className="abschnitt">Die Auflösung</h2>
+          <p className="fliesstext">{ergebnis.aufloesung}</p>
+
+          <h2 className="abschnitt">{beschuldigt?.name} sagt</h2>
+          <p className="fliesstext zitat">„{ergebnis.reaktion}“</p>
+
+          <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
+            {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
+          </button>
         </div>
-
-        <p className="ergebnis-name">
-          Der Täter war <strong>{taeter?.name}</strong> ({taeter?.tierart})
-        </p>
-
-        <div className="karte">
-          <h2>Die Auflösung</h2>
-          <p style={{ margin: 0 }}>{ergebnis.aufloesung}</p>
-        </div>
-
-        <div className="karte">
-          <h2>{getCharacter(ergebnis.beschuldigtId)?.name} sagt</h2>
-          <p style={{ margin: 0, fontStyle: "italic" }}>„{ergebnis.reaktion}“</p>
-        </div>
-
-        <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
-          {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
-        </button>
       </div>
     </div>
   );

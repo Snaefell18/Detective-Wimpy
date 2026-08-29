@@ -1,18 +1,36 @@
-import { CHARACTERS, DETECTIVE, characterBrief, getCharacter } from "./characters";
+import { characterBrief } from "./characters";
 import { ITEMS } from "./items";
 import { LOCATIONS, getLocation } from "./locations";
-import type { CaseFile, ChatTurn, TalkMode } from "./types";
+import type { CaseFile, Character, ChatTurn, Einstellungen, TalkMode } from "./types";
 
-/** Weltwissen, das in jedem Prompt gleich bleibt (gut für Prompt-Caching). */
-export const WORLD_PROMPT = `Du bist die Erzähl-Engine des Kinder-Detektivspiels "Detective Wimpy".
+const TON_TEXT: Record<Einstellungen["ton"], string> = {
+  kindgerecht:
+    "Der Ton ist warmherzig, witzig und spannend, wie ein gutes Kinderhörspiel.",
+  spannend:
+    "Der Ton ist dicht und atmosphärisch, wie ein Krimi am Abend - immer noch kindgerecht, aber mit Nervenkitzel.",
+  albern:
+    "Der Ton ist albern und überdreht, mit Wortwitz und kleinen Slapstick-Momenten.",
+};
+
+const detektiv = (besetzung: Character[]) =>
+  besetzung.find((c) => c.istDetektiv) ?? besetzung[0];
+
+/** Weltwissen für einen Fall - hängt an der Besetzung und dem Erzählton. */
+export function buildWorldPrompt(
+  besetzung: Character[],
+  ton: Einstellungen["ton"] = "kindgerecht",
+): string {
+  const held = detektiv(besetzung);
+
+  return `Du bist die Erzähl-Engine des Detektivspiels "Detective Wimpy".
 
 WELT
-Eine kleine Tierstadt. Der Spieler ist ${DETECTIVE.name}, ein ${DETECTIVE.tierart}: ${DETECTIVE.beschreibung}
+Eine kleine Tierstadt. Der Spieler ist ${held.name}, ein ${held.tierart}: ${held.beschreibung}
 Es geht nie um Blut, Tod oder echte Gewalt - Fälle sind Diebstähle, Streiche, Sabotage, verschwundene Dinge und Geheimnisse.
-Der Ton ist warmherzig, witzig und spannend, wie ein gutes Kinderhörspiel. Alles auf Deutsch, in kurzen, lebendigen Sätzen.
+${TON_TEXT[ton]} Alles auf Deutsch, in kurzen, lebendigen Sätzen.
 
 CHARAKTERE
-${CHARACTERS.map((c) => `- [${c.id}] ${characterBrief(c)}`).join("\n")}
+${besetzung.map((c) => `- [${c.id}] ${characterBrief(c)}`).join("\n")}
 
 ORTE
 ${LOCATIONS.map((o) => `- [${o.id}] ${o.name}: ${o.beschreibung}`).join("\n")}
@@ -24,13 +42,14 @@ REGELN
 - Benutze ausschließlich die oben genannten Ids für Charaktere, Orte und Gegenstände.
 - Die Werte eines Charakters bestimmen sein Verhalten: hohe Schelmischkeit heißt Späße und Ablenkung, hohes Kriminalitätslevel heißt Nähe zu krummen Dingern, hohe Intelligenz heißt gute Ausreden, hohe Freundlichkeit heißt offene Antworten, niedriges Charisma heißt hölzerne Sätze.
 - Kein Charakter ist "böse". Auch der Täter hat ein nachvollziehbares Motiv.`;
+}
 
 /** Prompt zum Erzeugen eines neuen Falls. Der Täter steht bereits fest. */
-export function buildCasePrompt(taeterId: string): string {
-  const taeter = getCharacter(taeterId);
+export function buildCasePrompt(besetzung: Character[], taeterId: string): string {
+  const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
 
-  const verdaechtige = CHARACTERS.filter((c) => !c.istDetektiv);
+  const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
 
   return `Erfinde einen neuen Fall für Detective Wimpy.
 
@@ -58,7 +77,7 @@ export function buildTalkPrompt(args: {
   gefundeneSpuren: string[];
 }): string {
   const { fall, charakterId, ortId, modus, nachricht, verlauf, gefundeneSpuren } = args;
-  const charakter = getCharacter(charakterId);
+  const charakter = fall.besetzung.find((c) => c.id === charakterId);
   if (!charakter) throw new Error(`Unbekannter Charakter: ${charakterId}`);
 
   const brief = fall.verdaechtige.find((v) => v.charakterId === charakterId);
@@ -131,8 +150,8 @@ export function buildAccusePrompt(args: {
   gefundeneSpuren: string[];
 }): string {
   const { fall, charakterId, begruendung, gefundeneSpuren } = args;
-  const beschuldigt = getCharacter(charakterId);
-  const taeter = getCharacter(fall.taeterId);
+  const beschuldigt = fall.besetzung.find((c) => c.id === charakterId);
+  const taeter = fall.besetzung.find((c) => c.id === fall.taeterId);
   const richtig = charakterId === fall.taeterId;
 
   return `Wimpy stellt seine finale Beschuldigung.

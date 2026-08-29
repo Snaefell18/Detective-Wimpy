@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { aktuelleCharaktere, useAdmin } from "./adminStore";
 import { DEFAULT_LOCATION_ID } from "./locations";
 import type {
   ChatTurn,
@@ -10,9 +11,7 @@ import type {
   TalkResult,
 } from "./types";
 
-const SPEICHER_KEY = "detective-wimpy:v1";
-const START_VERDACHT = 20;
-const BESCHULDIGUNGEN = 2;
+export const SPEICHER_KEY = "detective-wimpy:v1";
 
 export type Ergebnis = {
   richtig: boolean;
@@ -45,7 +44,7 @@ const LEER: Spielstand = {
   besuchteOrte: [DEFAULT_LOCATION_ID],
   verlauf: {},
   verdacht: {},
-  beschuldigungenUebrig: BESCHULDIGUNGEN,
+  beschuldigungenUebrig: 2,
   status: "kein-fall",
   ergebnis: null,
 };
@@ -72,6 +71,7 @@ const notiz = (text: string, quelle: string): NotebookEntry => ({
 
 /** Der komplette Spielzustand samt Server-Aufrufen. */
 export function useGame() {
+  const { daten: admin } = useAdmin();
   const [stand, setStand] = useState<Spielstand>(LEER);
   const [geladen, setGeladen] = useState(false);
   const [laedt, setLaedt] = useState<null | "fall" | "gespraech" | "suche" | "urteil">(
@@ -85,7 +85,14 @@ export function useGame() {
   useEffect(() => {
     try {
       const roh = window.localStorage.getItem(SPEICHER_KEY);
-      if (roh) setStand({ ...LEER, ...(JSON.parse(roh) as Spielstand) });
+      if (roh) {
+        const gespeichert = { ...LEER, ...(JSON.parse(roh) as Spielstand) };
+        // Ein Fall aus einer älteren Version kennt seine Besetzung noch nicht -
+        // der wäre nicht mehr spielbar, also fangen wir frisch an.
+        const brauchbar =
+          !gespeichert.fall || Array.isArray(gespeichert.fall.besetzung);
+        setStand(brauchbar ? gespeichert : LEER);
+      }
     } catch {
       // Kaputter Speicher soll das Spiel nicht blockieren.
     }
@@ -106,14 +113,22 @@ export function useGame() {
     setFehler(null);
     setLaedt("fall");
     try {
-      const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {});
+      // Besetzung und Einstellungen aus dem Admin-Menü gelten für diesen Fall.
+      const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {
+        charaktere: aktuelleCharaktere(admin),
+        einstellungen: admin.einstellungen,
+      });
       setStand({
         ...LEER,
         fall: daten.fall,
         siegel: daten.siegel,
         status: "laeuft",
+        beschuldigungenUebrig: admin.einstellungen.beschuldigungen,
         verdacht: Object.fromEntries(
-          Object.keys(daten.fall.aufenthalt).map((id) => [id, START_VERDACHT]),
+          Object.keys(daten.fall.aufenthalt).map((id) => [
+            id,
+            admin.einstellungen.startverdacht,
+          ]),
         ),
         notizen: [notiz(daten.fall.tatbeschreibung, "Fallakte")],
       });
@@ -122,7 +137,7 @@ export function useGame() {
     } finally {
       setLaedt(null);
     }
-  }, []);
+  }, [admin]);
 
   const gehZuOrt = useCallback((ortId: string) => {
     setStand((alt) => ({
@@ -216,7 +231,7 @@ export function useGame() {
                 0,
                 Math.min(
                   100,
-                  (alt.verdacht[charakterId] ?? START_VERDACHT) +
+                  (alt.verdacht[charakterId] ?? 0) +
                     daten.verdachtsaenderung,
                 ),
               ),

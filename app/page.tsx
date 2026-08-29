@@ -9,7 +9,6 @@ import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
-import { getLocation } from "@/lib/locations";
 import { useGame } from "@/lib/useGame";
 
 export default function Home() {
@@ -43,6 +42,7 @@ export default function Home() {
       <main className="app">
         <ErgebnisScreen
           ergebnis={stand.ergebnis}
+          besetzung={stand.fall.besetzung}
           onNeuerFall={spiel.neuerFall}
           laedt={laedt === "fall"}
         />
@@ -51,16 +51,16 @@ export default function Home() {
   }
 
   // 3. Laufendes Spiel.
-  const ort = getLocation(stand.ortId);
+  const chatCharakter = chatMit
+    ? stand.fall.besetzung.find((c) => c.id === chatMit)
+    : undefined;
 
   return (
     <main className="app">
-      <header className="kopf">
+      <header className={tab === "ort" ? "kopf schwebend" : "kopf"}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1>{stand.fall.titel}</h1>
-          <p className="unterzeile">
-            {ort?.name} · {stand.gefundeneSpuren.length} Spuren
-          </p>
+          <p className="unterzeile">{stand.gefundeneSpuren.length} Spuren gefunden</p>
         </div>
         <button
           className="knopf klein"
@@ -72,7 +72,7 @@ export default function Home() {
         </button>
       </header>
 
-      <div className="scroll">
+      <div className={tab === "ort" ? "buehne" : "scroll"}>
         {tab === "ort" && (
           <OrtScreen
             fall={stand.fall}
@@ -107,6 +107,7 @@ export default function Home() {
           <NotizbuchScreen
             gefundeneSpuren={stand.gefundeneSpuren}
             notizen={stand.notizen}
+            besetzung={stand.fall.besetzung}
           />
         )}
       </div>
@@ -115,9 +116,9 @@ export default function Home() {
 
       <Nav aktiv={tab} onWechsel={setTab} spurenAnzahl={stand.gefundeneSpuren.length} />
 
-      {chatMit && (
+      {chatMit && chatCharakter && (
         <ChatOverlay
-          charakterId={chatMit}
+          charakter={chatCharakter}
           verlauf={stand.verlauf[chatMit] ?? []}
           onSenden={(modus, text) => spiel.sprich(chatMit, modus, text)}
           onSchliessen={() => {
@@ -131,6 +132,7 @@ export default function Home() {
 
       {beschuldigenOffen && (
         <BeschuldigenOverlay
+          besetzung={stand.fall.besetzung}
           verdacht={stand.verdacht}
           versucheUebrig={stand.beschuldigungenUebrig}
           onBestaetigen={async (id, begruendung) => {
