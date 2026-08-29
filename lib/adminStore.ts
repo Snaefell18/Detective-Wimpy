@@ -1,30 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CHARACTERS } from "./characters";
-import { LOCATIONS } from "./locations";
-import {
-  STANDARD_EINSTELLUNGEN,
-  type Character,
-  type Einstellungen,
-  type Location,
-} from "./types";
+import { STANDARD_EINSTELLUNGEN, type Einstellungen } from "./types";
 
 const KEY = "detective-wimpy:admin:v1";
 
 export type AdminDaten = {
-  /** Aus dem Admin-Menü eingelesene Charaktere. Null = die aus dem Repository. */
-  charaktere: Character[] | null;
-  /** Aus dem Admin-Menü eingelesene Orte. Null = die aus dem Repository. */
-  orte: Location[] | null;
-  /** Bildpfad (z.B. "/charaktere/chat.png") -> Data-URL, nur auf diesem Gerät. */
+  /**
+   * Bildpfad (z.B. "/charaktere/chat.png") -> Data-URL, nur auf diesem Gerät.
+   * Bilder gehören nicht in Firestore: ein Dokument darf dort nur 1 MB groß
+   * sein, und ausgeliefert werden sie ohnehin aus public/.
+   */
   bilder: Record<string, string>;
   einstellungen: Einstellungen;
 };
 
 export const LEERE_ADMIN_DATEN: AdminDaten = {
-  charaktere: null,
-  orte: null,
   bilder: {},
   einstellungen: STANDARD_EINSTELLUNGEN,
 };
@@ -39,8 +30,6 @@ export function ladeAdminDaten(): AdminDaten {
     if (!roh) return LEERE_ADMIN_DATEN;
     const daten = JSON.parse(roh) as Partial<AdminDaten>;
     return {
-      charaktere: daten.charaktere ?? null,
-      orte: daten.orte ?? null,
       bilder: daten.bilder ?? {},
       einstellungen: { ...STANDARD_EINSTELLUNGEN, ...(daten.einstellungen ?? {}) },
     };
@@ -92,16 +81,6 @@ export function useAdmin() {
   );
 
   return { daten, geladen, aendern };
-}
-
-/** Die aktuell gültige Besetzung: aus dem Admin-Menü oder aus dem Repository. */
-export function aktuelleCharaktere(daten: AdminDaten): Character[] {
-  return daten.charaktere ?? CHARACTERS;
-}
-
-/** Die aktuell gültige Ortsliste: aus dem Admin-Menü oder aus dem Repository. */
-export function aktuelleOrte(daten: AdminDaten): Location[] {
-  return daten.orte ?? LOCATIONS;
 }
 
 /** Löst einen Bildpfad auf - ein im Admin hinterlegtes Bild gewinnt. */

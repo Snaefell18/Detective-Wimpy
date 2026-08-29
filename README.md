@@ -25,6 +25,59 @@ npm run dev                    # http://localhost:3000
      Ohne Angabe wird der API-Key als Schlüsselbasis benutzt.
 3. Deployen. Fertig - kein Server, keine Datenbank nötig.
 
+## Firebase einrichten
+
+Tiere, Schauplätze, Dinge und vorbereitete Fälle liegen in Firestore
+(Projekt `detective-wimpy`). Drei Schritte, einmalig:
+
+1. **Firestore anlegen** - in der Firebase-Konsole unter *Build → Firestore
+   Database → Datenbank erstellen* (Region nach Wunsch).
+2. **Anonyme Anmeldung aktivieren** - unter *Build → Authentication →
+   Sign-in method → Anonym*. Lesen geht auch ohne; für das Speichern aus dem
+   Admin-Menü ist sie nötig.
+3. **Regeln veröffentlichen** - entweder den Inhalt von `firestore.rules` in
+   der Konsole unter *Firestore → Regeln* einfügen, oder:
+
+   ```bash
+   npm run firebase:rules      # braucht einmalig: npx firebase-tools login
+   ```
+
+Danach im Admin-Menü unter **Tiere / Orte / Dinge** je einmal
+„Projektdaten übernehmen“ drücken - damit wandern die Listen aus `data/` in
+die Datenbank und lassen sich dort bearbeiten.
+
+### Was wo liegt
+
+| Sammlung     | Inhalt                                              |
+| ------------ | --------------------------------------------------- |
+| `charaktere` | die Tiere samt Werten                               |
+| `orte`       | Schauplätze mit Stadt und Atmosphäre                |
+| `items`      | Gegenstände und Spuren                              |
+| `faelle`     | vorbereitete Fälle („Kampagnen“)                    |
+
+Die Lösung eines Falls steht **nicht** im Klartext in der Datenbank: Täter,
+Motiv und gelogene Alibis stecken im Feld `siegel` - AES-256-verschlüsselt mit
+einem Schlüssel, den nur der Server kennt. Deshalb dürfen Fälle öffentlich
+lesbar sein, ohne dass sich jemand die Lösung erspähen kann.
+
+Ist die Datenbank leer oder nicht erreichbar, spielt die App mit den Listen aus
+`data/` weiter und sagt das im Admin-Menü.
+
+Bilder gehören nicht in Firestore (ein Dokument darf dort nur 1 MB groß sein) -
+sie liegen wie gehabt in `public/`.
+
+## Kampagnen: Fälle vorbereiten
+
+Jeder frisch gestartete Fall kostet einen Modellaufruf. Vorbereitete Fälle
+kosten ihn genau einmal:
+
+1. Admin-Menü → **Kampagnen**. Dort lassen sich Vorgaben machen: Name, Thema,
+   Stadt, welche Tiere mitspielen, welche Dinge als Spuren vorkommen müssen,
+   wer der Täter ist und wie knifflig es sein soll.
+2. „Fall erzeugen und speichern“ legt ihn in der Datenbank ab.
+3. Im Spiel steht er unter **Kampagnen** (Knopf unter „Neuen Fall starten“) und
+   startet sofort - beliebig oft, ohne weitere Kosten.
+
 ## Modelle und Kosten
 
 Standard ist **Claude Sonnet 5** (2 $ / 10 $ je Million Token) - stark genug für
@@ -116,12 +169,11 @@ Spiel funktioniert also auch ganz ohne Grafiken.
 
 Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`):
 
-- **Tiere** - die Excel-Tabelle als CSV einlesen. Die Datei wird geprüft
-  (genau ein Detektiv, mindestens zwei Verdächtige, keine doppelten Namen) und
-  gilt ab dem nächsten Fall. Darunter die aktuelle Besetzung mit Bildstatus.
-  „Eigene Liste verwerfen“ schaltet zurück auf `data/characters.csv`.
-- **Orte** - die Städte-Tabelle einlesen; darunter jede Stadt mit ihren
-  Schauplätzen und dem erwarteten Bildnamen.
+- **Tiere / Orte / Dinge** - Einträge anlegen, ändern und löschen; die Werte
+  (Charisma, Kriminalität …) stellt man direkt mit Schiebereglern ein. Für
+  Tiere und Orte lässt sich weiterhin eine CSV einlesen - sie landet dann
+  direkt in der Datenbank.
+- **Kampagnen** - Fälle vorbereiten und verwalten (siehe oben).
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
   inklusive Titelbild des Startbildschirms.
 - **Spiel** - Stadt (oder Zufall), Schauplätze pro Fall, Intro an/aus,
@@ -162,8 +214,16 @@ hohe Freundlichkeit offenere Antworten.
 ## Intro vor jeder Runde
 
 Nach dem Klick auf „Neuen Fall starten“ wird zuerst der Fall erzeugt (ein paar
-Sekunden, mit Hinweis auf dem Startbildschirm). Erst wenn alle Fakten da sind,
-startet der Titelsong (`public/audio/intro.mp3`) und mit ihm die Vorstellung:
+Sekunden, mit Hinweis auf dem Startbildschirm) - bei einer Kampagne entfällt
+das Warten ganz.
+
+Dann spricht der **Prolog** (`public/audio/introdark.mp3`): Die festen Zeilen
+des Sprechers erscheinen im Takt der Aufnahme, danach der Anriss dieses Falls,
+den Claude beim Erzeugen mitgeschrieben hat. Ohne die Datei läuft der Prolog
+stumm in 14 Sekunden durch.
+
+Direkt danach startet der Titelsong (`public/audio/intro.mp3`) und mit ihm die
+Vorstellung:
 Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder Verdächtige einzeln
 mit seinen Werten, die fünf Schauplätze, „Wer war es?“ - und zum Schluss der
 Startschuss. So steht im Intro von der ersten Sekunde an alles fest.
@@ -218,8 +278,9 @@ AES-256-GCM-verschlüsselt als „Siegel“. Der Browser trägt dieses undurchsi
 Siegel bei jeder Anfrage mit sich, entschlüsseln kann es nur der Server. Dadurch
 bleibt alles zustandslos - ideal für Vercel, ganz ohne Datenbank.
 
-Der Spielstand selbst (Ort, Notizen, Chatverläufe, Verdachtswerte) liegt im
-`localStorage` des Geräts, ein angefangener Fall überlebt also das Schließen der App.
+Der Spielstand selbst (Ort, Inventar, Notizen, Chatverläufe, Verdachtswerte)
+liegt im `localStorage` des Geräts, ein angefangener Fall überlebt also das
+Schließen der App.
 
 ## Design
 
@@ -251,9 +312,13 @@ app/
   api/talk/route.ts     Gespräch mit einem Charakter
   api/search/route.ts   Umsehen an einem Ort
   api/accuse/route.ts   Finale Beschuldigung und Auflösung
-components/             Bildschirme, Overlays und die Intro-Sequenz
+components/             Bildschirme, Overlays, Prolog und Intro-Sequenz
+components/admin/       die Bereiche des Admin-Menüs
 lib/
-  adminStore.ts         Admin-Daten auf dem Gerät (Besetzung, Bilder, Optionen)
+  firebase.ts           Firebase-Anbindung (Firestore + anonyme Anmeldung)
+  db.ts                 Lesen und Schreiben der Sammlungen
+  stammdaten.ts         Tiere/Orte/Dinge aus der Datenbank, sonst aus data/
+  adminStore.ts         Gerätedaten: eigene Bilder und Spieloptionen
   csv.ts                Das CSV-Format - benutzt von App und Import-Skript
   bildUpload.ts         Bilder verkleinern und als Data-URL ablegen
   characters.ts         Charaktere + Helfer (aus der CSV erzeugt)
@@ -298,4 +363,5 @@ Die Architektur ist darauf vorbereitet:
 | `npm run import:csv` | Charaktere aus der CSV neu einlesen         |
 | `npm run import:orte`| Städte und Orte aus der CSV neu einlesen    |
 | `npm run bilder:optimieren` | Bilder in public/ handytauglich verkleinern |
+| `npm run firebase:rules` | Sicherheitsregeln und Indizes veröffentlichen |
 | `npm run lint`       | Linter                                      |

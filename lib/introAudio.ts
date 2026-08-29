@@ -12,6 +12,7 @@
 
 let audio: HTMLAudioElement | null = null;
 let jubel: HTMLAudioElement | null = null;
+let prolog: HTMLAudioElement | null = null;
 
 export function introAudio(): HTMLAudioElement {
   if (!audio) {
@@ -19,6 +20,15 @@ export function introAudio(): HTMLAudioElement {
     audio.preload = "auto";
   }
   return audio;
+}
+
+/** Der gesprochene Prolog vor dem Intro (public/audio/introdark.mp3). */
+export function prologAudio(): HTMLAudioElement {
+  if (!prolog) {
+    prolog = new Audio("/audio/introdark.mp3");
+    prolog.preload = "auto";
+  }
+  return prolog;
 }
 
 /**
@@ -36,7 +46,7 @@ export function jubelSpielen(): void {
 
 /** Beendet beide Stücke - z.B. beim Verlassen des Ergebnisses. */
 export function musikStoppen(): void {
-  for (const stueck of [audio, jubel]) {
+  for (const stueck of [audio, jubel, prolog]) {
     if (!stueck) continue;
     stueck.pause();
     stueck.currentTime = 0;
@@ -50,16 +60,18 @@ export function musikStoppen(): void {
  * ab, und die Freigabe wäre wirkungslos.
  */
 export function tonFreigeben(): void {
-  const a = introAudio();
-  a.muted = true;
-  void a
-    .play()
-    .then(() => {
-      a.pause();
-      a.currentTime = 0;
-      a.muted = false;
-    })
-    .catch(() => {
-      a.muted = false;
-    });
+  // Beide Stücke freigeben: erst spricht der Prolog, dann läuft der Song.
+  for (const a of [prologAudio(), introAudio()]) {
+    a.muted = true;
+    void a
+      .play()
+      .then(() => {
+        a.pause();
+        a.currentTime = 0;
+        a.muted = false;
+      })
+      .catch(() => {
+        a.muted = false;
+      });
+  }
 }

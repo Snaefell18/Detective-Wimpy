@@ -1,0 +1,10 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "faelle",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "erstelltAm", "order": "DESCENDING" }]
+    }
+  ],
+  "fieldOverrides": []
+}

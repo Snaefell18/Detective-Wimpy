@@ -94,6 +94,8 @@ export type CaseFile = {
   stadt: string;
   /** Die Schauplätze dieses Falls (Standard: fünf). */
   orte: Location[];
+  /** Kurzer Prolog-Text, der vor dem Intro eingeblendet wird. */
+  introText: string;
   titel: string;
   tatbeschreibung: string;
   tatort: string; // Location-Id
@@ -177,10 +179,54 @@ export type PublicCase = {
   /** Stadt und Schauplätze dieses Falls. */
   stadt: string;
   orte: Location[];
+  /** Kurzer Prolog-Text, der vor dem Intro eingeblendet wird. */
+  introText: string;
   titel: string;
   tatbeschreibung: string;
   tatort: string;
   /** charakterId -> ortId, damit man weiß, wen man wo antrifft. */
   aufenthalt: Record<string, string>;
   erstelltAm: number;
+};
+
+/**
+ * Ein vorgenerierter Fall in der Datenbank ("Kampagne").
+ *
+ * Enthält alles, was der Browser zeigen darf, plus das Siegel - den
+ * verschlüsselten Fall, den nur der Server lesen kann.
+ */
+export type Kampagne = {
+  id: string;
+  /** Anzeigename in der Kampagnen-Liste. */
+  name: string;
+  fall: PublicCase;
+  siegel: string;
+  /** Womit dieser Fall erzeugt wurde (Thema, Stadt, Tiere ...). */
+  vorgaben: Vorgaben | null;
+  erstelltAm: number;
+};
+
+/** Wünsche an einen neuen Fall, die im Admin eingegeben werden. */
+export type Vorgaben = {
+  /** Freitext: worum soll es gehen? */
+  thema: string;
+  /** Stadt-Id oder "zufall". */
+  stadt: string;
+  /** Charakter-Ids, die vorkommen sollen (leer = alle). */
+  charaktere: string[];
+  /** Item-Ids, die als Spuren auftauchen sollen (leer = freie Wahl). */
+  items: string[];
+  /** Wer der Täter sein soll - leer heißt: zufällig. */
+  taeterId: string;
+  /** Wie knifflig der Fall sein soll. */
+  schwierigkeit: "leicht" | "mittel" | "knifflig";
+};
+
+export const STANDARD_VORGABEN: Vorgaben = {
+  thema: "",
+  stadt: "zufall",
+  charaktere: [],
+  items: [],
+  taeterId: "",
+  schwierigkeit: "mittel",
 };

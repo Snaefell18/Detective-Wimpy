@@ -4,10 +4,12 @@ import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
 import { LOCATIONS, waehleSchauplaetze } from "@/lib/locations";
 import { buildCasePrompt, buildWorldPrompt } from "@/lib/prompts";
+import { ITEMS } from "@/lib/items";
 import {
   CharacterSchema,
   EinstellungenSchema,
   LocationSchema,
+  VorgabenSchema,
   makeCaseDraftSchema,
 } from "@/lib/schemas";
 import { seal } from "@/lib/seal";
@@ -17,6 +19,7 @@ import {
   type Character,
   type Location,
   type PublicCase,
+  type Vorgaben,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -60,15 +63,35 @@ export async function POST(request: Request) {
       EinstellungenSchema.safeParse(body?.einstellungen).data ??
       STANDARD_EINSTELLUNGEN;
 
-    const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
-    const taeter = verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
+    const vorgaben: Vorgaben | null =
+      VorgabenSchema.safeParse(body?.vorgaben).data ?? null;
+
+    // Vorgabe "welche Tiere" einschränken - der Detektiv bleibt immer dabei.
+    const gefiltert =
+      vorgaben && vorgaben.charaktere.length >= 2
+        ? besetzung.filter(
+            (c) => c.istDetektiv || vorgaben.charaktere.includes(c.id),
+          )
+        : besetzung;
+    const spielendeBesetzung =
+      gefiltert.filter((c) => !c.istDetektiv).length >= 2 ? gefiltert : besetzung;
+
+    const verdaechtige = spielendeBesetzung.filter((c) => !c.istDetektiv);
+    const gewuenschterTaeter = verdaechtige.find(
+      (c) => c.id === vorgaben?.taeterId,
+    );
+    const taeter =
+      gewuenschterTaeter ??
+      verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
     // Stadt und Schauplätze für diesen Fall festlegen.
     const alleOrte = orteAus(body?.orte);
+    const gewuenschteStadt =
+      vorgaben && vorgaben.stadt !== "zufall" ? vorgaben.stadt : einstellungen.stadt;
     const schauplatz = waehleSchauplaetze(
       alleOrte,
       einstellungen.ortsAnzahl,
-      einstellungen.stadt === "zufall" ? undefined : einstellungen.stadt,
+      gewuenschteStadt === "zufall" ? undefined : gewuenschteStadt,
     );
     if (!schauplatz) {
       return NextResponse.json(
@@ -86,7 +109,7 @@ export async function POST(request: Request) {
         {
           type: "text",
           text: buildWorldPrompt(
-            besetzung,
+            spielendeBesetzung,
             schauplatz.orte,
             schauplatz.stadt.name,
             einstellungen.ton,
@@ -97,12 +120,20 @@ export async function POST(request: Request) {
       thinking: { type: "adaptive" },
       output_config: {
         effort: "medium",
-        format: zodOutputFormat(makeCaseDraftSchema(besetzung, schauplatz.orte)),
+        format: zodOutputFormat(
+          makeCaseDraftSchema(spielendeBesetzung, schauplatz.orte),
+        ),
       },
       messages: [
         {
           role: "user",
-          content: buildCasePrompt(besetzung, schauplatz.stadt.name, taeter.id),
+          content: buildCasePrompt(
+            spielendeBesetzung,
+            schauplatz.stadt.name,
+            taeter.id,
+            vorgaben,
+            ITEMS,
+          ),
         },
       ],
     });
@@ -118,12 +149,13 @@ export async function POST(request: Request) {
 
     const fall: CaseFile = {
       id: crypto.randomUUID(),
-      besetzung,
+      besetzung: spielendeBesetzung,
       ton: einstellungen.ton,
       stadt: schauplatz.stadt.name,
       orte: schauplatz.orte,
       titel: draft.titel,
       tatbeschreibung: draft.tatbeschreibung,
+      introText: draft.introText,
       tatort: draft.tatort,
       taeterId: taeter.id,
       motiv: draft.motiv,
@@ -135,11 +167,12 @@ export async function POST(request: Request) {
 
     const oeffentlich: PublicCase = {
       id: fall.id,
-      besetzung,
+      besetzung: spielendeBesetzung,
       stadt: fall.stadt,
       orte: fall.orte,
       titel: fall.titel,
       tatbeschreibung: fall.tatbeschreibung,
+      introText: fall.introText,
       tatort: fall.tatort,
       aufenthalt: Object.fromEntries(
         fall.verdaechtige.map((v) => [v.charakterId, v.aufenthaltsort]),

@@ -17,6 +17,7 @@ export function makeCaseDraftSchema(besetzung: Character[], orte: Location[]) {
   return z.object({
     titel: z.string(),
     tatbeschreibung: z.string(),
+    introText: z.string(),
     tatort: locationId,
     motiv: z.string(),
     tathergang: z.string(),
@@ -97,6 +98,16 @@ export const LocationSchema = z.object({
   atmosphaere: z.string().max(120),
   beschreibung: z.string().max(300),
   bild: z.string().max(300),
+});
+
+/** Vorgaben aus dem Admin-Menü für einen neuen Fall. */
+export const VorgabenSchema = z.object({
+  thema: z.string().max(400),
+  stadt: z.string().max(60),
+  charaktere: z.array(z.string().max(40)).max(24),
+  items: z.array(z.string().max(40)).max(24),
+  taeterId: z.string().max(40),
+  schwierigkeit: z.enum(["leicht", "mittel", "knifflig"]),
 });
 
 export const EinstellungenSchema = z.object({

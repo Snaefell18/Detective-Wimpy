@@ -8,6 +8,7 @@ import type {
   Einstellungen,
   Location,
   TalkMode,
+  Vorgaben,
 } from "./types";
 
 const TON_TEXT: Record<Einstellungen["ton"], string> = {
@@ -56,10 +57,21 @@ REGELN
 }
 
 /** Prompt zum Erzeugen eines neuen Falls. Der Täter steht bereits fest. */
+const SCHWIERIGKEIT_TEXT: Record<Vorgaben["schwierigkeit"], string> = {
+  leicht:
+    "Leicht: Die Spuren zeigen ziemlich deutlich auf den Täter, höchstens eine führt in die Irre.",
+  mittel:
+    "Mittel: Zwei Spuren zeigen auf den Täter, eine bis zwei führen in die Irre.",
+  knifflig:
+    "Knifflig: Die Wahrheit ergibt sich erst aus drei Spuren zusammen, mehrere Verdächtige wirken schuldig, zwei Spuren führen in die Irre.",
+};
+
 export function buildCasePrompt(
   besetzung: Character[],
   stadt: string,
   taeterId: string,
+  vorgaben?: Vorgaben | null,
+  items?: { id: string; name: string }[],
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
@@ -80,7 +92,24 @@ Anforderungen:
 - 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
 - Kindgerecht: kein Blut, keine Gewalt, kein Tod.
-- Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.`;
+- Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
+- introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Sie werden vor dem Intro als Prolog eingeblendet. Kein "Kapitel", keine Anrede, nur Atmosphäre.
+${
+  vorgaben
+    ? `
+VORGABEN AUS DEM ADMIN-MENÜ (unbedingt einhalten)
+${vorgaben.thema ? `- Thema: ${vorgaben.thema}` : ""}
+- ${SCHWIERIGKEIT_TEXT[vorgaben.schwierigkeit]}
+${
+  vorgaben.items.length && items
+    ? `- Diese Gegenstände müssen als Spuren vorkommen: ${items
+        .filter((i) => vorgaben.items.includes(i.id))
+        .map((i) => `${i.name} [${i.id}]`)
+        .join(", ")}`
+    : ""
+}`.trim()
+    : ""
+}`;
 }
 
 /** Prompt für ein Gespräch mit einem Charakter. */

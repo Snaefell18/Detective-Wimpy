@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// Sicherheitsregeln für Detective Wimpy.
+//
+// Lesen darf jeder - das Spiel läuft ohne Anmeldung im Browser.
+// Schreiben darf nur, wer angemeldet ist (anonyme Anmeldung genügt); damit
+// können zufällige Besucher die Stammdaten nicht einfach überschreiben.
+//
+// Wichtig: Die Lösung eines Falls (Täter, Motiv, gelogene Alibis) steht NICHT
+// im Klartext in der Datenbank. Sie liegt im Feld "siegel" - AES-verschlüsselt
+// mit einem Schlüssel, den nur der Server kennt. Deshalb ist es unbedenklich,
+// dass Fälle öffentlich lesbar sind.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function angemeldet() {
+      return request.auth != null;
+    }
+
+    function textLimit(feld, laenge) {
+      return !(feld in request.resource.data)
+        || (request.resource.data[feld] is string
+            && request.resource.data[feld].size() <= laenge);
+    }
+
+    // Stammdaten: Tiere, Schauplätze, Gegenstände
+    match /charaktere/{id} {
+      allow read: if true;
+      allow write: if angemeldet()
+        && textLimit('name', 60)
+        && textLimit('beschreibung', 1000);
+    }
+
+    match /orte/{id} {
+      allow read: if true;
+      allow write: if angemeldet()
+        && textLimit('name', 60)
+        && textLimit('beschreibung', 500);
+    }
+
+    match /items/{id} {
+      allow read: if true;
+      allow write: if angemeldet()
+        && textLimit('name', 60)
+        && textLimit('beschreibung', 500);
+    }
+
+    // Vorgenerierte Fälle ("Kampagnen")
+    match /faelle/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && textLimit('name', 80)
+        && textLimit('titel', 120)
+        && textLimit('tatbeschreibung', 2000)
+        && textLimit('introText', 2000)
+        && request.resource.data.siegel is string
+        && request.resource.data.siegel.size() < 200000;
+      allow delete: if angemeldet();
+    }
+
+    // Alles andere ist gesperrt.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

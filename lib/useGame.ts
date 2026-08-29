@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { aktuelleCharaktere, aktuelleOrte, useAdmin } from "./adminStore";
+import { useAdmin } from "./adminStore";
+import { useStammdaten } from "./stammdaten";
 import type {
   ChatTurn,
+  Kampagne,
   NotebookEntry,
   PublicCase,
   TalkMode,
@@ -71,6 +73,7 @@ const notiz = (text: string, quelle: string): NotebookEntry => ({
 /** Der komplette Spielzustand samt Server-Aufrufen. */
 export function useGame() {
   const { daten: admin } = useAdmin();
+  const stammdaten = useStammdaten();
   const [stand, setStand] = useState<Spielstand>(LEER);
   const [geladen, setGeladen] = useState(false);
   const [laedt, setLaedt] = useState<null | "fall" | "gespraech" | "suche" | "urteil">(
@@ -114,8 +117,8 @@ export function useGame() {
     try {
       // Besetzung und Einstellungen aus dem Admin-Menü gelten für diesen Fall.
       const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {
-        charaktere: aktuelleCharaktere(admin),
-        orte: aktuelleOrte(admin),
+        charaktere: stammdaten.charaktere,
+        orte: stammdaten.orte,
         einstellungen: admin.einstellungen,
       });
       const startOrt = daten.fall.orte[0]?.id ?? "";
@@ -142,7 +145,35 @@ export function useGame() {
     } finally {
       setLaedt(null);
     }
-  }, [admin]);
+  }, [admin, stammdaten.charaktere, stammdaten.orte]);
+
+  /**
+   * Startet einen vorgenerierten Fall aus der Datenbank - ohne Modellaufruf,
+   * also sofort und ohne Kosten.
+   */
+  const kampagneStarten = useCallback(
+    (kampagne: Kampagne) => {
+      setFehler(null);
+      const startOrt = kampagne.fall.orte[0]?.id ?? "";
+      setStand({
+        ...LEER,
+        fall: kampagne.fall,
+        siegel: kampagne.siegel,
+        ortId: startOrt,
+        besuchteOrte: startOrt ? [startOrt] : [],
+        status: "laeuft",
+        beschuldigungenUebrig: admin.einstellungen.beschuldigungen,
+        verdacht: Object.fromEntries(
+          Object.keys(kampagne.fall.aufenthalt).map((id) => [
+            id,
+            admin.einstellungen.startverdacht,
+          ]),
+        ),
+        notizen: [notiz(kampagne.fall.tatbeschreibung, "Fallakte")],
+      });
+    },
+    [admin.einstellungen],
+  );
 
   const gehZuOrt = useCallback((ortId: string) => {
     setStand((alt) => ({
@@ -323,6 +354,7 @@ export function useGame() {
     fehler,
     setFehler,
     neuerFall,
+    kampagneStarten,
     gehZuOrt,
     umsehen,
     sprich,

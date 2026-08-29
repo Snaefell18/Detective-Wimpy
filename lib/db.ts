@@ -1,0 +1,109 @@
+"use client";
+
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  writeBatch,
+} from "firebase/firestore";
+import { anmelden, getDb } from "./firebase";
+import type { Character, Item, Kampagne, Location } from "./types";
+
+/**
+ * Alle Daten des Spiels liegen in Firestore:
+ *
+ *   charaktere/{id}  - die Tiere
+ *   orte/{id}        - die Schauplätze (mit Stadt)
+ *   items/{id}       - Gegenstände und Spuren
+ *   faelle/{id}      - vorgenerierte Fälle ("Kampagnen")
+ *
+ * Die Lösung eines Falls steht nie im Klartext in der Datenbank - sie steckt
+ * verschlüsselt im Feld "siegel" (siehe lib/seal.ts).
+ */
+
+const sauber = <T extends object>(daten: T): T =>
+  // undefined mag Firestore nicht.
+  JSON.parse(JSON.stringify(daten));
+
+/**
+ * Firestore liefert ohne Verbindung stillschweigend leere Ergebnisse aus dem
+ * lokalen Zwischenspeicher. Deshalb wird immer mitgegeben, ob die Antwort aus
+ * dem Cache kam - so lässt sich "noch nichts angelegt" von "keine Verbindung"
+ * unterscheiden.
+ */
+export type Abfrage<T> = { daten: T[]; ausCache: boolean };
+
+async function alle<T>(sammlung: string): Promise<Abfrage<T>> {
+  const schnappschuss = await getDocs(collection(getDb(), sammlung));
+  return {
+    daten: schnappschuss.docs.map((d) => ({ ...(d.data() as T), id: d.id })),
+    ausCache: schnappschuss.metadata.fromCache,
+  };
+}
+
+/* --- Stammdaten ---------------------------------------------------- */
+
+export const ladeCharaktere = () => alle<Character>("charaktere");
+export const ladeOrte = () => alle<Location>("orte");
+export const ladeItems = () => alle<Item>("items");
+
+export async function speichereCharakter(charakter: Character): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "charaktere", charakter.id), sauber(charakter));
+}
+
+export async function speichereOrt(ort: Location): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "orte", ort.id), sauber(ort));
+}
+
+export async function speichereItem(item: Item): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "items", item.id), sauber(item));
+}
+
+export async function loesche(sammlung: string, id: string): Promise<void> {
+  await anmelden();
+  await deleteDoc(doc(getDb(), sammlung, id));
+}
+
+/** Schreibt eine ganze Liste auf einmal - für den Import aus einer CSV. */
+export async function speichereListe(
+  sammlung: "charaktere" | "orte" | "items",
+  eintraege: { id: string }[],
+): Promise<void> {
+  await anmelden();
+  const db = getDb();
+
+  // Firestore erlaubt 500 Schreibvorgänge pro Stapel.
+  for (let i = 0; i < eintraege.length; i += 400) {
+    const stapel = writeBatch(db);
+    for (const eintrag of eintraege.slice(i, i + 400)) {
+      stapel.set(doc(db, sammlung, eintrag.id), sauber(eintrag));
+    }
+    await stapel.commit();
+  }
+}
+
+/* --- Kampagnen (vorgenerierte Fälle) -------------------------------- */
+
+export async function ladeKampagnen(): Promise<Abfrage<Kampagne>> {
+  const schnappschuss = await getDocs(
+    query(collection(getDb(), "faelle"), orderBy("erstelltAm", "desc")),
+  );
+  return {
+    daten: schnappschuss.docs.map((d) => ({ ...(d.data() as Kampagne), id: d.id })),
+    ausCache: schnappschuss.metadata.fromCache,
+  };
+}
+
+export async function speichereKampagne(kampagne: Kampagne): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "faelle", kampagne.id), sauber(kampagne));
+}
+
+export const loescheKampagne = (id: string) => loesche("faelle", id);

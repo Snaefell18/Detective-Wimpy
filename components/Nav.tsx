@@ -1,11 +1,12 @@
 "use client";
 
-export type Tab = "ort" | "verdaechtige" | "notizbuch";
+export type Tab = "ort" | "verdaechtige" | "inventar" | "notizbuch";
 
 const TABS: { id: Tab; symbol: string; label: string }[] = [
   { id: "ort", symbol: "🗺️", label: "Orte" },
-  { id: "verdaechtige", symbol: "🐾", label: "Verdächtige" },
-  { id: "notizbuch", symbol: "📓", label: "Notizbuch" },
+  { id: "verdaechtige", symbol: "🐾", label: "Tiere" },
+  { id: "inventar", symbol: "🎒", label: "Inventar" },
+  { id: "notizbuch", symbol: "📓", label: "Notizen" },
 ];
 
 export function Nav({
@@ -29,7 +30,7 @@ export function Nav({
           <span className="symbol">{tab.symbol}</span>
           <span>
             {tab.label}
-            {tab.id === "notizbuch" && spurenAnzahl > 0 ? ` (${spurenAnzahl})` : ""}
+            {tab.id === "inventar" && spurenAnzahl > 0 ? ` ${spurenAnzahl}` : ""}
           </span>
         </button>
       ))}

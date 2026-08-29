@@ -5,6 +5,9 @@ import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
+import { InventarScreen } from "@/components/InventarScreen";
+import { KampagnenListe } from "@/components/KampagnenListe";
+import { Prolog } from "@/components/Prolog";
 import { Nav, type Tab } from "@/components/Nav";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
@@ -20,7 +23,8 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>("ort");
   const [chatMit, setChatMit] = useState<string | null>(null);
   const [beschuldigenOffen, setBeschuldigenOffen] = useState(false);
-  const [introLaeuft, setIntroLaeuft] = useState(false);
+  const [phase, setPhase] = useState<"aus" | "prolog" | "intro">("aus");
+  const [kampagnenOffen, setKampagnenOffen] = useState(false);
 
   const { stand, geladen, laedt, fehler, setFehler } = spiel;
 
@@ -33,18 +37,33 @@ export default function Home() {
   const fallStarten = async () => {
     if (admin.einstellungen.intro) tonFreigeben();
     const geklappt = await spiel.neuerFall();
-    if (geklappt && admin.einstellungen.intro) setIntroLaeuft(true);
+    if (geklappt && admin.einstellungen.intro) setPhase("prolog");
+  };
+
+  /** Vorbereiteter Fall aus der Datenbank - startet ohne Modellaufruf. */
+  const kampagneStarten = (kampagne: Parameters<typeof spiel.kampagneStarten>[0]) => {
+    if (admin.einstellungen.intro) tonFreigeben();
+    spiel.kampagneStarten(kampagne);
+    setKampagnenOffen(false);
+    if (admin.einstellungen.intro) setPhase("prolog");
   };
 
   if (!geladen) {
     return <main className="app" />;
   }
 
-  // Intro läuft: es deckt alles ab, bis der Song vorbei ist.
-  if (introLaeuft && stand.fall) {
+  // Erst der gesprochene Prolog, dann das Intro mit dem Titelsong.
+  if (phase !== "aus" && stand.fall) {
     return (
       <main className="app">
-        <IntroSequenz fall={stand.fall} onFertig={() => setIntroLaeuft(false)} />
+        {phase === "prolog" ? (
+          <Prolog
+            introText={stand.fall.introText}
+            onFertig={() => setPhase("intro")}
+          />
+        ) : (
+          <IntroSequenz fall={stand.fall} onFertig={() => setPhase("aus")} />
+        )}
       </main>
     );
   }
@@ -55,9 +74,17 @@ export default function Home() {
       <main className="app">
         <StartScreen
           onStart={() => void fallStarten()}
+          onKampagnen={() => setKampagnenOffen(true)}
           laedt={laedt === "fall"}
           fehler={fehler}
         />
+
+        {kampagnenOffen && (
+          <KampagnenListe
+            onStarten={kampagneStarten}
+            onSchliessen={() => setKampagnenOffen(false)}
+          />
+        )}
       </main>
     );
   }
@@ -131,12 +158,15 @@ export default function Home() {
           />
         )}
 
-        {tab === "notizbuch" && (
-          <NotizbuchScreen
+        {tab === "inventar" && (
+          <InventarScreen
             gefundeneSpuren={stand.gefundeneSpuren}
             notizen={stand.notizen}
-            besetzung={stand.fall.besetzung}
           />
+        )}
+
+        {tab === "notizbuch" && (
+          <NotizbuchScreen notizen={stand.notizen} besetzung={stand.fall.besetzung} />
         )}
       </div>
 
