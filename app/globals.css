@@ -1048,9 +1048,16 @@ a.zurueck {
 }
 
 .szene-ort img {
-  object-position: center;
-  /* Leichter Zoom, damit die Szene lebendig wirkt. */
+  /*
+   * Oben verankert: Die Ortsbilder sind hochkant (z.B. 592x1280), die Bühne
+   * ist wegen der Navigationsleiste flacher. Bei "center" schnitt cover den
+   * Himmel oben weg. Beschnitten wird jetzt unten - dort liegen ohnehin
+   * Verlauf, Umsehen-Knopf und Ortsleiste darüber.
+   */
+  object-position: center top;
+  /* Leichter Zoom, damit die Szene lebendig wirkt - ebenfalls von oben aus. */
   transform: scale(1.04);
+  transform-origin: center top;
 }
 
 /* Freigestellte Figuren sollen ganz zu sehen sein, nicht angeschnitten. */
