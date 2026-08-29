@@ -95,6 +95,19 @@ bleibt alles zustandslos - ideal für Vercel, ganz ohne Datenbank.
 Der Spielstand selbst (Ort, Notizen, Chatverläufe, Verdachtswerte) liegt im
 `localStorage` des Geräts, ein angefangener Fall überlebt also das Schließen der App.
 
+## Design
+
+Farben und Typografie orientieren sich am Detective-Conan-Keyvisual:
+
+- tiefes Marineblau (`#050f22`) als Grund, Karten in Stahlblau,
+- ein schräger Lichtstrahl und ein angedeutetes Panel-Raster im Hintergrund,
+- der Rot-Orange-Verlauf des Serienlogos mit gelber Kontur für Titel,
+  Hauptaktionen und die eigenen Chatblasen,
+- Eisblau (`#7cc4ff`) für Werte, Fokusrahmen und ruhige Akzente.
+
+Alle Farben liegen als CSS-Variablen ganz oben in `app/globals.css` - dort einmal
+ändern reicht, um das ganze Spiel umzufärben.
+
 ## Projektstruktur
 
 ```

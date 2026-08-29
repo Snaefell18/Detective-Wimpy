@@ -40,7 +40,7 @@ export function ErgebnisScreen({
           <p style={{ margin: 0, fontStyle: "italic" }}>„{ergebnis.reaktion}“</p>
         </div>
 
-        <button className="knopf gold" onClick={onNeuerFall} disabled={laedt}>
+        <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
           {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
         </button>
       </div>

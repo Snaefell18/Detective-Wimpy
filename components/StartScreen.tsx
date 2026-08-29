@@ -26,7 +26,7 @@ export function StartScreen({
 
       {fehler && <p className="fehler">{fehler}</p>}
 
-      <button className="knopf gold" onClick={onStart} disabled={laedt}>
+      <button className="knopf aktion" onClick={onStart} disabled={laedt}>
         {laedt ? "Der Fall wird ausgeheckt …" : "Neuen Fall starten"}
       </button>
 

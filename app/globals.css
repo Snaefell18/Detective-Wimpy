@@ -5,18 +5,25 @@
    --------------------------------------------------------------- */
 
 :root {
-  --nacht: #0d0b14;
-  --nacht-2: #16121f;
-  --karte: #1e1930;
-  --karte-hell: #2a2340;
-  --rand: #3a3155;
-  --text: #f4f0ff;
-  --text-leise: #a79fc4;
-  --gold: #ffc44d;
-  --gold-dunkel: #d99b16;
-  --rot: #ff6b6b;
-  --gruen: #58d68d;
-  --blau: #6bb8ff;
+  /* Farbwelt nach dem Detective-Conan-Keyvisual:
+     tiefes Marineblau als Grund, Eisblau als Licht, und der
+     Rot-Orange-Verlauf des Logos mit gelber Kontur als Akzent. */
+  --nacht: #050f22;
+  --nacht-2: #08192f;
+  --karte: #102a4e;
+  --karte-hell: #1a3d69;
+  --rand: #2d5a88;
+  --text: #eaf3ff;
+  --text-leise: #9db8dc;
+
+  --rot: #e4322b;
+  --rot-dunkel: #a3170f;
+  --orange: #f79320;
+  --gelb: #ffd24a;
+
+  --eis: #7cc4ff;
+  --eis-dunkel: #2f6fbf;
+  --gruen: #4fd18b;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -80,9 +87,52 @@ textarea {
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 60% at 50% 0%, #241d3a 0%, transparent 60%),
+    radial-gradient(130% 70% at 50% -10%, #14396b 0%, transparent 62%),
+    radial-gradient(90% 50% at 100% 100%, #0b2748 0%, transparent 70%),
     var(--nacht);
+  /* clip statt hidden: verhindert, dass scrollIntoView im Chat
+     versehentlich den ganzen App-Rahmen verschiebt. */
   overflow: hidden;
+  overflow: clip;
+  isolation: isolate;
+}
+
+/* Der schräge Lichtstrahl von links oben - wie auf dem Conan-Plakat. */
+.app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(
+    104deg,
+    transparent 22%,
+    rgba(160, 210, 255, 0.16) 30%,
+    rgba(210, 235, 255, 0.05) 36%,
+    transparent 44%
+  );
+  pointer-events: none;
+}
+
+/* Angedeutete Bilder-Collage im Hintergrund. */
+.app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(124, 196, 255, 0.05) 0 2px,
+      transparent 2px 86px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(124, 196, 255, 0.05) 0 2px,
+      transparent 2px 124px
+    );
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 75%);
+  pointer-events: none;
 }
 
 .scroll {
@@ -97,7 +147,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(180deg, rgba(13, 11, 20, 0.96), rgba(13, 11, 20, 0.6));
+  background: linear-gradient(180deg, rgba(5, 15, 34, 0.96), rgba(5, 15, 34, 0.55));
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -151,14 +201,20 @@ textarea {
   opacity: 0.45;
 }
 
-.knopf.gold {
-  background: linear-gradient(160deg, var(--gold), var(--gold-dunkel));
-  color: #2a1c00;
+.knopf.aktion {
+  background: linear-gradient(165deg, var(--orange), var(--rot) 70%);
+  color: #fff;
+  border: 2px solid var(--gelb);
+  text-shadow: 0 1px 2px rgba(90, 12, 0, 0.6);
+  box-shadow: 0 8px 22px rgba(228, 50, 43, 0.28);
 }
 
 .knopf.rot {
-  background: linear-gradient(160deg, #ff8080, #d43b3b);
-  color: #2a0000;
+  background: linear-gradient(165deg, var(--rot), var(--rot-dunkel));
+  color: #fff;
+  border: 2px solid var(--gelb);
+  text-shadow: 0 1px 2px rgba(60, 6, 0, 0.7);
+  box-shadow: 0 8px 22px rgba(163, 23, 15, 0.32);
 }
 
 .knopf.klein {
@@ -216,6 +272,16 @@ textarea {
   opacity: 0.75;
 }
 
+/* In kleinen Flächen muss der Platzhaltertext mitschrumpfen. */
+.charakter-bild.klein .bild-platzhalter {
+  font-size: 9px;
+}
+
+.ort-kachel-bild .bild-platzhalter,
+.item-bild .bild-platzhalter {
+  font-size: 10px;
+}
+
 /* --- Untere Navigation ------------------------------------------ */
 
 .nav {
@@ -226,7 +292,7 @@ textarea {
   display: flex;
   padding: 8px 12px calc(var(--safe-bottom) + 8px);
   gap: 6px;
-  background: rgba(16, 13, 26, 0.92);
+  background: rgba(6, 18, 38, 0.92);
   backdrop-filter: blur(18px);
   border-top: 1px solid var(--rand);
   z-index: 10;
@@ -251,8 +317,8 @@ textarea {
 }
 
 .nav button[data-aktiv="true"] {
-  color: var(--gold);
-  background: rgba(255, 196, 77, 0.1);
+  color: var(--gelb);
+  background: rgba(247, 147, 32, 0.12);
 }
 
 /* --- Animationen ------------------------------------------------ */
@@ -307,8 +373,8 @@ textarea {
   height: 190px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid var(--gold);
-  box-shadow: 0 18px 50px rgba(255, 196, 77, 0.22);
+  border: 3px solid var(--eis);
+  box-shadow: 0 18px 50px rgba(124, 196, 255, 0.25);
 }
 
 .start-titel {
@@ -316,10 +382,15 @@ textarea {
   font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  background: linear-gradient(120deg, var(--gold), #fff0c9);
+  background: linear-gradient(180deg, var(--orange) 8%, var(--rot) 70%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* Gelbe Außenkontur wie im Serienlogo. */
+  -webkit-text-stroke: 2px var(--gelb);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  text-transform: uppercase;
 }
 
 .start-unter {
@@ -357,7 +428,7 @@ textarea {
   position: absolute;
   inset: auto 0 0 0;
   padding: 30px 16px 14px;
-  background: linear-gradient(180deg, transparent, rgba(9, 7, 16, 0.95));
+  background: linear-gradient(180deg, transparent, rgba(4, 12, 28, 0.95));
 }
 
 .ort-bild-text h2 {
@@ -372,8 +443,8 @@ textarea {
 }
 
 .fund {
-  border-color: var(--gold);
-  background: rgba(255, 196, 77, 0.1);
+  border-color: var(--gelb);
+  background: rgba(255, 210, 74, 0.12);
   margin-top: 12px;
 }
 
@@ -447,8 +518,8 @@ textarea {
 }
 
 .ort-kachel[data-aktiv="true"] {
-  border-color: var(--gold);
-  background: rgba(255, 196, 77, 0.08);
+  border-color: var(--orange);
+  background: rgba(247, 147, 32, 0.1);
 }
 
 .ort-kachel-bild {
@@ -495,7 +566,7 @@ textarea {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--gruen), var(--gold), var(--rot));
+  background: linear-gradient(90deg, var(--gruen), var(--orange), var(--rot));
   transition: width 0.35s ease;
 }
 
@@ -529,7 +600,7 @@ textarea {
 .stat-balken span {
   display: block;
   height: 100%;
-  background: var(--blau);
+  background: var(--eis);
 }
 
 .stat-wert {
@@ -571,7 +642,7 @@ textarea {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--gold);
+  color: var(--gelb);
   font-weight: 700;
 }
 
@@ -614,8 +685,8 @@ textarea {
 
 .blase.eigen {
   align-self: flex-end;
-  background: linear-gradient(160deg, var(--gold), var(--gold-dunkel));
-  color: #2a1c00;
+  background: linear-gradient(160deg, var(--orange), var(--rot));
+  color: #fff;
   border-bottom-right-radius: 6px;
 }
 
@@ -650,7 +721,7 @@ textarea {
 
 .chat-fuss {
   padding: 10px 14px calc(var(--safe-bottom) + 10px);
-  background: rgba(16, 13, 26, 0.96);
+  background: rgba(6, 18, 38, 0.96);
   border-top: 1px solid var(--rand);
   display: flex;
   flex-direction: column;
@@ -675,9 +746,9 @@ textarea {
 }
 
 .modus[data-aktiv="true"] {
-  background: rgba(255, 196, 77, 0.14);
-  border-color: var(--gold);
-  color: var(--gold);
+  background: rgba(247, 147, 32, 0.16);
+  border-color: var(--orange);
+  color: var(--gelb);
 }
 
 .vorschlaege {
@@ -717,15 +788,15 @@ textarea {
 }
 
 .eingabe input:focus {
-  border-color: var(--gold);
+  border-color: var(--gelb);
 }
 
 .senden {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: linear-gradient(160deg, var(--gold), var(--gold-dunkel));
-  color: #2a1c00;
+  background: linear-gradient(160deg, var(--orange), var(--rot));
+  color: #fff;
   font-size: 18px;
   flex: none;
 }
@@ -756,7 +827,7 @@ textarea {
 
 .wahl-kachel[data-aktiv="true"] {
   border-color: var(--rot);
-  background: rgba(255, 107, 107, 0.12);
+  background: rgba(228, 50, 43, 0.16);
 }
 
 .feld {
@@ -777,7 +848,7 @@ textarea {
 }
 
 .feld textarea:focus {
-  border-color: var(--gold);
+  border-color: var(--gelb);
 }
 
 /* --- Ergebnis ---------------------------------------------------- */
@@ -815,8 +886,8 @@ textarea {
 
 .fehler {
   color: var(--rot);
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.35);
+  background: rgba(228, 50, 43, 0.12);
+  border: 1px solid rgba(228, 50, 43, 0.45);
   border-radius: 14px;
   padding: 10px 14px;
   font-size: 14px;
@@ -829,5 +900,5 @@ textarea {
   right: 16px;
   bottom: calc(var(--nav-hoehe) + var(--safe-bottom) + 12px);
   z-index: 15;
-  background: rgba(60, 20, 28, 0.96);
+  background: rgba(74, 16, 14, 0.96);
 }

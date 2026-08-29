@@ -42,7 +42,7 @@ export function OrtScreen({
         </div>
       </div>
 
-      <button className="knopf gold" onClick={umsehen} disabled={suchtGerade}>
+      <button className="knopf aktion" onClick={umsehen} disabled={suchtGerade}>
         {suchtGerade ? "Wimpy sucht …" : "🔍 Umsehen"}
       </button>
 
