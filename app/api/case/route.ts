@@ -106,7 +106,7 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.parse({
       model: MODEL,
-      max_tokens: 24000,
+      max_tokens: 8192,
       system: [
         {
           type: "text",
