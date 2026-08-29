@@ -2,52 +2,79 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bild } from "./Bild";
-import { introAudio } from "@/lib/introAudio";
+import { spiele, stand, stoppe } from "@/lib/introAudio";
 import type { Character, PublicCase } from "@/lib/types";
 
-/** Ohne Musik (z.B. wenn der Browser das Abspielen blockiert) wird gekürzt. */
-const STUMME_DAUER = 32;
+/** Ohne Musik (blockierter Ton) läuft das Intro deutlich kürzer. */
+const STUMME_DAUER = 34;
 
 type Szene =
   | { art: "titel"; von: number; bis: number }
   | { art: "stadt"; von: number; bis: number }
-  | { art: "fall"; von: number; bis: number }
+  | { art: "wort"; von: number; bis: number; wort: string; nr: number }
   | { art: "verdaechtig"; von: number; bis: number; charakter: Character; nr: number }
   | { art: "orte"; von: number; bis: number }
   | { art: "frage"; von: number; bis: number }
-  | { art: "los"; von: number; bis: number };
+  | { art: "akte"; von: number; bis: number };
 
 /**
- * Baut den Ablauf als Anteile der Gesamtdauer (0..1). Dadurch passt das Intro
- * automatisch auf jede Songlänge - egal ob 30 Sekunden oder drei Minuten.
+ * Der Ablauf in Anteilen der Songlänge (0..1) - so passt das Intro auf jede
+ * Aufnahme. Am Ende steht die Fallakte; sie wartet auf einen Fingertipp.
  */
 function szenenPlan(fall: PublicCase): Szene[] {
   const verdaechtige = fall.besetzung.filter((c) => !c.istDetektiv);
 
+  // Ältere Fälle (und Kampagnen von vorher) haben noch keine Schlagworte -
+  // dann werden welche aus dem Fall selbst gebildet.
+  const worte = (fall.schlagworte ?? []).filter(Boolean).slice(0, 6);
+  const schlagworte = worte.length
+    ? worte
+    : [
+        fall.stadt,
+        fall.orte.find((o) => o.id === fall.tatort)?.name ?? fall.orte[0]?.name ?? "Tatort",
+        `${verdaechtige.length} Verdächtige`,
+        "Eine Spur zu viel",
+      ].filter(Boolean);
+
   const plan: Szene[] = [
-    { art: "titel", von: 0, bis: 0.1 },
-    { art: "stadt", von: 0.1, bis: 0.22 },
-    { art: "fall", von: 0.22, bis: 0.36 },
+    { art: "titel", von: 0, bis: 0.09 },
+    { art: "stadt", von: 0.09, bis: 0.2 },
   ];
 
-  // Die Verdächtigen teilen sich den Mittelteil.
-  const von = 0.36;
-  const bis = 0.68;
-  const schritt = verdaechtige.length ? (bis - von) / verdaechtige.length : 0;
-  verdaechtige.forEach((charakter, i) => {
-    plan.push({
-      art: "verdaechtig",
-      von: von + i * schritt,
-      bis: von + (i + 1) * schritt,
-      charakter,
-      nr: i + 1,
-    });
-  });
+  const verteile = <T,>(liste: T[], von: number, bis: number, bauen: (
+    posten: T,
+    i: number,
+    von: number,
+    bis: number,
+  ) => Szene) => {
+    if (liste.length === 0) return;
+    const schritt = (bis - von) / liste.length;
+    liste.forEach((posten, i) =>
+      plan.push(bauen(posten, i, von + i * schritt, von + (i + 1) * schritt)),
+    );
+  };
+
+  // Schlagworte blitzen einzeln auf.
+  verteile(schlagworte, 0.2, 0.42, (wort, i, von, bis) => ({
+    art: "wort",
+    von,
+    bis,
+    wort,
+    nr: i,
+  }));
+
+  verteile(verdaechtige, 0.42, 0.72, (charakter, i, von, bis) => ({
+    art: "verdaechtig",
+    von,
+    bis,
+    charakter,
+    nr: i + 1,
+  }));
 
   plan.push(
-    { art: "orte", von: 0.68, bis: 0.84 },
-    { art: "frage", von: 0.84, bis: 0.94 },
-    { art: "los", von: 0.94, bis: 1 },
+    { art: "orte", von: 0.72, bis: 0.85 },
+    { art: "frage", von: 0.85, bis: 0.94 },
+    { art: "akte", von: 0.94, bis: 1.01 },
   );
 
   return plan;
@@ -57,87 +84,69 @@ export function IntroSequenz({
   fall,
   onFertig,
 }: {
-  /** Der fertige Fall - das Intro startet erst, wenn alles da ist. */
   fall: PublicCase;
+  /** Wird erst aufgerufen, wenn der Spieler die Fallakte antippt. */
   onFertig: () => void;
 }) {
-  const startRef = useRef<number>(performance.now());
-  const fertigRef = useRef(false);
+  const startRef = useRef(performance.now());
   const [fortschritt, setFortschritt] = useState(0);
   const [tonAn, setTonAn] = useState(true);
 
   const plan = useMemo(() => szenenPlan(fall), [fall]);
 
-  // Der Fortschritt kommt aus dem Song selbst - so bleibt alles synchron.
   useEffect(() => {
-    const audio = introAudio();
-    let laeuft = true;
+    let laeuftNoch = true;
 
-    audio.currentTime = 0;
-    void audio
-      .play()
-      .then(() => {
-        if (laeuft) setTonAn(true);
-      })
-      .catch(() => {
-        // Nur melden, wenn dieser Durchlauf noch aktiv ist: React startet
-        // Effekte doppelt, und das abgebrochene erste play() ist kein Fehler.
-        if (laeuft) setTonAn(false);
-      });
+    void spiele("intro").then((geklappt) => {
+      if (laeuftNoch) setTonAn(geklappt);
+    });
 
     const tick = () => {
-      if (!laeuft) return;
+      if (!laeuftNoch) return;
 
-      const dauer = audio && Number.isFinite(audio.duration) && audio.duration > 1
-        ? audio.duration
-        : STUMME_DAUER;
-      const zeit =
-        audio && !audio.paused && audio.currentTime > 0
-          ? audio.currentTime
-          : (performance.now() - startRef.current) / 1000;
+      const { zeit, dauer } = stand("intro");
+      const gesamt = dauer ?? STUMME_DAUER;
+      const vergangen = zeit > 0 ? zeit : (performance.now() - startRef.current) / 1000;
 
-      const anteil = Math.min(1, zeit / dauer);
-      setFortschritt(anteil);
-
-      if (anteil >= 1) {
-        if (!fertigRef.current) {
-          fertigRef.current = true;
-          onFertig();
-        }
-        return;
-      }
+      // Bei 1 bleibt es stehen: Die Fallakte wartet auf den Fingertipp.
+      setFortschritt(Math.min(1, vergangen / gesamt));
       requestAnimationFrame(tick);
     };
 
     const id = requestAnimationFrame(tick);
     return () => {
-      laeuft = false;
+      laeuftNoch = false;
       cancelAnimationFrame(id);
-      audio.pause();
-      audio.currentTime = 0;
+      stoppe("intro");
     };
-  }, [onFertig]);
+  }, []);
 
-  const szene = plan.find((s) => fortschritt >= s.von && fortschritt < s.bis) ?? plan[plan.length - 1];
-  const lokal = Math.min(1, (fortschritt - szene.von) / Math.max(0.001, szene.bis - szene.von));
-
-  const tonNachholen = () => {
-    if (tonAn) return;
-    void introAudio()
-      .play()
-      .then(() => setTonAn(true))
-      .catch(() => {});
-  };
+  const szene =
+    plan.find((s) => fortschritt >= s.von && fortschritt < s.bis) ?? plan[plan.length - 1];
+  const lokal = Math.min(
+    1,
+    (fortschritt - szene.von) / Math.max(0.001, szene.bis - szene.von),
+  );
 
   return (
-    // Sollte der Browser den Ton doch blockiert haben, startet ihn der erste
-    // Tipp auf den Bildschirm.
-    <div className="intro" onPointerDown={tonNachholen}>
+    <div
+      className="intro"
+      onPointerDown={() => {
+        if (!tonAn) void spiele("intro").then(setTonAn);
+      }}
+    >
       <div className="intro-regen" />
       <div className="intro-strahl" />
+      <div className="intro-puls" />
 
       <div className="intro-buehne">
-        <SzenenInhalt szene={szene} lokal={lokal} fall={fall} key={szeneSchluessel(szene)} />
+        <SzenenInhalt
+          szene={szene}
+          lokal={lokal}
+          fall={fall}
+          onStarten={onFertig}
+          key={szeneSchluessel(szene)}
+        />
       </div>
 
       <div className="intro-leiste">
@@ -146,27 +155,15 @@ export function IntroSequenz({
         </div>
         <div className="intro-knoepfe">
           {!tonAn && (
-            <button
-              className="intro-ton"
-              onClick={() => {
-                void introAudio()
-                  .play()
-                  .then(() => setTonAn(true))
-                  .catch(() => {});
-              }}
-            >
+            <button className="intro-ton" onClick={() => void spiele("intro").then(setTonAn)}>
               🔈 Ton an
             </button>
           )}
-          <button
-            className="intro-skip"
-            onClick={() => {
-              fertigRef.current = true;
-              onFertig();
-            }}
-          >
-            Überspringen ›
-          </button>
+          {szene.art !== "akte" && (
+            <button className="intro-skip" onClick={onFertig}>
+              Überspringen ›
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -174,7 +171,11 @@ export function IntroSequenz({
 }
 
 const szeneSchluessel = (szene: Szene) =>
-  szene.art === "verdaechtig" ? `${szene.art}-${szene.charakter.id}` : szene.art;
+  szene.art === "verdaechtig"
+    ? `v-${szene.charakter.id}`
+    : szene.art === "wort"
+      ? `w-${szene.nr}`
+      : szene.art;
 
 /* ------------------------------------------------------------------ */
 
@@ -182,17 +183,20 @@ function SzenenInhalt({
   szene,
   lokal,
   fall,
+  onStarten,
 }: {
   szene: Szene;
   lokal: number;
   fall: PublicCase;
+  onStarten: () => void;
 }) {
   switch (szene.art) {
     case "titel":
       return (
         <div className="szene-block">
+          <div className="blitz" />
           <p className="intro-oberzeile einfliegen">Ein neuer Fall für</p>
-          <h1 className="intro-logo knallen">
+          <h1 className="intro-logo slam">
             Detektiv
             <span>Wimpy</span>
           </h1>
@@ -202,31 +206,31 @@ function SzenenInhalt({
     case "stadt":
       return (
         <div className="szene-block">
+          <div className="blitz" />
           <p className="intro-oberzeile einfliegen">Tatort</p>
-          <h1 className="intro-stadt knallen">{fall.stadt}</h1>
+          <h1 className="intro-stadt slam">{fall.stadt}</h1>
           <div className="intro-streifen">
             {fall.orte.slice(0, 5).map((ort, i) => (
               <div
                 key={ort.id}
-                className="intro-streifen-bild"
-                style={{ animationDelay: `${i * 0.12}s` }}
+                className="intro-streifen-bild wischen"
+                style={{ animationDelay: `${i * 0.09}s` }}
               >
-                <Bild src={ort.bild} alt={ort.name} platzhalter={ort.name} />
+                <Bild src={ort.bild} alt={ort.name} platzhalter="" groesse="120px" />
               </div>
             ))}
           </div>
         </div>
       );
 
-    case "fall":
+    case "wort":
       return (
         <div className="szene-block">
-          <p className="intro-oberzeile einfliegen">Der Fall</p>
-          <h1 className="intro-falltitel knallen">{fall.titel}</h1>
-          <p className="intro-text">
-            {schreibmaschine(fall.tatbeschreibung, lokal)}
-            <span className="cursor" />
-          </p>
+          <div className="blitz stark" />
+          <div className="wort-balken" data-seite={szene.nr % 2 === 0 ? "links" : "rechts"} />
+          <h1 className="schlagwort" data-nr={szene.nr}>
+            {szene.wort}
+          </h1>
         </div>
       );
 
@@ -234,12 +238,12 @@ function SzenenInhalt({
       const c = szene.charakter;
       return (
         <div className="szene-block verdaechtig-szene">
-          <div className="intro-portraet hereinschieben">
-            <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
+          <div className="intro-portraet slam-seite">
+            <Bild src={c.bild} alt={c.name} platzhalter={c.name} groesse="260px" />
           </div>
           <div className="intro-steckbrief">
             <span className="intro-nummer">Verdächtige·r {szene.nr}</span>
-            <h1 className="knallen">{c.name}</h1>
+            <h1 className="slam">{c.name}</h1>
             <p className="leise">
               {c.tierart}, {c.alter} Jahre
             </p>
@@ -248,7 +252,6 @@ function SzenenInhalt({
               <IntroWert label="Schelm" wert={c.stats.schelmischkeit} lokal={lokal} />
               <IntroWert label="Klugheit" wert={c.stats.intelligenz} lokal={lokal} />
             </div>
-            <p className="intro-zitat">{c.beschreibung}</p>
           </div>
         </div>
       );
@@ -263,13 +266,12 @@ function SzenenInhalt({
               <div
                 key={ort.id}
                 className="intro-ort aufpoppen"
-                style={{ animationDelay: `${i * 0.14}s` }}
+                style={{ animationDelay: `${i * 0.1}s` }}
               >
                 <div className="intro-ort-bild">
-                  <Bild src={ort.bild} alt={ort.name} platzhalter={ort.name} />
+                  <Bild src={ort.bild} alt={ort.name} platzhalter={ort.name} groesse="180px" />
                 </div>
                 <strong>{ort.name}</strong>
-                <span className="leise klein">{ort.atmosphaere}</span>
               </div>
             ))}
           </div>
@@ -281,30 +283,46 @@ function SzenenInhalt({
         <div className="szene-block">
           <h1 className="intro-frage pochen">Wer war es?</h1>
           <div className="intro-gesichter">
-            {fall.besetzung.filter((c) => !c.istDetektiv).map((c, i) => (
-              <div
-                key={c.id}
-                className="intro-gesicht flackern"
-                style={{ animationDelay: `${i * 0.18}s` }}
-              >
-                <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
-              </div>
-            ))}
+            {fall.besetzung
+              .filter((c) => !c.istDetektiv)
+              .map((c, i) => (
+                <div
+                  key={c.id}
+                  className="intro-gesicht flackern"
+                  style={{ animationDelay: `${i * 0.14}s` }}
+                >
+                  <Bild src={c.bild} alt={c.name} platzhalter={c.name} groesse="120px" />
+                </div>
+              ))}
           </div>
         </div>
       );
 
-    case "los":
+    case "akte":
+      // Die vollständige Fallakte - ein Tipp darauf startet die Runde.
       return (
-        <div className="szene-block">
-          <h1 className="intro-los knallen">Wimpy übernimmt den Fall</h1>
-        </div>
+        <button className="akte einblenden" onClick={onStarten}>
+          <span className="akte-marke">Fallakte · {fall.stadt}</span>
+          <h1 className="akte-titel">{fall.titel}</h1>
+          <p className="akte-text">{fall.tatbeschreibung}</p>
+
+          <div className="akte-zahlen">
+            <span>
+              <strong>{fall.besetzung.length - 1}</strong> Verdächtige
+            </span>
+            <span>
+              <strong>{fall.orte.length}</strong> Schauplätze
+            </span>
+          </div>
+
+          <span className="akte-knopf">Fall übernehmen ›</span>
+        </button>
       );
   }
 }
 
 function IntroWert({ label, wert, lokal }: { label: string; wert: number; lokal: number }) {
-  const anteil = Math.min(1, lokal * 2.2) * wert * 10;
+  const anteil = Math.min(1, lokal * 2.4) * wert * 10;
   return (
     <div className="intro-wert">
       <span>{label}</span>
@@ -314,10 +332,4 @@ function IntroWert({ label, wert, lokal }: { label: string; wert: number; lokal:
       <strong>{wert}</strong>
     </div>
   );
-}
-
-/** Schreibt den Text im Takt der Szene. */
-function schreibmaschine(text: string, lokal: number): string {
-  const zeichen = Math.floor(Math.min(1, lokal * 1.8) * text.length);
-  return text.slice(0, zeichen);
 }

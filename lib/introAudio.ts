@@ -1,77 +1,110 @@
 "use client";
 
 /**
- * Der Titelsong lebt in einem einzigen Audio-Element außerhalb von React.
+ * Tonspur des Spiels: Prolog, Titelsong und Siegermusik.
  *
- * Hintergrund: Safari und Chrome erlauben Abspielen nur als Folge einer
- * Nutzergeste. Das Intro startet aber erst, wenn der Fall fertig erzeugt ist -
- * also mehrere Sekunden nach dem Klick. Deshalb wird das Element schon im
- * Klick-Handler kurz "angetippt" (stumm starten, sofort anhalten). Danach gilt
- * es als freigegeben und darf später jederzeit spielen.
+ * Alles läuft über einen kleinen Manager außerhalb von React. Zwei Gründe:
+ *
+ * 1. Es darf immer nur ein Stück spielen. Vorher konnten sich Erzähler und
+ *    Titelsong überlagern, weil zwei Bildschirme gleichzeitig abspielten.
+ * 2. Browser erlauben Abspielen nur als Folge einer Nutzergeste. Deshalb
+ *    werden im Klick alle Stücke einmal kurz "angetippt" - danach dürfen sie
+ *    auch später starten, etwa nachdem der Fall erzeugt wurde.
  */
 
-let audio: HTMLAudioElement | null = null;
-let jubel: HTMLAudioElement | null = null;
-let prolog: HTMLAudioElement | null = null;
+export type Stueck = "prolog" | "intro" | "jubel";
 
-export function introAudio(): HTMLAudioElement {
+const DATEIEN: Record<Stueck, string> = {
+  prolog: "/audio/introdark.mp3",
+  intro: "/audio/intro.mp3",
+  jubel: "/audio/winner.mp3",
+};
+
+const spieler = new Map<Stueck, HTMLAudioElement>();
+let laufend: Stueck | null = null;
+
+function hole(stueck: Stueck): HTMLAudioElement {
+  let audio = spieler.get(stueck);
   if (!audio) {
-    audio = new Audio("/audio/intro.mp3");
+    audio = new Audio(DATEIEN[stueck]);
     audio.preload = "auto";
+    spieler.set(stueck, audio);
   }
   return audio;
 }
 
-/** Der gesprochene Prolog vor dem Intro (public/audio/introdark.mp3). */
-export function prologAudio(): HTMLAudioElement {
-  if (!prolog) {
-    prolog = new Audio("/audio/introdark.mp3");
-    prolog.preload = "auto";
-  }
-  return prolog;
-}
+export const audioVon = (stueck: Stueck): HTMLAudioElement => hole(stueck);
 
-/**
- * Siegermusik für den gelösten Fall (public/audio/winner.mp3).
- * Fehlt die Datei, passiert einfach nichts.
- */
-export function jubelSpielen(): void {
-  if (!jubel) {
-    jubel = new Audio("/audio/winner.mp3");
-    jubel.preload = "auto";
-  }
-  jubel.currentTime = 0;
-  void jubel.play().catch(() => {});
-}
-
-/** Beendet beide Stücke - z.B. beim Verlassen des Ergebnisses. */
-export function musikStoppen(): void {
-  for (const stueck of [audio, jubel, prolog]) {
-    if (!stueck) continue;
-    stueck.pause();
-    stueck.currentTime = 0;
-  }
-}
-
-/**
- * Im Klick-Handler aufrufen: gibt das Abspielen frei und lädt schon mal vor.
- *
- * Wichtig: hier kein load() aufrufen - das bricht das gerade gestartete play()
- * ab, und die Freigabe wäre wirkungslos.
- */
+/** Im Klick-Handler aufrufen: gibt alle Stücke frei und lädt sie vor. */
 export function tonFreigeben(): void {
-  // Beide Stücke freigeben: erst spricht der Prolog, dann läuft der Song.
-  for (const a of [prologAudio(), introAudio()]) {
-    a.muted = true;
-    void a
+  for (const stueck of Object.keys(DATEIEN) as Stueck[]) {
+    const audio = hole(stueck);
+    audio.muted = true;
+    void audio
       .play()
       .then(() => {
-        a.pause();
-        a.currentTime = 0;
-        a.muted = false;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
       })
       .catch(() => {
-        a.muted = false;
+        audio.muted = false;
       });
   }
+}
+
+/**
+ * Spielt ein Stück von vorn und stoppt alle anderen.
+ * Gibt zurück, ob der Ton tatsächlich läuft.
+ */
+export async function spiele(stueck: Stueck): Promise<boolean> {
+  stoppeAusser(stueck);
+
+  const audio = hole(stueck);
+  audio.currentTime = 0;
+  laufend = stueck;
+
+  try {
+    await audio.play();
+    return true;
+  } catch {
+    // Blockiert der Browser, läuft die Szene stumm weiter.
+    return false;
+  }
+}
+
+/** Hält ein Stück an (oder alle, wenn keins genannt ist). */
+export function stoppe(stueck?: Stueck): void {
+  const betroffen = stueck ? [stueck] : ([...spieler.keys()] as Stueck[]);
+  for (const name of betroffen) {
+    const audio = spieler.get(name);
+    if (!audio) continue;
+    audio.pause();
+    audio.currentTime = 0;
+    if (laufend === name) laufend = null;
+  }
+}
+
+function stoppeAusser(behalten: Stueck): void {
+  for (const [name, audio] of spieler) {
+    if (name === behalten) continue;
+    audio.pause();
+    audio.currentTime = 0;
+  }
+}
+
+/** Läuft dieses Stück gerade hörbar? */
+export const laeuft = (stueck: Stueck): boolean => {
+  const audio = spieler.get(stueck);
+  return Boolean(audio && !audio.paused && audio.currentTime > 0);
+};
+
+/** Spielzeit und Länge - daran hängen die Animationen. */
+export function stand(stueck: Stueck): { zeit: number; dauer: number | null } {
+  const audio = spieler.get(stueck);
+  if (!audio) return { zeit: 0, dauer: null };
+  return {
+    zeit: audio.currentTime,
+    dauer: Number.isFinite(audio.duration) && audio.duration > 1 ? audio.duration : null,
+  };
 }

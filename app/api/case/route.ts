@@ -4,9 +4,10 @@ import { ergebnisAus, fehlerText } from "@/lib/antwort";
 import { idOderStandard, passendeId } from "@/lib/zuordnen";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
-import { LOCATIONS, waehleSchauplaetze } from "@/lib/locations";
+import { LOCATIONS, findeOrt, waehleSchauplaetze } from "@/lib/locations";
 import { buildCasePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { ITEMS } from "@/lib/items";
+import type { CaseDraft } from "@/lib/schemas";
 import {
   CharacterSchema,
   EinstellungenSchema,
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await getAnthropic().messages.parse({
+    const response = await getAnthropic().messages.create({
       model: MODEL,
       max_tokens: 8192,
       system: [
@@ -140,10 +141,7 @@ export async function POST(request: Request) {
       ],
     });
 
-    const modellAntwort = ergebnisAus<typeof response.parsed_output>(
-      response,
-      "api/case",
-    );
+    const modellAntwort = ergebnisAus<CaseDraft>(response, "api/case");
     if ("fehler" in modellAntwort) {
       return NextResponse.json(
         { fehler: modellAntwort.fehler },
@@ -151,7 +149,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const draft = modellAntwort.daten!;
+    const draft = modellAntwort.daten;
 
     // Die Ids des Modells auf die tatsächlich gültigen abbilden - ein
     // danebenliegender Name soll nicht den ganzen Fall unbrauchbar machen.
@@ -197,6 +195,16 @@ export async function POST(request: Request) {
       titel: draft.titel,
       tatbeschreibung: draft.tatbeschreibung,
       introText: draft.introText,
+      // Notfalls Schlagworte selbst bilden - das Intro braucht immer welche.
+      schlagworte:
+        draft.schlagworte?.filter((w) => w.trim()).slice(0, 6).length >= 3
+          ? draft.schlagworte.map((w) => w.trim()).filter(Boolean).slice(0, 6)
+          : [
+              schauplatz.stadt.name,
+              findeOrt(schauplatz.orte, draft.tatort)?.name ?? schauplatz.orte[0].name,
+              `${verdaechtige.length} Verdächtige`,
+              "Eine Spur zu viel",
+            ],
       tatort: idOderStandard(draft.tatort, ortIds, ortIds[0]),
       taeterId: taeter.id,
       motiv: draft.motiv,
@@ -214,6 +222,7 @@ export async function POST(request: Request) {
       titel: fall.titel,
       tatbeschreibung: fall.tatbeschreibung,
       introText: fall.introText,
+      schlagworte: fall.schlagworte,
       tatort: fall.tatort,
       aufenthalt: Object.fromEntries(
         fall.verdaechtige.map((v) => [v.charakterId, v.aufenthaltsort]),

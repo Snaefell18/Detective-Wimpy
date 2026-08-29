@@ -3,24 +3,22 @@ import type { Message } from "@anthropic-ai/sdk/resources/messages";
 /**
  * Wertet eine Antwort der Claude-API aus.
  *
- * Statt jeden Misserfolg gleich zu behandeln, sagen wir genau, was los war -
- * sonst sieht man im Spiel nur "Fehler" und tappt im Dunkeln. Fehlt das
- * geparste Ergebnis, wird als letzter Versuch das JSON aus dem Text gelesen:
- * Das rettet Antworten, die inhaltlich stimmen, aber am Parser vorbeigingen.
+ * Bewusst wird hier selbst geparst statt über messages.parse(): Dessen strenge
+ * Prüfung wirft eine Ausnahme, sobald ein einziges Feld nicht exakt zum Schema
+ * passt - und ein Charakter, der "misstrauisch" statt "nervös" ist, hätte den
+ * ganzen Spielzug gekostet. Die Feinarbeit macht danach lib/zuordnen.ts.
  */
 export function ergebnisAus<T>(
-  antwort: Message & { parsed_output?: T | null },
+  antwort: Message,
   bereich: string,
 ): { daten: T } | { fehler: string; status: number } {
-  if (antwort.parsed_output) return { daten: antwort.parsed_output };
-
   const text = antwort.content
     .filter((block): block is Extract<typeof block, { type: "text" }> => block.type === "text")
     .map((block) => block.text)
     .join("")
     .trim();
 
-  // Notnagel: JSON aus dem Text fischen.
+  // Das Modell liefert JSON; manchmal mit Vor- oder Nachrede drumherum.
   const anfang = text.indexOf("{");
   const ende = text.lastIndexOf("}");
   if (anfang >= 0 && ende > anfang) {

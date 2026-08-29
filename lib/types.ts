@@ -96,6 +96,8 @@ export type CaseFile = {
   orte: Location[];
   /** Kurzer Prolog-Text, der vor dem Intro eingeblendet wird. */
   introText: string;
+  /** Schlagworte, die im Intro einzeln aufblitzen. */
+  schlagworte: string[];
   titel: string;
   tatbeschreibung: string;
   tatort: string; // Location-Id
@@ -181,6 +183,8 @@ export type PublicCase = {
   orte: Location[];
   /** Kurzer Prolog-Text, der vor dem Intro eingeblendet wird. */
   introText: string;
+  /** Schlagworte, die im Intro einzeln aufblitzen. */
+  schlagworte: string[];
   titel: string;
   tatbeschreibung: string;
   tatort: string;

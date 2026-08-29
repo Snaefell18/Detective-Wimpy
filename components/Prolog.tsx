@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { prologAudio } from "@/lib/introAudio";
+import { spiele, stand, stoppe } from "@/lib/introAudio";
 
 /**
- * Der gesprochene Prolog vor dem Intro (public/audio/introdark.mp3).
+ * Der gesprochene Vorspann (public/audio/introdark.mp3).
  *
- * Die festen Zeilen des Sprechers werden im Takt der Aufnahme eingeblendet,
- * danach folgt der Anriss dieses Falls. Am Ende der Aufnahme geht es direkt
- * ins Intro mit dem Titelsong.
+ * Die Zeilen erscheinen im Takt der Aufnahme - eine nach der anderen, ruhig
+ * und mit Nachhall. Danach eine kurze Stille, dann übernimmt das Intro.
  */
 const SPRECHERTEXT = [
   "Es gibt Dinge, die man übersieht.",
@@ -21,50 +20,45 @@ const SPRECHERTEXT = [
 ];
 
 /** Ohne Ton wäre das Warten sonst zäh. */
-const STUMME_DAUER = 14;
+const STUMME_DAUER = 18;
 
-export function Prolog({
-  introText,
-  onFertig,
-}: {
-  /** Der fallspezifische Anriss aus der Datenbank. */
-  introText: string;
-  onFertig: () => void;
-}) {
+/** Stille zwischen letztem Wort und Titelsong. */
+const PAUSE_MS = 700;
+
+export function Prolog({ onFertig }: { onFertig: () => void }) {
   const startRef = useRef(performance.now());
   const fertigRef = useRef(false);
   const [fortschritt, setFortschritt] = useState(0);
 
-  const fallZeilen = introText
-    .split(/\n|(?<=\.)\s+/)
-    .map((zeile) => zeile.trim())
-    .filter(Boolean);
+  // Die Rückmeldung liegt in einer Ref: Sonst würde jede neue Funktion aus der
+  // Elternkomponente den Effekt neu starten - und die Aufnahme liefe von vorn.
+  const fertigCb = useRef(onFertig);
+  fertigCb.current = onFertig;
 
   useEffect(() => {
-    const audio = prologAudio();
-    let laeuft = true;
+    let laeuftNoch = true;
+    let pause: number | undefined;
 
-    audio.currentTime = 0;
-    void audio.play().catch(() => {});
+    void spiele("prolog");
+
+    const beenden = () => {
+      if (fertigRef.current) return;
+      fertigRef.current = true;
+      // Kurz nachhallen lassen, bevor die Musik einsetzt.
+      pause = window.setTimeout(() => fertigCb.current(), PAUSE_MS);
+    };
 
     const tick = () => {
-      if (!laeuft) return;
-      const dauer =
-        Number.isFinite(audio.duration) && audio.duration > 1
-          ? audio.duration
-          : STUMME_DAUER;
-      const zeit =
-        !audio.paused && audio.currentTime > 0
-          ? audio.currentTime
-          : (performance.now() - startRef.current) / 1000;
+      if (!laeuftNoch) return;
 
-      setFortschritt(Math.min(1, zeit / dauer));
+      const { zeit, dauer } = stand("prolog");
+      const gesamt = dauer ?? STUMME_DAUER;
+      const vergangen = zeit > 0 ? zeit : (performance.now() - startRef.current) / 1000;
 
-      if (zeit >= dauer) {
-        if (!fertigRef.current) {
-          fertigRef.current = true;
-          onFertig();
-        }
+      setFortschritt(Math.min(1, vergangen / gesamt));
+
+      if (vergangen >= gesamt) {
+        beenden();
         return;
       }
       requestAnimationFrame(tick);
@@ -72,17 +66,22 @@ export function Prolog({
 
     const id = requestAnimationFrame(tick);
     return () => {
-      laeuft = false;
+      laeuftNoch = false;
       cancelAnimationFrame(id);
-      audio.pause();
-      audio.currentTime = 0;
+      window.clearTimeout(pause);
+      stoppe("prolog");
     };
-  }, [onFertig]);
+    // Absichtlich ohne Abhängigkeiten: Der Prolog läuft genau einmal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Die Sprecherzeilen füllen die ersten drei Viertel, dann kommt der Fall.
-  const gesamt = SPRECHERTEXT.length;
-  const sichtbar = Math.min(gesamt, Math.floor((fortschritt / 0.78) * gesamt) + 1);
-  const fallSichtbar = fortschritt > 0.74;
+  // Die Zeilen verteilen sich über die ganze Aufnahme, mit etwas Vorlauf am
+  // Anfang - so hinkt der Text der Stimme nicht hinterher.
+  const anteil = Math.max(0, (fortschritt - 0.04) / 0.9);
+  const sichtbar = Math.min(
+    SPRECHERTEXT.length,
+    Math.floor(anteil * SPRECHERTEXT.length) + 1,
+  );
 
   return (
     <div className="prolog">
@@ -94,20 +93,13 @@ export function Prolog({
             {zeile}
           </p>
         ))}
-
-        {fallSichtbar && fallZeilen.length > 0 && (
-          <div className="prolog-fall">
-            {fallZeilen.map((zeile) => (
-              <p key={zeile}>{zeile}</p>
-            ))}
-          </div>
-        )}
       </div>
 
       <button
         className="intro-skip prolog-skip"
         onClick={() => {
           fertigRef.current = true;
+          stoppe("prolog");
           onFertig();
         }}
       >

@@ -36,6 +36,11 @@ export function makeCaseDraftSchema(besetzung: Character[], orte: Location[]) {
     titel: z.string(),
     tatbeschreibung: z.string(),
     introText: z.string(),
+    schlagworte: z
+      .array(z.string())
+      .describe(
+        "Vier bis sechs kurze Schlagworte zum Fall (ein bis zwei Wörter), die im Intro einzeln eingeblendet werden",
+      ),
     tatort: locationId,
     motiv: z.string(),
     tathergang: z.string(),

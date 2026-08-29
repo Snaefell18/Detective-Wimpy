@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Szene } from "./Bild";
-import { jubelSpielen, musikStoppen } from "@/lib/introAudio";
+import { spiele, stoppe } from "@/lib/introAudio";
 import type { Character } from "@/lib/types";
 import type { Ergebnis } from "@/lib/useGame";
 
@@ -25,8 +25,8 @@ export function ErgebnisScreen({
 
   // Gelöster Fall: Siegermusik. Sie hört auf, wenn der Bildschirm verschwindet.
   useEffect(() => {
-    if (ergebnis.richtig) jubelSpielen();
-    return () => musikStoppen();
+    if (ergebnis.richtig) void spiele("jubel");
+    return () => stoppe();
   }, [ergebnis.richtig]);
 
   return (

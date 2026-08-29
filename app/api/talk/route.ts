@@ -5,6 +5,7 @@ import { passendeId, stimmungAus } from "@/lib/zuordnen";
 import { MODEL_GESPRAECH, getAnthropic } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
+import type * as z from "zod/v4";
 import { unseal } from "@/lib/seal";
 import type { CaseFile, ChatTurn, TalkMode, TalkResult } from "@/lib/types";
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ fehler: "Leere Nachricht." }, { status: 400 });
     }
 
-    const response = await getAnthropic().messages.parse({
+    const response = await getAnthropic().messages.create({
       model: MODEL_GESPRAECH,
       // Großzügig, weil adaptives Denken mitzählt - sonst bricht die Antwort
       // mitten im JSON ab.
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       ],
     });
 
-    const modellAntwort = ergebnisAus<typeof response.parsed_output>(response, "api/talk");
+    const modellAntwort = ergebnisAus<z.infer<typeof TalkSchema>>(response, "api/talk");
     if ("fehler" in modellAntwort) {
       return NextResponse.json(
         { fehler: modellAntwort.fehler },
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsed = modellAntwort.daten!;
+    const parsed = modellAntwort.daten;
 
     // Nur Spuren gelten, die es an diesem Ort wirklich zu finden gibt.
     const spurenHier = fall.spuren

@@ -93,6 +93,7 @@ Anforderungen:
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
 - Kindgerecht: kein Blut, keine Gewalt, kein Tod.
 - Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
+- schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
 - introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Sie werden vor dem Intro als Prolog eingeblendet. Kein "Kapitel", keine Anrede, nur Atmosphäre.
 ${
   vorgaben

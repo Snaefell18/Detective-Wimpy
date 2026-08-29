@@ -4,6 +4,7 @@ import { ergebnisAus, fehlerText } from "@/lib/antwort";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { AccuseSchema } from "@/lib/schemas";
+import type * as z from "zod/v4";
 import { unseal } from "@/lib/seal";
 import type { AccuseResult, CaseFile } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ fehler: "Unbekannter Charakter." }, { status: 400 });
     }
 
-    const response = await getAnthropic().messages.parse({
+    const response = await getAnthropic().messages.create({
       model: MODEL,
       max_tokens: 12000,
       system: [
@@ -60,14 +61,14 @@ export async function POST(request: Request) {
       ],
     });
 
-    const modellAntwort = ergebnisAus<typeof response.parsed_output>(response, "api/accuse");
+    const modellAntwort = ergebnisAus<z.infer<typeof AccuseSchema>>(response, "api/accuse");
     if ("fehler" in modellAntwort) {
       return NextResponse.json(
         { fehler: modellAntwort.fehler },
         { status: modellAntwort.status },
       );
     }
-    const aufloesung = modellAntwort.daten!;
+    const aufloesung = modellAntwort.daten;
 
     // Wer der Täter ist, entscheidet der Server - nicht das Modell.
     const richtig = body.charakterId === fall.taeterId;

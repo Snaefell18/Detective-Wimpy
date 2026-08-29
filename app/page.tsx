@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
@@ -34,6 +34,10 @@ export default function Home() {
    * an fest. Der Ton wird schon im Klick selbst freigegeben, weil Browser das
    * Abspielen nur direkt aus einer Nutzergeste heraus erlauben.
    */
+  // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
+  const prologFertig = useCallback(() => setPhase("intro"), []);
+  const introFertig = useCallback(() => setPhase("aus"), []);
+
   const fallStarten = async () => {
     if (admin.einstellungen.intro) tonFreigeben();
     const geklappt = await spiel.neuerFall();
@@ -57,12 +61,9 @@ export default function Home() {
     return (
       <main className="app">
         {phase === "prolog" ? (
-          <Prolog
-            introText={stand.fall.introText}
-            onFertig={() => setPhase("intro")}
-          />
+          <Prolog onFertig={prologFertig} />
         ) : (
-          <IntroSequenz fall={stand.fall} onFertig={() => setPhase("aus")} />
+          <IntroSequenz fall={stand.fall} onFertig={introFertig} />
         )}
       </main>
     );
