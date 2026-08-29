@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ergebnisAus, fehlerText } from "@/lib/antwort";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { AccuseSchema } from "@/lib/schemas";
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.parse({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: 12000,
       system: [
         {
           type: "text",
@@ -59,28 +60,26 @@ export async function POST(request: Request) {
       ],
     });
 
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
+    const modellAntwort = ergebnisAus<typeof response.parsed_output>(response, "api/accuse");
+    if ("fehler" in modellAntwort) {
       return NextResponse.json(
-        { fehler: "Die Auflösung konnte nicht erzeugt werden." },
-        { status: 502 },
+        { fehler: modellAntwort.fehler },
+        { status: modellAntwort.status },
       );
     }
+    const aufloesung = modellAntwort.daten!;
 
     // Wer der Täter ist, entscheidet der Server - nicht das Modell.
     const richtig = body.charakterId === fall.taeterId;
     const ergebnis: AccuseResult & { taeterId: string } = {
       richtig,
-      aufloesung: response.parsed_output.aufloesung,
-      reaktion: response.parsed_output.reaktion,
+      aufloesung: aufloesung.aufloesung,
+      reaktion: aufloesung.reaktion,
       taeterId: fall.taeterId,
     };
 
     return NextResponse.json(ergebnis);
   } catch (error) {
-    console.error("[api/accuse]", error);
-    return NextResponse.json(
-      { fehler: error instanceof Error ? error.message : "Unbekannter Fehler" },
-      { status: 500 },
-    );
+    return NextResponse.json({ fehler: fehlerText(error, "api/accuse") }, { status: 500 });
   }
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ergebnisAus, fehlerText } from "@/lib/antwort";
+import { idOderStandard, passendeId } from "@/lib/zuordnen";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
 import { LOCATIONS, waehleSchauplaetze } from "@/lib/locations";
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.parse({
       model: MODEL,
-      max_tokens: 8000,
+      max_tokens: 24000,
       system: [
         {
           type: "text",
@@ -138,14 +140,53 @@ export async function POST(request: Request) {
       ],
     });
 
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
+    const modellAntwort = ergebnisAus<typeof response.parsed_output>(
+      response,
+      "api/case",
+    );
+    if ("fehler" in modellAntwort) {
       return NextResponse.json(
-        { fehler: "Der Fall konnte nicht erzeugt werden. Bitte noch einmal versuchen." },
-        { status: 502 },
+        { fehler: modellAntwort.fehler },
+        { status: modellAntwort.status },
       );
     }
 
-    const draft = response.parsed_output;
+    const draft = modellAntwort.daten!;
+
+    // Die Ids des Modells auf die tatsächlich gültigen abbilden - ein
+    // danebenliegender Name soll nicht den ganzen Fall unbrauchbar machen.
+    const ortIds = schauplatz.orte.map((o) => o.id);
+    const charakterIds = spielendeBesetzung.map((c) => c.id);
+    const itemIds = ITEMS.map((i) => i.id);
+
+    const eintraege = draft.verdaechtige
+      .map((v) => ({
+        ...v,
+        charakterId: passendeId(v.charakterId, charakterIds),
+        aufenthaltsort: idOderStandard(v.aufenthaltsort, ortIds, ortIds[0]),
+      }))
+      .filter((v): v is typeof v & { charakterId: string } => Boolean(v.charakterId));
+
+    // Wer im Entwurf fehlt, bekommt einen Standardeintrag - sonst stünde ein
+    // Verdächtiger im Spiel, über den niemand etwas weiß.
+    const fehlende = verdaechtige
+      .filter((c) => !eintraege.some((v) => v.charakterId === c.id))
+      .map((c, i) => ({
+        charakterId: c.id,
+        aufenthaltsort: ortIds[(i + 1) % ortIds.length],
+        alibi: "War angeblich allein unterwegs.",
+        geheimnis: "Verheimlicht eine Kleinigkeit, die nichts mit der Tat zu tun hat.",
+        alibiIstGelogen: false,
+      }));
+
+    const spuren = draft.spuren
+      .map((s) => ({
+        ...s,
+        itemId: passendeId(s.itemId, itemIds),
+        ortId: idOderStandard(s.ortId, ortIds, ortIds[0]),
+        zeigtAufCharakterId: idOderStandard(s.zeigtAufCharakterId, charakterIds, taeter.id),
+      }))
+      .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
 
     const fall: CaseFile = {
       id: crypto.randomUUID(),
@@ -156,12 +197,12 @@ export async function POST(request: Request) {
       titel: draft.titel,
       tatbeschreibung: draft.tatbeschreibung,
       introText: draft.introText,
-      tatort: draft.tatort,
+      tatort: idOderStandard(draft.tatort, ortIds, ortIds[0]),
       taeterId: taeter.id,
       motiv: draft.motiv,
       tathergang: draft.tathergang,
-      verdaechtige: draft.verdaechtige,
-      spuren: draft.spuren,
+      verdaechtige: [...eintraege, ...fehlende],
+      spuren,
       erstelltAm: Date.now(),
     };
 
@@ -183,10 +224,6 @@ export async function POST(request: Request) {
     // Der vollständige Fall verlässt den Server nur verschlüsselt.
     return NextResponse.json({ fall: oeffentlich, siegel: seal(fall) });
   } catch (error) {
-    console.error("[api/case]", error);
-    return NextResponse.json(
-      { fehler: error instanceof Error ? error.message : "Unbekannter Fehler" },
-      { status: 500 },
-    );
+    return NextResponse.json({ fehler: fehlerText(error, "api/case") }, { status: 500 });
   }
 }

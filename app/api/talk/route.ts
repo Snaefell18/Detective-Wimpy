@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { ergebnisAus, fehlerText } from "@/lib/antwort";
+import { passendeId, stimmungAus } from "@/lib/zuordnen";
 import { MODEL_GESPRAECH, getAnthropic } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
@@ -42,7 +44,9 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.parse({
       model: MODEL_GESPRAECH,
-      max_tokens: 4000,
+      // Großzügig, weil adaptives Denken mitzählt - sonst bricht die Antwort
+      // mitten im JSON ab.
+      max_tokens: 12000,
       system: [
         {
           type: "text",
@@ -68,19 +72,26 @@ export async function POST(request: Request) {
       ],
     });
 
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
+    const modellAntwort = ergebnisAus<typeof response.parsed_output>(response, "api/talk");
+    if ("fehler" in modellAntwort) {
       return NextResponse.json(
-        { fehler: "Darauf möchte dieser Charakter gerade nicht antworten." },
-        { status: 502 },
+        { fehler: modellAntwort.fehler },
+        { status: modellAntwort.status },
       );
     }
 
-    const parsed = response.parsed_output;
+    const parsed = modellAntwort.daten!;
+
+    // Nur Spuren gelten, die es an diesem Ort wirklich zu finden gibt.
+    const spurenHier = fall.spuren
+      .filter((s) => s.ortId === body.ortId)
+      .map((s) => s.itemId);
+
     const ergebnis: TalkResult = {
       antwort: parsed.antwort,
-      stimmung: parsed.stimmung,
+      stimmung: stimmungAus(parsed.stimmung),
       neueNotiz: parsed.neueNotiz,
-      gefundeneSpurItemId: parsed.gefundeneSpurItemId,
+      gefundeneSpurItemId: passendeId(parsed.gefundeneSpurItemId, spurenHier),
       // Grenzen erzwingen, damit ein Ausrutscher des Modells die Anzeige nicht sprengt.
       verdachtsaenderung: Math.max(-20, Math.min(20, Math.round(parsed.verdachtsaenderung))),
       luegt: parsed.luegt,
@@ -88,10 +99,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ergebnis);
   } catch (error) {
-    console.error("[api/talk]", error);
-    return NextResponse.json(
-      { fehler: error instanceof Error ? error.message : "Unbekannter Fehler" },
-      { status: 500 },
-    );
+    return NextResponse.json({ fehler: fehlerText(error, "api/talk") }, { status: 500 });
   }
 }

@@ -1,18 +1,36 @@
 import * as z from "zod/v4";
 import { ITEMS } from "./items";
 import type { Character, Location } from "./types";
+import { STIMMUNGEN } from "./zuordnen";
 
-const enumOf = (werte: string[]) => z.enum(werte as [string, ...string[]]);
+/**
+ * Wichtig: Feste Auswahllisten werden vom Modell nur *beschrieben*, nicht
+ * erzwungen - liefert es einen Wert daneben ("misstrauisch" statt "nervös"),
+ * würde eine strenge Prüfung den ganzen Aufruf scheitern lassen. Deshalb sind
+ * solche Felder freie Texte mit klarer Beschreibung; die Zuordnung auf gültige
+ * Werte passiert danach im Server (siehe lib/zuordnen.ts).
+ */
+const ausListe = (werte: string[], was: string) =>
+  z.string().describe(`${was}. Genau einer dieser Werte: ${werte.join(", ")}`);
 
-const itemId = enumOf(ITEMS.map((i) => i.id));
+const itemId = ausListe(
+  ITEMS.map((i) => i.id),
+  "Id eines Gegenstands",
+);
 
 /**
  * Die erlaubten Charakter- und Orts-Ids hängen vom Fall ab (Besetzung und
  * Stadt wechseln), deshalb werden die Schemata pro Fall gebaut.
  */
 export function makeCaseDraftSchema(besetzung: Character[], orte: Location[]) {
-  const characterId = enumOf(besetzung.map((c) => c.id));
-  const locationId = enumOf(orte.map((o) => o.id));
+  const characterId = ausListe(
+    besetzung.map((c) => c.id),
+    "Id eines Charakters",
+  );
+  const locationId = ausListe(
+    orte.map((o) => o.id),
+    "Id eines Schauplatzes",
+  );
 
   return z.object({
     titel: z.string(),
@@ -47,17 +65,17 @@ export type CaseDraft = z.infer<ReturnType<typeof makeCaseDraftSchema>>;
 /** Was Claude bei einem Gespräch liefern muss. */
 export const TalkSchema = z.object({
   antwort: z.string(),
-  stimmung: z.enum([
-    "freundlich",
-    "nervös",
-    "genervt",
-    "ausweichend",
-    "panisch",
-    "amüsiert",
-  ]),
-  neueNotiz: z.string().nullable(),
-  gefundeneSpurItemId: itemId.nullable(),
-  verdachtsaenderung: z.number(),
+  stimmung: ausListe([...STIMMUNGEN], "Stimmung des Charakters"),
+  neueNotiz: z
+    .string()
+    .nullable()
+    .describe("Kurze Notiz für Wimpys Notizbuch, oder null"),
+  gefundeneSpurItemId: itemId
+    .nullable()
+    .describe("Id einer hier entdeckten Spur, oder null"),
+  verdachtsaenderung: z
+    .number()
+    .describe("Änderung des Verdachts, -20 bis +20"),
   luegt: z.boolean(),
 });
 
