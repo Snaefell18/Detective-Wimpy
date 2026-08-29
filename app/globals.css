@@ -1010,8 +1010,15 @@ a.zurueck {
   transform: scale(1.04);
 }
 
+/* Freigestellte Figuren sollen ganz zu sehen sein, nicht angeschnitten. */
 .szene-portraet img {
-  object-position: center 12%;
+  object-fit: contain;
+  object-position: center 6%;
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.6));
+}
+
+.szene-portraet {
+  background: radial-gradient(70% 45% at 50% 32%, #1c4374 0%, transparent 70%);
 }
 
 .szene-platzhalter {

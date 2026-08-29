@@ -34,7 +34,7 @@ export function OrtScreen({
   return (
     <div className="ort-ansicht">
       {/* Der Ort füllt den ganzen Bildschirm, alles andere schwebt darüber. */}
-      <Szene src={ort?.bild} alt={ort?.name ?? ortId} platzhalter={ort?.name} />
+      <Szene src={ort?.bild} alt={ort?.name ?? ortId} platzhalter="" />
 
       <div className="ort-buehne">
         <div className="ort-titel">
@@ -83,7 +83,7 @@ export function OrtScreen({
                 onClick={() => onOrtWechsel(o.id)}
               >
                 <div className="ort-chip-bild">
-                  <Bild src={o.bild} alt={o.name} platzhalter={o.name} rund />
+                  <Bild src={o.bild} alt={o.name} platzhalter="" rund />
                 </div>
                 <span>{o.name}</span>
                 {dort > 0 && <span className="punkt">{dort}</span>}

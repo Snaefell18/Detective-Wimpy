@@ -65,6 +65,21 @@ Querformat (ca. 1600 × 1000 px), Gegenstände quadratisch (512 px), das Titelbi
 Ortsbilder heißen `<stadt>-<ort>.png`, also `venedig-markusplatz.png`.
 `npm run import:orte` gibt die erwarteten Namen aus.
 
+**Dateiendungen klein schreiben.** Vercel läuft auf Linux und unterscheidet
+Groß- und Kleinschreibung: `Fan.PNG` wird unter `/charaktere/fan.png` nicht
+gefunden. Am besten alles kleingeschrieben ablegen.
+
+**Bilder klein halten.** Aus Bildgeneratoren kommen gern 2-3 MB große PNGs -
+auf dem Handy ist das viel zu schwer, gerade im Intro. Einmal
+
+```bash
+npm run bilder:optimieren          # verkleinert alles unter public/
+npm run bilder:optimieren -- --pruefen   # zeigt nur, was passieren würde
+```
+
+und die Dateien liegen bei ~300 kB, ohne sichtbaren Verlust; Transparenz bleibt
+erhalten.
+
 ### 2. Zum Ausprobieren: im Admin-Menü
 
 Unter **Admin → Bilder** kannst du zu jedem Eintrag ein Bild direkt vom Handy
@@ -230,6 +245,7 @@ public/audio/intro.mp3  Titelsong - seine Länge ist die Länge des Intros
 scripts/import-csv.mjs  CSV -> lib/characters.generated.ts
 scripts/import-locations.mjs  CSV -> lib/locations.generated.ts
 scripts/make-icons.mjs  Erzeugt die App-Icons
+scripts/optimize-images.mjs   Verkleinert die Bilder in public/
 ```
 
 ## Für später: Mehrspielermodus
@@ -257,4 +273,5 @@ Die Architektur ist darauf vorbereitet:
 | `npm run typecheck`  | Nur Typen prüfen                            |
 | `npm run import:csv` | Charaktere aus der CSV neu einlesen         |
 | `npm run import:orte`| Städte und Orte aus der CSV neu einlesen    |
+| `npm run bilder:optimieren` | Bilder in public/ handytauglich verkleinern |
 | `npm run lint`       | Linter                                      |

@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "import:csv": "node scripts/import-csv.mjs",
-    "import:orte": "node scripts/import-locations.mjs"
+    "import:orte": "node scripts/import-locations.mjs",
+    "bilder:optimieren": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
@@ -22,6 +23,7 @@
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "sharp": "^0.35.4",
     "typescript": "^5.8.3"
   }
 }
