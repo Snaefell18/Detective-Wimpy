@@ -68,7 +68,7 @@ export function OrtScreen({
           <p className="ort-leer">Keine Menschenseele. Beziehungsweise Tierseele.</p>
         )}
 
-        <button className="knopf aktion" onClick={umsehen} disabled={suchtGerade}>
+        <button className="knopf dezent" onClick={umsehen} disabled={suchtGerade}>
           {suchtGerade ? "Wimpy sucht …" : "🔍 Umsehen"}
         </button>
 
