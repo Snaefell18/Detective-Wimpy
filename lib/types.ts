@@ -23,10 +23,22 @@ export type Character = {
 
 export type Location = {
   id: string;
+  /** Stadt, in der dieser Ort liegt (z.B. "Venedig"). */
+  stadt: string;
+  stadtId: string;
   name: string;
+  /** Die Atmosphäre aus der Tabelle - sie färbt Beschreibungen und Dialoge. */
+  atmosphaere: string;
   beschreibung: string;
   /** Pfad im Ordner /public/orte */
   bild: string;
+};
+
+/** Eine Stadt mit ihren Schauplätzen. */
+export type City = {
+  id: string;
+  name: string;
+  orte: Location[];
 };
 
 export type Item = {
@@ -54,12 +66,21 @@ export type Einstellungen = {
   startverdacht: number;
   /** Erzählton, den Claude anschlägt. */
   ton: "kindgerecht" | "spannend" | "albern";
+  /** Stadt, in der gespielt wird - "zufall" würfelt bei jedem Fall neu. */
+  stadt: string;
+  /** Wie viele Schauplätze ein Fall hat. */
+  ortsAnzahl: number;
+  /** Intro mit Titelmusik vor jeder Runde. */
+  intro: boolean;
 };
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   beschuldigungen: 2,
   startverdacht: 20,
   ton: "kindgerecht",
+  stadt: "zufall",
+  ortsAnzahl: 5,
+  intro: true,
 };
 
 /** Alles, was der Fall vorgibt. Wird beim Start einmal erzeugt. */
@@ -69,6 +90,10 @@ export type CaseFile = {
   besetzung: Character[];
   /** Erzählton für diesen Fall. */
   ton: Einstellungen["ton"];
+  /** Die Stadt, in der dieser Fall spielt. */
+  stadt: string;
+  /** Die Schauplätze dieses Falls (Standard: fünf). */
+  orte: Location[];
   titel: string;
   tatbeschreibung: string;
   tatort: string; // Location-Id
@@ -149,6 +174,9 @@ export type PublicCase = {
   id: string;
   /** Die Besetzung dieses Falls - der Browser braucht sie für die Anzeige. */
   besetzung: Character[];
+  /** Stadt und Schauplätze dieses Falls. */
+  stadt: string;
+  orte: Location[];
   titel: string;
   tatbeschreibung: string;
   tatort: string;

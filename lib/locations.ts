@@ -1,57 +1,46 @@
-import type { Location } from "./types";
+import { alsStaedte } from "./csv";
+import { LOCATIONS } from "./locations.generated";
+import type { City, Location } from "./types";
+
+export { LOCATIONS };
+
+/** Alle Städte mit ihren Schauplätzen (aus data/locations.csv). */
+export const CITIES: City[] = alsStaedte(LOCATIONS);
+
+export const getCity = (id: string): City | undefined =>
+  CITIES.find((stadt) => stadt.id === id);
+
+/** Nur Städte, in denen genug Schauplätze für einen Fall liegen. */
+export function spielbareStaedte(orte: Location[], anzahl: number): City[] {
+  return alsStaedte(orte).filter((stadt) => stadt.orte.length >= anzahl);
+}
 
 /**
- * Orte des Spiels. Die Bilder liegen in /public/orte und heißen wie die Id.
- * Neue Orte einfach hier ergänzen und ein PNG mit passendem Namen ablegen.
+ * Wählt die Schauplätze eines Falls: eine Stadt, daraus `anzahl` Orte.
+ * Hat die Stadt mehr Orte als nötig, wird zufällig gemischt - so fühlt sich
+ * auch die gleiche Stadt beim nächsten Fall anders an.
  */
-export const LOCATIONS: Location[] = [
-  {
-    id: "marktplatz",
-    name: "Marktplatz",
-    beschreibung:
-      "Das Herz der Stadt. Stände mit Früchten, viel Gerede, noch mehr Gerüchte.",
-    bild: "/orte/marktplatz.png",
-  },
-  {
-    id: "baumhaus",
-    name: "Baumhaus",
-    beschreibung:
-      "Wimpys Zuhause hoch in der Krone. Von hier oben sieht man fast alles.",
-    bild: "/orte/baumhaus.png",
-  },
-  {
-    id: "cafe",
-    name: "Café Mondlicht",
-    beschreibung:
-      "Warmes Licht, klebrige Tische und der beste Ort, um Gespräche zu belauschen.",
-    bild: "/orte/cafe.png",
-  },
-  {
-    id: "park",
-    name: "Nachtpark",
-    beschreibung:
-      "Dunkle Wege, raschelnde Büsche. Nachts hört man hier jeden Schritt.",
-    bild: "/orte/park.png",
-  },
-  {
-    id: "turnhalle",
-    name: "Turnhalle",
-    beschreibung:
-      "Schweiß, Matten und Mikkelis Trainingspläne an der Wand.",
-    bild: "/orte/turnhalle.png",
-  },
-  {
-    id: "hafen",
-    name: "Alter Hafen",
-    beschreibung:
-      "Kisten, Möwen und Schatten zwischen den Booten. Hier verschwindet gern mal etwas.",
-    bild: "/orte/hafen.png",
-  },
-];
+export function waehleSchauplaetze(
+  orte: Location[],
+  anzahl: number,
+  stadtId?: string,
+): { stadt: City; orte: Location[] } | null {
+  const kandidaten = spielbareStaedte(orte, anzahl);
+  if (kandidaten.length === 0) return null;
 
-export const LOCATION_BY_ID = new Map(LOCATIONS.map((ort) => [ort.id, ort]));
+  const stadt =
+    kandidaten.find((s) => s.id === stadtId) ??
+    kandidaten[Math.floor(Math.random() * kandidaten.length)];
 
-export const getLocation = (id: string): Location | undefined =>
-  LOCATION_BY_ID.get(id);
+  const gemischt = [...stadt.orte];
+  for (let i = gemischt.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [gemischt[i], gemischt[j]] = [gemischt[j], gemischt[i]];
+  }
 
-export const DEFAULT_LOCATION_ID = LOCATIONS[0].id;
+  return { stadt, orte: gemischt.slice(0, anzahl) };
+}
+
+/** Sucht einen Ort in der Liste eines laufenden Falls. */
+export const findeOrt = (orte: Location[], id: string): Location | undefined =>
+  orte.find((ort) => ort.id === id);

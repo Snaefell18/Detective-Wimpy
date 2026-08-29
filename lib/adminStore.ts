@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CHARACTERS } from "./characters";
-import { STANDARD_EINSTELLUNGEN, type Character, type Einstellungen } from "./types";
+import { LOCATIONS } from "./locations";
+import {
+  STANDARD_EINSTELLUNGEN,
+  type Character,
+  type Einstellungen,
+  type Location,
+} from "./types";
 
 const KEY = "detective-wimpy:admin:v1";
 
 export type AdminDaten = {
   /** Aus dem Admin-Menü eingelesene Charaktere. Null = die aus dem Repository. */
   charaktere: Character[] | null;
+  /** Aus dem Admin-Menü eingelesene Orte. Null = die aus dem Repository. */
+  orte: Location[] | null;
   /** Bildpfad (z.B. "/charaktere/chat.png") -> Data-URL, nur auf diesem Gerät. */
   bilder: Record<string, string>;
   einstellungen: Einstellungen;
@@ -16,6 +24,7 @@ export type AdminDaten = {
 
 export const LEERE_ADMIN_DATEN: AdminDaten = {
   charaktere: null,
+  orte: null,
   bilder: {},
   einstellungen: STANDARD_EINSTELLUNGEN,
 };
@@ -31,6 +40,7 @@ export function ladeAdminDaten(): AdminDaten {
     const daten = JSON.parse(roh) as Partial<AdminDaten>;
     return {
       charaktere: daten.charaktere ?? null,
+      orte: daten.orte ?? null,
       bilder: daten.bilder ?? {},
       einstellungen: { ...STANDARD_EINSTELLUNGEN, ...(daten.einstellungen ?? {}) },
     };
@@ -87,6 +97,11 @@ export function useAdmin() {
 /** Die aktuell gültige Besetzung: aus dem Admin-Menü oder aus dem Repository. */
 export function aktuelleCharaktere(daten: AdminDaten): Character[] {
   return daten.charaktere ?? CHARACTERS;
+}
+
+/** Die aktuell gültige Ortsliste: aus dem Admin-Menü oder aus dem Repository. */
+export function aktuelleOrte(daten: AdminDaten): Location[] {
+  return daten.orte ?? LOCATIONS;
 }
 
 /** Löst einen Bildpfad auf - ein im Admin hinterlegtes Bild gewinnt. */

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { aktuelleCharaktere, useAdmin } from "./adminStore";
-import { DEFAULT_LOCATION_ID } from "./locations";
+import { aktuelleCharaktere, aktuelleOrte, useAdmin } from "./adminStore";
 import type {
   ChatTurn,
   NotebookEntry,
@@ -38,10 +37,10 @@ export type Spielstand = {
 const LEER: Spielstand = {
   fall: null,
   siegel: null,
-  ortId: DEFAULT_LOCATION_ID,
+  ortId: "",
   gefundeneSpuren: [],
   notizen: [],
-  besuchteOrte: [DEFAULT_LOCATION_ID],
+  besuchteOrte: [],
   verlauf: {},
   verdacht: {},
   beschuldigungenUebrig: 2,
@@ -116,12 +115,16 @@ export function useGame() {
       // Besetzung und Einstellungen aus dem Admin-Menü gelten für diesen Fall.
       const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {
         charaktere: aktuelleCharaktere(admin),
+        orte: aktuelleOrte(admin),
         einstellungen: admin.einstellungen,
       });
+      const startOrt = daten.fall.orte[0]?.id ?? "";
       setStand({
         ...LEER,
         fall: daten.fall,
         siegel: daten.siegel,
+        ortId: startOrt,
+        besuchteOrte: startOrt ? [startOrt] : [],
         status: "laeuft",
         beschuldigungenUebrig: admin.einstellungen.beschuldigungen,
         verdacht: Object.fromEntries(

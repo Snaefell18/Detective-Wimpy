@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "import:csv": "node scripts/import-csv.mjs"
+    "import:csv": "node scripts/import-csv.mjs",
+    "import:orte": "node scripts/import-locations.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

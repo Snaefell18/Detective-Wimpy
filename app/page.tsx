@@ -4,34 +4,56 @@ import { useState } from "react";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
+import { IntroSequenz } from "@/components/IntroSequenz";
 import { Nav, type Tab } from "@/components/Nav";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
+import { useAdmin } from "@/lib/adminStore";
 import { useGame } from "@/lib/useGame";
 
 export default function Home() {
   const spiel = useGame();
+  const { daten: admin } = useAdmin();
   const [tab, setTab] = useState<Tab>("ort");
   const [chatMit, setChatMit] = useState<string | null>(null);
   const [beschuldigenOffen, setBeschuldigenOffen] = useState(false);
+  const [introLaeuft, setIntroLaeuft] = useState(false);
 
   const { stand, geladen, laedt, fehler, setFehler } = spiel;
 
+  /**
+   * Das Intro startet sofort mit dem Klick (die Geste erlaubt den Ton), der
+   * Fall wird parallel dazu erzeugt und taucht mitten im Intro auf.
+   */
+  const fallStarten = () => {
+    if (admin.einstellungen.intro) setIntroLaeuft(true);
+    void spiel.neuerFall();
+  };
+
   if (!geladen) {
     return <main className="app" />;
+  }
+
+  // Intro läuft: es deckt alles ab, bis der Song vorbei ist.
+  if (introLaeuft) {
+    return (
+      <main className="app">
+        <IntroSequenz
+          fall={stand.fall}
+          fehler={fehler}
+          onFertig={() => setIntroLaeuft(false)}
+        />
+      </main>
+    );
   }
 
   // 1. Noch kein Fall - Startbildschirm.
   if (!stand.fall || stand.status === "kein-fall") {
     return (
       <main className="app">
-        <StartScreen
-          onStart={spiel.neuerFall}
-          laedt={laedt === "fall"}
-          fehler={fehler}
-        />
+        <StartScreen onStart={fallStarten} laedt={laedt === "fall"} fehler={fehler} />
       </main>
     );
   }
@@ -43,7 +65,7 @@ export default function Home() {
         <ErgebnisScreen
           ergebnis={stand.ergebnis}
           besetzung={stand.fall.besetzung}
-          onNeuerFall={spiel.neuerFall}
+          onNeuerFall={fallStarten}
           laedt={laedt === "fall"}
         />
       </main>
@@ -60,7 +82,9 @@ export default function Home() {
       <header className={tab === "ort" ? "kopf schwebend" : "kopf"}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1>{stand.fall.titel}</h1>
-          <p className="unterzeile">{stand.gefundeneSpuren.length} Spuren gefunden</p>
+          <p className="unterzeile">
+            {stand.fall.stadt} · {stand.gefundeneSpuren.length} Spuren
+          </p>
         </div>
         <button
           className="knopf klein"

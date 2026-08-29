@@ -1,7 +1,14 @@
 import { characterBrief } from "./characters";
 import { ITEMS } from "./items";
-import { LOCATIONS, getLocation } from "./locations";
-import type { CaseFile, Character, ChatTurn, Einstellungen, TalkMode } from "./types";
+import { findeOrt } from "./locations";
+import type {
+  CaseFile,
+  Character,
+  ChatTurn,
+  Einstellungen,
+  Location,
+  TalkMode,
+} from "./types";
 
 const TON_TEXT: Record<Einstellungen["ton"], string> = {
   kindgerecht:
@@ -18,6 +25,8 @@ const detektiv = (besetzung: Character[]) =>
 /** Weltwissen für einen Fall - hängt an der Besetzung und dem Erzählton. */
 export function buildWorldPrompt(
   besetzung: Character[],
+  orte: Location[],
+  stadt: string,
   ton: Einstellungen["ton"] = "kindgerecht",
 ): string {
   const held = detektiv(besetzung);
@@ -25,45 +34,53 @@ export function buildWorldPrompt(
   return `Du bist die Erzähl-Engine des Detektivspiels "Detective Wimpy".
 
 WELT
-Eine kleine Tierstadt. Der Spieler ist ${held.name}, ein ${held.tierart}: ${held.beschreibung}
+Der Fall spielt in ${stadt} - einer Stadt, in der Tiere wie Menschen leben. Beziehe dich auf das, was diese Stadt ausmacht.
+Der Spieler ist ${held.name}, ein ${held.tierart}: ${held.beschreibung}
 Es geht nie um Blut, Tod oder echte Gewalt - Fälle sind Diebstähle, Streiche, Sabotage, verschwundene Dinge und Geheimnisse.
 ${TON_TEXT[ton]} Alles auf Deutsch, in kurzen, lebendigen Sätzen.
 
 CHARAKTERE
 ${besetzung.map((c) => `- [${c.id}] ${characterBrief(c)}`).join("\n")}
 
-ORTE
-${LOCATIONS.map((o) => `- [${o.id}] ${o.name}: ${o.beschreibung}`).join("\n")}
+SCHAUPLÄTZE IN ${stadt.toUpperCase()}
+${orte.map((o) => `- [${o.id}] ${o.name} (${o.atmosphaere || "neutral"})`).join("\n")}
 
 GEGENSTÄNDE
 ${ITEMS.map((i) => `- [${i.id}] ${i.name}: ${i.beschreibung}`).join("\n")}
 
 REGELN
 - Benutze ausschließlich die oben genannten Ids für Charaktere, Orte und Gegenstände.
+- Die Atmosphäre eines Schauplatzes prägt, was dort passiert und wie es sich anfühlt.
 - Die Werte eines Charakters bestimmen sein Verhalten: hohe Schelmischkeit heißt Späße und Ablenkung, hohes Kriminalitätslevel heißt Nähe zu krummen Dingern, hohe Intelligenz heißt gute Ausreden, hohe Freundlichkeit heißt offene Antworten, niedriges Charisma heißt hölzerne Sätze.
 - Kein Charakter ist "böse". Auch der Täter hat ein nachvollziehbares Motiv.`;
 }
 
 /** Prompt zum Erzeugen eines neuen Falls. Der Täter steht bereits fest. */
-export function buildCasePrompt(besetzung: Character[], taeterId: string): string {
+export function buildCasePrompt(
+  besetzung: Character[],
+  stadt: string,
+  taeterId: string,
+): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
 
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
 
-  return `Erfinde einen neuen Fall für Detective Wimpy.
+  return `Erfinde einen neuen Fall für Detective Wimpy - er spielt in ${stadt}.
 
 DER TÄTER STEHT BEREITS FEST: ${taeter.name} [${taeter.id}].
 Baue den ganzen Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv, Vorgehen und die Spuren.
 
 Anforderungen:
-- Ein Tatort aus der Ortsliste.
+- Ein Tatort aus der Schauplatzliste.
+- Der Fall muss zu ${stadt} passen: Was dort typisch ist, kommt vor.
 - Für jeden dieser Verdächtigen genau einen Eintrag: ${verdaechtige.map((c) => `${c.name} [${c.id}]`).join(", ")}.
-- Jeder Verdächtige hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Ortsliste.
+- Jeder Verdächtige hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Schauplatzliste. Verteile sie auf verschiedene Schauplätze.
 - Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
 - 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
-- Kindgerecht: kein Blut, keine Gewalt, kein Tod.`;
+- Kindgerecht: kein Blut, keine Gewalt, kein Tod.
+- Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.`;
 }
 
 /** Prompt für ein Gespräch mit einem Charakter. */
@@ -82,7 +99,7 @@ export function buildTalkPrompt(args: {
 
   const brief = fall.verdaechtige.find((v) => v.charakterId === charakterId);
   const istTaeter = fall.taeterId === charakterId;
-  const ort = getLocation(ortId);
+  const ort = findeOrt(fall.orte, ortId);
 
   const spurenHier = fall.spuren.filter(
     (s) => s.ortId === ortId && !gefundeneSpuren.includes(s.itemId),
@@ -105,7 +122,7 @@ ${characterBrief(charakter)}
 DER FALL (nur dein Wissen, niemals wörtlich ausplaudern)
 Titel: ${fall.titel}
 Tat: ${fall.tatbeschreibung}
-Tatort: ${getLocation(fall.tatort)?.name ?? fall.tatort}
+Tatort: ${findeOrt(fall.orte, fall.tatort)?.name ?? fall.tatort} in ${fall.stadt}
 ${
   istTaeter
     ? `DU BIST DER TÄTER. Motiv: ${fall.motiv}. Hergang: ${fall.tathergang}. Du gibst es niemals von selbst zu und lenkst geschickt ab - aber du verhedderst dich in Details, wenn Wimpy dich mit passenden Spuren konfrontiert.`
@@ -115,7 +132,7 @@ Dein Alibi: ${brief?.alibi ?? "keins"}${brief?.alibiIstGelogen ? " (gelogen!)" :
 Dein Geheimnis: ${brief?.geheimnis ?? "keins"}
 
 SITUATION
-Ihr steht am Ort: ${ort?.name ?? ortId}. ${ort?.beschreibung ?? ""}
+Ihr steht am Schauplatz: ${ort?.name ?? ortId} in ${fall.stadt}. Atmosphäre: ${ort?.atmosphaere || "neutral"}.
 Wimpy hat bisher diese Spuren gefunden: ${
     gefundeneSpuren.length ? gefundeneSpuren.join(", ") : "noch keine"
   }.

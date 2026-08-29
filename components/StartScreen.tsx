@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bild } from "./Bild";
+import { useCallback, useState } from "react";
+import { Szene } from "./Bild";
 import { aktuelleCharaktere, useAdmin } from "@/lib/adminStore";
+import { aktuelleOrte } from "@/lib/adminStore";
+import { alsStaedte } from "@/lib/csv";
 
+/** Der Startbildschirm ist das Titelbild - die Knöpfe liegen im Himmel darüber. */
 export function StartScreen({
   onStart,
   laedt,
@@ -16,33 +20,48 @@ export function StartScreen({
   const { daten } = useAdmin();
   const besetzung = aktuelleCharaktere(daten);
   const held = besetzung.find((c) => c.istDetektiv) ?? besetzung[0];
-  const verdaechtige = besetzung.length - 1;
+  const staedte = alsStaedte(aktuelleOrte(daten));
+  const [ohneBild, setOhneBild] = useState(false);
+  const merken = useCallback((leer: boolean) => setOhneBild(leer), []);
 
   return (
     <div className="start">
-      <Link href="/admin" className="admin-knopf" aria-label="Admin-Menü">
-        ⚙︎
-      </Link>
+      <Szene
+        src="/start.png"
+        alt="Detektiv Wimpy"
+        platzhalter=""
+        variante="titel"
+        onLeer={merken}
+      />
 
-      <div className="start-held">
-        <Bild src={held.bild} alt={held.name} platzhalter={held.name} />
+      {/* Solange kein Titelbild hinterlegt ist, trägt der Schriftzug den Screen. */}
+      {ohneBild && (
+        <h1 className="start-logo">
+          Detektiv
+          <span>Wimpy</span>
+        </h1>
+      )}
+
+      <div className="start-himmel" data-ohne-bild={ohneBild}>
+        <button className="knopf aktion" onClick={onStart} disabled={laedt}>
+          {laedt ? "Der Fall wird ausgeheckt …" : "Neuen Fall starten"}
+        </button>
+
+        <div className="start-zeile">
+          <Link href="/admin" className="knopf klein glas" aria-label="Admin-Menü">
+            ⚙︎ Admin
+          </Link>
+          <span className="start-info">
+            {besetzung.length - 1} Verdächtige · {staedte.length} Städte
+          </span>
+        </div>
+
+        {fehler && <p className="fehler">{fehler}</p>}
       </div>
 
-      <h1 className="start-titel">Detective {held.name}</h1>
-      <p className="start-unter">
-        Ein {held.tierart} mit Lupe, sechs Orte, {verdaechtige} Verdächtige - und
-        immer genau einer, der lügt.
-      </p>
-
-      {fehler && <p className="fehler">{fehler}</p>}
-
-      <button className="knopf aktion" onClick={onStart} disabled={laedt}>
-        {laedt ? "Der Fall wird ausgeheckt …" : "Neuen Fall starten"}
-      </button>
-
-      <p className="leise start-hinweis">
-        Tipp: Über „Teilen → Zum Home-Bildschirm“ läuft das Spiel wie eine echte App
-        im Vollbild.
+      <p className="start-fuss">
+        {held.name}, {held.tierart} · „Teilen → Zum Home-Bildschirm“ startet das Spiel im
+        Vollbild.
       </p>
     </div>
   );

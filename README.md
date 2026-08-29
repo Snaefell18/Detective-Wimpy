@@ -59,7 +59,11 @@ So kommen die Dateien ins Projekt:
 
 Empfehlung: Charaktere hochkant freigestellt (PNG mit Transparenz, ca.
 900 × 1200 px) - sie werden im Gespräch bildschirmfüllend gezeigt. Orte im
-Querformat (ca. 1600 × 1000 px), Gegenstände quadratisch (512 px).
+Querformat (ca. 1600 × 1000 px), Gegenstände quadratisch (512 px), das Titelbild
+`public/start.png` im Hochformat (z.B. 1080 × 1920).
+
+Ortsbilder heißen `<stadt>-<ort>.png`, also `venedig-markusplatz.png`.
+`npm run import:orte` gibt die erwarteten Namen aus.
 
 ### 2. Zum Ausprobieren: im Admin-Menü
 
@@ -75,14 +79,17 @@ Spiel funktioniert also auch ganz ohne Grafiken.
 
 Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`):
 
-- **Charaktere** - die Excel-Tabelle als CSV einlesen. Die Datei wird geprüft
+- **Tiere** - die Excel-Tabelle als CSV einlesen. Die Datei wird geprüft
   (genau ein Detektiv, mindestens zwei Verdächtige, keine doppelten Namen) und
   gilt ab dem nächsten Fall. Darunter die aktuelle Besetzung mit Bildstatus.
   „Eigene Liste verwerfen“ schaltet zurück auf `data/characters.csv`.
-- **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben).
-- **Spiel** - Erzählton (kindgerecht, spannend, albern), Anzahl der
-  Beschuldigungen, Startverdacht, sowie Zurücksetzen von Einstellungen und
-  Spielstand.
+- **Orte** - die Städte-Tabelle einlesen; darunter jede Stadt mit ihren
+  Schauplätzen und dem erwarteten Bildnamen.
+- **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
+  inklusive Titelbild des Startbildschirms.
+- **Spiel** - Stadt (oder Zufall), Schauplätze pro Fall, Intro an/aus,
+  Erzählton (kindgerecht, spannend, albern), Anzahl der Beschuldigungen,
+  Startverdacht, sowie Zurücksetzen von Einstellungen und Spielstand.
 
 Alles davon liegt im Browser des Geräts, nicht auf dem Server. Beim Start eines
 Falls schickt die App Besetzung und Einstellungen einmal mit; sie werden in den
@@ -115,11 +122,47 @@ Die Werte sind nicht nur Deko: Sie stehen im Prompt und steuern das Verhalten -
 hohe Schelmischkeit heißt Ablenkungsmanöver, hohe Intelligenz bessere Ausreden,
 hohe Freundlichkeit offenere Antworten.
 
+## Intro vor jeder Runde
+
+Mit dem Klick auf „Neuen Fall starten“ läuft der Titelsong
+(`public/audio/intro.mp3`), während Fall, Verdächtige und Schauplätze
+vorgestellt werden: Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder
+Verdächtige einzeln mit seinen Werten, die fünf Schauplätze, „Wer war es?“ -
+und zum Schluss der Startschuss.
+
+Das Intro ist an den Song gekoppelt (`audio.currentTime`), nicht an feste
+Sekunden: Es endet **genau** mit dem letzten Ton. Tauschst du die MP3 gegen eine
+längere oder kürzere aus, passt sich der Ablauf von selbst an. Der Fall wird
+parallel im Hintergrund erzeugt und taucht mitten im Intro auf.
+
+Blockiert der Browser den Ton (das kann beim ersten Start passieren), läuft das
+Intro stumm und deutlich kürzer, mit einem „Ton an“-Knopf. Überspringen geht
+immer, und im Admin-Menü lässt sich das Intro ganz abschalten.
+
+## Städte und Schauplätze
+
+Jeder Fall spielt in einer Stadt aus `data/locations.csv`; daraus werden fünf
+Schauplätze gezogen (im Admin einstellbar, 3 bis 8). Hat eine Stadt mehr Orte
+als nötig, wird gemischt - dieselbe Stadt fühlt sich beim nächsten Fall anders
+an. Die Atmosphäre-Spalte geht in die Prompts ein und färbt, was an einem Ort
+passiert.
+
+```
+Stadt;Location;Atmosphäre
+Venedig;Markusplatz;Episch
+Longyearbyen;Wildnis;gefährlich
+```
+
+Neue Städte einfach anhängen und `npm run import:orte` ausführen - jede Stadt
+braucht mindestens so viele Orte, wie ein Fall Schauplätze hat. Wer nichts
+einchecken will, liest die Tabelle im Admin-Menü unter **Orte** ein.
+
 ## Wie das Spiel funktioniert
 
-1. **Fall erzeugen** (`POST /api/case`): Der Server würfelt einen Täter aus allen
-   Verdächtigen und lässt Claude die Geschichte darum herum bauen - Tat, Motiv,
-   Alibis, Geheimnisse, Aufenthaltsorte und 4-6 Spuren.
+1. **Fall erzeugen** (`POST /api/case`): Der Server wählt Stadt und Schauplätze,
+   würfelt einen Täter aus allen Verdächtigen und lässt Claude die Geschichte
+   darum herum bauen - Tat, Motiv, Alibis, Geheimnisse, Aufenthaltsorte und
+   4-6 Spuren, passend zur Stadt.
 2. **Umsehen** (`POST /api/search`): Findet an einem Ort die nächste unentdeckte
    Spur. Braucht kein Modell und ist deshalb sofort da.
 3. **Reden / Befragen / Beschuldigen** (`POST /api/talk`): Claude spielt den
@@ -169,20 +212,23 @@ app/
   api/talk/route.ts     Gespräch mit einem Charakter
   api/search/route.ts   Umsehen an einem Ort
   api/accuse/route.ts   Finale Beschuldigung und Auflösung
-components/             Bildschirme und Overlays
+components/             Bildschirme, Overlays und die Intro-Sequenz
 lib/
   adminStore.ts         Admin-Daten auf dem Gerät (Besetzung, Bilder, Optionen)
   csv.ts                Das CSV-Format - benutzt von App und Import-Skript
   bildUpload.ts         Bilder verkleinern und als Data-URL ablegen
   characters.ts         Charaktere + Helfer (aus der CSV erzeugt)
-  locations.ts          Orte
+  locations.ts          Städte und Schauplätze
   items.ts              Gegenstände
   prompts.ts            Alle Prompts an Claude
   schemas.ts            Struktur der Antworten (Zod)
   seal.ts               Verschlüsselung des Falls
   useGame.ts            Spielzustand inkl. Speicherung auf dem Gerät
 data/characters.csv     Die Tier-Tabelle aus Excel
+data/locations.csv      Städte und ihre Schauplätze
+public/audio/intro.mp3  Titelsong - seine Länge ist die Länge des Intros
 scripts/import-csv.mjs  CSV -> lib/characters.generated.ts
+scripts/import-locations.mjs  CSV -> lib/locations.generated.ts
 scripts/make-icons.mjs  Erzeugt die App-Icons
 ```
 
@@ -210,4 +256,5 @@ Die Architektur ist darauf vorbereitet:
 | `npm run build`      | Produktions-Build (macht auch den Typecheck)|
 | `npm run typecheck`  | Nur Typen prüfen                            |
 | `npm run import:csv` | Charaktere aus der CSV neu einlesen         |
+| `npm run import:orte`| Städte und Orte aus der CSV neu einlesen    |
 | `npm run lint`       | Linter                                      |

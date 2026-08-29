@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { Bild } from "@/components/Bild";
-import { aktuelleCharaktere, useAdmin } from "@/lib/adminStore";
+import { aktuelleCharaktere, aktuelleOrte, useAdmin } from "@/lib/adminStore";
 import { alsDataUrl, groesse } from "@/lib/bildUpload";
 import { CHARACTERS } from "@/lib/characters";
-import { parseCharacterCsv, pruefeBesetzung } from "@/lib/csv";
+import {
+  alsStaedte,
+  parseCharacterCsv,
+  parseLocationCsv,
+  pruefeBesetzung,
+  pruefeOrte,
+} from "@/lib/csv";
 import { ITEMS } from "@/lib/items";
 import { LOCATIONS } from "@/lib/locations";
 import { STANDARD_EINSTELLUNGEN, type Einstellungen } from "@/lib/types";
 
-type Bereich = "charaktere" | "bilder" | "einstellungen";
+type Bereich = "charaktere" | "orte" | "bilder" | "einstellungen";
 
 const TOENE: { id: Einstellungen["ton"]; label: string; hinweis: string }[] = [
   { id: "kindgerecht", label: "Kindgerecht", hinweis: "warm und witzig" },
@@ -46,13 +52,19 @@ export default function AdminSeite() {
       </header>
 
       <div className="reiter">
-        {(["charaktere", "bilder", "einstellungen"] as Bereich[]).map((id) => (
+        {(["charaktere", "orte", "bilder", "einstellungen"] as Bereich[]).map((id) => (
           <button
             key={id}
             data-aktiv={bereich === id}
             onClick={() => setBereich(id)}
           >
-            {id === "charaktere" ? "Charaktere" : id === "bilder" ? "Bilder" : "Spiel"}
+            {id === "charaktere"
+              ? "Tiere"
+              : id === "orte"
+                ? "Orte"
+                : id === "bilder"
+                  ? "Bilder"
+                  : "Spiel"}
           </button>
         ))}
       </div>
@@ -68,6 +80,8 @@ export default function AdminSeite() {
               onFehler={setFehler}
             />
           )}
+
+          {bereich === "orte" && <OrteBereich onMeldung={melden} onFehler={setFehler} />}
 
           {bereich === "bilder" && <BilderBereich onMeldung={melden} onFehler={setFehler} />}
 
@@ -91,6 +105,72 @@ export default function AdminSeite() {
                   </button>
                 ))}
               </div>
+
+              <h2 className="abschnitt">Stadt</h2>
+              <div className="wahl-reihe umbrechend">
+                <button
+                  className="wahl-chip"
+                  data-aktiv={daten.einstellungen.stadt === "zufall"}
+                  onClick={() =>
+                    aendern({
+                      einstellungen: { ...daten.einstellungen, stadt: "zufall" },
+                    })
+                  }
+                >
+                  <strong>Zufall</strong>
+                  <span className="leise">jedes Mal neu</span>
+                </button>
+                {alsStaedte(aktuelleOrte(daten)).map((stadt) => (
+                  <button
+                    key={stadt.id}
+                    className="wahl-chip"
+                    data-aktiv={daten.einstellungen.stadt === stadt.id}
+                    onClick={() =>
+                      aendern({
+                        einstellungen: { ...daten.einstellungen, stadt: stadt.id },
+                      })
+                    }
+                  >
+                    <strong>{stadt.name}</strong>
+                    <span className="leise">{stadt.orte.length} Orte</span>
+                  </button>
+                ))}
+              </div>
+
+              <h2 className="abschnitt">Schauplätze pro Fall</h2>
+              <Schieber
+                wert={daten.einstellungen.ortsAnzahl}
+                min={3}
+                max={8}
+                einheit="Orte"
+                onAendern={(wert) =>
+                  aendern({
+                    einstellungen: { ...daten.einstellungen, ortsAnzahl: wert },
+                  })
+                }
+              />
+              <p className="leise">
+                Eine Stadt kann nur gewählt werden, wenn sie so viele Orte hat.
+              </p>
+
+              <h2 className="abschnitt">Intro</h2>
+              <button
+                className="knopf"
+                onClick={() =>
+                  aendern({
+                    einstellungen: {
+                      ...daten.einstellungen,
+                      intro: !daten.einstellungen.intro,
+                    },
+                  })
+                }
+              >
+                Titelmusik-Intro: {daten.einstellungen.intro ? "an" : "aus"}
+              </button>
+              <p className="leise">
+                Vor jeder Runde läuft der Titelsong, während Fall, Verdächtige und
+                Schauplätze vorgestellt werden.
+              </p>
 
               <h2 className="abschnitt">Beschuldigungen pro Fall</h2>
               <Schieber
@@ -145,8 +225,9 @@ export default function AdminSeite() {
               </button>
 
               <p className="leise" style={{ marginTop: 18 }}>
-                Aktuell im Spiel: {charaktere.length} Charaktere,{" "}
-                {LOCATIONS.length} Orte, {ITEMS.length} Gegenstände,{" "}
+                Aktuell im Spiel: {charaktere.length} Tiere,{" "}
+                {alsStaedte(aktuelleOrte(daten)).length} Städte mit{" "}
+                {aktuelleOrte(daten).length} Orten, {ITEMS.length} Gegenstände,{" "}
                 {Object.keys(daten.bilder).length} eigene Bilder auf diesem Gerät.
               </p>
             </>
@@ -297,6 +378,11 @@ function BilderBereich({
   const eintraege = useMemo(
     () => [
       {
+        titel: "Startbildschirm",
+        ordner: "public",
+        posten: [{ pfad: "/start.png", name: "Titelbild" }],
+      },
+      {
         titel: "Charaktere",
         ordner: "public/charaktere",
         posten: aktuelleCharaktere(daten).map((c) => ({
@@ -304,11 +390,11 @@ function BilderBereich({
           name: c.name,
         })),
       },
-      {
-        titel: "Orte",
+      ...alsStaedte(aktuelleOrte(daten)).map((stadt) => ({
+        titel: `Orte · ${stadt.name}`,
         ordner: "public/orte",
-        posten: LOCATIONS.map((o) => ({ pfad: o.bild, name: o.name })),
-      },
+        posten: stadt.orte.map((o) => ({ pfad: o.bild, name: o.name })),
+      })),
       {
         titel: "Gegenstände",
         ordner: "public/items",
@@ -409,6 +495,107 @@ function BilderBereich({
           </ul>
         </div>
       ))}
+    </>
+  );
+}
+
+function OrteBereich({
+  onMeldung,
+  onFehler,
+}: {
+  onMeldung: (text: string) => void;
+  onFehler: (text: string | null) => void;
+}) {
+  const { daten, aendern } = useAdmin();
+  const dateiRef = useRef<HTMLInputElement>(null);
+  const orte = aktuelleOrte(daten);
+  const staedte = alsStaedte(orte);
+  const eigene = daten.orte !== null;
+  const noetig = daten.einstellungen.ortsAnzahl;
+
+  const einlesen = async (datei: File) => {
+    onFehler(null);
+    try {
+      const geparst = parseLocationCsv(await datei.text());
+      const problem = pruefeOrte(geparst, noetig);
+      if (problem) {
+        onFehler(problem);
+        return;
+      }
+      const ergebnis = aendern({ orte: geparst });
+      if (ergebnis.fehler) onFehler(ergebnis.fehler);
+      else
+        onMeldung(
+          `${geparst.length} Orte in ${alsStaedte(geparst).length} Städten eingelesen.`,
+        );
+    } catch {
+      onFehler("Die Datei konnte nicht gelesen werden.");
+    }
+  };
+
+  return (
+    <>
+      <p className="leise">
+        Tabelle mit den Spalten <code>Stadt;Location;Atmosphäre</code> einlesen. Jeder
+        Fall spielt in einer Stadt; daraus werden {noetig} Schauplätze gezogen.
+      </p>
+
+      <input
+        ref={dateiRef}
+        type="file"
+        accept=".csv,text/csv,text/plain"
+        hidden
+        onChange={(e) => {
+          const datei = e.target.files?.[0];
+          if (datei) void einlesen(datei);
+          e.target.value = "";
+        }}
+      />
+
+      <button className="knopf aktion" onClick={() => dateiRef.current?.click()}>
+        Orte-CSV einlesen
+      </button>
+
+      {eigene && (
+        <button
+          className="knopf"
+          style={{ marginTop: 10 }}
+          onClick={() => {
+            aendern({ orte: null });
+            onMeldung(`Zurück zu den ${LOCATIONS.length} Orten aus dem Projekt.`);
+          }}
+        >
+          Eigene Liste verwerfen
+        </button>
+      )}
+
+      {staedte.map((stadt) => {
+        const spielbar = stadt.orte.length >= noetig;
+        return (
+          <div key={stadt.id}>
+            <h2 className="abschnitt">
+              {stadt.name}{" "}
+              <span className="leise">
+                · {stadt.orte.length} Orte{spielbar ? "" : " · zu wenige"}
+              </span>
+            </h2>
+            <ul className="liste">
+              {stadt.orte.map((ort) => (
+                <li key={ort.id}>
+                  <div className="listen-bild">
+                    <Bild src={ort.bild} alt={ort.name} platzhalter={ort.name} />
+                  </div>
+                  <div className="listen-text">
+                    <strong>{ort.name}</strong>
+                    <span className="leise">{ort.atmosphaere}</span>
+                    <span className="leise pfad">{ort.bild.split("/").pop()}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </>
   );
 }

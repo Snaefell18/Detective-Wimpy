@@ -1,7 +1,7 @@
 "use client";
 
 import { Bild } from "./Bild";
-import { getLocation } from "@/lib/locations";
+import { findeOrt } from "@/lib/locations";
 import type { PublicCase } from "@/lib/types";
 
 const STAT_LABELS: Record<string, string> = {
@@ -35,7 +35,7 @@ export function VerdaechtigeScreen({
 
       {verdaechtige.map((c) => {
         const punkte = verdacht[c.id] ?? 0;
-        const ort = getLocation(fall.aufenthalt[c.id] ?? "");
+        const ort = findeOrt(fall.orte, fall.aufenthalt[c.id] ?? "");
         return (
           <button key={c.id} className="dossier" onClick={() => onCharakter(c.id)}>
             <div className="dossier-bild">

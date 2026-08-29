@@ -1,4 +1,4 @@
-import type { Character } from "./types";
+import type { Character, City, Location } from "./types";
 
 /**
  * Liest die Charakter-Tabelle (Semikolon-getrennt, wie aus Excel exportiert).
@@ -11,14 +11,22 @@ import type { Character } from "./types";
  * benutzt - es gibt also nur eine Stelle, an der das Format definiert ist.
  */
 export function slugify(wert: string): string {
-  return wert
-    .toLowerCase()
-    .replaceAll("ä", "ae")
-    .replaceAll("ö", "oe")
-    .replaceAll("ü", "ue")
-    .replaceAll("ß", "ss")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  return (
+    wert
+      .toLowerCase()
+      .replaceAll("ä", "ae")
+      .replaceAll("ö", "oe")
+      .replaceAll("ü", "ue")
+      .replaceAll("ß", "ss")
+      .replaceAll("ø", "o")
+      .replaceAll("æ", "ae")
+      .replaceAll("å", "aa")
+      // Akzente abtrennen und wegwerfen: café -> cafe, Genève -> geneve
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+  );
 }
 
 const zahl = (wert: string | undefined): number => {
@@ -83,6 +91,65 @@ export function pruefeBesetzung(charaktere: Character[]): string | null {
     .filter((id, i, alle) => alle.indexOf(id) !== i);
   if (doppelt.length > 0)
     return `Doppelte Namen: ${[...new Set(doppelt)].join(", ")}.`;
+
+  return null;
+}
+
+/**
+ * Liest die Orte-Tabelle: Stadt;Location;Atmosphäre[;Bild]
+ *
+ * Jede Stadt wird zu einem Schauplatz-Satz. Städte mit zu wenigen Orten sind
+ * nicht spielbar - pruefeStaedte() sagt, welche das sind.
+ */
+export function parseLocationCsv(text: string): Location[] {
+  const zeilen = text
+    .replace(/^﻿/, "")
+    .split(/\r?\n/)
+    .filter((zeile) => zeile.trim().length > 0);
+
+  const trenner = (zeilen[0]?.split(";").length ?? 0) > 1 ? ";" : ",";
+
+  return zeilen
+    .slice(1)
+    .map((zeile) => zeile.split(trenner).map((zelle) => zelle.trim()))
+    .filter((zellen) => Boolean(zellen[0]) && Boolean(zellen[1]))
+    .map((zellen) => {
+      const stadt = zellen[0];
+      const name = zellen[1];
+      const stadtId = slugify(stadt);
+      const id = `${stadtId}-${slugify(name)}`;
+      const atmosphaere = zellen[2] || "";
+      return {
+        id,
+        stadt,
+        stadtId,
+        name,
+        atmosphaere,
+        beschreibung: atmosphaere ? `${name} - ${atmosphaere}.` : name,
+        bild: zellen[3] || `/orte/${id}.png`,
+      } satisfies Location;
+    });
+}
+
+/** Gruppiert Orte zu Städten. */
+export function alsStaedte(orte: Location[]): City[] {
+  const nachStadt = new Map<string, City>();
+  for (const ort of orte) {
+    const stadt = nachStadt.get(ort.stadtId);
+    if (stadt) stadt.orte.push(ort);
+    else nachStadt.set(ort.stadtId, { id: ort.stadtId, name: ort.stadt, orte: [ort] });
+  }
+  return [...nachStadt.values()];
+}
+
+/** Prüft, ob mit dieser Ortsliste gespielt werden kann. */
+export function pruefeOrte(orte: Location[], mindestens: number): string | null {
+  if (orte.length === 0) return "Die Datei enthält keine Orte.";
+
+  const staedte = alsStaedte(orte);
+  const zuKlein = staedte.filter((s) => s.orte.length < mindestens);
+  if (zuKlein.length === staedte.length)
+    return `Keine Stadt hat genug Schauplätze - es braucht mindestens ${mindestens} pro Stadt.`;
 
   return null;
 }

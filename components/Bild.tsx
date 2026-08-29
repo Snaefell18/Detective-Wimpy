@@ -51,11 +51,14 @@ export function Szene({
   alt,
   platzhalter,
   variante = "ort",
+  onLeer,
 }: {
   src?: string | null;
   alt: string;
   platzhalter?: string;
-  variante?: "ort" | "portraet";
+  variante?: "ort" | "portraet" | "titel";
+  /** Meldet, ob gerade nur der Platzhalter zu sehen ist. */
+  onLeer?: (leer: boolean) => void;
 }) {
   const { daten } = useAdmin();
   const [fehlt, setFehlt] = useState(false);
@@ -63,9 +66,12 @@ export function Szene({
 
   useEffect(() => setFehlt(false), [quelle]);
 
+  const leer = !quelle || fehlt;
+  useEffect(() => onLeer?.(leer), [leer, onLeer]);
+
   return (
     <div className={`szene szene-${variante}`} aria-hidden>
-      {quelle && !fehlt ? (
+      {!leer ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={quelle} alt="" onError={() => setFehlt(true)} draggable={false} />
       ) : (

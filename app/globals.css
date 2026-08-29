@@ -380,54 +380,98 @@ textarea {
   }
 }
 
-/* --- Startbildschirm -------------------------------------------- */
+/* --- Startbildschirm: das Titelbild füllt alles ------------------ */
 
 .start {
+  position: relative;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+}
+
+.szene-titel img {
+  object-position: center center;
+}
+
+/* Die Knöpfe liegen im Himmel zwischen Logo und Häuserzeile. */
+.start-himmel {
+  position: relative;
+  z-index: 2;
+  margin-top: 27vh;
+  padding: 0 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.start-zeile {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+}
+
+.knopf.glas {
+  background: rgba(8, 22, 44, 0.62);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(124, 196, 255, 0.35);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.start-info {
+  font-size: 12.5px;
+  color: #cfe2fa;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.start-fuss {
+  position: relative;
+  z-index: 2;
+  margin: auto 0 0;
+  padding: 0 26px calc(var(--safe-bottom) + 16px);
+  font-size: 11.5px;
+  color: #a9c2e2;
   text-align: center;
-  padding: calc(var(--safe-top) + 24px) 26px calc(var(--safe-bottom) + 26px);
-  gap: 12px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
-.start-held {
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid var(--eis);
-  box-shadow: 0 18px 50px rgba(124, 196, 255, 0.25);
+/* Ohne Titelbild trägt der Schriftzug den Bildschirm. */
+.szene-titel .szene-platzhalter {
+  background: radial-gradient(80% 60% at 50% 20%, #17395f, #050f22 78%);
 }
 
-.start-titel {
-  margin: 8px 0 0;
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  background: linear-gradient(180deg, var(--orange) 8%, var(--rot) 70%);
+.start-logo {
+  position: relative;
+  z-index: 2;
+  margin: 16vh 0 0;
+  text-align: center;
+  font-size: 44px;
+  line-height: 0.92;
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, var(--gelb), var(--orange) 60%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* Gelbe Außenkontur wie im Serienlogo. */
-  -webkit-text-stroke: 2px var(--gelb);
+  -webkit-text-stroke: 2px rgba(255, 240, 200, 0.45);
   paint-order: stroke fill;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
-  text-transform: uppercase;
 }
 
-.start-unter {
-  margin: 0 0 12px;
-  color: var(--text-leise);
-  max-width: 320px;
+.start-logo span {
+  display: block;
+  font-size: 60px;
+  background: linear-gradient(180deg, #bfe3ff, var(--eis-dunkel));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--gelb);
 }
 
-.start-hinweis {
-  margin-top: 4px;
-  font-size: 12.5px;
-  max-width: 320px;
+.start-himmel[data-ohne-bild="true"] {
+  margin-top: 8vh;
 }
 
 /* --- Ortsansicht ------------------------------------------------ */
@@ -1451,4 +1495,487 @@ a.zurueck {
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: 6px;
+}
+
+/* =================================================================
+   Intro: läuft exakt so lange wie der Titelsong
+   ================================================================= */
+
+.intro {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 70% at 50% 0%, #16376a 0%, transparent 60%),
+    radial-gradient(90% 60% at 20% 100%, #1b1030 0%, transparent 70%),
+    #03081a;
+  overflow: hidden;
+}
+
+/* Regen und Suchscheinwerfer wie auf dem Titelbild. */
+.intro-regen {
+  position: absolute;
+  inset: -20%;
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0 6px,
+    rgba(170, 210, 255, 0.14) 6px 7px,
+    transparent 7px 16px
+  );
+  animation: regnen 0.7s linear infinite;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@keyframes regnen {
+  to {
+    transform: translate3d(-60px, 220px, 0);
+  }
+}
+
+.intro-strahl {
+  position: absolute;
+  inset: -30%;
+  background: conic-gradient(
+    from 200deg at 50% 0%,
+    transparent 0deg,
+    rgba(124, 196, 255, 0.16) 12deg,
+    transparent 26deg
+  );
+  animation: schwenken 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes schwenken {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+.intro-buehne {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 26px) 22px 20px;
+  text-align: center;
+}
+
+.szene-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.intro-oberzeile {
+  margin: 0;
+  font-size: 12.5px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--eis);
+}
+
+/* --- Animationen ------------------------------------------------- */
+
+@keyframes knall {
+  0% {
+    opacity: 0;
+    transform: scale(2.4) rotate(-4deg);
+    filter: blur(16px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.94) rotate(0.6deg);
+    filter: blur(0);
+  }
+  75% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.knallen {
+  animation: knall 0.62s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes einfliegen {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.einfliegen {
+  animation: einfliegen 0.5s ease both;
+}
+
+@keyframes hereinschieben {
+  0% {
+    opacity: 0;
+    transform: translateX(-40%) rotate(-8deg) scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hereinschieben {
+  animation: hereinschieben 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes aufpoppen {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(30px);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.aufpoppen {
+  animation: aufpoppen 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes flackern {
+  0% {
+    opacity: 0;
+    filter: brightness(3);
+  }
+  30% {
+    opacity: 1;
+    filter: brightness(1.6);
+  }
+  45% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+.flackern {
+  animation: flackern 0.7s ease both;
+}
+
+@keyframes pochen {
+  0%,
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 30px rgba(228, 50, 43, 0.5);
+  }
+  50% {
+    transform: scale(1.07);
+    text-shadow: 0 0 60px rgba(255, 210, 74, 0.75);
+  }
+}
+
+.pochen {
+  animation: pochen 0.9s ease-in-out infinite;
+}
+
+/* --- Szeneninhalte ------------------------------------------------ */
+
+.intro-logo {
+  margin: 0;
+  font-size: 46px;
+  line-height: 0.92;
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, var(--gelb), var(--orange) 60%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(255, 240, 200, 0.5);
+  paint-order: stroke fill;
+}
+
+.intro-logo span {
+  display: block;
+  font-size: 62px;
+  background: linear-gradient(180deg, #bfe3ff, var(--eis-dunkel));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--gelb);
+}
+
+.intro-stadt {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  text-shadow: 0 0 44px rgba(124, 196, 255, 0.6);
+}
+
+.intro-streifen {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  height: 110px;
+  margin-top: 8px;
+}
+
+.intro-streifen-bild {
+  flex: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: aufpoppen 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.intro-falltitel {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--gelb);
+  text-shadow: 0 0 40px rgba(255, 196, 77, 0.45);
+}
+
+.intro-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #d8e6fa;
+  min-height: 5em;
+  max-width: 34ch;
+}
+
+.cursor {
+  display: inline-block;
+  width: 9px;
+  height: 1.05em;
+  margin-left: 3px;
+  background: var(--gelb);
+  vertical-align: -3px;
+  animation: pulsieren 0.6s steps(1) infinite;
+}
+
+.verdaechtig-szene {
+  gap: 6px;
+}
+
+.intro-portraet {
+  width: 205px;
+  height: 235px;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 76%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 76%, transparent 100%);
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.7));
+}
+
+.intro-steckbrief h1 {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+.intro-steckbrief p {
+  margin: 2px 0 0;
+}
+
+.intro-nummer {
+  font-size: 11.5px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--rot);
+  font-weight: 800;
+}
+
+.intro-werte {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 12px auto 8px;
+  width: min(300px, 100%);
+}
+
+.intro-wert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-leise);
+}
+
+.intro-wert span:first-child {
+  width: 72px;
+  text-align: left;
+}
+
+.intro-wert-balken {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.intro-wert-balken span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--eis), var(--orange), var(--rot));
+  transition: width 0.2s linear;
+}
+
+.intro-zitat {
+  font-size: 13.5px;
+  color: #c3d7f0;
+  max-width: 34ch;
+  margin: 0 auto;
+}
+
+.intro-orte {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.intro-ort {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.intro-ort:first-child {
+  grid-column: span 2;
+}
+
+.intro-ort-bild {
+  height: 74px;
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.intro-ort:first-child .intro-ort-bild {
+  height: 108px;
+}
+
+.intro-frage {
+  margin: 0 0 6px;
+  font-size: 50px;
+  font-weight: 900;
+  color: var(--rot);
+  text-transform: uppercase;
+  letter-spacing: -1px;
+}
+
+.intro-gesichter {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.intro-gesicht {
+  width: 88px;
+  height: 98px;
+  border-radius: 16px;
+  overflow: hidden;
+  filter: grayscale(0.7) contrast(1.15);
+}
+
+.intro-los {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--gelb);
+  text-shadow: 0 0 50px rgba(255, 196, 77, 0.5);
+}
+
+/* --- Leiste unten -------------------------------------------------- */
+
+.intro-leiste {
+  position: relative;
+  z-index: 3;
+  padding: 0 20px calc(var(--safe-bottom) + 14px);
+}
+
+.intro-fortschritt {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.intro-fortschritt span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--eis), var(--gelb), var(--rot));
+}
+
+.intro-knoepfe {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.intro-skip,
+.intro-ton {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-leise);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.intro-ton {
+  color: var(--gelb);
+}
+
+.intro-skip {
+  margin-left: auto;
+}
+
+/* --- Kleinigkeiten ------------------------------------------------- */
+
+.stadt-marke {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--gelb);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.wahl-reihe.umbrechend {
+  flex-wrap: wrap;
+}
+
+.wahl-reihe.umbrechend .wahl-chip {
+  flex: 1 1 40%;
 }

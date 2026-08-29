@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       system: [
         {
           type: "text",
-          text: buildWorldPrompt(fall.besetzung, fall.ton),
+          text: buildWorldPrompt(fall.besetzung, fall.orte, fall.stadt, fall.ton),
           cache_control: { type: "ephemeral" },
         },
       ],

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bild, Szene } from "./Bild";
-import { LOCATIONS, getLocation } from "@/lib/locations";
+import { findeOrt } from "@/lib/locations";
 import type { Character, PublicCase } from "@/lib/types";
 
 export function OrtScreen({
@@ -21,7 +21,7 @@ export function OrtScreen({
   suchtGerade: boolean;
 }) {
   const [fundText, setFundText] = useState<string | null>(null);
-  const ort = getLocation(ortId);
+  const ort = findeOrt(fall.orte, ortId);
   const verdaechtige: Character[] = fall.besetzung.filter((c) => !c.istDetektiv);
   const anwesend = verdaechtige.filter((c) => fall.aufenthalt[c.id] === ortId);
 
@@ -38,8 +38,9 @@ export function OrtScreen({
 
       <div className="ort-buehne">
         <div className="ort-titel">
+          <span className="stadt-marke">{fall.stadt}</span>
           <h2>{ort?.name}</h2>
-          <p>{ort?.beschreibung}</p>
+          <p>{ort?.atmosphaere}</p>
         </div>
 
         {anwesend.length > 0 && (
@@ -72,7 +73,7 @@ export function OrtScreen({
         </button>
 
         <div className="orte-leiste">
-          {LOCATIONS.map((o) => {
+          {fall.orte.map((o) => {
             const dort = verdaechtige.filter((c) => fall.aufenthalt[c.id] === o.id).length;
             return (
               <button

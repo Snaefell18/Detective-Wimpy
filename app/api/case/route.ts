@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { MODEL, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
+import { LOCATIONS, waehleSchauplaetze } from "@/lib/locations";
 import { buildCasePrompt, buildWorldPrompt } from "@/lib/prompts";
 import {
   CharacterSchema,
   EinstellungenSchema,
+  LocationSchema,
   makeCaseDraftSchema,
 } from "@/lib/schemas";
 import { seal } from "@/lib/seal";
@@ -13,14 +15,16 @@ import {
   STANDARD_EINSTELLUNGEN,
   type CaseFile,
   type Character,
+  type Location,
   type PublicCase,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** Höchstens so viele Charaktere - schützt vor riesigen Prompts. */
+/** Höchstens so viele Charaktere bzw. Orte - schützt vor riesigen Prompts. */
 const MAX_CHARAKTERE = 24;
+const MAX_ORTE = 120;
 
 /**
  * Nimmt die Besetzung aus dem Admin-Menü entgegen, sofern sie brauchbar ist.
@@ -41,6 +45,13 @@ function besetzungAus(roh: unknown): Character[] {
   return besetzung;
 }
 
+/** Orte aus dem Admin-Menü, sonst die Liste aus data/locations.csv. */
+function orteAus(roh: unknown): Location[] {
+  const geprueft = LocationSchema.array().max(MAX_ORTE).safeParse(roh);
+  if (!geprueft.success || geprueft.data.length === 0) return LOCATIONS;
+  return geprueft.data as Location[];
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -52,23 +63,47 @@ export async function POST(request: Request) {
     const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
     const taeter = verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
+    // Stadt und Schauplätze für diesen Fall festlegen.
+    const alleOrte = orteAus(body?.orte);
+    const schauplatz = waehleSchauplaetze(
+      alleOrte,
+      einstellungen.ortsAnzahl,
+      einstellungen.stadt === "zufall" ? undefined : einstellungen.stadt,
+    );
+    if (!schauplatz) {
+      return NextResponse.json(
+        {
+          fehler: `Keine Stadt hat ${einstellungen.ortsAnzahl} Schauplätze. Bitte im Admin-Menü die Ortsliste oder die Anzahl anpassen.`,
+        },
+        { status: 400 },
+      );
+    }
+
     const response = await getAnthropic().messages.parse({
       model: MODEL,
       max_tokens: 8000,
       system: [
         {
           type: "text",
-          text: buildWorldPrompt(besetzung, einstellungen.ton),
+          text: buildWorldPrompt(
+            besetzung,
+            schauplatz.orte,
+            schauplatz.stadt.name,
+            einstellungen.ton,
+          ),
           cache_control: { type: "ephemeral" },
         },
       ],
       thinking: { type: "adaptive" },
       output_config: {
         effort: "medium",
-        format: zodOutputFormat(makeCaseDraftSchema(besetzung)),
+        format: zodOutputFormat(makeCaseDraftSchema(besetzung, schauplatz.orte)),
       },
       messages: [
-        { role: "user", content: buildCasePrompt(besetzung, taeter.id) },
+        {
+          role: "user",
+          content: buildCasePrompt(besetzung, schauplatz.stadt.name, taeter.id),
+        },
       ],
     });
 
@@ -85,6 +120,8 @@ export async function POST(request: Request) {
       id: crypto.randomUUID(),
       besetzung,
       ton: einstellungen.ton,
+      stadt: schauplatz.stadt.name,
+      orte: schauplatz.orte,
       titel: draft.titel,
       tatbeschreibung: draft.tatbeschreibung,
       tatort: draft.tatort,
@@ -99,6 +136,8 @@ export async function POST(request: Request) {
     const oeffentlich: PublicCase = {
       id: fall.id,
       besetzung,
+      stadt: fall.stadt,
+      orte: fall.orte,
       titel: fall.titel,
       tatbeschreibung: fall.tatbeschreibung,
       tatort: fall.tatort,

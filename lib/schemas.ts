@@ -1,19 +1,18 @@
 import * as z from "zod/v4";
 import { ITEMS } from "./items";
-import { LOCATIONS } from "./locations";
-import type { Character } from "./types";
+import type { Character, Location } from "./types";
 
 const enumOf = (werte: string[]) => z.enum(werte as [string, ...string[]]);
 
-const locationId = enumOf(LOCATIONS.map((o) => o.id));
 const itemId = enumOf(ITEMS.map((i) => i.id));
 
 /**
- * Die erlaubten Charakter-Ids hängen von der Besetzung ab (im Admin-Menü kann
- * sie geändert werden), deshalb werden die Schemata pro Fall gebaut.
+ * Die erlaubten Charakter- und Orts-Ids hängen vom Fall ab (Besetzung und
+ * Stadt wechseln), deshalb werden die Schemata pro Fall gebaut.
  */
-export function makeCaseDraftSchema(besetzung: Character[]) {
+export function makeCaseDraftSchema(besetzung: Character[], orte: Location[]) {
   const characterId = enumOf(besetzung.map((c) => c.id));
+  const locationId = enumOf(orte.map((o) => o.id));
 
   return z.object({
     titel: z.string(),
@@ -89,8 +88,22 @@ export const CharacterSchema = z.object({
   istDetektiv: z.boolean(),
 });
 
+/** Prüft die Orte, die der Client aus dem Admin-Menü mitschickt. */
+export const LocationSchema = z.object({
+  id: z.string().min(1).max(80),
+  stadt: z.string().min(1).max(60),
+  stadtId: z.string().min(1).max(60),
+  name: z.string().min(1).max(60),
+  atmosphaere: z.string().max(120),
+  beschreibung: z.string().max(300),
+  bild: z.string().max(300),
+});
+
 export const EinstellungenSchema = z.object({
   beschuldigungen: z.number().min(1).max(5),
   startverdacht: z.number().min(0).max(80),
   ton: z.enum(["kindgerecht", "spannend", "albern"]),
+  stadt: z.string().max(60),
+  ortsAnzahl: z.number().min(3).max(8),
+  intro: z.boolean(),
 });

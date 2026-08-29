@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getItem } from "@/lib/items";
-import { getLocation } from "@/lib/locations";
+import { findeOrt } from "@/lib/locations";
 import { unseal } from "@/lib/seal";
 import type { CaseFile } from "@/lib/types";
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     );
 
     if (!spur) {
-      const ort = getLocation(body.ortId);
+      const ort = findeOrt(fall.orte, body.ortId);
       return NextResponse.json({
         spur: null,
         text: `Wimpy sucht ${ort ? `am Ort "${ort.name}"` : "hier"} jeden Winkel ab - hier ist nichts mehr zu holen.`,
