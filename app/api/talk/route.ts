@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { MODEL, getAnthropic } from "@/lib/anthropic";
+import { MODEL_GESPRAECH, getAnthropic } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
 import { unseal } from "@/lib/seal";
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     const response = await getAnthropic().messages.parse({
-      model: MODEL,
+      model: MODEL_GESPRAECH,
       max_tokens: 4000,
       system: [
         {

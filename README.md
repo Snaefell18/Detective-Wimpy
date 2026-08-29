@@ -25,6 +25,25 @@ npm run dev                    # http://localhost:3000
      Ohne Angabe wird der API-Key als Schlüsselbasis benutzt.
 3. Deployen. Fertig - kein Server, keine Datenbank nötig.
 
+## Modelle und Kosten
+
+Standard ist **Claude Sonnet 5** (2 $ / 10 $ je Million Token) - stark genug für
+Fallkonstruktion und Rollenspiel und deutlich günstiger als Opus (5 $ / 25 $).
+Umstellen ohne Codeänderung:
+
+| Variable               | Wofür                          | Default           |
+| ---------------------- | ------------------------------ | ----------------- |
+| `ANTHROPIC_MODEL`      | Fall erzeugen, Auflösung       | `claude-sonnet-5` |
+| `ANTHROPIC_MODEL_TALK` | nur die Gespräche              | wie oben          |
+
+Die Gespräche sind der häufigste Aufruf - wer dort noch sparen will, setzt
+`ANTHROPIC_MODEL_TALK=claude-haiku-4-5` (1 $ / 5 $). Umgekehrt bringt
+`claude-opus-5` die stärksten Dialoge, kostet aber am meisten.
+
+Sparsam ist die App ohnehin gebaut: Das Weltwissen wird zwischengespeichert
+(Prompt-Caching), Gespräche laufen mit niedrigem Aufwand (`effort: "low"`), und
+das Durchsuchen der Orte kommt ganz ohne Modell aus.
+
 Auf dem iPhone: Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Die App
 startet dann im Vollbild ohne Safari-Leisten (`display: standalone`), mit
 eigenem Icon und korrekten Abständen zu Dynamic Island und Home-Indicator.
@@ -139,20 +158,22 @@ hohe Freundlichkeit offenere Antworten.
 
 ## Intro vor jeder Runde
 
-Mit dem Klick auf „Neuen Fall starten“ läuft der Titelsong
-(`public/audio/intro.mp3`), während Fall, Verdächtige und Schauplätze
-vorgestellt werden: Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder
-Verdächtige einzeln mit seinen Werten, die fünf Schauplätze, „Wer war es?“ -
-und zum Schluss der Startschuss.
+Nach dem Klick auf „Neuen Fall starten“ wird zuerst der Fall erzeugt (ein paar
+Sekunden, mit Hinweis auf dem Startbildschirm). Erst wenn alle Fakten da sind,
+startet der Titelsong (`public/audio/intro.mp3`) und mit ihm die Vorstellung:
+Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder Verdächtige einzeln
+mit seinen Werten, die fünf Schauplätze, „Wer war es?“ - und zum Schluss der
+Startschuss. So steht im Intro von der ersten Sekunde an alles fest.
 
 Das Intro ist an den Song gekoppelt (`audio.currentTime`), nicht an feste
 Sekunden: Es endet **genau** mit dem letzten Ton. Tauschst du die MP3 gegen eine
-längere oder kürzere aus, passt sich der Ablauf von selbst an. Der Fall wird
-parallel im Hintergrund erzeugt und taucht mitten im Intro auf.
+längere oder kürzere aus, passt sich der Ablauf von selbst an.
 
-Blockiert der Browser den Ton (das kann beim ersten Start passieren), läuft das
-Intro stumm und deutlich kürzer, mit einem „Ton an“-Knopf. Überspringen geht
-immer, und im Admin-Menü lässt sich das Intro ganz abschalten.
+Damit der Ton trotz der Wartezeit erlaubt bleibt, wird das Audio-Element schon
+im Klick selbst kurz angetippt - Browser lassen Abspielen nur als Folge einer
+Nutzergeste zu. Blockiert es doch einmal, läuft das Intro stumm und kürzer;
+ein „Ton an“-Knopf und ein Tipp auf den Bildschirm holen die Musik nach.
+Überspringen geht immer, und im Admin-Menü lässt sich das Intro abschalten.
 
 ## Städte und Schauplätze
 

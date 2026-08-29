@@ -11,6 +11,7 @@ import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
+import { tonFreigeben } from "@/lib/introAudio";
 import { useGame } from "@/lib/useGame";
 
 export default function Home() {
@@ -24,12 +25,15 @@ export default function Home() {
   const { stand, geladen, laedt, fehler, setFehler } = spiel;
 
   /**
-   * Das Intro startet sofort mit dem Klick (die Geste erlaubt den Ton), der
-   * Fall wird parallel dazu erzeugt und taucht mitten im Intro auf.
+   * Erst den Fall erzeugen lassen, dann das Intro starten - so stehen im Intro
+   * alle Fakten (Stadt, Titel, Tathergang, Verdächtige) von der ersten Sekunde
+   * an fest. Der Ton wird schon im Klick selbst freigegeben, weil Browser das
+   * Abspielen nur direkt aus einer Nutzergeste heraus erlauben.
    */
-  const fallStarten = () => {
-    if (admin.einstellungen.intro) setIntroLaeuft(true);
-    void spiel.neuerFall();
+  const fallStarten = async () => {
+    if (admin.einstellungen.intro) tonFreigeben();
+    const geklappt = await spiel.neuerFall();
+    if (geklappt && admin.einstellungen.intro) setIntroLaeuft(true);
   };
 
   if (!geladen) {
@@ -37,14 +41,10 @@ export default function Home() {
   }
 
   // Intro läuft: es deckt alles ab, bis der Song vorbei ist.
-  if (introLaeuft) {
+  if (introLaeuft && stand.fall) {
     return (
       <main className="app">
-        <IntroSequenz
-          fall={stand.fall}
-          fehler={fehler}
-          onFertig={() => setIntroLaeuft(false)}
-        />
+        <IntroSequenz fall={stand.fall} onFertig={() => setIntroLaeuft(false)} />
       </main>
     );
   }
@@ -53,7 +53,11 @@ export default function Home() {
   if (!stand.fall || stand.status === "kein-fall") {
     return (
       <main className="app">
-        <StartScreen onStart={fallStarten} laedt={laedt === "fall"} fehler={fehler} />
+        <StartScreen
+          onStart={() => void fallStarten()}
+          laedt={laedt === "fall"}
+          fehler={fehler}
+        />
       </main>
     );
   }
@@ -65,7 +69,7 @@ export default function Home() {
         <ErgebnisScreen
           ergebnis={stand.ergebnis}
           besetzung={stand.fall.besetzung}
-          onNeuerFall={fallStarten}
+          onNeuerFall={() => void fallStarten()}
           laedt={laedt === "fall"}
         />
       </main>

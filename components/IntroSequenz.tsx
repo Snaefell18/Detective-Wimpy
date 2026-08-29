@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bild } from "./Bild";
+import { introAudio } from "@/lib/introAudio";
 import type { Character, PublicCase } from "@/lib/types";
 
 /** Ohne Musik (z.B. wenn der Browser das Abspielen blockiert) wird gekürzt. */
@@ -20,8 +21,8 @@ type Szene =
  * Baut den Ablauf als Anteile der Gesamtdauer (0..1). Dadurch passt das Intro
  * automatisch auf jede Songlänge - egal ob 30 Sekunden oder drei Minuten.
  */
-function szenenPlan(fall: PublicCase | null): Szene[] {
-  const verdaechtige = fall?.besetzung.filter((c) => !c.istDetektiv) ?? [];
+function szenenPlan(fall: PublicCase): Szene[] {
+  const verdaechtige = fall.besetzung.filter((c) => !c.istDetektiv);
 
   const plan: Szene[] = [
     { art: "titel", von: 0, bis: 0.1 },
@@ -54,14 +55,12 @@ function szenenPlan(fall: PublicCase | null): Szene[] {
 
 export function IntroSequenz({
   fall,
-  fehler,
   onFertig,
 }: {
-  fall: PublicCase | null;
-  fehler: string | null;
+  /** Der fertige Fall - das Intro startet erst, wenn alles da ist. */
+  fall: PublicCase;
   onFertig: () => void;
 }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
   const startRef = useRef<number>(performance.now());
   const fertigRef = useRef(false);
   const [fortschritt, setFortschritt] = useState(0);
@@ -71,13 +70,20 @@ export function IntroSequenz({
 
   // Der Fortschritt kommt aus dem Song selbst - so bleibt alles synchron.
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = introAudio();
     let laeuft = true;
 
-    void audio?.play().catch(() => {
-      // iOS/Safari blockieren Autoplay ohne Geste - dann läuft das Intro stumm.
-      setTonAn(false);
-    });
+    audio.currentTime = 0;
+    void audio
+      .play()
+      .then(() => {
+        if (laeuft) setTonAn(true);
+      })
+      .catch(() => {
+        // Nur melden, wenn dieser Durchlauf noch aktiv ist: React startet
+        // Effekte doppelt, und das abgebrochene erste play() ist kein Fehler.
+        if (laeuft) setTonAn(false);
+      });
 
     const tick = () => {
       if (!laeuft) return;
@@ -107,25 +113,26 @@ export function IntroSequenz({
     return () => {
       laeuft = false;
       cancelAnimationFrame(id);
-      audio?.pause();
+      audio.pause();
+      audio.currentTime = 0;
     };
   }, [onFertig]);
-
-  // Ein Fehler beim Erzeugen des Falls beendet das Intro sofort.
-  useEffect(() => {
-    if (fehler && !fertigRef.current) {
-      fertigRef.current = true;
-      onFertig();
-    }
-  }, [fehler, onFertig]);
 
   const szene = plan.find((s) => fortschritt >= s.von && fortschritt < s.bis) ?? plan[plan.length - 1];
   const lokal = Math.min(1, (fortschritt - szene.von) / Math.max(0.001, szene.bis - szene.von));
 
-  return (
-    <div className="intro">
-      <audio ref={audioRef} src="/audio/intro.mp3" preload="auto" />
+  const tonNachholen = () => {
+    if (tonAn) return;
+    void introAudio()
+      .play()
+      .then(() => setTonAn(true))
+      .catch(() => {});
+  };
 
+  return (
+    // Sollte der Browser den Ton doch blockiert haben, startet ihn der erste
+    // Tipp auf den Bildschirm.
+    <div className="intro" onPointerDown={tonNachholen}>
       <div className="intro-regen" />
       <div className="intro-strahl" />
 
@@ -142,7 +149,10 @@ export function IntroSequenz({
             <button
               className="intro-ton"
               onClick={() => {
-                void audioRef.current?.play().then(() => setTonAn(true)).catch(() => {});
+                void introAudio()
+                  .play()
+                  .then(() => setTonAn(true))
+                  .catch(() => {});
               }}
             >
               🔈 Ton an
@@ -175,7 +185,7 @@ function SzenenInhalt({
 }: {
   szene: Szene;
   lokal: number;
-  fall: PublicCase | null;
+  fall: PublicCase;
 }) {
   switch (szene.art) {
     case "titel":
@@ -193,9 +203,9 @@ function SzenenInhalt({
       return (
         <div className="szene-block">
           <p className="intro-oberzeile einfliegen">Tatort</p>
-          <h1 className="intro-stadt knallen">{fall?.stadt ?? "…"}</h1>
+          <h1 className="intro-stadt knallen">{fall.stadt}</h1>
           <div className="intro-streifen">
-            {(fall?.orte ?? []).slice(0, 5).map((ort, i) => (
+            {fall.orte.slice(0, 5).map((ort, i) => (
               <div
                 key={ort.id}
                 className="intro-streifen-bild"
@@ -212,9 +222,9 @@ function SzenenInhalt({
       return (
         <div className="szene-block">
           <p className="intro-oberzeile einfliegen">Der Fall</p>
-          <h1 className="intro-falltitel knallen">{fall?.titel ?? "Die Akte wird geöffnet …"}</h1>
+          <h1 className="intro-falltitel knallen">{fall.titel}</h1>
           <p className="intro-text">
-            {schreibmaschine(fall?.tatbeschreibung ?? "", lokal)}
+            {schreibmaschine(fall.tatbeschreibung, lokal)}
             <span className="cursor" />
           </p>
         </div>
@@ -249,7 +259,7 @@ function SzenenInhalt({
         <div className="szene-block">
           <p className="intro-oberzeile einfliegen">Schauplätze</p>
           <div className="intro-orte">
-            {(fall?.orte ?? []).map((ort, i) => (
+            {fall.orte.map((ort, i) => (
               <div
                 key={ort.id}
                 className="intro-ort aufpoppen"
@@ -271,7 +281,7 @@ function SzenenInhalt({
         <div className="szene-block">
           <h1 className="intro-frage pochen">Wer war es?</h1>
           <div className="intro-gesichter">
-            {(fall?.besetzung.filter((c) => !c.istDetektiv) ?? []).map((c, i) => (
+            {fall.besetzung.filter((c) => !c.istDetektiv).map((c, i) => (
               <div
                 key={c.id}
                 className="intro-gesicht flackern"

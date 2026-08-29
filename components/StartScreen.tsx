@@ -56,6 +56,12 @@ export function StartScreen({
           </span>
         </div>
 
+        {laedt && (
+          <p className="start-laden">
+            Wimpy sortiert die Akten … gleich geht es los.
+          </p>
+        )}
+
         {fehler && <p className="fehler">{fehler}</p>}
       </div>
 

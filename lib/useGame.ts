@@ -108,7 +108,7 @@ export function useGame() {
     }
   }, [stand, geladen]);
 
-  const neuerFall = useCallback(async () => {
+  const neuerFall = useCallback(async (): Promise<boolean> => {
     setFehler(null);
     setLaedt("fall");
     try {
@@ -135,8 +135,10 @@ export function useGame() {
         ),
         notizen: [notiz(daten.fall.tatbeschreibung, "Fallakte")],
       });
+      return true;
     } catch (error) {
       setFehler(error instanceof Error ? error.message : "Unbekannter Fehler");
+      return false;
     } finally {
       setLaedt(null);
     }
