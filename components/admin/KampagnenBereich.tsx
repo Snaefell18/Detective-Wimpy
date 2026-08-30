@@ -20,6 +20,18 @@ const SCHWIERIGKEITEN: { id: Vorgaben["schwierigkeit"]; label: string }[] = [
   { id: "knifflig", label: "Knifflig" },
 ];
 
+const REIFEGRADE: { id: Vorgaben["reifegrad"]; label: string; hinweis: string }[] = [
+  { id: "kindgerecht", label: "Kindgerecht", hinweis: "Streiche, Diebstähle" },
+  { id: "jugendlich", label: "Jugendlich", hinweis: "Drohungen, Rauferei" },
+  { id: "erwachsen", label: "Erwachsen", hinweis: "Gewalt, auch ein Toter" },
+];
+
+const ABSURDITAETEN: { id: Vorgaben["absurditaet"]; label: string; hinweis: string }[] = [
+  { id: "bodenstaendig", label: "Bodenständig", hinweis: "könnte so passiert sein" },
+  { id: "verspielt", label: "Verspielt", hinweis: "schrullig, leicht überzogen" },
+  { id: "absurd", label: "Absurd", hinweis: "Logik wie im Traum" },
+];
+
 /**
  * Fälle vorbereiten: Sie werden einmal erzeugt und in der Datenbank abgelegt.
  * Danach starten sie sofort - ohne weiteren Modellaufruf.
@@ -213,6 +225,38 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         ))}
       </div>
 
+      <h3 className="unter-abschnitt">
+        Publikum <span className="leise">· wie hart der Fall erzählt wird</span>
+      </h3>
+      <div className="wahl-reihe">
+        {REIFEGRADE.map((r) => (
+          <button
+            key={r.id}
+            className="wahl-chip"
+            data-aktiv={vorgaben.reifegrad === r.id}
+            onClick={() => setVorgaben({ ...vorgaben, reifegrad: r.id })}
+          >
+            <strong>{r.label}</strong>
+            <span className="leise">{r.hinweis}</span>
+          </button>
+        ))}
+      </div>
+
+      <h3 className="unter-abschnitt">Absurdität</h3>
+      <div className="wahl-reihe">
+        {ABSURDITAETEN.map((a) => (
+          <button
+            key={a.id}
+            className="wahl-chip"
+            data-aktiv={vorgaben.absurditaet === a.id}
+            onClick={() => setVorgaben({ ...vorgaben, absurditaet: a.id })}
+          >
+            <strong>{a.label}</strong>
+            <span className="leise">{a.hinweis}</span>
+          </button>
+        ))}
+      </div>
+
       <h3 className="unter-abschnitt">Schwierigkeit</h3>
       <div className="wahl-reihe">
         {SCHWIERIGKEITEN.map((s) => (
@@ -256,6 +300,9 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
               <strong>{k.name}</strong>
               <span className="leise">
                 {k.fall.stadt} · {k.fall.besetzung.length - 1} Verdächtige
+                {k.vorgaben?.reifegrad && k.vorgaben.reifegrad !== "kindgerecht"
+                  ? ` · ${k.vorgaben.reifegrad}`
+                  : ""}
               </span>
               <span className="leise klein">{k.fall.titel}</span>
             </div>

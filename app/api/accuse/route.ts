@@ -42,7 +42,15 @@ export async function POST(request: Request) {
       system: [
         {
           type: "text",
-          text: buildWorldPrompt(fall.besetzung, fall.orte, fall.stadt, fall.ton, fall.items),
+          text: buildWorldPrompt(
+            fall.besetzung,
+            fall.orte,
+            fall.stadt,
+            fall.ton,
+            fall.items,
+            fall.reifegrad,
+            fall.absurditaet,
+          ),
           cache_control: { type: "ephemeral" },
         },
       ],

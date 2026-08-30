@@ -83,6 +83,12 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   intro: true,
 };
 
+/** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */
+export type Reifegrad = "kindgerecht" | "jugendlich" | "erwachsen";
+
+/** Wie weit sich der Fall von der Wirklichkeit entfernen darf. */
+export type Absurditaet = "bodenstaendig" | "verspielt" | "absurd";
+
 /** Alles, was der Fall vorgibt. Wird beim Start einmal erzeugt. */
 export type CaseFile = {
   id: string;
@@ -92,6 +98,10 @@ export type CaseFile = {
   items: Item[];
   /** Erzählton für diesen Fall. */
   ton: Einstellungen["ton"];
+  /** Für welches Publikum dieser Fall erzählt wird. */
+  reifegrad: Reifegrad;
+  /** Wie schräg dieser Fall sein darf. */
+  absurditaet: Absurditaet;
   /** Die Stadt, in der dieser Fall spielt. */
   stadt: string;
   /** Die Schauplätze dieses Falls (Standard: fünf). */
@@ -226,6 +236,10 @@ export type Vorgaben = {
   taeterId: string;
   /** Wie knifflig der Fall sein soll. */
   schwierigkeit: "leicht" | "mittel" | "knifflig";
+  /** Für welches Publikum erzählt wird. */
+  reifegrad: Reifegrad;
+  /** Wie schräg der Fall sein darf. */
+  absurditaet: Absurditaet;
 };
 
 export const STANDARD_VORGABEN: Vorgaben = {
@@ -235,4 +249,6 @@ export const STANDARD_VORGABEN: Vorgaben = {
   items: [],
   taeterId: "",
   schwierigkeit: "mittel",
+  reifegrad: "kindgerecht",
+  absurditaet: "verspielt",
 };

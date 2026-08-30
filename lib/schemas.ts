@@ -146,6 +146,9 @@ export const VorgabenSchema = z.object({
   items: z.array(z.string().max(40)).max(24),
   taeterId: z.string().max(40),
   schwierigkeit: z.enum(["leicht", "mittel", "knifflig"]),
+  // Ältere Kampagnen kennen die beiden Felder noch nicht.
+  reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]).default("kindgerecht"),
+  absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]).default("verspielt"),
 });
 
 export const EinstellungenSchema = z.object({

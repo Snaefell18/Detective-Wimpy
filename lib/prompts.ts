@@ -3,11 +3,13 @@ import { ITEMS } from "./items";
 import type { Item } from "./types";
 import { findeOrt } from "./locations";
 import type {
+  Absurditaet,
   CaseFile,
   Character,
   ChatTurn,
   Einstellungen,
   Location,
+  Reifegrad,
   TalkMode,
   Vorgaben,
 } from "./types";
@@ -21,6 +23,30 @@ const TON_TEXT: Record<Einstellungen["ton"], string> = {
     "Der Ton ist albern und überdreht, mit Wortwitz und kleinen Slapstick-Momenten.",
 };
 
+/**
+ * Wie hart erzählt werden darf. Voreingestellt ist "kindgerecht"; die
+ * härteren Stufen werden nur im Admin-Menü für vorbereitete Kampagnen
+ * gewählt und gelten dann für den ganzen Fall - auch für die Gespräche.
+ */
+const REIFE_TEXT: Record<Reifegrad, string> = {
+  kindgerecht:
+    "Es geht nie um Blut, Tod oder echte Gewalt - Fälle sind Diebstähle, Streiche, Sabotage, verschwundene Dinge und Geheimnisse.",
+  jugendlich:
+    "Der Fall darf ernst sein: Drohungen, Erpressung, Einbruch, eine Rauferei, eine echte Verletzung. Kein Tod, keine ausgemalte Brutalität - die Spannung kommt aus der Bedrohung, nicht aus dem Schaden.",
+  erwachsen:
+    "Erzähle wie ein Krimi für Erwachsene: Der Fall darf um Gewalt, Rache, Erpressung und auch um einen Toten gehen, mit echten Abgründen und Figuren, die schuldig werden. Halte es literarisch statt blutig - andeuten und atmosphärisch beschreiben, nicht Verletzungen ausmalen. Keine sexuellen Inhalte, keine Grausamkeit als Selbstzweck, keine Anleitungen zu echten Straftaten.",
+};
+
+/** Wie weit sich der Fall von der Wirklichkeit entfernen darf. */
+const ABSURD_TEXT: Record<Absurditaet, string> = {
+  bodenstaendig:
+    "Bleib bodenständig: Alles im Fall könnte so wirklich passiert sein, die Motive sind nachvollziehbar, es gibt nichts Übernatürliches.",
+  verspielt:
+    "Es darf verspielt zugehen: schrullige Angewohnheiten, kleine Übertreibungen, hier und da ein wunderlicher Zufall.",
+  absurd:
+    "Es darf völlig absurd werden: aberwitzige Einfälle, unmögliche Zufälle, Logik wie im Traum. Der Fall muss trotzdem lösbar bleiben - die absurden Regeln gelten dann eben durchgehend.",
+};
+
 const detektiv = (besetzung: Character[]) =>
   besetzung.find((c) => c.istDetektiv) ?? besetzung[0];
 
@@ -32,6 +58,8 @@ export function buildWorldPrompt(
   ton: Einstellungen["ton"] = "kindgerecht",
   /** Die Gegenstände dieses Falls - nicht der ganze Katalog. */
   items: Item[] = ITEMS,
+  reifegrad: Reifegrad = "kindgerecht",
+  absurditaet: Absurditaet = "verspielt",
 ): string {
   const held = detektiv(besetzung);
 
@@ -40,7 +68,8 @@ export function buildWorldPrompt(
 WELT
 Der Fall spielt in ${stadt} - einer Stadt, in der Tiere wie Menschen leben. Beziehe dich auf das, was diese Stadt ausmacht.
 Der Spieler ist ${held.name}, ein ${held.tierart}: ${held.beschreibung}
-Es geht nie um Blut, Tod oder echte Gewalt - Fälle sind Diebstähle, Streiche, Sabotage, verschwundene Dinge und Geheimnisse.
+${REIFE_TEXT[reifegrad]}
+${ABSURD_TEXT[absurditaet]}
 ${TON_TEXT[ton]} Alles auf Deutsch, in kurzen, lebendigen Sätzen.
 
 CHARAKTERE
@@ -96,7 +125,8 @@ Anforderungen:
 - Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
 - Nutze die Gegenstände, die zu diesem Fall und dieser Stadt passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
-- Kindgerecht: kein Blut, keine Gewalt, kein Tod.
+- ${REIFE_TEXT[vorgaben?.reifegrad ?? "kindgerecht"]}
+- ${ABSURD_TEXT[vorgaben?.absurditaet ?? "verspielt"]}
 - Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
 - schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
 - introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Sie werden vor dem Intro als Prolog eingeblendet. Kein "Kapitel", keine Anrede, nur Atmosphäre.

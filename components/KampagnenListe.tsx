@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { Bild } from "./Bild";
 import { ladeKampagnen } from "@/lib/db";
-import type { Kampagne } from "@/lib/types";
+import type { Kampagne, Reifegrad } from "@/lib/types";
+
+/** Nur die härteren Stufen werden angezeigt - kindgerecht ist der Normalfall. */
+const REIFE_MARKE: Partial<Record<Reifegrad, string>> = {
+  jugendlich: "Ab 12",
+  erwachsen: "Ab 18",
+};
 
 /** Auswahl der vorgenerierten Fälle aus der Datenbank. */
 export function KampagnenListe({
@@ -65,7 +71,12 @@ export function KampagnenListe({
                 />
               </div>
               <div className="kampagne-text">
-                <strong>{k.name || k.fall.titel}</strong>
+                <strong>
+                  {k.name || k.fall.titel}
+                  {k.vorgaben?.reifegrad && REIFE_MARKE[k.vorgaben.reifegrad] && (
+                    <span className="reife-marke">{REIFE_MARKE[k.vorgaben.reifegrad]}</span>
+                  )}
+                </strong>
                 <span className="leise klein">
                   {k.fall.stadt} · {k.fall.besetzung.length - 1} Verdächtige ·{" "}
                   {k.fall.orte.length} Orte
