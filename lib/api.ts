@@ -10,12 +10,26 @@
  * der niemand etwas anfangen kann. Deshalb wird hier erst der Text gelesen
  * und dann vorsichtig geparst.
  */
-export async function postJson<T>(pfad: string, body: unknown): Promise<T> {
-  const antwort = await fetch(pfad, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-  });
+export async function postJson<T>(
+  pfad: string,
+  body: unknown,
+  /** Nach so vielen Sekunden gibt der Browser von sich aus auf. */
+  sekunden = 75,
+): Promise<T> {
+  let antwort: Response;
+  try {
+    antwort = await fetch(pfad, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+      signal: AbortSignal.timeout(sekunden * 1000),
+    });
+  } catch (fehler) {
+    // Hier landet alles, wobei schon die Verbindung scheitert: abgebrochene
+    // Anfragen, Funklöcher - und auf dem iPhone auch ein Bildschirm, der
+    // während der Wartezeit zugeht. Safari meldet das nur als "Load failed".
+    throw new Error(verbindungsFehler(fehler));
+  }
 
   const roh = await antwort.text();
   let daten: unknown = null;
@@ -39,6 +53,15 @@ export async function postJson<T>(pfad: string, body: unknown): Promise<T> {
   }
 
   return daten as T;
+}
+
+/** Verständlicher Text, wenn die Anfrage gar nicht erst durchkam. */
+function verbindungsFehler(fehler: unknown): string {
+  const name = fehler instanceof Error ? fehler.name : "";
+  if (name === "TimeoutError") {
+    return "Das hat zu lange gedauert - die Anfrage wurde abgebrochen. Bitte noch einmal versuchen, am besten mit knapperen Vorgaben.";
+  }
+  return "Die Verbindung ist abgebrochen. Das passiert vor allem, wenn das Handy zwischendurch den Bildschirm sperrt - lass ihn an und versuch es noch einmal.";
 }
 
 /** Verständlicher Text zu einem Statuscode ohne brauchbaren Inhalt. */

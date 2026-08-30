@@ -269,6 +269,13 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         {laeuft ? "Der Fall wird ausgeheckt …" : "Fall erzeugen und speichern"}
       </button>
 
+      {laeuft && (
+        <p className="leise klein" style={{ marginTop: 8 }}>
+          Das dauert bis zu einer Minute. Bitte den Bildschirm anlassen - sperrt
+          sich das Handy, bricht die Verbindung ab.
+        </p>
+      )}
+
       <h2 className="abschnitt">
         Gespeicherte Kampagnen ({kampagnen?.length ?? 0})
       </h2>
