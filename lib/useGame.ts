@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { postJson as post } from "./api";
 import { useAdmin } from "./adminStore";
 import { useStammdaten } from "./stammdaten";
 import type {
@@ -49,19 +50,6 @@ const LEER: Spielstand = {
   status: "kein-fall",
   ergebnis: null,
 };
-
-async function post<T>(pfad: string, body: unknown): Promise<T> {
-  const antwort = await fetch(pfad, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-  });
-  const daten = await antwort.json().catch(() => ({}));
-  if (!antwort.ok) {
-    throw new Error(daten?.fehler ?? `Serverfehler (${antwort.status})`);
-  }
-  return daten as T;
-}
 
 const notiz = (text: string, quelle: string): NotebookEntry => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

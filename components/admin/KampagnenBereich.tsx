@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bild } from "@/components/Bild";
 import { useAdmin } from "@/lib/adminStore";
+import { postJson } from "@/lib/api";
 import { alsStaedte } from "@/lib/csv";
 import { ladeKampagnen, loescheKampagne, speichereKampagne } from "@/lib/db";
 import { useStammdaten } from "@/lib/stammdaten";
@@ -77,25 +78,13 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
     setLaeuft(true);
     onFehler(null);
     try {
-      const antwort = await fetch("/api/case", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          charaktere: stammdaten.charaktere,
-          orte: stammdaten.orte,
-          items: stammdaten.items,
-          einstellungen: admin.einstellungen,
-          vorgaben,
-        }),
+      const daten = await postJson<{ fall: PublicCase; siegel: string }>("/api/case", {
+        charaktere: stammdaten.charaktere,
+        orte: stammdaten.orte,
+        items: stammdaten.items,
+        einstellungen: admin.einstellungen,
+        vorgaben,
       });
-      const daten = (await antwort.json()) as
-        | { fall: PublicCase; siegel: string }
-        | { fehler: string };
-
-      if (!antwort.ok || "fehler" in daten) {
-        onFehler("fehler" in daten ? daten.fehler : "Der Fall konnte nicht erzeugt werden.");
-        return;
-      }
 
       const kampagne: Kampagne = {
         id: daten.fall.id,

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ergebnisAus, fehlerText } from "@/lib/antwort";
+import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { idOderStandard, passendeId } from "@/lib/zuordnen";
-import { MODEL, getAnthropic } from "@/lib/anthropic";
+import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
 import { LOCATIONS, findeOrt, waehleSchauplaetze } from "@/lib/locations";
 import { buildCasePrompt, buildWorldPrompt } from "@/lib/prompts";
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
           ),
         },
       ],
-    });
+    }, budget(50));
 
     const modellAntwort = ergebnisAus<CaseDraft>(response, "api/case");
     if ("fehler" in modellAntwort) {
@@ -275,6 +275,9 @@ export async function POST(request: Request) {
     // Der vollständige Fall verlässt den Server nur verschlüsselt.
     return NextResponse.json({ fall: oeffentlich, siegel: seal(fall) });
   } catch (error) {
-    return NextResponse.json({ fehler: fehlerText(error, "api/case") }, { status: 500 });
+    return NextResponse.json(
+      { fehler: fehlerText(error, "api/case") },
+      { status: istZeitueberschreitung(error) ? 504 : 500 },
+    );
   }
 }

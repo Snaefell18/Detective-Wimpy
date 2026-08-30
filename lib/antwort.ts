@@ -56,8 +56,23 @@ export function ergebnisAus<T>(
 }
 
 /** Macht aus einem Fehler eine Meldung, die im Spiel weiterhilft. */
+/** Lief der Aufruf in sein Zeitlimit (oder wurde abgebrochen)? */
+export function istZeitueberschreitung(fehler: unknown): boolean {
+  if (!(fehler instanceof Error)) return false;
+  return (
+    fehler.name === "APIConnectionTimeoutError" ||
+    fehler.name === "AbortError" ||
+    fehler.name === "TimeoutError" ||
+    /timed? ?out|aborted/i.test(fehler.message)
+  );
+}
+
 export function fehlerText(fehler: unknown, bereich: string): string {
   console.error(`[${bereich}]`, fehler);
+
+  if (istZeitueberschreitung(fehler)) {
+    return "Das hat zu lange gedauert und wurde abgebrochen. Bitte noch einmal versuchen - mit knapperen Vorgaben geht es meist schneller.";
+  }
 
   if (fehler instanceof Error) {
     // Fehler der Anthropic-API tragen Status und Grund im Text - beides ist

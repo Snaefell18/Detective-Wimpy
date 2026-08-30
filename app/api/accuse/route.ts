@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ergebnisAus, fehlerText } from "@/lib/antwort";
-import { MODEL, getAnthropic } from "@/lib/anthropic";
+import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
+import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { AccuseSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
           }),
         },
       ],
-    });
+    }, budget(24, 1));
 
     const modellAntwort = ergebnisAus<z.infer<typeof AccuseSchema>>(response, "api/accuse");
     if ("fehler" in modellAntwort) {
@@ -89,6 +89,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ergebnis);
   } catch (error) {
-    return NextResponse.json({ fehler: fehlerText(error, "api/accuse") }, { status: 500 });
+    return NextResponse.json(
+      { fehler: fehlerText(error, "api/accuse") },
+      { status: istZeitueberschreitung(error) ? 504 : 500 },
+    );
   }
 }

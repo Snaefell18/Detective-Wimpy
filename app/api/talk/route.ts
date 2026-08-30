@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ergebnisAus, fehlerText } from "@/lib/antwort";
+import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { passendeId, stimmungAus } from "@/lib/zuordnen";
-import { MODEL_GESPRAECH, getAnthropic } from "@/lib/anthropic";
+import { MODEL_GESPRAECH, budget, getAnthropic } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
           }),
         },
       ],
-    });
+    }, budget(24, 1));
 
     const modellAntwort = ergebnisAus<z.infer<typeof TalkSchema>>(response, "api/talk");
     if ("fehler" in modellAntwort) {
@@ -108,6 +108,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ergebnis);
   } catch (error) {
-    return NextResponse.json({ fehler: fehlerText(error, "api/talk") }, { status: 500 });
+    return NextResponse.json(
+      { fehler: fehlerText(error, "api/talk") },
+      { status: istZeitueberschreitung(error) ? 504 : 500 },
+    );
   }
 }

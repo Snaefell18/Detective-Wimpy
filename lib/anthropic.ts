@@ -30,3 +30,19 @@ export function getAnthropic(): Anthropic {
   client ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return client;
 }
+
+/**
+ * Zeitbudget für einen Modellaufruf.
+ *
+ * Vercel bricht eine Funktion nach maxDuration (60 s) hart ab und liefert dann
+ * eine HTML-Fehlerseite statt JSON - der Browser zeigt daraufhin eine
+ * kryptische Meldung. Deshalb bekommt jeder Aufruf ein eigenes, kleineres
+ * Budget, damit noch Zeit für eine verständliche eigene Antwort bleibt.
+ *
+ * Achtung: Das Zeitlimit gilt je Versuch. Die Sekunden mal (versuche + 1)
+ * müssen deshalb unter dem Limit der Plattform bleiben.
+ */
+export const budget = (sekunden: number, versuche = 0) => ({
+  timeout: sekunden * 1000,
+  maxRetries: versuche,
+});
