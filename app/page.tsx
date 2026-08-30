@@ -90,13 +90,15 @@ export default function Home() {
     );
   }
 
-  // 1. Noch kein Fall - Startbildschirm.
-  if (!stand.fall || stand.status === "kein-fall") {
+  // 1. Kein Fall oder pausiert - Startbildschirm.
+  if (!stand.fall || stand.status === "kein-fall" || stand.status === "pausiert") {
     return (
       <main className="app">
         <StartScreen
           onStart={() => void fallStarten()}
           onKampagnen={() => setKampagnenOffen(true)}
+          onFortsetzen={stand.status === "pausiert" ? spiel.fortsetzen : undefined}
+          laufenderFall={stand.status === "pausiert" ? stand.fall?.titel : undefined}
           laedt={laedt === "fall"}
           schritt={schritt}
           fehler={fehler}
@@ -141,14 +143,26 @@ export default function Home() {
             {stand.fall.stadt} · {stand.gefundeneSpuren.length} Spuren
           </p>
         </div>
-        <button
-          className="knopf klein"
-          onClick={() => {
-            if (window.confirm("Aktuellen Fall wirklich aufgeben?")) spiel.aufgeben();
-          }}
-        >
-          Aufgeben
-        </button>
+        <div className="kopf-knoepfe">
+          <button
+            className="rund-knopf"
+            onClick={spiel.pausieren}
+            aria-label="Pausieren"
+            title="Pausieren"
+          >
+            ⏸
+          </button>
+          <button
+            className="rund-knopf"
+            onClick={() => {
+              if (window.confirm("Aktuellen Fall wirklich beenden?")) spiel.aufgeben();
+            }}
+            aria-label="Fall beenden"
+            title="Fall beenden"
+          >
+            ✕
+          </button>
+        </div>
       </header>
 
       <div className={tab === "ort" ? "buehne" : "scroll"}>

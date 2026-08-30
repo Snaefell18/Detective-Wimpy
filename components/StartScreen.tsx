@@ -10,12 +10,17 @@ import { useStammdaten } from "@/lib/stammdaten";
 export function StartScreen({
   onStart,
   onKampagnen,
+  onFortsetzen,
+  laufenderFall,
   laedt,
   schritt,
   fehler,
 }: {
   onStart: () => void;
   onKampagnen: () => void;
+  /** Nur gesetzt, wenn ein pausierter Fall wartet. */
+  onFortsetzen?: () => void;
+  laufenderFall?: string;
   laedt: boolean;
   /** Woran gerade gebaut wird - der Fall entsteht in drei Schritten. */
   schritt?: string | null;
@@ -50,12 +55,20 @@ export function StartScreen({
           {laedt ? "Wird ausgeheckt …" : "Neuer Fall"}
         </button>
 
+        {onFortsetzen && (
+          <button className="knopf glas schmal" onClick={onFortsetzen}>
+            ▶ Fortsetzen
+          </button>
+        )}
+
         <button className="knopf glas schmal" onClick={onKampagnen}>
           🗂 Kampagnen
         </button>
 
         <span className="start-info">
-          {charaktere.length - 1} Verdächtige · {staedte.length} Städte
+          {laufenderFall
+            ? `Pausiert: ${laufenderFall}`
+            : `${charaktere.length - 1} Verdächtige · ${staedte.length} Städte`}
         </span>
 
         {laedt && (

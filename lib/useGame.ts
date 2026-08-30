@@ -34,7 +34,7 @@ export type Spielstand = {
   verlauf: Record<string, ChatTurn[]>;
   verdacht: Record<string, number>;
   beschuldigungenUebrig: number;
-  status: "kein-fall" | "laeuft" | "beendet";
+  status: "kein-fall" | "laeuft" | "pausiert" | "beendet";
   ergebnis: Ergebnis | null;
 };
 
@@ -339,6 +339,16 @@ export function useGame() {
     [],
   );
 
+  /** Pause: Der Fall bleibt liegen, das Hauptmenü bietet "Fortsetzen" an. */
+  const pausieren = useCallback(() => {
+    setStand((alt) => (alt.status === "laeuft" ? { ...alt, status: "pausiert" } : alt));
+  }, []);
+
+  const fortsetzen = useCallback(() => {
+    setStand((alt) => (alt.status === "pausiert" ? { ...alt, status: "laeuft" } : alt));
+  }, []);
+
+  /** Beenden: Der Fall ist weg. */
   const aufgeben = useCallback(() => {
     setStand(LEER);
   }, []);
@@ -352,6 +362,8 @@ export function useGame() {
     setFehler,
     neuerFall,
     kampagneStarten,
+    pausieren,
+    fortsetzen,
     gehZuOrt,
     umsehen,
     sprich,

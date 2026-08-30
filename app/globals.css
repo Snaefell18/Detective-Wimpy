@@ -1407,6 +1407,33 @@ a.zurueck {
   color: var(--gelb);
 }
 
+/* Pausieren und Beenden oben rechts. */
+.kopf-knoepfe {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.rund-knopf {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.rund-knopf:active {
+  transform: scale(0.94);
+}
+
 /* Altersmarke an härteren Kampagnen. */
 .reife-marke {
   margin-left: 8px;
