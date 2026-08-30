@@ -147,28 +147,34 @@ export function useGame() {
    * Startet einen vorgenerierten Fall aus der Datenbank - ohne Modellaufruf,
    * also sofort und ohne Kosten.
    */
-  const kampagneStarten = useCallback(
-    (kampagne: Kampagne) => {
+  /**
+   * Einen fertigen Fall starten - egal ob aus einer Kampagne oder aus dem
+   * Kapitel einer Saga. Es fällt kein Modellaufruf an.
+   */
+  const fertigenFallStarten = useCallback(
+    (fall: PublicCase, siegel: string, beschuldigungen?: number) => {
       setFehler(null);
-      const startOrt = kampagne.fall.orte[0]?.id ?? "";
+      const startOrt = fall.orte[0]?.id ?? "";
       setStand({
         ...LEER,
-        fall: kampagne.fall,
-        siegel: kampagne.siegel,
+        fall,
+        siegel,
         ortId: startOrt,
         besuchteOrte: startOrt ? [startOrt] : [],
         status: "laeuft",
-        beschuldigungenUebrig: admin.einstellungen.beschuldigungen,
+        beschuldigungenUebrig: beschuldigungen ?? admin.einstellungen.beschuldigungen,
         verdacht: Object.fromEntries(
-          Object.keys(kampagne.fall.aufenthalt).map((id) => [
-            id,
-            admin.einstellungen.startverdacht,
-          ]),
+          Object.keys(fall.aufenthalt).map((id) => [id, admin.einstellungen.startverdacht]),
         ),
-        notizen: [notiz(kampagne.fall.tatbeschreibung, "Fallakte")],
+        notizen: [notiz(fall.tatbeschreibung, "Fallakte")],
       });
     },
     [admin.einstellungen],
+  );
+
+  const kampagneStarten = useCallback(
+    (kampagne: Kampagne) => fertigenFallStarten(kampagne.fall, kampagne.siegel),
+    [fertigenFallStarten],
   );
 
   const gehZuOrt = useCallback((ortId: string) => {
@@ -362,6 +368,7 @@ export function useGame() {
     setFehler,
     neuerFall,
     kampagneStarten,
+    fertigenFallStarten,
     pausieren,
     fortsetzen,
     gehZuOrt,

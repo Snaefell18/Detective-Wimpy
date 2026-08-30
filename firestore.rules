@@ -58,6 +58,18 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Sagas: mehrere Fälle mit gemeinsamem Überthema
+    match /sagen/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && textLimit('name', 120)
+        && textLimit('thema', 2000)
+        && textLimit('klappentext', 2000)
+        && request.resource.data.bogenSiegel is string
+        && request.resource.data.bogenSiegel.size() < 200000;
+      allow delete: if angemeldet();
+    }
+
     // Alles andere ist gesperrt.
     match /{document=**} {
       allow read, write: if false;

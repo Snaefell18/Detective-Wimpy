@@ -1407,6 +1407,72 @@ a.zurueck {
   color: var(--gelb);
 }
 
+/* --- Sagas ---------------------------------------------------------- */
+
+.saga-knoepfe {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.saga-eintrag {
+  align-items: flex-start;
+}
+
+.saga-karte {
+  margin-top: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.saga-kopf {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.saga-kopf strong {
+  display: block;
+  font-size: 16px;
+}
+
+.saga-inhalt {
+  padding: 0 16px 16px;
+}
+
+.erzaehler-feld {
+  padding-top: 6px;
+}
+
+/* Erzählerteil zwischen zwei Kapiteln. */
+.erzaehler-titel {
+  margin: 0 0 18px;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--gelb);
+  text-align: center;
+}
+
+.erzaehler-weiter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--safe-bottom) + 26px);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
 /* Pausieren und Beenden oben rechts. */
 .kopf-knoepfe {
   display: flex;

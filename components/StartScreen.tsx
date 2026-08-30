@@ -10,6 +10,7 @@ import { useStammdaten } from "@/lib/stammdaten";
 export function StartScreen({
   onStart,
   onKampagnen,
+  onSagas,
   onFortsetzen,
   laufenderFall,
   laedt,
@@ -18,6 +19,7 @@ export function StartScreen({
 }: {
   onStart: () => void;
   onKampagnen: () => void;
+  onSagas: () => void;
   /** Nur gesetzt, wenn ein pausierter Fall wartet. */
   onFortsetzen?: () => void;
   laufenderFall?: string;
@@ -63,6 +65,10 @@ export function StartScreen({
 
         <button className="knopf glas schmal" onClick={onKampagnen}>
           🗂 Kampagnen
+        </button>
+
+        <button className="knopf glas schmal" onClick={onSagas}>
+          📖 Sagas
         </button>
 
         <span className="start-info">

@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Ein Build parallel zum laufenden Entwicklungsserver würde dessen Dateien
+  // überschreiben. Mit NEXT_DIST_DIR landet er woanders.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   images: {
     // Vercel liefert die Bilder als WebP/AVIF in der Größe aus, die das Gerät
     // wirklich braucht - aus einem 1280px-PNG werden so ~100 kB statt 500.

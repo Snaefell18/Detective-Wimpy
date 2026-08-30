@@ -174,6 +174,25 @@ export const VorgabenSchema = z.object({
   absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]).default("verspielt"),
 });
 
+/** Vorgaben für eine ganze Saga aus dem Admin-Menü. */
+export const SagaVorgabenSchema = z.object({
+  name: z.string().max(120),
+  thema: z.string().max(2000),
+  kapitelAnzahl: z.number().min(2).max(8),
+  kapitelWuensche: z.array(z.string().max(400)).max(8),
+  stadt: z.string().max(60),
+  staedteWechseln: z.boolean(),
+  charaktere: z.array(z.string().max(40)).max(24),
+  items: z.array(z.string().max(40)).max(24),
+  drahtzieherId: z.string().max(40),
+  schwierigkeit: z.enum(["leicht", "mittel", "knifflig"]),
+  reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]),
+  absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]),
+  ton: z.enum(["kindgerecht", "spannend", "albern"]),
+  ortsAnzahl: z.number().min(2).max(8),
+  beschuldigungen: z.number().min(1).max(5),
+});
+
 export const EinstellungenSchema = z.object({
   beschuldigungen: z.number().min(1).max(5),
   startverdacht: z.number().min(0).max(80),

@@ -7,7 +7,9 @@ import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
+import { ErzaehlerScreen } from "@/components/ErzaehlerScreen";
 import { Prolog } from "@/components/Prolog";
+import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
@@ -15,7 +17,9 @@ import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
+import type { Saga } from "@/lib/sagaTypen";
 import { useGame } from "@/lib/useGame";
+import { useSagaLauf } from "@/lib/useSagaLauf";
 
 export default function Home() {
   const spiel = useGame();
@@ -25,6 +29,8 @@ export default function Home() {
   const [beschuldigenOffen, setBeschuldigenOffen] = useState(false);
   const [phase, setPhase] = useState<"aus" | "prolog" | "intro">("aus");
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
+  const [sagenOffen, setSagenOffen] = useState(false);
+  const saga = useSagaLauf();
 
   const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
 
@@ -59,7 +65,32 @@ export default function Home() {
     if (admin.einstellungen.intro) setPhase("prolog");
   };
 
-  if (!geladen) {
+  /* --- Sagas: Erzählerteile und Kapitel ------------------------------ */
+
+  const sagaStarten = (gewaehlt: Saga, vonVorn: boolean) => {
+    saga.starten(gewaehlt, vonVorn);
+    setSagenOffen(false);
+  };
+
+  /** Den Fall des aktuellen Kapitels (oder das Finale) beginnen. */
+  const sagaFallStarten = (finale: boolean) => {
+    if (!saga.stand) return;
+    const quelle = finale
+      ? saga.stand.saga.finale
+      : saga.stand.saga.kapitel[saga.stand.lauf.kapitel];
+    if (!quelle?.fall || !quelle.siegel) {
+      saga.setzePhase(finale ? "epilog" : "erzaehler");
+      return;
+    }
+    spiel.fertigenFallStarten(
+      quelle.fall,
+      quelle.siegel,
+      saga.stand.saga.vorgaben.beschuldigungen,
+    );
+    saga.setzePhase(finale ? "finale" : "fall");
+  };
+
+  if (!geladen || !saga.geladen) {
     return <main className="app" />;
   }
 
@@ -90,6 +121,66 @@ export default function Home() {
     );
   }
 
+  // Erzählerteile einer Saga.
+  if (saga.stand && phase === "aus") {
+    const { saga: sagaDaten, lauf } = saga.stand;
+
+    if (lauf.phase === "auftakt") {
+      return (
+        <main className="app">
+          <ErzaehlerScreen
+            teil={sagaDaten.auftakt}
+            titel={sagaDaten.name}
+            onWeiter={() => saga.setzePhase("erzaehler")}
+          />
+        </main>
+      );
+    }
+
+    if (lauf.phase === "erzaehler") {
+      const kapitel = sagaDaten.kapitel[lauf.kapitel];
+      return (
+        <main className="app">
+          <ErzaehlerScreen
+            teil={kapitel.erzaehler}
+            titel={`Kapitel ${kapitel.nummer}: ${kapitel.name}`}
+            weiterText="Fall übernehmen ›"
+            onWeiter={() => sagaFallStarten(false)}
+          />
+        </main>
+      );
+    }
+
+    if (lauf.phase === "finale-erzaehler") {
+      return (
+        <main className="app">
+          <ErzaehlerScreen
+            teil={sagaDaten.finale.erzaehler}
+            titel={sagaDaten.finale.frage}
+            weiterText="Ins Finale ›"
+            onWeiter={() => sagaFallStarten(true)}
+          />
+        </main>
+      );
+    }
+
+    if (lauf.phase === "epilog") {
+      return (
+        <main className="app">
+          <ErzaehlerScreen
+            teil={sagaDaten.finale.epilog}
+            titel={`${sagaDaten.name} - Ende`}
+            weiterText="Zum Hauptmenü ›"
+            onWeiter={() => {
+              saga.beenden();
+              spiel.aufgeben();
+            }}
+          />
+        </main>
+      );
+    }
+  }
+
   // 1. Kein Fall oder pausiert - Startbildschirm.
   if (!stand.fall || stand.status === "kein-fall" || stand.status === "pausiert") {
     return (
@@ -97,6 +188,7 @@ export default function Home() {
         <StartScreen
           onStart={() => void fallStarten()}
           onKampagnen={() => setKampagnenOffen(true)}
+          onSagas={() => setSagenOffen(true)}
           onFortsetzen={stand.status === "pausiert" ? spiel.fortsetzen : undefined}
           laufenderFall={stand.status === "pausiert" ? stand.fall?.titel : undefined}
           laedt={laedt === "fall"}
@@ -108,6 +200,18 @@ export default function Home() {
           <KampagnenListe
             onStarten={kampagneStarten}
             onSchliessen={() => setKampagnenOffen(false)}
+          />
+        )}
+
+        {sagenOffen && (
+          <SagenListe
+            onStarten={sagaStarten}
+            onSchliessen={() => setSagenOffen(false)}
+            laufend={
+              saga.stand
+                ? { sagaId: saga.stand.saga.id, kapitel: saga.stand.lauf.kapitel }
+                : null
+            }
           />
         )}
       </main>
@@ -122,7 +226,22 @@ export default function Home() {
           ergebnis={stand.ergebnis}
           besetzung={stand.fall.besetzung}
           onNeuerFall={() => void fallStarten()}
-          onHauptmenue={spiel.aufgeben}
+          onHauptmenue={() => {
+            saga.beenden();
+            spiel.aufgeben();
+          }}
+          onWeiter={
+            saga.stand
+              ? () => {
+                  if (saga.stand?.lauf.phase === "finale") saga.setzePhase("epilog");
+                  else saga.kapitelGeschafft();
+                  spiel.aufgeben();
+                }
+              : undefined
+          }
+          weiterText={
+            saga.stand?.lauf.phase === "finale" ? "Epilog ›" : "Nächstes Kapitel ›"
+          }
           laedt={laedt === "fall"}
         />
       </main>

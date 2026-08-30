@@ -11,11 +11,16 @@ export function ErgebnisScreen({
   besetzung,
   onNeuerFall,
   onHauptmenue,
+  onWeiter,
+  weiterText,
   laedt,
 }: {
   ergebnis: Ergebnis;
   besetzung: Character[];
   onNeuerFall: () => void;
+  /** In einer Saga: weiter zum nächsten Kapitel statt zu einem neuen Fall. */
+  onWeiter?: () => void;
+  weiterText?: string;
   /** Zurück zum Startbildschirm, ohne gleich einen neuen Fall zu starten. */
   onHauptmenue: () => void;
   laedt: boolean;
@@ -54,9 +59,15 @@ export function ErgebnisScreen({
           <h2 className="abschnitt">{beschuldigt?.name} sagt</h2>
           <p className="fliesstext zitat">„{ergebnis.reaktion}“</p>
 
-          <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
-            {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
-          </button>
+          {onWeiter ? (
+            <button className="knopf aktion" onClick={onWeiter}>
+              {weiterText ?? "Weiter ›"}
+            </button>
+          ) : (
+            <button className="knopf aktion" onClick={onNeuerFall} disabled={laedt}>
+              {laedt ? "Neuer Fall wird ausgeheckt …" : "Nächster Fall"}
+            </button>
+          )}
 
           <button
             className="knopf dezent"

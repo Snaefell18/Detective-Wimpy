@@ -17,6 +17,12 @@ export type FallEingaben = {
   items: Item[];
   einstellungen: Einstellungen;
   vorgaben?: Vorgaben | null;
+  /**
+   * Nur für Sagas: der versiegelte Bogen und die Kapitelnummer (0 = Finale).
+   * Besetzung, Täter und Vorgaben kommen dann aus dem Bogen, nicht von hier.
+   */
+  sagaSiegel?: string;
+  kapitel?: number;
 };
 
 /** Was in der Oberfläche steht, während gebaut wird. */

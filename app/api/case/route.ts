@@ -24,6 +24,8 @@ import {
   makeSpurenSchema,
   makeVerdaechtigeSchema,
 } from "@/lib/schemas";
+import type { Bogen } from "@/lib/sagaBogen";
+import { buildSagaBriefing } from "@/lib/sagaPrompts";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
@@ -118,7 +120,14 @@ function wuerfleItems(pool: Item[], pflicht: string[]): Item[] {
 type Schritt = "geruest" | "verdaechtige" | "spuren";
 
 /** Der halbfertige Fall im Siegel - Verdächtige und Spuren fehlen anfangs. */
-type Entwurf = CaseFile & { vorgaben: Vorgaben | null };
+type Entwurf = CaseFile & {
+  vorgaben: Vorgaben | null;
+  /**
+   * Nur bei Sagas gesetzt: Was das Modell über den großen Bogen wissen muss.
+   * Steht ausschließlich hier im Siegel, damit der Browser nichts davon sieht.
+   */
+  sagaBriefing?: string;
+};
 
 const modellOptionen = (
   system: string,
@@ -138,6 +147,26 @@ const modellOptionen = (
     messages: [{ role: "user" as const, content: frage }],
   }) as MessageCreateParamsNonStreaming;
 
+const mitBriefing = (prompt: string, briefing?: string) =>
+  briefing ? `${briefing}\n\n---\n\n${prompt}` : prompt;
+
+/**
+ * Gehört dieser Fall zu einer Saga? Dann kommen Vorgaben, Täter und Briefing
+ * aus dem versiegelten Bogen statt aus dem Körper der Anfrage - so kann der
+ * Browser weder den Drahtzieher noch die Enthüllungen mitlesen.
+ */
+function sagaTeil(body: Record<string, unknown>): {
+  bogen: Bogen;
+  kapitel: number;
+} | null {
+  const siegel = typeof body?.sagaSiegel === "string" ? body.sagaSiegel : "";
+  if (!siegel) return null;
+  const bogen = unseal<Bogen>(siegel);
+  // 0 steht für das Finale.
+  const kapitel = Number(body?.kapitel ?? 0);
+  return { bogen, kapitel: Number.isFinite(kapitel) ? kapitel : 0 };
+}
+
 /** Weltwissen zu einem Entwurf - in allen drei Schritten identisch. */
 const weltVon = (entwurf: Entwurf) =>
   buildWorldPrompt(
@@ -149,6 +178,28 @@ const weltVon = (entwurf: Entwurf) =>
     entwurf.reifegrad,
     entwurf.absurditaet,
   );
+
+/** Baut aus dem Bogen den Text, den die Fallerzeugung braucht. */
+function briefingVon(bogen: Bogen, kapitelNr: number): string {
+  const istFinale = kapitelNr === 0;
+  const kapitel = bogen.kapitel.find((k) => k.nummer === kapitelNr);
+  const vorher = bogen.kapitel
+    .filter((k) => (istFinale ? true : k.nummer < kapitelNr))
+    .map((k) => k.enthuellung)
+    .filter(Boolean);
+
+  return buildSagaBriefing({
+    thema: bogen.thema,
+    wahrheit: bogen.wahrheit,
+    drahtzieherName: bogen.drahtzieherName,
+    kapitelNummer: kapitelNr,
+    kapitelAnzahl: bogen.kapitel.length,
+    auftrag: istFinale ? bogen.finale.auftrag : (kapitel?.auftrag ?? ""),
+    enthuellung: kapitel?.enthuellung ?? "",
+    vorherigeEnthuellungen: vorher,
+    istFinale,
+  });
+}
 
 /** Was der Browser über einen fertigen Fall erfahren darf. */
 function oeffentlichVon(fall: CaseFile): PublicCase {
@@ -203,29 +254,63 @@ export async function POST(request: Request) {
 /* --- Schritt 1: das Gerüst ----------------------------------------- */
 
 async function geruestSchritt(body: Record<string, unknown>) {
-  const besetzung = besetzungAus(body?.charaktere);
-  const einstellungen =
-    EinstellungenSchema.safeParse(body?.einstellungen).data ?? STANDARD_EINSTELLUNGEN;
-  const vorgaben: Vorgaben | null = VorgabenSchema.safeParse(body?.vorgaben).data ?? null;
+  const saga = sagaTeil(body);
+
+  const besetzung = saga ? saga.bogen.besetzung : besetzungAus(body?.charaktere);
+  const einstellungen = saga
+    ? {
+        ...STANDARD_EINSTELLUNGEN,
+        ton: saga.bogen.vorgaben.ton,
+        ortsAnzahl: saga.bogen.vorgaben.ortsAnzahl,
+        beschuldigungen: saga.bogen.vorgaben.beschuldigungen,
+        stadt: saga.bogen.vorgaben.stadt,
+      }
+    : (EinstellungenSchema.safeParse(body?.einstellungen).data ?? STANDARD_EINSTELLUNGEN);
+
+  // Bei einer Saga bestimmt der Bogen die Vorgaben, nicht der Browser.
+  const vorgaben: Vorgaben | null = saga
+    ? {
+        thema: "",
+        stadt: saga.bogen.vorgaben.stadt,
+        charaktere: [],
+        items: saga.bogen.vorgaben.items,
+        taeterId: "",
+        schwierigkeit: saga.bogen.vorgaben.schwierigkeit,
+        reifegrad: saga.bogen.vorgaben.reifegrad,
+        absurditaet: saga.bogen.vorgaben.absurditaet,
+      }
+    : (VorgabenSchema.safeParse(body?.vorgaben).data ?? null);
 
   // Vorgabe "welche Tiere" einschränken - der Detektiv bleibt immer dabei.
   const gefiltert =
-    vorgaben && vorgaben.charaktere.length >= 2
+    !saga && vorgaben && vorgaben.charaktere.length >= 2
       ? besetzung.filter((c) => c.istDetektiv || vorgaben.charaktere.includes(c.id))
       : besetzung;
   const spielendeBesetzung =
     gefiltert.filter((c) => !c.istDetektiv).length >= 2 ? gefiltert : besetzung;
 
   const verdaechtige = spielendeBesetzung.filter((c) => !c.istDetektiv);
-  const gewuenschterTaeter = verdaechtige.find((c) => c.id === vorgaben?.taeterId);
+  const sagaTaeterId = saga
+    ? saga.kapitel === 0
+      ? saga.bogen.drahtzieherId
+      : saga.bogen.kapitel.find((k) => k.nummer === saga.kapitel)?.taeterId
+    : undefined;
+  const gewuenschterTaeter = verdaechtige.find(
+    (c) => c.id === (sagaTaeterId ?? vorgaben?.taeterId),
+  );
   const taeter =
     gewuenschterTaeter ?? verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
   const fallItems = wuerfleItems(itemsAus(body?.items), vorgaben?.items ?? []);
 
   const alleOrte = orteAus(body?.orte);
+  // Eine Saga darf ihre Kapitel über mehrere Städte verteilen.
   const gewuenschteStadt =
-    vorgaben && vorgaben.stadt !== "zufall" ? vorgaben.stadt : einstellungen.stadt;
+    saga && saga.bogen.vorgaben.staedteWechseln
+      ? "zufall"
+      : vorgaben && vorgaben.stadt !== "zufall"
+        ? vorgaben.stadt
+        : einstellungen.stadt;
   const schauplatz = waehleSchauplaetze(
     alleOrte,
     einstellungen.ortsAnzahl,
@@ -261,12 +346,16 @@ async function geruestSchritt(body: Record<string, unknown>) {
     spuren: [],
     erstelltAm: Date.now(),
     vorgaben,
+    sagaBriefing: saga ? briefingVon(saga.bogen, saga.kapitel) : undefined,
   };
 
   const response = await getAnthropic().messages.create(
     modellOptionen(
       weltVon(roh),
-      buildGeruestPrompt(spielendeBesetzung, roh.stadt, taeter.id, vorgaben),
+      mitBriefing(
+        buildGeruestPrompt(spielendeBesetzung, roh.stadt, taeter.id, vorgaben),
+        roh.sagaBriefing,
+      ),
       zodOutputFormat(makeGeruestSchema(spielendeBesetzung, schauplatz.orte)),
       4096,
       "medium",
@@ -317,12 +406,15 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
   const response = await getAnthropic().messages.create(
     modellOptionen(
       weltVon(entwurf),
-      buildVerdaechtigePrompt(
-        entwurf.besetzung,
-        entwurf.taeterId,
-        entwurf.titel,
-        entwurf.tathergang,
-        entwurf.vorgaben,
+      mitBriefing(
+        buildVerdaechtigePrompt(
+          entwurf.besetzung,
+          entwurf.taeterId,
+          entwurf.titel,
+          entwurf.tathergang,
+          entwurf.vorgaben,
+        ),
+        entwurf.sagaBriefing,
       ),
       zodOutputFormat(makeVerdaechtigeSchema(entwurf.besetzung, entwurf.orte)),
       4096,
@@ -376,14 +468,17 @@ async function spurenSchritt(entwurf: Entwurf) {
   const response = await getAnthropic().messages.create(
     modellOptionen(
       weltVon(entwurf),
-      buildSpurenPrompt(
-        entwurf.besetzung,
-        entwurf.taeterId,
-        entwurf.titel,
-        entwurf.tathergang,
-        entwurf.verdaechtige,
-        entwurf.vorgaben,
-        entwurf.items,
+      mitBriefing(
+        buildSpurenPrompt(
+          entwurf.besetzung,
+          entwurf.taeterId,
+          entwurf.titel,
+          entwurf.tathergang,
+          entwurf.verdaechtige,
+          entwurf.vorgaben,
+          entwurf.items,
+        ),
+        entwurf.sagaBriefing,
       ),
       zodOutputFormat(makeSpurenSchema(entwurf.besetzung, entwurf.orte, entwurf.items)),
       4096,

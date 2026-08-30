@@ -11,6 +11,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { anmelden, getDb } from "./firebase";
+import type { Saga } from "./sagaTypen";
 import type { Character, Item, Kampagne, Location } from "./types";
 
 /**
@@ -20,6 +21,7 @@ import type { Character, Item, Kampagne, Location } from "./types";
  *   orte/{id}        - die Schauplätze (mit Stadt)
  *   items/{id}       - Gegenstände und Spuren
  *   faelle/{id}      - vorgenerierte Fälle ("Kampagnen")
+ *   sagen/{id}       - Sagas: mehrere Fälle mit gemeinsamem Überthema
  *
  * Die Lösung eines Falls steht nie im Klartext in der Datenbank - sie steckt
  * verschlüsselt im Feld "siegel" (siehe lib/seal.ts).
@@ -107,3 +109,14 @@ export async function speichereKampagne(kampagne: Kampagne): Promise<void> {
 }
 
 export const loescheKampagne = (id: string) => loesche("faelle", id);
+
+/* --- Sagas --------------------------------------------------------- */
+
+export const ladeSagas = () => alle<Saga>("sagen");
+
+export async function speichereSaga(saga: Saga): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "sagen", saga.id), sauber(saga));
+}
+
+export const loescheSaga = (id: string) => loesche("sagen", id);
