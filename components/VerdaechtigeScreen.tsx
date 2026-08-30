@@ -2,7 +2,7 @@
 
 import { Bild } from "./Bild";
 import { findeOrt } from "@/lib/locations";
-import type { PublicCase } from "@/lib/types";
+import type { ChatTurn, NotebookEntry, PublicCase } from "@/lib/types";
 
 const STAT_LABELS: Record<string, string> = {
   charisma: "Charisma",
@@ -14,28 +14,46 @@ const STAT_LABELS: Record<string, string> = {
   intelligenz: "Klugheit",
 };
 
+/**
+ * Die Tierakte: Sie führt nur die Verdächtigen, mit denen Wimpy schon
+ * gesprochen hat - wen man noch nie getroffen hat, über den weiß man auch
+ * nichts. Gezeigt werden die Werte und die Hinweise, die es zu dieser Person
+ * gibt; der Fall selbst steht im Notizbuch.
+ */
 export function VerdaechtigeScreen({
   fall,
   verdacht,
+  verlauf,
+  notizen,
   onCharakter,
   onBeschuldigen,
   beschuldigungenUebrig,
 }: {
   fall: PublicCase;
   verdacht: Record<string, number>;
+  verlauf: Record<string, ChatTurn[]>;
+  notizen: NotebookEntry[];
   onCharakter: (id: string) => void;
   onBeschuldigen: () => void;
   beschuldigungenUebrig: number;
 }) {
-  const verdaechtige = fall.besetzung.filter((c) => !c.istDetektiv);
+  const bekannt = fall.besetzung.filter(
+    (c) => !c.istDetektiv && (verlauf[c.id]?.length ?? 0) > 0,
+  );
 
   return (
     <div className="inhalt einblenden">
-      <p className="fall-text">{fall.tatbeschreibung}</p>
+      {bekannt.length === 0 && (
+        <p className="leise">
+          Noch niemand befragt. Wer Wimpy an den Schauplätzen über den Weg läuft
+          und mit ihm spricht, landet hier in der Akte.
+        </p>
+      )}
 
-      {verdaechtige.map((c) => {
+      {bekannt.map((c) => {
         const punkte = verdacht[c.id] ?? 0;
         const ort = findeOrt(fall.orte, fall.aufenthalt[c.id] ?? "");
+        const hinweise = notizen.filter((n) => n.quelle === c.id);
         return (
           <button key={c.id} className="dossier" onClick={() => onCharakter(c.id)}>
             <div className="dossier-bild">
@@ -57,8 +75,6 @@ export function VerdaechtigeScreen({
                 Verdacht {punkte}% {ort ? `· zuletzt ${ort.name}` : ""}
               </span>
 
-              <p className="dossier-beschreibung">{c.beschreibung}</p>
-
               <div className="stats">
                 {Object.entries(c.stats).map(([key, wert]) => (
                   <div key={key} className="stat">
@@ -70,13 +86,21 @@ export function VerdaechtigeScreen({
                   </div>
                 ))}
               </div>
+
+              {hinweise.length > 0 && (
+                <ul className="dossier-hinweise">
+                  {hinweise.map((n) => (
+                    <li key={n.id}>{n.text}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </button>
         );
       })}
 
-      <button className="knopf rot" onClick={onBeschuldigen}>
-        ⚖️ Fall auflösen ({beschuldigungenUebrig} Versuch
+      <button className="knopf aktion" onClick={onBeschuldigen}>
+        Fall auflösen ({beschuldigungenUebrig} Versuch
         {beschuldigungenUebrig === 1 ? "" : "e"} übrig)
       </button>
     </div>

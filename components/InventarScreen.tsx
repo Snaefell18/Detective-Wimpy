@@ -6,8 +6,9 @@ import { useStammdaten } from "@/lib/stammdaten";
 import type { Item, NotebookEntry } from "@/lib/types";
 
 /**
- * Inventar: die Dinge, die Wimpy unterwegs eingesammelt hat, mit dem, was er
- * dazu notiert hat. Antippen zeigt die Einzelheiten.
+ * Inventar: ausschließlich die Dinge, die Wimpy unterwegs wirklich
+ * eingesammelt hat, mit dem, was er dazu notiert hat. Antippen zeigt die
+ * Einzelheiten.
  */
 export function InventarScreen({
   gefundeneSpuren,
@@ -30,9 +31,7 @@ export function InventarScreen({
 
   return (
     <div className="inhalt einblenden">
-      <h3 className="abschnitt">
-        Beweisstücke ({gefunden.length}/{items.length})
-      </h3>
+      <h3 className="abschnitt">Beweisstücke ({gefunden.length})</h3>
 
       {gefunden.length === 0 ? (
         <p className="leise">
@@ -58,17 +57,6 @@ export function InventarScreen({
           ))}
         </div>
       )}
-
-      <h3 className="abschnitt">Noch nicht gefunden</h3>
-      <div className="fehlende">
-        {items
-          .filter((i) => !gefundeneSpuren.includes(i.id))
-          .map((item) => (
-            <span key={item.id} className="fehlend">
-              ? {item.name}
-            </span>
-          ))}
-      </div>
     </div>
   );
 }

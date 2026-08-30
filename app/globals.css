@@ -1391,10 +1391,20 @@ a.zurueck {
   font-weight: 800;
 }
 
-.dossier-beschreibung {
-  margin: 10px 0 12px;
-  font-size: 13.5px;
+/* Was Wimpy über dieses Tier notiert hat. */
+.dossier-hinweise {
+  margin: 12px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.45;
   color: #c3d7f0;
+}
+
+.dossier-hinweise li::marker {
+  color: var(--gelb);
 }
 
 /* --- Ergebnis ------------------------------------------------------- */
@@ -2271,20 +2281,6 @@ a.zurueck {
   margin: 2px 0 0;
   font-size: 13.5px;
   color: #c3d7f0;
-}
-
-.fehlende {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.fehlend {
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-leise);
-  font-size: 12.5px;
 }
 
 /* =================================================================

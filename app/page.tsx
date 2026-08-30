@@ -169,6 +169,8 @@ export default function Home() {
           <VerdaechtigeScreen
             fall={stand.fall}
             verdacht={stand.verdacht}
+            verlauf={stand.verlauf}
+            notizen={stand.notizen}
             onCharakter={(id) => {
               setFehler(null);
               setChatMit(id);
