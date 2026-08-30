@@ -23,7 +23,7 @@ const SCHWIERIGKEITEN: { id: Vorgaben["schwierigkeit"]; label: string }[] = [
 const REIFEGRADE: { id: Vorgaben["reifegrad"]; label: string; hinweis: string }[] = [
   { id: "kindgerecht", label: "Kindgerecht", hinweis: "Streiche, Diebstähle" },
   { id: "jugendlich", label: "Jugendlich", hinweis: "Drohungen, Rauferei" },
-  { id: "erwachsen", label: "Erwachsen", hinweis: "Gewalt, auch ein Toter" },
+  { id: "erwachsen", label: "Erwachsen", hinweis: "Gewalt, Tote nur Menschen" },
 ];
 
 const ABSURDITAETEN: { id: Vorgaben["absurditaet"]; label: string; hinweis: string }[] = [

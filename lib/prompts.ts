@@ -37,6 +37,14 @@ const REIFE_TEXT: Record<Reifegrad, string> = {
     "Erzähle wie ein Krimi für Erwachsene: Der Fall darf um Gewalt, Rache, Erpressung und auch um einen Toten gehen, mit echten Abgründen und Figuren, die schuldig werden. Halte es literarisch statt blutig - andeuten und atmosphärisch beschreiben, nicht Verletzungen ausmalen. Keine sexuellen Inhalte, keine Grausamkeit als Selbstzweck, keine Anleitungen zu echten Straftaten.",
 };
 
+/**
+ * Gilt in jeder Stufe, in der überhaupt jemand sterben darf: Ein Tier stirbt
+ * nie. Tote sind immer Außenstehende - Menschen, die nicht zur Welt der Tiere
+ * gehören und die der Spieler nie kennengelernt hat.
+ */
+const TOTE_REGEL =
+  "Ganz wichtig: Es stirbt niemals ein Tier. Kein Charakter aus der Besetzung und kein anderes Tier kommt zu Tode, wird tödlich verletzt oder ist zuvor gestorben. Geht es in einem Fall um einen Toten, ist es immer ein außenstehender Mensch - jemand aus der Menschenwelt, der nicht zur Stadt der Tiere gehört und den der Spieler nie kennengelernt hat. Tiere dürfen bedroht, verletzt, erpresst oder entführt werden, aber sie überleben ausnahmslos.";
+
 /** Wie weit sich der Fall von der Wirklichkeit entfernen darf. */
 const ABSURD_TEXT: Record<Absurditaet, string> = {
   bodenstaendig:
@@ -69,6 +77,7 @@ WELT
 Der Fall spielt in ${stadt} - einer Stadt, in der Tiere wie Menschen leben. Beziehe dich auf das, was diese Stadt ausmacht.
 Der Spieler ist ${held.name}, ein ${held.tierart}: ${held.beschreibung}
 ${REIFE_TEXT[reifegrad]}
+${reifegrad === "kindgerecht" ? "" : TOTE_REGEL}
 ${ABSURD_TEXT[absurditaet]}
 ${TON_TEXT[ton]} Alles auf Deutsch, in kurzen, lebendigen Sätzen.
 
@@ -125,7 +134,9 @@ Anforderungen:
 - Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
 - Nutze die Gegenstände, die zu diesem Fall und dieser Stadt passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
-- ${REIFE_TEXT[vorgaben?.reifegrad ?? "kindgerecht"]}
+- ${REIFE_TEXT[vorgaben?.reifegrad ?? "kindgerecht"]}${
+  vorgaben && vorgaben.reifegrad !== "kindgerecht" ? `\n- ${TOTE_REGEL}` : ""
+}
 - ${ABSURD_TEXT[vorgaben?.absurditaet ?? "verspielt"]}
 - Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
 - schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
