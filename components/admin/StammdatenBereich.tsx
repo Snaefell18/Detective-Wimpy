@@ -11,7 +11,8 @@ import {
   speichereOrt,
 } from "@/lib/db";
 import { stammdatenAktualisieren, useStammdaten } from "@/lib/stammdaten";
-import type { Character, Item, Location } from "@/lib/types";
+import { LEERE_BEZIEHUNGEN } from "@/lib/types";
+import type { Beziehungen, Character, Item, Location } from "@/lib/types";
 import type { BereichProps } from "./typen";
 
 type Art = "charaktere" | "orte" | "items";
@@ -138,6 +139,7 @@ export function StammdatenBereich({
       {neu && (
         <Formular
           art={art}
+          alleCharaktere={stammdaten.charaktere}
           eintrag={null}
           onAbbrechen={() => setNeu(false)}
           onSpeichern={async (eintrag) => {
@@ -157,6 +159,7 @@ export function StammdatenBereich({
             <li key={eintrag.id} className="listen-formular">
               <Formular
                 art={art}
+                alleCharaktere={stammdaten.charaktere}
                 eintrag={eintrag}
                 onAbbrechen={() => setBearbeitet(null)}
                 onSpeichern={async (geaendert) => {
@@ -275,11 +278,14 @@ const leererEintrag = (art: Art): Character | Location | Item => {
 /** Ein Formular je Art - so bleiben die Felder typsicher. */
 function Formular({
   art,
+  alleCharaktere,
   eintrag,
   onSpeichern,
   onAbbrechen,
 }: {
   art: Art;
+  /** Für die Beziehungen: alle Tiere, die zur Auswahl stehen. */
+  alleCharaktere: Character[];
   eintrag: Character | Location | Item | null;
   onSpeichern: (eintrag: Character | Location | Item) => void;
   onAbbrechen: () => void;
@@ -287,6 +293,7 @@ function Formular({
   if (art === "charaktere") {
     return (
       <CharakterFormular
+        alle={alleCharaktere}
         eintrag={(eintrag as Character) ?? (leererEintrag("charaktere") as Character)}
         onSpeichern={onSpeichern}
         onAbbrechen={onAbbrechen}
@@ -364,18 +371,49 @@ function BildFeld({
   );
 }
 
+const BEZIEHUNGS_FELDER: {
+  key: keyof Beziehungen;
+  label: string;
+  hinweis: string;
+}[] = [
+  { key: "besteFreunde", label: "Beste Freunde", hinweis: "werden gedeckt" },
+  { key: "freunde", label: "Freunde", hinweis: "werden in Schutz genommen" },
+  { key: "feinde", label: "Feinde", hinweis: "bekommen Spitzen ab" },
+  { key: "erzfeinde", label: "Erzfeinde", hinweis: "werden angeschwärzt" },
+];
+
 function CharakterFormular({
   eintrag,
+  alle,
   onSpeichern,
   onAbbrechen,
 }: {
   eintrag: Character;
+  alle: Character[];
   onSpeichern: (eintrag: Character) => void;
   onAbbrechen: () => void;
 }) {
   const [entwurf, setEntwurf] = useState<Character>(eintrag);
   const aendern = (teil: Partial<Character>) =>
     setEntwurf((alt) => ({ ...alt, ...teil }));
+
+  const beziehungen: Beziehungen = entwurf.beziehungen ?? LEERE_BEZIEHUNGEN;
+
+  /** Ein Tier in einer der vier Listen an- oder abwählen - immer nur in einer. */
+  const beziehungUmschalten = (feld: keyof Beziehungen, id: string) => {
+    const drin = beziehungen[feld].includes(id);
+    const bereinigt = Object.fromEntries(
+      (Object.keys(LEERE_BEZIEHUNGEN) as (keyof Beziehungen)[]).map((k) => [
+        k,
+        beziehungen[k].filter((x) => x !== id),
+      ]),
+    ) as Beziehungen;
+    aendern({
+      beziehungen: drin
+        ? bereinigt
+        : { ...bereinigt, [feld]: [...bereinigt[feld], id] },
+    });
+  };
 
   return (
     <Rahmen
@@ -445,6 +483,32 @@ function CharakterFormular({
           onChange={(e) => aendern({ beschreibung: e.target.value })}
         />
       </label>
+
+      <h4 className="unter-abschnitt">
+        Beziehungen <span className="leise">· wirken sich im Spiel aus</span>
+      </h4>
+      {BEZIEHUNGS_FELDER.map((feld) => (
+        <div key={feld.key} className="beziehungs-feld">
+          <span className="leise klein">
+            {feld.label} · {feld.hinweis}
+          </span>
+          <div className="marken-reihe">
+            {alle
+              .filter((c) => c.id !== entwurf.id)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="marke-knopf"
+                  data-aktiv={beziehungen[feld.key].includes(c.id)}
+                  onClick={() => beziehungUmschalten(feld.key, c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+          </div>
+        </div>
+      ))}
 
       <BildFeld
         wert={entwurf.bild}

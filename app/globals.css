@@ -1446,6 +1446,14 @@ a.zurueck {
   padding: 0 16px 16px;
 }
 
+.beziehungs-feld {
+  margin: 10px 0;
+}
+
+.beziehungs-feld .marken-reihe {
+  margin-top: 4px;
+}
+
 .kapitel-block {
   margin: 14px 0;
   padding: 12px 14px;

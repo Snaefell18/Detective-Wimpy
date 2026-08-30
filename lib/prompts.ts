@@ -55,6 +55,42 @@ const ABSURD_TEXT: Record<Absurditaet, string> = {
     "Es darf völlig absurd werden: aberwitzige Einfälle, unmögliche Zufälle, Logik wie im Traum. Der Fall muss trotzdem lösbar bleiben - die absurden Regeln gelten dann eben durchgehend.",
 };
 
+/**
+ * Wer diesem Tier nahesteht und wen es nicht ausstehen kann.
+ *
+ * Die Beziehungen wirken sich im Spiel aus: Beste Freunde werden gedeckt,
+ * Erzfeinde bei jeder Gelegenheit angeschwärzt.
+ */
+export function beziehungsText(
+  charakter: Character,
+  besetzung: Character[],
+): string {
+  const b = charakter.beziehungen;
+  if (!b) return "";
+
+  const namen = (ids: string[]) =>
+    ids
+      .map((id) => besetzung.find((c) => c.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+
+  const zeilen = [
+    b.besteFreunde.length ? `Beste Freunde: ${namen(b.besteFreunde)}` : "",
+    b.freunde.length ? `Freunde: ${namen(b.freunde)}` : "",
+    b.feinde.length ? `Feinde: ${namen(b.feinde)}` : "",
+    b.erzfeinde.length ? `Erzfeinde: ${namen(b.erzfeinde)}` : "",
+  ].filter(Boolean);
+
+  return zeilen.join(". ");
+}
+
+/** Wie sich Beziehungen im Gespräch niederschlagen. */
+const BEZIEHUNGS_REGELN = `- Beste Freunde deckst du: Du gibst ihnen ungefragt ein Alibi, spielst Belastendes klein und wirst ungehalten, wenn Wimpy sie verdächtigt. Lügen für sie tust du ungern und ungeschickt.
+- Freunde behandelst du wohlwollend: Du sagst nichts Schlechtes über sie und suchst nach harmlosen Erklärungen.
+- Feinde bekommen von dir Spitzen ab: Du erwähnst gern, was sie zuletzt angestellt haben, und lenkst den Verdacht beiläufig in ihre Richtung.
+- Erzfeinde beschuldigst du offen und gern - auch ohne Beweis. Du erfindest nichts völlig aus der Luft, aber du legst jede Kleinigkeit gegen sie aus und schwärzt sie an, wo es geht.
+- Diese Neigungen sind stärker als dein Wunsch, Wimpy zu helfen - aber sie machen dich nicht zum Lügner in eigener Sache.`;
+
 const detektiv = (besetzung: Character[]) =>
   besetzung.find((c) => c.istDetektiv) ?? besetzung[0];
 
@@ -82,7 +118,12 @@ ${ABSURD_TEXT[absurditaet]}
 ${TON_TEXT[ton]} Alles auf Deutsch, in kurzen, lebendigen Sätzen.
 
 CHARAKTERE
-${besetzung.map((c) => `- [${c.id}] ${characterBrief(c)}`).join("\n")}
+${besetzung
+  .map((c) => {
+    const bez = beziehungsText(c, besetzung);
+    return `- [${c.id}] ${characterBrief(c)}${bez ? ` ${bez}.` : ""}`;
+  })
+  .join("\n")}
 
 SCHAUPLÄTZE IN ${stadt.toUpperCase()}
 ${orte.map((o) => `- [${o.id}] ${o.name} (${o.atmosphaere || "neutral"})`).join("\n")}
@@ -178,6 +219,7 @@ Anforderungen:
 - Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
 - Die Geheimnisse der Unschuldigen haben nichts mit der Tat zu tun, machen sie aber verdächtig.
 - Alibi und Geheimnis passen zu den Werten des Tieres.
+- Beziehungen wirken mit: Wer einen besten Freund unter den Verdächtigen hat, baut ihn ins eigene Alibi ein oder deckt ihn. Wer einen Erzfeind hat, hat auffällig oft eine Geschichte parat, die gegen diesen spricht.
 ${regeln(vorgaben)}`;
 }
 
@@ -209,6 +251,7 @@ Anforderungen:
 - Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
 - Nutze die Gegenstände, die zu diesem Fall passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
+- Eine irreführende Spur darf ruhig auf einen Erzfeind des Täters zeigen - so wirkt sie wie gelegt.
 ${
   vorgaben?.items.length
     ? `- Diese Gegenstände müssen vorkommen: ${items
@@ -255,7 +298,11 @@ export function buildTalkPrompt(args: {
 
 DEIN CHARAKTER
 ${characterBrief(charakter)}
-
+${
+  beziehungsText(charakter, fall.besetzung)
+    ? `\nDEINE BEZIEHUNGEN\n${beziehungsText(charakter, fall.besetzung)}.\n${BEZIEHUNGS_REGELN}\n`
+    : ""
+}
 DER FALL (nur dein Wissen, niemals wörtlich ausplaudern)
 Titel: ${fall.titel}
 Tat: ${fall.tatbeschreibung}
@@ -293,7 +340,7 @@ ${
 
 WIMPY SAGT: "${nachricht}"
 
-Antworte als ${charakter.name} in 1-4 Sätzen wörtlicher Rede, ohne Namensprefix, ohne Anführungszeichen.`;
+Antworte als ${charakter.name} in 1-4 Sätzen wörtlicher Rede, ohne Namensprefix, ohne Anführungszeichen und ohne interne oder XML-artige Tags.`;
 }
 
 /** Prompt für die finale Beschuldigung. */

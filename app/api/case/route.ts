@@ -511,7 +511,11 @@ async function spurenSchritt(entwurf: Entwurf) {
     }))
     .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
 
-  const fall: CaseFile = { ...entwurf, spuren };
+  // Vorgaben und Saga-Briefing braucht nur die Erzeugung. Sie fliegen hier
+  // raus, damit das Siegel klein bleibt - der Browser schickt es bei jeder
+  // Frage an ein Tier wieder mit.
+  const { vorgaben: _v, sagaBriefing: _b, ...rest } = entwurf;
+  const fall: CaseFile = { ...rest, spuren };
 
   // Der vollständige Fall verlässt den Server nur verschlüsselt.
   return NextResponse.json({

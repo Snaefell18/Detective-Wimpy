@@ -140,6 +140,14 @@ export const CharacterSchema = z.object({
   beschreibung: z.string().max(600),
   bild: z.string().max(300),
   istDetektiv: z.boolean(),
+  beziehungen: z
+    .object({
+      besteFreunde: z.array(z.string().max(40)).max(24),
+      freunde: z.array(z.string().max(40)).max(24),
+      feinde: z.array(z.string().max(40)).max(24),
+      erzfeinde: z.array(z.string().max(40)).max(24),
+    })
+    .optional(),
 });
 
 /** Prüft die Orte, die der Client aus dem Admin-Menü mitschickt. */

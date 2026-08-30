@@ -8,6 +8,24 @@ export type CharacterStats = {
   intelligenz: number;
 };
 
+/**
+ * Wer mit wem kann. Die Listen enthalten Charakter-Ids und wirken sich im
+ * Spiel aus: Beste Freunde werden gedeckt, Erzfeinde angeschwärzt.
+ */
+export type Beziehungen = {
+  besteFreunde: string[];
+  freunde: string[];
+  feinde: string[];
+  erzfeinde: string[];
+};
+
+export const LEERE_BEZIEHUNGEN: Beziehungen = {
+  besteFreunde: [],
+  freunde: [],
+  feinde: [],
+  erzfeinde: [],
+};
+
 export type Character = {
   id: string;
   nummer: number;
@@ -19,6 +37,8 @@ export type Character = {
   /** Pfad im Ordner /public/charaktere */
   bild: string;
   istDetektiv: boolean;
+  /** Freundschaften und Feindschaften - optional, ältere Daten haben sie nicht. */
+  beziehungen?: Beziehungen;
 };
 
 export type Location = {

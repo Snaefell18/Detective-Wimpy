@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages";
 
 /**
  * Standardmodell für das Spiel: Claude Sonnet 5.
@@ -14,6 +15,34 @@ export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
 /** Modell für Gespräche; ohne eigene Angabe dasselbe wie oben. */
 export const MODEL_GESPRAECH = process.env.ANTHROPIC_MODEL_TALK ?? MODEL;
+
+/**
+ * Ältere Modelle (Haiku 4.5, Sonnet 4.5 ...) kennen weder adaptives Denken
+ * noch "effort" und lehnen beides mit einem Fehler ab. Wer über
+ * ANTHROPIC_MODEL_TALK auf so ein Modell umstellt, soll trotzdem spielen
+ * können.
+ */
+const kenntEffort = (modell: string) =>
+  !/(haiku-4-5|sonnet-4-5|opus-4-5|claude-3)/.test(modell);
+
+/**
+ * Optionen für eine Antwort, die schnell kommen muss.
+ *
+ * Ein Tier antwortet mit ein paar Sätzen - dafür braucht es kein Nachdenken.
+ * Adaptives Denken hat die Antwort je nach Fall um viele Sekunden verzögert,
+ * gerade in Sagas mit langen Prompts. Ohne Denken reicht auch ein kleines
+ * Token-Budget, was zusätzlich Zeit spart.
+ */
+export function schnellOptionen(modell: string, format: object) {
+  return (
+    kenntEffort(modell)
+      ? {
+          thinking: { type: "disabled" },
+          output_config: { effort: "low", format },
+        }
+      : { output_config: { format } }
+  ) as Pick<MessageCreateParamsNonStreaming, "thinking" | "output_config">;
+}
 
 let client: Anthropic | null = null;
 

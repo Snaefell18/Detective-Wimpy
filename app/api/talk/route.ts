@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { passendeId, stimmungAus } from "@/lib/zuordnen";
-import { MODEL_GESPRAECH, budget, getAnthropic } from "@/lib/anthropic";
+import { MODEL_GESPRAECH, budget, getAnthropic, schnellOptionen } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
@@ -45,9 +45,8 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.create({
       model: MODEL_GESPRAECH,
-      // Großzügig, weil adaptives Denken mitzählt - sonst bricht die Antwort
-      // mitten im JSON ab.
-      max_tokens: 12000,
+      // Ohne Denken reichen ein paar hundert Token für Antwort und Notiz.
+      max_tokens: 2000,
       system: [
         {
           type: "text",
@@ -63,8 +62,7 @@ export async function POST(request: Request) {
           cache_control: { type: "ephemeral" },
         },
       ],
-      thinking: { type: "adaptive" },
-      output_config: { effort: "low", format: zodOutputFormat(TalkSchema) },
+      ...schnellOptionen(MODEL_GESPRAECH, zodOutputFormat(TalkSchema)),
       messages: [
         {
           role: "user",
