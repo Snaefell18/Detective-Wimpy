@@ -48,13 +48,24 @@ export function useSagaLauf() {
       }
       return {
         saga,
-        lauf: { sagaId: saga.id, kapitel: 0, phase: "auftakt", geloest: [] },
+        lauf: { sagaId: saga.id, kapitel: 0, phase: "auftakt", fallId: null, geloest: [] },
       };
     });
   }, []);
 
-  const setzePhase = useCallback((phase: SagaLauf["phase"]) => {
-    setStand((alt) => (alt ? { ...alt, lauf: { ...alt.lauf, phase } } : alt));
+  const setzePhase = useCallback((phase: SagaLauf["phase"], fallId?: string | null) => {
+    setStand((alt) =>
+      alt
+        ? {
+            ...alt,
+            lauf: {
+              ...alt.lauf,
+              phase,
+              fallId: fallId === undefined ? alt.lauf.fallId : fallId,
+            },
+          }
+        : alt,
+    );
   }, []);
 
   /** Kapitel gelöst - weiter zum nächsten Erzählerteil oder zum Finale. */
@@ -69,8 +80,14 @@ export function useSagaLauf() {
       return {
         ...alt,
         lauf: letztes
-          ? { ...alt.lauf, geloest, phase: "finale-erzaehler" }
-          : { ...alt.lauf, geloest, kapitel: alt.lauf.kapitel + 1, phase: "erzaehler" },
+          ? { ...alt.lauf, geloest, phase: "finale-erzaehler", fallId: null }
+          : {
+              ...alt.lauf,
+              geloest,
+              kapitel: alt.lauf.kapitel + 1,
+              phase: "erzaehler",
+              fallId: null,
+            },
       };
     });
   }, []);

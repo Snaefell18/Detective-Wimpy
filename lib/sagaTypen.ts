@@ -125,6 +125,12 @@ export type SagaLauf = {
   /** 0-basiert; entspricht dem Index in kapitel[]. */
   kapitel: number;
   phase: "auftakt" | "erzaehler" | "fall" | "finale-erzaehler" | "finale" | "epilog";
+  /**
+   * Id des Falls, der gerade zu dieser Saga läuft. Damit lässt sich ein
+   * einzelner Fall zwischendurch spielen, ohne dass sein Ende die Saga
+   * weiterschaltet.
+   */
+  fallId: string | null;
   /** Nummern der bereits gelösten Kapitel. */
   geloest: number[];
 };

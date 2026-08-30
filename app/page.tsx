@@ -67,9 +67,32 @@ export default function Home() {
 
   /* --- Sagas: Erzählerteile und Kapitel ------------------------------ */
 
+  /** Läuft gerade der Fall, der zur Saga gehört? */
+  const sagaFallLaeuft = Boolean(
+    saga.stand && stand.fall && stand.fall.id === saga.stand.lauf.fallId,
+  );
+
   const sagaStarten = (gewaehlt: Saga, vonVorn: boolean) => {
-    saga.starten(gewaehlt, vonVorn);
     setSagenOffen(false);
+
+    const weiter = !vonVorn && saga.stand?.saga.id === gewaehlt.id;
+    if (!weiter) {
+      saga.starten(gewaehlt, true);
+      return;
+    }
+
+    saga.starten(gewaehlt, false);
+    const phase = saga.stand!.lauf.phase;
+
+    if (phase === "fall" || phase === "finale") {
+      if (sagaFallLaeuft) {
+        // Der Fall liegt nur pausiert herum - einfach weiterspielen.
+        if (stand.status === "pausiert") spiel.fortsetzen();
+      } else {
+        // Das Kapitel wurde abgebrochen: noch einmal vom Erzählerteil an.
+        saga.setzePhase(phase === "finale" ? "finale-erzaehler" : "erzaehler", null);
+      }
+    }
   };
 
   /** Den Fall des aktuellen Kapitels (oder das Finale) beginnen. */
@@ -87,7 +110,7 @@ export default function Home() {
       quelle.siegel,
       saga.stand.saga.vorgaben.beschuldigungen,
     );
-    saga.setzePhase(finale ? "finale" : "fall");
+    saga.setzePhase(finale ? "finale" : "fall", quelle.fall.id);
   };
 
   if (!geladen || !saga.geladen) {
@@ -121,8 +144,14 @@ export default function Home() {
     );
   }
 
+  // Läuft gerade ein Fall, der nichts mit der Saga zu tun hat? Dann hat er
+  // Vorrang - die Saga wartet, bis man sie über "Sagas" wieder aufnimmt.
+  const fremderFallLaeuft = Boolean(
+    stand.fall && stand.status !== "kein-fall" && !sagaFallLaeuft,
+  );
+
   // Erzählerteile einer Saga.
-  if (saga.stand && phase === "aus") {
+  if (saga.stand && phase === "aus" && !fremderFallLaeuft) {
     const { saga: sagaDaten, lauf } = saga.stand;
 
     if (lauf.phase === "auftakt") {
@@ -227,11 +256,11 @@ export default function Home() {
           besetzung={stand.fall.besetzung}
           onNeuerFall={() => void fallStarten()}
           onHauptmenue={() => {
-            saga.beenden();
+            // Die Saga bleibt liegen - über "Sagas" geht es später weiter.
             spiel.aufgeben();
           }}
           onWeiter={
-            saga.stand
+            sagaFallLaeuft
               ? () => {
                   if (saga.stand?.lauf.phase === "finale") saga.setzePhase("epilog");
                   else saga.kapitelGeschafft();
