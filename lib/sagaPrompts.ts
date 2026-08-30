@@ -8,8 +8,8 @@ import type { Character, City } from "./types";
  * hinausgeht.
  */
 
-/** Der eine Aufruf, der den ganzen Bogen entwirft. */
-export function buildBogenPrompt(
+/** Schritt 1: Worum es in der ganzen Saga geht. */
+export function buildKernPrompt(
   besetzung: Character[],
   staedte: City[],
   drahtzieher: Character,
@@ -17,34 +17,104 @@ export function buildBogenPrompt(
 ): string {
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
 
-  const wuensche = vorgaben.kapitelWuensche
-    .map((w, i) => (w.trim() ? `- Kapitel ${i + 1}: ${w.trim()}` : ""))
-    .filter(Boolean)
-    .join("\n");
-
-  return `Entwirf den Bogen einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale.
+  return `Entwirf den Kern einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale. Die einzelnen Kapitel kommen später - hier geht es nur um den großen Bogen.
 
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
-Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf. In den einzelnen Kapiteln bleibt das verborgen.
+Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
 
 ${vorgaben.thema ? `ÜBERTHEMA (unbedingt aufgreifen): ${vorgaben.thema}\n` : ""}
 DIE TIERE
 ${verdaechtige.map((c) => `- [${c.id}] ${characterBrief(c)}`).join("\n")}
 
 DIE STÄDTE
-${staedte.map((s) => `- [${s.id}] ${s.name} (${s.orte.length} Schauplätze)`).join("\n")}
+${staedte.map((s) => `- ${s.name}`).join("\n")}
 
 Anforderungen:
-- Genau ${vorgaben.kapitelAnzahl} Kapitel, dann das Finale.
-- Jedes Kapitel ist ein eigener, für sich lösbarer Fall - mit eigenem Täter aus der Liste. Der Drahtzieher darf in den Kapiteln NICHT der Täter sein.
-- Die Kapiteltäter hängen mit dem Drahtzieher zusammen: erpresst, bezahlt, hereingelegt oder ahnungslos benutzt.
-- Jedes Kapitel gibt genau ein Stück der Wahrheit preis (enthuellung). Zusammen ergeben sie das Bild, das im Finale den Drahtzieher überführt.
-- Die Enthüllungen steigern sich: erst eine Kleinigkeit, am Ende etwas, das kaum noch anders zu deuten ist.
-- Die Erzählertexte klingen wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede, kein "Kapitel 1".
+- Die Wahrheit muss groß genug für ${vorgaben.kapitelAnzahl} Fälle sein, aber in einem Satz erzählbar.
 - Der Klappentext verrät den Drahtzieher nicht.
-- Alles auf Deutsch.
-${wuensche ? `\nWÜNSCHE ZU EINZELNEN KAPITELN (unbedingt einhalten)\n${wuensche}` : ""}`;
+- Der Auftakttext klingt wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede.
+- Alles auf Deutsch.`;
+}
+
+/** Schritt 2: ein einzelnes Kapitel, das die vorherigen kennt. */
+export function buildKapitelPrompt(args: {
+  nummer: number;
+  anzahl: number;
+  thema: string;
+  wahrheit: string;
+  drahtzieherName: string;
+  drahtzieherId: string;
+  moeglicheTaeter: Character[];
+  bisher: { name: string; enthuellung: string }[];
+  wunsch: string;
+  stadt: string;
+}): string {
+  const {
+    nummer,
+    anzahl,
+    thema,
+    wahrheit,
+    drahtzieherName,
+    drahtzieherId,
+    moeglicheTaeter,
+    bisher,
+    wunsch,
+    stadt,
+  } = args;
+
+  const vorher = bisher.length
+    ? `\nWAS BISHER GESCHAH\n${bisher
+        .map((k, i) => `- Kapitel ${i + 1} „${k.name}“: ${k.enthuellung}`)
+        .join("\n")}`
+    : "\nDies ist das erste Kapitel.";
+
+  const letztes = nummer === anzahl;
+
+  return `Entwirf Kapitel ${nummer} von ${anzahl} einer Saga.
+
+ÜBERTHEMA: ${thema}
+DIE WAHRHEIT HINTER ALLEM (streng geheim, kommt erst im Finale heraus): ${wahrheit}
+DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel auf keinen Fall der Täter sein und wirkt höchstens beiläufig harmlos.${vorher}
+
+MÖGLICHE TÄTER FÜR DIESES KAPITEL
+${moeglicheTaeter.map((c) => `- ${c.name} [${c.id}]`).join("\n")}
+
+Anforderungen:
+- Das Kapitel spielt in ${stadt}.
+- Der Fall ist für sich abgeschlossen und lösbar, ohne die anderen Kapitel zu kennen.
+- Die Enthüllung geht einen Schritt weiter als die bisherigen${letztes ? " und ist die deutlichste von allen - danach fehlt nur noch der letzte Beweis" : ""}.
+- Der Täter dieses Kapitels hängt mit dem Drahtzieher zusammen: erpresst, bezahlt, hereingelegt oder ahnungslos benutzt.
+- Der Erzählertext klingt wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede, kein "Kapitel ${nummer}".
+- Alles auf Deutsch.${wunsch ? `\n\nWUNSCH FÜR DIESES KAPITEL (unbedingt einhalten): ${wunsch}` : ""}`;
+}
+
+/** Schritt 3: das Finale. */
+export function buildFinalePrompt(args: {
+  thema: string;
+  wahrheit: string;
+  drahtzieherName: string;
+  motiv: string;
+  bisher: { name: string; enthuellung: string }[];
+}): string {
+  const { thema, wahrheit, drahtzieherName, motiv, bisher } = args;
+
+  return `Entwirf das Finale der Saga.
+
+ÜBERTHEMA: ${thema}
+DIE WAHRHEIT: ${wahrheit}
+DER DRAHTZIEHER: ${drahtzieherName} - hier ist er der Täter, und hier fliegt alles auf.
+SEIN MOTIV: ${motiv}
+
+WAS DIE KAPITEL PREISGEGEBEN HABEN
+${bisher.map((k, i) => `- Kapitel ${i + 1} „${k.name}“: ${k.enthuellung}`).join("\n")}
+
+Anforderungen:
+- Die Frage ist kurz und steht groß über dem Finale (z.B. "Wer sammelt die Glocken?").
+- Der Auftrag führt die Fäden aller Kapitel zusammen.
+- Der Erzählertext vor dem Finale zieht die Schlinge zu, verrät den Drahtzieher aber noch nicht.
+- Der Epilog kommt nach dem gelösten Fall und darf alles aussprechen.
+- Erzählertexte in kurzen Zeilen, keine Anrede. Alles auf Deutsch.`;
 }
 
 /**

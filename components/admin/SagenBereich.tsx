@@ -93,6 +93,14 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       return { ...alt, kapitelWuensche: wuensche };
     });
 
+  /** Stadt je Kapitel; der letzte Eintrag gehört zum Finale. */
+  const stadtSetzen = (i: number, stadt: string) =>
+    setVorgaben((alt) => {
+      const staedteListe = [...alt.kapitelStaedte];
+      staedteListe[i] = stadt;
+      return { ...alt, kapitelStaedte: staedteListe };
+    });
+
   const erzeugen = async () => {
     setLaeuft(true);
     onFehler(null);
@@ -190,19 +198,60 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         ))}
       </div>
 
-      {kapitelNummern.map((i) => (
-        <label className="feld" key={i}>
-          <span className="leise">Wunsch für Kapitel {i + 1} (frei lassen = freie Hand)</span>
-          <input
-            value={vorgaben.kapitelWuensche[i] ?? ""}
-            onChange={(e) => wunschSetzen(i, e.target.value)}
-            placeholder="z.B. Spielt auf dem Nachtmarkt, ein Fahrrad verschwindet"
-            maxLength={400}
-          />
-        </label>
-      ))}
+      {[...kapitelNummern, vorgaben.kapitelAnzahl].map((i) => {
+        const istFinale = i === vorgaben.kapitelAnzahl;
+        return (
+          <div className="kapitel-block" key={i}>
+            <h4 className="unter-abschnitt">
+              {istFinale ? "Finale" : `Kapitel ${i + 1}`}
+            </h4>
 
-      <h3 className="unter-abschnitt">Stadt</h3>
+            {!istFinale && (
+              <label className="feld">
+                <span className="leise">Wunsch (frei lassen = freie Hand)</span>
+                <input
+                  value={vorgaben.kapitelWuensche[i] ?? ""}
+                  onChange={(e) => wunschSetzen(i, e.target.value)}
+                  placeholder="z.B. Spielt auf dem Nachtmarkt, ein Fahrrad verschwindet"
+                  maxLength={400}
+                />
+              </label>
+            )}
+
+            <span className="leise klein">Stadt</span>
+            <div className="marken-reihe">
+              <button
+                className="marke-knopf"
+                data-aktiv={!vorgaben.kapitelStaedte[i]}
+                onClick={() => stadtSetzen(i, "")}
+              >
+                Wie eingestellt
+              </button>
+              <button
+                className="marke-knopf"
+                data-aktiv={vorgaben.kapitelStaedte[i] === "zufall"}
+                onClick={() => stadtSetzen(i, "zufall")}
+              >
+                Zufall
+              </button>
+              {staedte.map((stadt) => (
+                <button
+                  key={stadt.id}
+                  className="marke-knopf"
+                  data-aktiv={vorgaben.kapitelStaedte[i] === stadt.id}
+                  onClick={() => stadtSetzen(i, stadt.id)}
+                >
+                  {stadt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      <h3 className="unter-abschnitt">
+        Stadt <span className="leise">· gilt, wo oben „Wie eingestellt“ steht</span>
+      </h3>
       <div className="wahl-reihe umbrechend">
         <button
           className="wahl-chip"
@@ -210,7 +259,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           onClick={() => setzen({ staedteWechseln: true })}
         >
           <strong>Wechselnd</strong>
-          <span className="leise">jedes Kapitel woanders</span>
+          <span className="leise">jedes Mal woanders</span>
         </button>
         {staedte.map((stadt) => (
           <button

@@ -16,6 +16,8 @@ export type BogenKapitel = {
   auftrag: string;
   enthuellung: string;
   taeterId: string;
+  /** Stadt-Id oder "zufall" - der Fall dieses Kapitels spielt dort. */
+  stadt: string;
 };
 
 export type Bogen = {
@@ -37,6 +39,7 @@ export type Bogen = {
     auftrag: string;
     erzaehlerText: string;
     epilogText: string;
+    stadt: string;
   };
   erstelltAm: number;
 };

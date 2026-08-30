@@ -1446,6 +1446,17 @@ a.zurueck {
   padding: 0 16px 16px;
 }
 
+.kapitel-block {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.kapitel-block .unter-abschnitt {
+  margin-top: 0;
+}
+
 .erzaehler-feld {
   padding-top: 6px;
 }

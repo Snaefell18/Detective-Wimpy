@@ -37,6 +37,11 @@ export type SagaVorgaben = {
   kapitelAnzahl: number;
   /** Freitext je Kapitel - leer heißt: das Modell entscheidet. */
   kapitelWuensche: string[];
+  /**
+   * Stadt je Kapitel: Stadt-Id, "zufall" oder leer für die allgemeine
+   * Einstellung darunter. Das Finale steht an letzter Stelle.
+   */
+  kapitelStaedte: string[];
   /** Stadt-Id oder "zufall". */
   stadt: string;
   /** true: Jedes Kapitel darf in einer anderen Stadt spielen. */
@@ -62,6 +67,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   thema: "",
   kapitelAnzahl: 3,
   kapitelWuensche: [],
+  kapitelStaedte: [],
   stadt: "zufall",
   staedteWechseln: true,
   charaktere: [],

@@ -6,20 +6,30 @@ import { LEERER_ERZAEHLER, type Saga, type SagaVorgaben } from "./sagaTypen";
 import type { Character, Item, Location, PublicCase } from "./types";
 
 /**
- * Eine ganze Saga bauen - in vielen kleinen Aufrufen.
+ * Eine ganze Saga bauen - in lauter kleinen Aufrufen.
  *
- * Erst der Bogen (ein Aufruf), dann jedes Kapitel als eigener Fall (je drei
- * Aufrufe), zuletzt das Finale (noch einmal drei). Keine einzelne Anfrage
- * läuft damit in das Zeitlimit der Plattform, egal wie lang die Saga wird.
+ * Erst der Kern, dann jedes Kapitel des Bogens einzeln, dann das Finale -
+ * und erst danach die eigentlichen Fälle, jeder wiederum in drei Schritten.
+ * Bei drei Kapiteln sind das 5 + 12 kleine Anfragen statt einer großen; keine
+ * kommt dem Zeitlimit der Plattform nahe, egal wie lang die Saga wird.
  */
-type BogenAntwort = {
+type KernAntwort = {
   bogenSiegel: string;
   id: string;
   name: string;
   thema: string;
   klappentext: string;
   auftaktText: string;
-  kapitel: { nummer: number; name: string; teaser: string; erzaehlerText: string }[];
+  kapitelAnzahl: number;
+};
+
+type KapitelAntwort = {
+  bogenSiegel: string;
+  kapitel: { nummer: number; name: string; teaser: string; erzaehlerText: string };
+};
+
+type FinaleAntwort = {
+  bogenSiegel: string;
   finale: { frage: string; erzaehlerText: string; epilogText: string };
 };
 
@@ -34,13 +44,41 @@ export async function erzeugeSaga(
   eingaben: SagaEingaben,
   onSchritt?: (text: string) => void,
 ): Promise<Saga> {
-  onSchritt?.("Der Bogen der Saga entsteht …");
-  const bogen = await postJson<BogenAntwort>("/api/saga", {
+  const anzahl = eingaben.vorgaben.kapitelAnzahl;
+
+  // 1. Der Kern: worum es überhaupt geht.
+  onSchritt?.("Das Überthema entsteht …");
+  const kern = await postJson<KernAntwort>("/api/saga", {
     charaktere: eingaben.charaktere,
     orte: eingaben.orte,
     vorgaben: eingaben.vorgaben,
   });
 
+  // 2. Die Kapitel - eines nach dem anderen, jedes kennt die vorherigen.
+  let siegel = kern.bogenSiegel;
+  const entwuerfe: KapitelAntwort["kapitel"][] = [];
+  for (let nummer = 1; nummer <= anzahl; nummer++) {
+    onSchritt?.(`Kapitel ${nummer} von ${anzahl} wird ersonnen …`);
+    const antwort = await postJson<KapitelAntwort>("/api/saga", {
+      schritt: "kapitel",
+      bogenSiegel: siegel,
+      orte: eingaben.orte,
+      nummer,
+    });
+    siegel = antwort.bogenSiegel;
+    entwuerfe.push(antwort.kapitel);
+  }
+
+  // 3. Das Finale.
+  onSchritt?.("Das Finale wird geschmiedet …");
+  const finaleBogen = await postJson<FinaleAntwort>("/api/saga", {
+    schritt: "finale",
+    bogenSiegel: siegel,
+    orte: eingaben.orte,
+  });
+  siegel = finaleBogen.bogenSiegel;
+
+  // 4. Jetzt die eigentlichen Fälle - jeder wieder in drei Schritten.
   const einstellungen = {
     beschuldigungen: eingaben.vorgaben.beschuldigungen,
     startverdacht: 20,
@@ -57,17 +95,17 @@ export async function erzeugeSaga(
         orte: eingaben.orte,
         items: eingaben.items,
         einstellungen,
-        sagaSiegel: bogen.bogenSiegel,
+        sagaSiegel: siegel,
         kapitel,
       },
       (text) => onSchritt?.(`${was}: ${text}`),
     );
 
   const kapitel = [];
-  for (const k of bogen.kapitel) {
+  for (const k of entwuerfe) {
     const gebaut: { fall: PublicCase; siegel: string } = await fallFuer(
       k.nummer,
-      `Kapitel ${k.nummer} von ${bogen.kapitel.length}`,
+      `Fall ${k.nummer} von ${anzahl}`,
     );
     kapitel.push({
       nummer: k.nummer,
@@ -79,24 +117,25 @@ export async function erzeugeSaga(
     });
   }
 
-  const finale = await fallFuer(0, "Finale");
+  onSchritt?.("Der Finalfall wird gebaut …");
+  const finale = await fallFuer(0, "Finalfall");
 
   return {
-    id: bogen.id,
-    name: bogen.name,
-    thema: bogen.thema,
-    klappentext: bogen.klappentext,
+    id: kern.id,
+    name: kern.name,
+    thema: kern.thema,
+    klappentext: kern.klappentext,
     vorgaben: eingaben.vorgaben,
-    auftakt: { text: bogen.auftaktText, audio: "" },
+    auftakt: { text: kern.auftaktText, audio: "" },
     kapitel,
     finale: {
-      erzaehler: { text: bogen.finale.erzaehlerText, audio: "" },
-      frage: bogen.finale.frage,
-      epilog: { text: bogen.finale.epilogText, audio: "" },
+      erzaehler: { text: finaleBogen.finale.erzaehlerText, audio: "" },
+      frage: finaleBogen.finale.frage,
+      epilog: { text: finaleBogen.finale.epilogText, audio: "" },
       fall: finale.fall,
       siegel: finale.siegel,
     },
-    bogenSiegel: bogen.bogenSiegel,
+    bogenSiegel: siegel,
     erstelltAm: Date.now(),
   };
 }

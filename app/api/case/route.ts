@@ -304,13 +304,15 @@ async function geruestSchritt(body: Record<string, unknown>) {
   const fallItems = wuerfleItems(itemsAus(body?.items), vorgaben?.items ?? []);
 
   const alleOrte = orteAus(body?.orte);
-  // Eine Saga darf ihre Kapitel über mehrere Städte verteilen.
+  // Bei einer Saga steht die Stadt je Kapitel im Bogen.
+  const sagaStadt = saga
+    ? saga.kapitel === 0
+      ? saga.bogen.finale.stadt
+      : saga.bogen.kapitel.find((k) => k.nummer === saga.kapitel)?.stadt
+    : undefined;
   const gewuenschteStadt =
-    saga && saga.bogen.vorgaben.staedteWechseln
-      ? "zufall"
-      : vorgaben && vorgaben.stadt !== "zufall"
-        ? vorgaben.stadt
-        : einstellungen.stadt;
+    sagaStadt ??
+    (vorgaben && vorgaben.stadt !== "zufall" ? vorgaben.stadt : einstellungen.stadt);
   const schauplatz = waehleSchauplaetze(
     alleOrte,
     einstellungen.ortsAnzahl,

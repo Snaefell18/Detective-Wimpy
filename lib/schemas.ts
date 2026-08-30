@@ -180,6 +180,7 @@ export const SagaVorgabenSchema = z.object({
   thema: z.string().max(2000),
   kapitelAnzahl: z.number().min(2).max(8),
   kapitelWuensche: z.array(z.string().max(400)).max(8),
+  kapitelStaedte: z.array(z.string().max(60)).max(9).default([]),
   stadt: z.string().max(60),
   staedteWechseln: z.boolean(),
   charaktere: z.array(z.string().max(40)).max(24),
