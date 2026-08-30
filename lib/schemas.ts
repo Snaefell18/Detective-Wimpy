@@ -17,25 +17,24 @@ const ausListe = (werte: string[], was: string) =>
  * Die erlaubten Ids hängen vom Fall ab (Besetzung, Stadt und die für diesen
  * Fall gezogenen Gegenstände wechseln), deshalb werden die Schemata pro Fall
  * gebaut.
+ *
+ * Ein Fall entsteht in drei Schritten - siehe lib/prompts.ts. Jeder Schritt
+ * hat sein eigenes, kleines Schema.
  */
-export function makeCaseDraftSchema(
-  besetzung: Character[],
-  orte: Location[],
-  items: Item[] = ITEMS,
-) {
-  const itemId = ausListe(
-    items.map((i) => i.id),
-    "Id eines Gegenstands",
-  );
-  const characterId = ausListe(
+const idListen = (besetzung: Character[], orte: Location[]) => ({
+  characterId: ausListe(
     besetzung.map((c) => c.id),
     "Id eines Charakters",
-  );
-  const locationId = ausListe(
+  ),
+  locationId: ausListe(
     orte.map((o) => o.id),
     "Id eines Schauplatzes",
-  );
+  ),
+});
 
+/** Schritt 1: Was ist passiert, wo und warum. */
+export function makeGeruestSchema(besetzung: Character[], orte: Location[]) {
+  const { locationId } = idListen(besetzung, orte);
   return z.object({
     titel: z.string(),
     tatbeschreibung: z.string(),
@@ -48,6 +47,13 @@ export function makeCaseDraftSchema(
     tatort: locationId,
     motiv: z.string(),
     tathergang: z.string(),
+  });
+}
+
+/** Schritt 2: Alibi, Geheimnis und Aufenthaltsort je Verdächtigem. */
+export function makeVerdaechtigeSchema(besetzung: Character[], orte: Location[]) {
+  const { characterId, locationId } = idListen(besetzung, orte);
+  return z.object({
     verdaechtige: z.array(
       z.object({
         charakterId: characterId,
@@ -57,6 +63,21 @@ export function makeCaseDraftSchema(
         alibiIstGelogen: z.boolean(),
       }),
     ),
+  });
+}
+
+/** Schritt 3: Die Gegenstände, die an den Orten zu finden sind. */
+export function makeSpurenSchema(
+  besetzung: Character[],
+  orte: Location[],
+  items: Item[] = ITEMS,
+) {
+  const { characterId, locationId } = idListen(besetzung, orte);
+  const itemId = ausListe(
+    items.map((i) => i.id),
+    "Id eines Gegenstands",
+  );
+  return z.object({
     spuren: z.array(
       z.object({
         itemId,
@@ -69,7 +90,9 @@ export function makeCaseDraftSchema(
   });
 }
 
-export type CaseDraft = z.infer<ReturnType<typeof makeCaseDraftSchema>>;
+export type Geruest = z.infer<ReturnType<typeof makeGeruestSchema>>;
+export type VerdaechtigeDraft = z.infer<ReturnType<typeof makeVerdaechtigeSchema>>;
+export type SpurenDraft = z.infer<ReturnType<typeof makeSpurenSchema>>;
 
 /** Was Claude bei einem Gespräch liefern muss. */
 export const TalkSchema = z.object({

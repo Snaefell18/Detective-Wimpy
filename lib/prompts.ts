@@ -107,56 +107,117 @@ const SCHWIERIGKEIT_TEXT: Record<Vorgaben["schwierigkeit"], string> = {
     "Knifflig: Die Wahrheit ergibt sich erst aus drei Spuren zusammen, mehrere Verdächtige wirken schuldig, zwei Spuren führen in die Irre.",
 };
 
-export function buildCasePrompt(
+/** Was für alle drei Bauschritte gleich gilt. */
+function regeln(vorgaben?: Vorgaben | null): string {
+  const reifegrad = vorgaben?.reifegrad ?? "kindgerecht";
+  return `- ${REIFE_TEXT[reifegrad]}${reifegrad !== "kindgerecht" ? `\n- ${TOTE_REGEL}` : ""}
+- ${ABSURD_TEXT[vorgaben?.absurditaet ?? "verspielt"]}`;
+}
+
+/**
+ * Ein Fall entsteht in drei Schritten statt in einem Rutsch.
+ *
+ * Ein einziger Aufruf für den ganzen Fall lief regelmäßig in das Zeitlimit
+ * der Plattform. Drei kleinere Aufrufe sind jeder für sich schnell, und weil
+ * das Weltwissen zwischengespeichert wird, kosten Schritt zwei und drei kaum
+ * zusätzliche Token.
+ *
+ * Schritt 1: Das Gerüst - was ist passiert, wo, warum.
+ */
+export function buildGeruestPrompt(
   besetzung: Character[],
   stadt: string,
   taeterId: string,
   vorgaben?: Vorgaben | null,
-  items: { id: string; name: string }[] = ITEMS,
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
 
-  const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
-
-  return `Erfinde einen neuen Fall für Detective Wimpy - er spielt in ${stadt}.
+  return `Erfinde das Gerüst eines neuen Falls für Detective Wimpy - er spielt in ${stadt}.
 
 DER TÄTER STEHT BEREITS FEST: ${taeter.name} [${taeter.id}].
-Baue den ganzen Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv, Vorgehen und die Spuren.
+Baue den Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv und Vorgehen.
 
 Anforderungen:
 - Ein Tatort aus der Schauplatzliste.
 - Der Fall muss zu ${stadt} passen: Was dort typisch ist, kommt vor.
-- Für jeden dieser Verdächtigen genau einen Eintrag: ${verdaechtige.map((c) => `${c.name} [${c.id}]`).join(", ")}.
-- Jeder Verdächtige hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Schauplatzliste. Verteile sie auf verschiedene Schauplätze.
-- Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
-- 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
-- Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
-- Nutze die Gegenstände, die zu diesem Fall und dieser Stadt passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
-- Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
-- ${REIFE_TEXT[vorgaben?.reifegrad ?? "kindgerecht"]}${
-  vorgaben && vorgaben.reifegrad !== "kindgerecht" ? `\n- ${TOTE_REGEL}` : ""
-}
-- ${ABSURD_TEXT[vorgaben?.absurditaet ?? "verspielt"]}
-- Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
+- titel: kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
+- tatbeschreibung: zwei bis vier Sätze, die der Spieler zu Beginn liest. Sie verraten den Täter nicht.
+- tathergang: was wirklich geschah, Schritt für Schritt. Das sieht nur der Server.
+- motiv: warum ${taeter.name} es getan hat - nachvollziehbar, nicht "böse".
 - schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
-- introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Sie werden vor dem Intro als Prolog eingeblendet. Kein "Kapitel", keine Anrede, nur Atmosphäre.
+- introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Kein "Kapitel", keine Anrede, nur Atmosphäre.
+${regeln(vorgaben)}
 ${
-  vorgaben
-    ? `
-VORGABEN AUS DEM ADMIN-MENÜ (unbedingt einhalten)
-${vorgaben.thema ? `- Thema: ${vorgaben.thema}` : ""}
-- ${SCHWIERIGKEIT_TEXT[vorgaben.schwierigkeit]}
+  vorgaben?.thema
+    ? `\nVORGABE AUS DEM ADMIN-MENÜ (unbedingt einhalten)\n- Thema: ${vorgaben.thema}`
+    : ""
+}`.trim();
+}
+
+/** Schritt 2: Wo alle waren, was sie behaupten und was sie verschweigen. */
+export function buildVerdaechtigePrompt(
+  besetzung: Character[],
+  taeterId: string,
+  titel: string,
+  tathergang: string,
+  vorgaben?: Vorgaben | null,
+): string {
+  const taeter = besetzung.find((c) => c.id === taeterId);
+  const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
+
+  return `Der Fall steht schon fest. Fülle jetzt die Verdächtigen aus.
+
+FALL: ${titel}
+WAS WIRKLICH GESCHAH: ${tathergang}
+TÄTER: ${taeter?.name} [${taeterId}]
+
+Anforderungen:
+- Für jeden dieser Verdächtigen genau einen Eintrag: ${verdaechtige.map((c) => `${c.name} [${c.id}]`).join(", ")}.
+- Jeder hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Schauplatzliste. Verteile sie auf verschiedene Schauplätze.
+- Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
+- Die Geheimnisse der Unschuldigen haben nichts mit der Tat zu tun, machen sie aber verdächtig.
+- Alibi und Geheimnis passen zu den Werten des Tieres.
+${regeln(vorgaben)}`;
+}
+
+/** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
+export function buildSpurenPrompt(
+  besetzung: Character[],
+  taeterId: string,
+  titel: string,
+  tathergang: string,
+  verdaechtige: { charakterId: string; aufenthaltsort: string; alibi: string }[],
+  vorgaben?: Vorgaben | null,
+  items: { id: string; name: string }[] = ITEMS,
+): string {
+  const name = (id: string) => besetzung.find((c) => c.id === id)?.name ?? id;
+
+  return `Der Fall und die Verdächtigen stehen fest. Lege jetzt die Spuren aus.
+
+FALL: ${titel}
+WAS WIRKLICH GESCHAH: ${tathergang}
+TÄTER: ${name(taeterId)} [${taeterId}]
+
+DIE VERDÄCHTIGEN
+${verdaechtige.map((v) => `- ${name(v.charakterId)} [${v.charakterId}], jetzt bei [${v.aufenthaltsort}], behauptet: ${v.alibi}`).join("\n")}
+
+Anforderungen:
+- 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort.
+- Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
+- ${SCHWIERIGKEIT_TEXT[vorgaben?.schwierigkeit ?? "mittel"]}
+- Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
+- Nutze die Gegenstände, die zu diesem Fall passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
+- Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
 ${
-  vorgaben.items.length && items
-    ? `- Diese Gegenstände müssen als Spuren vorkommen: ${items
+  vorgaben?.items.length
+    ? `- Diese Gegenstände müssen vorkommen: ${items
         .filter((i) => vorgaben.items.includes(i.id))
         .map((i) => `${i.name} [${i.id}]`)
         .join(", ")}`
     : ""
-}`.trim()
-    : ""
-}`;
+}
+${regeln(vorgaben)}`.trim();
 }
 
 /** Prompt für ein Gespräch mit einem Charakter. */

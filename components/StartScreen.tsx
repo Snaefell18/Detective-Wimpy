@@ -11,11 +11,14 @@ export function StartScreen({
   onStart,
   onKampagnen,
   laedt,
+  schritt,
   fehler,
 }: {
   onStart: () => void;
   onKampagnen: () => void;
   laedt: boolean;
+  /** Woran gerade gebaut wird - der Fall entsteht in drei Schritten. */
+  schritt?: string | null;
   fehler: string | null;
 }) {
   const { charaktere, orte } = useStammdaten();
@@ -56,9 +59,7 @@ export function StartScreen({
         </span>
 
         {laedt && (
-          <p className="start-laden">
-            Wimpy sortiert die Akten … gleich geht es los.
-          </p>
+          <p className="start-laden">{schritt ?? "Wimpy sortiert die Akten …"}</p>
         )}
 
         {fehler && <p className="fehler">{fehler}</p>}

@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { Bild } from "@/components/Bild";
 import { useAdmin } from "@/lib/adminStore";
-import { postJson } from "@/lib/api";
+import { erzeugeFall } from "@/lib/fallErzeugen";
 import { alsStaedte } from "@/lib/csv";
 import { ladeKampagnen, loescheKampagne, speichereKampagne } from "@/lib/db";
 import { useStammdaten } from "@/lib/stammdaten";
 import {
   STANDARD_VORGABEN,
   type Kampagne,
-  type PublicCase,
   type Vorgaben,
 } from "@/lib/types";
 import type { BereichProps } from "./typen";
@@ -44,6 +43,7 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
   const [vorgaben, setVorgaben] = useState<Vorgaben>(STANDARD_VORGABEN);
   const [name, setName] = useState("");
   const [laeuft, setLaeuft] = useState(false);
+  const [schritt, setSchritt] = useState<string | null>(null);
 
   const staedte = alsStaedte(stammdaten.orte);
   const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
@@ -78,13 +78,16 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
     setLaeuft(true);
     onFehler(null);
     try {
-      const daten = await postJson<{ fall: PublicCase; siegel: string }>("/api/case", {
-        charaktere: stammdaten.charaktere,
-        orte: stammdaten.orte,
-        items: stammdaten.items,
-        einstellungen: admin.einstellungen,
-        vorgaben,
-      });
+      const daten = await erzeugeFall(
+        {
+          charaktere: stammdaten.charaktere,
+          orte: stammdaten.orte,
+          items: stammdaten.items,
+          einstellungen: admin.einstellungen,
+          vorgaben,
+        },
+        (text, nummer) => setSchritt(`Schritt ${nummer} von 3: ${text}`),
+      );
 
       const kampagne: Kampagne = {
         id: daten.fall.id,
@@ -105,6 +108,7 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
       );
     } finally {
       setLaeuft(false);
+      setSchritt(null);
     }
   };
 
@@ -266,13 +270,15 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         onClick={() => void erzeugen()}
         disabled={laeuft}
       >
-        {laeuft ? "Der Fall wird ausgeheckt …" : "Fall erzeugen und speichern"}
+        {laeuft ? "Der Fall wird gebaut …" : "Fall erzeugen und speichern"}
       </button>
 
       {laeuft && (
         <p className="leise klein" style={{ marginTop: 8 }}>
-          Das dauert bis zu einer Minute. Bitte den Bildschirm anlassen - sperrt
-          sich das Handy, bricht die Verbindung ab.
+          {schritt ?? "Es geht gleich los …"}
+          <br />
+          Bitte den Bildschirm anlassen - sperrt sich das Handy, bricht die
+          Verbindung ab.
         </p>
       )}
 

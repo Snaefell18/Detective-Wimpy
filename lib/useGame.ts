@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { postJson as post } from "./api";
 import { useAdmin } from "./adminStore";
+import { erzeugeFall } from "./fallErzeugen";
 import { useStammdaten } from "./stammdaten";
 import type {
   ChatTurn,
@@ -68,6 +69,8 @@ export function useGame() {
     null,
   );
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Woran gerade gebaut wird - der Fall entsteht in drei Schritten. */
+  const [schritt, setSchritt] = useState<string | null>(null);
   const standRef = useRef(stand);
   standRef.current = stand;
 
@@ -104,12 +107,15 @@ export function useGame() {
     setLaedt("fall");
     try {
       // Besetzung und Einstellungen aus dem Admin-Menü gelten für diesen Fall.
-      const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {
-        charaktere: stammdaten.charaktere,
-        orte: stammdaten.orte,
-        items: stammdaten.items,
-        einstellungen: admin.einstellungen,
-      });
+      const daten = await erzeugeFall(
+        {
+          charaktere: stammdaten.charaktere,
+          orte: stammdaten.orte,
+          items: stammdaten.items,
+          einstellungen: admin.einstellungen,
+        },
+        setSchritt,
+      );
       const startOrt = daten.fall.orte[0]?.id ?? "";
       setStand({
         ...LEER,
@@ -133,6 +139,7 @@ export function useGame() {
       return false;
     } finally {
       setLaedt(null);
+      setSchritt(null);
     }
   }, [admin, stammdaten.charaktere, stammdaten.orte, stammdaten.items]);
 
@@ -340,6 +347,7 @@ export function useGame() {
     stand,
     geladen,
     laedt,
+    schritt,
     fehler,
     setFehler,
     neuerFall,

@@ -26,7 +26,7 @@ export default function Home() {
   const [phase, setPhase] = useState<"aus" | "prolog" | "intro">("aus");
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
 
-  const { stand, geladen, laedt, fehler, setFehler } = spiel;
+  const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
 
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
@@ -98,6 +98,7 @@ export default function Home() {
           onStart={() => void fallStarten()}
           onKampagnen={() => setKampagnenOffen(true)}
           laedt={laedt === "fall"}
+          schritt={schritt}
           fehler={fehler}
         />
 
