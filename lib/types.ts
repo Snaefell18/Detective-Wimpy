@@ -88,6 +88,8 @@ export type CaseFile = {
   id: string;
   /** Die Charaktere, mit denen dieser Fall gespielt wird (inkl. Admin-Änderungen). */
   besetzung: Character[];
+  /** Die Gegenstände, aus denen die Spuren dieses Falls stammen. */
+  items: Item[];
   /** Erzählton für diesen Fall. */
   ton: Einstellungen["ton"];
   /** Die Stadt, in der dieser Fall spielt. */

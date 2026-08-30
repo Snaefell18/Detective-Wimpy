@@ -43,7 +43,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const item = getItem(spur.itemId);
+    // Erst im Fall nachschlagen - er kann Gegenstände aus der Datenbank
+    // enthalten, die es in lib/items.ts gar nicht gibt.
+    const item = fall.items?.find((i) => i.id === spur.itemId) ?? getItem(spur.itemId);
     return NextResponse.json({
       spur: {
         itemId: spur.itemId,

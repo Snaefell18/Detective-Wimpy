@@ -11,6 +11,7 @@ import type { CaseDraft } from "@/lib/schemas";
 import {
   CharacterSchema,
   EinstellungenSchema,
+  ItemSchema,
   LocationSchema,
   VorgabenSchema,
   makeCaseDraftSchema,
@@ -20,6 +21,7 @@ import {
   STANDARD_EINSTELLUNGEN,
   type CaseFile,
   type Character,
+  type Item,
   type Location,
   type PublicCase,
   type Vorgaben,
@@ -31,6 +33,10 @@ export const maxDuration = 60;
 /** Höchstens so viele Charaktere bzw. Orte - schützt vor riesigen Prompts. */
 const MAX_CHARAKTERE = 24;
 const MAX_ORTE = 120;
+const MAX_ITEMS = 60;
+
+/** So viele Gegenstände stehen einem einzelnen Fall zur Auswahl. */
+const ITEMS_PRO_FALL = 8;
 
 /**
  * Nimmt die Besetzung aus dem Admin-Menü entgegen, sofern sie brauchbar ist.
@@ -56,6 +62,33 @@ function orteAus(roh: unknown): Location[] {
   const geprueft = LocationSchema.array().max(MAX_ORTE).safeParse(roh);
   if (!geprueft.success || geprueft.data.length === 0) return LOCATIONS;
   return geprueft.data as Location[];
+}
+
+/** Gegenstände aus der Datenbank, sonst die Liste aus lib/items.ts. */
+function itemsAus(roh: unknown): Item[] {
+  const geprueft = ItemSchema.array().max(MAX_ITEMS).safeParse(roh);
+  if (!geprueft.success || geprueft.data.length === 0) return ITEMS;
+  return geprueft.data as Item[];
+}
+
+/**
+ * Zieht die Gegenstände für einen Fall.
+ *
+ * Bekommt das Modell jedes Mal den ganzen Katalog, greift es immer wieder zu
+ * denselben Klassikern (Schal, Fotografie ...). Deshalb bekommt jeder Fall
+ * eine frisch gemischte, kleine Auswahl - gewünschte Gegenstände sind darin
+ * gesetzt, der Rest wird ausgelost.
+ */
+function wuerfleItems(pool: Item[], pflicht: string[]): Item[] {
+  const gesetzt = pool.filter((i) => pflicht.includes(i.id));
+  const rest = pool.filter((i) => !pflicht.includes(i.id));
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const auswahl = [...gesetzt, ...rest].slice(0, Math.max(ITEMS_PRO_FALL, gesetzt.length));
+  // Mindestens vier - sonst wiederholen sich die Spuren innerhalb eines Falls.
+  return auswahl.length >= 4 ? auswahl : pool;
 }
 
 export async function POST(request: Request) {
@@ -88,6 +121,9 @@ export async function POST(request: Request) {
       verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
     // Stadt und Schauplätze für diesen Fall festlegen.
+    const alleItems = itemsAus(body?.items);
+    const fallItems = wuerfleItems(alleItems, vorgaben?.items ?? []);
+
     const alleOrte = orteAus(body?.orte);
     const gewuenschteStadt =
       vorgaben && vorgaben.stadt !== "zufall" ? vorgaben.stadt : einstellungen.stadt;
@@ -116,6 +152,7 @@ export async function POST(request: Request) {
             schauplatz.orte,
             schauplatz.stadt.name,
             einstellungen.ton,
+            fallItems,
           ),
           cache_control: { type: "ephemeral" },
         },
@@ -124,7 +161,7 @@ export async function POST(request: Request) {
       output_config: {
         effort: "medium",
         format: zodOutputFormat(
-          makeCaseDraftSchema(spielendeBesetzung, schauplatz.orte),
+          makeCaseDraftSchema(spielendeBesetzung, schauplatz.orte, fallItems),
         ),
       },
       messages: [
@@ -135,7 +172,7 @@ export async function POST(request: Request) {
             schauplatz.stadt.name,
             taeter.id,
             vorgaben,
-            ITEMS,
+            fallItems,
           ),
         },
       ],
@@ -155,7 +192,7 @@ export async function POST(request: Request) {
     // danebenliegender Name soll nicht den ganzen Fall unbrauchbar machen.
     const ortIds = schauplatz.orte.map((o) => o.id);
     const charakterIds = spielendeBesetzung.map((c) => c.id);
-    const itemIds = ITEMS.map((i) => i.id);
+    const itemIds = fallItems.map((i) => i.id);
 
     const eintraege = draft.verdaechtige
       .map((v) => ({
@@ -189,6 +226,7 @@ export async function POST(request: Request) {
     const fall: CaseFile = {
       id: crypto.randomUUID(),
       besetzung: spielendeBesetzung,
+      items: fallItems,
       ton: einstellungen.ton,
       stadt: schauplatz.stadt.name,
       orte: schauplatz.orte,

@@ -53,6 +53,36 @@ export const ITEMS: Item[] = [
     beschreibung: "Zwei Tiere, ein Lächeln - und jemand, der weggeschnitten wurde.",
     bild: "/items/fotografie.png",
   },
+  {
+    id: "brille",
+    name: "Brille",
+    beschreibung: "Ein Bügel ist verbogen, auf dem Glas klebt ein Fingerabdruck.",
+    bild: "/items/brille.png",
+  },
+  {
+    id: "buerste",
+    name: "Bürste",
+    beschreibung: "Zwischen den Borsten steckt Fell - und etwas, das da nicht hingehört.",
+    bild: "/items/buerste.png",
+  },
+  {
+    id: "kamera",
+    name: "Kamera",
+    beschreibung: "Auf dem letzten Bild ist jemand zu sehen, der nicht dort sein wollte.",
+    bild: "/items/kamera.png",
+  },
+  {
+    id: "notizbuch",
+    name: "Notizbuch",
+    beschreibung: "Eine Seite fehlt. Der Abdruck der Schrift ist noch zu erahnen.",
+    bild: "/items/notizbuch.png",
+  },
+  {
+    id: "taschenlampe",
+    name: "Taschenlampe",
+    beschreibung: "Noch warm. Wer auch immer sie hielt, war eben erst hier.",
+    bild: "/items/taschenlampe.png",
+  },
 ];
 
 export const ITEM_BY_ID = new Map(ITEMS.map((item) => [item.id, item]));

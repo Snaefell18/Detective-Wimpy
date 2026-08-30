@@ -19,7 +19,6 @@ export function StartScreen({
   fehler: string | null;
 }) {
   const { charaktere, orte } = useStammdaten();
-  const held = charaktere.find((c) => c.istDetektiv) ?? charaktere[0];
   const staedte = alsStaedte(orte);
   const [ohneBild, setOhneBild] = useState(false);
   const merken = useCallback((leer: boolean) => setOhneBild(leer), []);
@@ -42,23 +41,19 @@ export function StartScreen({
         </h1>
       )}
 
+      {/* Schmale Knöpfe: Das Titelbild soll so weit wie möglich frei bleiben. */}
       <div className="start-himmel" data-ohne-bild={ohneBild}>
-        <button className="knopf aktion" onClick={onStart} disabled={laedt}>
-          {laedt ? "Der Fall wird ausgeheckt …" : "Neuen Fall starten"}
+        <button className="knopf aktion schmal" onClick={onStart} disabled={laedt}>
+          {laedt ? "Wird ausgeheckt …" : "Neuer Fall"}
         </button>
 
-        <button className="knopf glas" onClick={onKampagnen}>
+        <button className="knopf glas schmal" onClick={onKampagnen}>
           🗂 Kampagnen
         </button>
 
-        <div className="start-zeile">
-          <Link href="/admin" className="knopf klein glas" aria-label="Admin-Menü">
-            ⚙︎ Admin
-          </Link>
-          <span className="start-info">
-            {charaktere.length - 1} Verdächtige · {staedte.length} Städte
-          </span>
-        </div>
+        <span className="start-info">
+          {charaktere.length - 1} Verdächtige · {staedte.length} Städte
+        </span>
 
         {laedt && (
           <p className="start-laden">
@@ -69,10 +64,11 @@ export function StartScreen({
         {fehler && <p className="fehler">{fehler}</p>}
       </div>
 
-      <p className="start-fuss">
-        {held?.name}, {held?.tierart} · „Teilen → Zum Home-Bildschirm“ startet das
-        Spiel im Vollbild.
-      </p>
+      <div className="start-fuss">
+        <Link href="/admin" className="knopf klein glas" aria-label="Admin-Menü">
+          ⚙︎ Admin
+        </Link>
+      </div>
     </div>
   );
 }

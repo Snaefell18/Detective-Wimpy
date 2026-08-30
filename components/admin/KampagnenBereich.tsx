@@ -71,6 +71,7 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         body: JSON.stringify({
           charaktere: stammdaten.charaktere,
           orte: stammdaten.orte,
+          items: stammdaten.items,
           einstellungen: admin.einstellungen,
           vorgaben,
         }),

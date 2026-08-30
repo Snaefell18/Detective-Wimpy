@@ -1,5 +1,6 @@
 import { characterBrief } from "./characters";
 import { ITEMS } from "./items";
+import type { Item } from "./types";
 import { findeOrt } from "./locations";
 import type {
   CaseFile,
@@ -29,6 +30,8 @@ export function buildWorldPrompt(
   orte: Location[],
   stadt: string,
   ton: Einstellungen["ton"] = "kindgerecht",
+  /** Die Gegenstände dieses Falls - nicht der ganze Katalog. */
+  items: Item[] = ITEMS,
 ): string {
   const held = detektiv(besetzung);
 
@@ -47,7 +50,7 @@ SCHAUPLÄTZE IN ${stadt.toUpperCase()}
 ${orte.map((o) => `- [${o.id}] ${o.name} (${o.atmosphaere || "neutral"})`).join("\n")}
 
 GEGENSTÄNDE
-${ITEMS.map((i) => `- [${i.id}] ${i.name}: ${i.beschreibung}`).join("\n")}
+${items.map((i) => `- [${i.id}] ${i.name}: ${i.beschreibung}`).join("\n")}
 
 REGELN
 - Benutze ausschließlich die oben genannten Ids für Charaktere, Orte und Gegenstände.
@@ -71,7 +74,7 @@ export function buildCasePrompt(
   stadt: string,
   taeterId: string,
   vorgaben?: Vorgaben | null,
-  items?: { id: string; name: string }[],
+  items: { id: string; name: string }[] = ITEMS,
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
@@ -90,6 +93,8 @@ Anforderungen:
 - Jeder Verdächtige hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Schauplatzliste. Verteile sie auf verschiedene Schauplätze.
 - Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
 - 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
+- Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
+- Nutze die Gegenstände, die zu diesem Fall und dieser Stadt passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
 - Kindgerecht: kein Blut, keine Gewalt, kein Tod.
 - Der Titel ist kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.

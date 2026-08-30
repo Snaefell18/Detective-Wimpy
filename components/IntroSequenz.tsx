@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bild } from "./Bild";
 import { spiele, stand, stoppe } from "@/lib/introAudio";
-import type { Character, PublicCase } from "@/lib/types";
+import type { Character, Location, PublicCase } from "@/lib/types";
 
 /** Ohne Musik (blockierter Ton) läuft das Intro deutlich kürzer. */
 const STUMME_DAUER = 34;
@@ -13,7 +13,7 @@ type Szene =
   | { art: "stadt"; von: number; bis: number }
   | { art: "wort"; von: number; bis: number; wort: string; nr: number }
   | { art: "verdaechtig"; von: number; bis: number; charakter: Character; nr: number }
-  | { art: "orte"; von: number; bis: number }
+  | { art: "ort"; von: number; bis: number; ort: Location; nr: number }
   | { art: "frage"; von: number; bis: number }
   | { art: "akte"; von: number; bis: number };
 
@@ -63,7 +63,7 @@ function szenenPlan(fall: PublicCase): Szene[] {
     nr: i,
   }));
 
-  verteile(verdaechtige, 0.42, 0.72, (charakter, i, von, bis) => ({
+  verteile(verdaechtige, 0.42, 0.68, (charakter, i, von, bis) => ({
     art: "verdaechtig",
     von,
     bis,
@@ -71,9 +71,18 @@ function szenenPlan(fall: PublicCase): Szene[] {
     nr: i + 1,
   }));
 
+  // Jeder Schauplatz bekommt den ganzen Bildschirm - in einen Rahmen gequetscht
+  // sahen die hochkanten Bilder immer angeschnitten aus.
+  verteile(fall.orte, 0.68, 0.86, (ort, i, von, bis) => ({
+    art: "ort",
+    von,
+    bis,
+    ort,
+    nr: i + 1,
+  }));
+
   plan.push(
-    { art: "orte", von: 0.72, bis: 0.85 },
-    { art: "frage", von: 0.85, bis: 0.94 },
+    { art: "frage", von: 0.86, bis: 0.94 },
     { art: "akte", von: 0.94, bis: 1.01 },
   );
 
@@ -135,6 +144,8 @@ export function IntroSequenz({
         if (!tonAn) void spiele("intro").then(setTonAn);
       }}
     >
+      <IntroHintergrund fall={fall} aktiv={aktiverOrt(szene, fall)} />
+
       <div className="intro-regen" />
       <div className="intro-strahl" />
       <div className="intro-puls" />
@@ -170,12 +181,21 @@ export function IntroSequenz({
   );
 }
 
+/** Welcher Schauplatz gerade im Hintergrund steht - sonst bleibt es dunkel. */
+const aktiverOrt = (szene: Szene, fall: PublicCase): string | null => {
+  if (szene.art === "ort") return szene.ort.id;
+  if (szene.art === "stadt") return fall.tatort || fall.orte[0]?.id || null;
+  return null;
+};
+
 const szeneSchluessel = (szene: Szene) =>
   szene.art === "verdaechtig"
     ? `v-${szene.charakter.id}`
     : szene.art === "wort"
       ? `w-${szene.nr}`
-      : szene.art;
+      : szene.art === "ort"
+        ? `o-${szene.ort.id}`
+        : szene.art;
 
 /* ------------------------------------------------------------------ */
 
@@ -209,17 +229,6 @@ function SzenenInhalt({
           <div className="blitz" />
           <p className="intro-oberzeile einfliegen">Tatort</p>
           <h1 className="intro-stadt slam">{fall.stadt}</h1>
-          <div className="intro-streifen">
-            {fall.orte.slice(0, 5).map((ort, i) => (
-              <div
-                key={ort.id}
-                className="intro-streifen-bild wischen"
-                style={{ animationDelay: `${i * 0.09}s` }}
-              >
-                <Bild src={ort.bild} alt={ort.name} platzhalter="" groesse="120px" />
-              </div>
-            ))}
-          </div>
         </div>
       );
 
@@ -257,24 +266,14 @@ function SzenenInhalt({
       );
     }
 
-    case "orte":
+    case "ort":
       return (
         <div className="szene-block">
-          <p className="intro-oberzeile einfliegen">Schauplätze</p>
-          <div className="intro-orte">
-            {fall.orte.map((ort, i) => (
-              <div
-                key={ort.id}
-                className="intro-ort aufpoppen"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                <div className="intro-ort-bild">
-                  <Bild src={ort.bild} alt={ort.name} platzhalter={ort.name} groesse="180px" />
-                </div>
-                <strong>{ort.name}</strong>
-              </div>
-            ))}
-          </div>
+          <p className="intro-oberzeile einfliegen">Schauplatz {szene.nr}</p>
+          <h1 className="intro-ortsname slam">{szene.ort.name}</h1>
+          {szene.ort.atmosphaere && (
+            <p className="intro-atmosphaere einfliegen">{szene.ort.atmosphaere}</p>
+          )}
         </div>
       );
 
@@ -299,26 +298,40 @@ function SzenenInhalt({
       );
 
     case "akte":
-      // Die vollständige Fallakte - ein Tipp darauf startet die Runde.
+      // Nur Titel und Text - ein Tipp irgendwo darauf startet die Runde.
       return (
         <button className="akte einblenden" onClick={onStarten}>
-          <span className="akte-marke">Fallakte · {fall.stadt}</span>
           <h1 className="akte-titel">{fall.titel}</h1>
           <p className="akte-text">{fall.tatbeschreibung}</p>
-
-          <div className="akte-zahlen">
-            <span>
-              <strong>{fall.besetzung.length - 1}</strong> Verdächtige
-            </span>
-            <span>
-              <strong>{fall.orte.length}</strong> Schauplätze
-            </span>
-          </div>
-
-          <span className="akte-knopf">Fall übernehmen ›</span>
+          <span className="akte-start pochen">Fall übernehmen ›</span>
         </button>
       );
   }
+}
+
+/**
+ * Die Schauplätze als bildschirmfüllender Hintergrund.
+ *
+ * Alle Bilder hängen von Anfang an im Dokument und werden nur ein- und
+ * ausgeblendet. Würde je Szene eines nachgeladen, käme es zu spät - eine
+ * Szene dauert nur ein bis zwei Sekunden.
+ */
+function IntroHintergrund({ fall, aktiv }: { fall: PublicCase; aktiv: string | null }) {
+  return (
+    <div className="intro-hintergrund" aria-hidden>
+      {fall.orte.map((ort) => (
+        <div key={ort.id} className="intro-vollbild" data-aktiv={ort.id === aktiv}>
+          {/*
+            Bewusst ein einfaches <img>: Die Bilder aus /public sind bereits
+            klein gerechnet, und das Intro schneidet in Sekundenschritten -
+            da darf nichts erst über den Bildoptimierer laufen.
+          */}
+          <img className="bild" src={ort.bild} alt="" draggable={false} />
+        </div>
+      ))}
+      <div className="intro-vollbild-verlauf" />
+    </div>
+  );
 }
 
 function IntroWert({ label, wert, lokal }: { label: string; wert: number; lokal: number }) {

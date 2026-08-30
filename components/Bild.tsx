@@ -18,6 +18,7 @@ export function Bild({
   platzhalter,
   rund,
   groesse = "(max-width: 520px) 50vw, 260px",
+  sofort,
 }: {
   src?: string | null;
   alt: string;
@@ -25,6 +26,8 @@ export function Bild({
   /** Porträts werden mittig oben beschnitten, Szenen mittig. */
   rund?: boolean;
   groesse?: string;
+  /** Bild sofort laden statt beim Scrollen - für Bilder, die gleich dran sind. */
+  sofort?: boolean;
 }) {
   const { daten } = useAdmin();
   const [fehlt, setFehlt] = useState(false);
@@ -45,6 +48,7 @@ export function Bild({
       alt={alt}
       fill
       sizes={groesse}
+      priority={sofort}
       unoptimized={istDataUrl(quelle)}
       onError={() => setFehlt(true)}
       draggable={false}

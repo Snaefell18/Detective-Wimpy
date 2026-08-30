@@ -119,6 +119,7 @@ export function useGame() {
       const daten = await post<{ fall: PublicCase; siegel: string }>("/api/case", {
         charaktere: stammdaten.charaktere,
         orte: stammdaten.orte,
+        items: stammdaten.items,
         einstellungen: admin.einstellungen,
       });
       const startOrt = daten.fall.orte[0]?.id ?? "";
@@ -145,7 +146,7 @@ export function useGame() {
     } finally {
       setLaedt(null);
     }
-  }, [admin, stammdaten.charaktere, stammdaten.orte]);
+  }, [admin, stammdaten.charaktere, stammdaten.orte, stammdaten.items]);
 
   /**
    * Startet einen vorgenerierten Fall aus der Datenbank - ohne Modellaufruf,

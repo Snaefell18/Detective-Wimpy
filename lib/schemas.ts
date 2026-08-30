@@ -1,6 +1,6 @@
 import * as z from "zod/v4";
 import { ITEMS } from "./items";
-import type { Character, Location } from "./types";
+import type { Character, Item, Location } from "./types";
 import { STIMMUNGEN } from "./zuordnen";
 
 /**
@@ -13,16 +13,20 @@ import { STIMMUNGEN } from "./zuordnen";
 const ausListe = (werte: string[], was: string) =>
   z.string().describe(`${was}. Genau einer dieser Werte: ${werte.join(", ")}`);
 
-const itemId = ausListe(
-  ITEMS.map((i) => i.id),
-  "Id eines Gegenstands",
-);
-
 /**
- * Die erlaubten Charakter- und Orts-Ids hängen vom Fall ab (Besetzung und
- * Stadt wechseln), deshalb werden die Schemata pro Fall gebaut.
+ * Die erlaubten Ids hängen vom Fall ab (Besetzung, Stadt und die für diesen
+ * Fall gezogenen Gegenstände wechseln), deshalb werden die Schemata pro Fall
+ * gebaut.
  */
-export function makeCaseDraftSchema(besetzung: Character[], orte: Location[]) {
+export function makeCaseDraftSchema(
+  besetzung: Character[],
+  orte: Location[],
+  items: Item[] = ITEMS,
+) {
+  const itemId = ausListe(
+    items.map((i) => i.id),
+    "Id eines Gegenstands",
+  );
   const characterId = ausListe(
     besetzung.map((c) => c.id),
     "Id eines Charakters",
@@ -75,7 +79,10 @@ export const TalkSchema = z.object({
     .string()
     .nullable()
     .describe("Kurze Notiz für Wimpys Notizbuch, oder null"),
-  gefundeneSpurItemId: itemId
+  // Welche Ids gültig sind, steht im Gesprächsprompt - der Fall bringt seine
+  // eigenen Gegenstände mit, deshalb hier keine feste Liste.
+  gefundeneSpurItemId: z
+    .string()
     .nullable()
     .describe("Id einer hier entdeckten Spur, oder null"),
   verdachtsaenderung: z
@@ -120,6 +127,14 @@ export const LocationSchema = z.object({
   name: z.string().min(1).max(60),
   atmosphaere: z.string().max(120),
   beschreibung: z.string().max(300),
+  bild: z.string().max(300),
+});
+
+/** Prüft die Gegenstände, die der Client aus der Datenbank mitschickt. */
+export const ItemSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(80),
+  beschreibung: z.string().max(400),
   bild: z.string().max(300),
 });
 
