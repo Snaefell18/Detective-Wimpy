@@ -1446,6 +1446,25 @@ a.zurueck {
   padding: 0 16px 16px;
 }
 
+/* Was am Fall noch nicht stimmt - rechnet der Browser selbst aus. */
+.akte-probleme {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(228, 50, 43, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(228, 50, 43, 0.4);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.akte-probleme ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 /* Der Akten-Editor im Admin-Menü. */
 .akte {
   display: flex;

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { pruefeFall } from "@/lib/aktePruefen";
 import type { CaseClue, CaseFile, SuspectBrief } from "@/lib/types";
 
 /**
  * Alles an einem Fall von Hand ändern - auch das, was im Spiel geheim ist.
  *
- * Gespeichert wird erst, wenn der Server den Fall für spielbar hält
- * (siehe lib/aktePruefen.ts). Kommt eine Meldung zurück, bleibt das
- * Formular offen und der bisherige Stand in der Datenbank unangetastet.
+ * Ob der Fall spielbar bleibt, rechnet der Browser selbst aus - die Prüfung
+ * (lib/aktePruefen.ts) ist reine Logik, kein Modell und kein Server. Sie läuft
+ * bei jeder Änderung mit und steht unten als Liste. Erst zum Speichern geht der
+ * Fall einmal an den eigenen Server, weil nur der ihn wieder versiegeln kann.
  */
 export function FallEditor({
   fall,
@@ -23,6 +25,9 @@ export function FallEditor({
 }) {
   const [entwurf, setEntwurf] = useState<CaseFile>(fall);
   const aendern = (teil: Partial<CaseFile>) => setEntwurf((alt) => ({ ...alt, ...teil }));
+
+  // Läuft im Browser mit, bei jeder Änderung.
+  const probleme = useMemo(() => pruefeFall(entwurf), [entwurf]);
 
   const verdaechtige = entwurf.besetzung.filter((c) => !c.istDetektiv);
   const name = (id: string) => entwurf.besetzung.find((c) => c.id === id)?.name ?? id;
@@ -332,16 +337,27 @@ export function FallEditor({
         + Spur hinzufügen
       </button>
 
-      <p className="leise klein" style={{ marginTop: 12 }}>
-        Der Fall braucht mindestens eine echte Spur, die auf {name(entwurf.taeterId)} zeigt -
-        sonst lässt er sich nicht lösen und wird nicht gespeichert.
-      </p>
+      {probleme.length > 0 ? (
+        <div className="akte-probleme">
+          <strong>So ist der Fall nicht spielbar:</strong>
+          <ul>
+            {probleme.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="leise klein" style={{ marginTop: 12 }}>
+          Spielbar: {name(entwurf.taeterId)} ist überführbar, alle Verdächtigen haben
+          einen Eintrag, alle Spuren liegen an gültigen Orten.
+        </p>
+      )}
 
       <div className="knopf-reihe" style={{ marginTop: 12 }}>
         <button
           className="knopf aktion"
           onClick={() => onSpeichern(entwurf)}
-          disabled={laeuft}
+          disabled={laeuft || probleme.length > 0}
         >
           {laeuft ? "Wird versiegelt …" : "Akte speichern"}
         </button>
