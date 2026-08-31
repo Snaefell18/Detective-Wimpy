@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { pruefeFall } from "@/lib/aktePruefen";
-import type { CaseClue, CaseFile, SuspectBrief } from "@/lib/types";
+import { alsStaedte } from "@/lib/csv";
+import type {
+  CaseClue,
+  CaseFile,
+  Character,
+  Item,
+  Location,
+  SuspectBrief,
+} from "@/lib/types";
 
 /**
  * Alles an einem Fall von Hand ändern - auch das, was im Spiel geheim ist.
@@ -14,11 +22,18 @@ import type { CaseClue, CaseFile, SuspectBrief } from "@/lib/types";
  */
 export function FallEditor({
   fall,
+  alleCharaktere,
+  alleOrte,
+  alleItems,
   onSpeichern,
   onAbbrechen,
   laeuft,
 }: {
   fall: CaseFile;
+  /** Alles, was aus den Stammdaten zur Auswahl steht. */
+  alleCharaktere: Character[];
+  alleOrte: Location[];
+  alleItems: Item[];
   onSpeichern: (fall: CaseFile) => void;
   onAbbrechen: () => void;
   laeuft: boolean;
@@ -68,6 +83,88 @@ export function FallEditor({
     }));
   };
 
+  /**
+   * Ein Tier dazunehmen oder herausnehmen.
+   *
+   * Beim Herausnehmen muss aufgeräumt werden: sein Eintrag verschwindet, und
+   * Spuren, die auf ihn zeigten, wandern zum Täter. Sonst stünde der Fall
+   * sofort als unspielbar da.
+   */
+  const charakterUmschalten = (c: Character) => {
+    const drin = entwurf.besetzung.some((x) => x.id === c.id);
+    if (!drin) {
+      setEntwurf((alt) => ({
+        ...alt,
+        besetzung: [...alt.besetzung, c],
+        verdaechtige: c.istDetektiv
+          ? alt.verdaechtige
+          : [
+              ...alt.verdaechtige,
+              {
+                charakterId: c.id,
+                aufenthaltsort: alt.orte[0].id,
+                alibi: "War angeblich allein unterwegs.",
+                geheimnis: "Verheimlicht eine Kleinigkeit.",
+                alibiIstGelogen: false,
+              },
+            ],
+      }));
+      return;
+    }
+
+    setEntwurf((alt) => {
+      const besetzung = alt.besetzung.filter((x) => x.id !== c.id);
+      const uebrig = besetzung.filter((x) => !x.istDetektiv);
+      const taeterId = alt.taeterId === c.id ? (uebrig[0]?.id ?? "") : alt.taeterId;
+      return {
+        ...alt,
+        besetzung,
+        taeterId,
+        verdaechtige: alt.verdaechtige.filter((v) => v.charakterId !== c.id),
+        spuren: alt.spuren.map((s) =>
+          s.zeigtAufCharakterId === c.id ? { ...s, zeigtAufCharakterId: taeterId } : s,
+        ),
+      };
+    });
+  };
+
+  /** Einen Schauplatz dazunehmen oder herausnehmen - mit Umzug der Betroffenen. */
+  const ortUmschalten = (o: Location) => {
+    const drin = entwurf.orte.some((x) => x.id === o.id);
+    if (!drin) {
+      setEntwurf((alt) => ({ ...alt, orte: [...alt.orte, o] }));
+      return;
+    }
+    setEntwurf((alt) => {
+      const orte = alt.orte.filter((x) => x.id !== o.id);
+      if (orte.length === 0) return alt;
+      const ausweich = orte[0].id;
+      return {
+        ...alt,
+        orte,
+        tatort: alt.tatort === o.id ? ausweich : alt.tatort,
+        verdaechtige: alt.verdaechtige.map((v) =>
+          v.aufenthaltsort === o.id ? { ...v, aufenthaltsort: ausweich } : v,
+        ),
+        spuren: alt.spuren.map((s) => (s.ortId === o.id ? { ...s, ortId: ausweich } : s)),
+      };
+    });
+  };
+
+  /** Einen Gegenstand dazunehmen oder herausnehmen - Spuren darauf entfallen. */
+  const itemUmschalten = (it: Item) => {
+    const drin = entwurf.items.some((x) => x.id === it.id);
+    setEntwurf((alt) =>
+      drin
+        ? {
+            ...alt,
+            items: alt.items.filter((x) => x.id !== it.id),
+            spuren: alt.spuren.filter((s) => s.itemId !== it.id),
+          }
+        : { ...alt, items: [...alt.items, it] },
+    );
+  };
+
   /** Fehlt zu einem Verdächtigen ein Eintrag, wird er hier ergänzt. */
   const eintragAnlegen = (charakterId: string) =>
     setEntwurf((alt) => ({
@@ -84,8 +181,91 @@ export function FallEditor({
       ],
     }));
 
+  const staedte = alsStaedte(alleOrte);
+  const orteDerStadt = alleOrte.filter((o) => o.stadt === entwurf.stadt);
+
   return (
     <div className="akte">
+      <h3 className="unter-abschnitt">
+        Wer ist dabei <span className="leise">· {verdaechtige.length} Verdächtige</span>
+      </h3>
+      <p className="leise klein">
+        Der Detektiv ist immer dabei. Nimmst du ein Tier heraus, verschwindet
+        sein Eintrag, und Spuren auf ihn zeigen danach auf den Täter.
+      </p>
+      <div className="marken-reihe">
+        {alleCharaktere.map((c) => (
+          <button
+            key={c.id}
+            className="marke-knopf"
+            data-aktiv={entwurf.besetzung.some((x) => x.id === c.id)}
+            disabled={c.istDetektiv}
+            onClick={() => charakterUmschalten(c)}
+          >
+            {c.name}
+            {c.istDetektiv ? " (Detektiv)" : ""}
+          </button>
+        ))}
+      </div>
+
+      <h3 className="unter-abschnitt">
+        Stadt und Schauplätze <span className="leise">· {entwurf.orte.length} Orte</span>
+      </h3>
+      <div className="marken-reihe">
+        {staedte.map((stadt) => (
+          <button
+            key={stadt.id}
+            className="marke-knopf"
+            data-aktiv={entwurf.stadt === stadt.name}
+            onClick={() => {
+              if (entwurf.stadt === stadt.name) return;
+              // Andere Stadt heißt: andere Orte. Alles, was daran hängt, zieht mit um.
+              const neueOrte = stadt.orte.slice(0, Math.max(2, entwurf.orte.length));
+              aendern({
+                stadt: stadt.name,
+                orte: neueOrte,
+                tatort: neueOrte[0].id,
+                verdaechtige: entwurf.verdaechtige.map((v, i) => ({
+                  ...v,
+                  aufenthaltsort: neueOrte[i % neueOrte.length].id,
+                })),
+                spuren: entwurf.spuren.map((s) => ({ ...s, ortId: neueOrte[0].id })),
+              });
+            }}
+          >
+            {stadt.name}
+          </button>
+        ))}
+      </div>
+      <div className="marken-reihe">
+        {orteDerStadt.map((o) => (
+          <button
+            key={o.id}
+            className="marke-knopf"
+            data-aktiv={entwurf.orte.some((x) => x.id === o.id)}
+            onClick={() => ortUmschalten(o)}
+          >
+            {o.name}
+          </button>
+        ))}
+      </div>
+
+      <h3 className="unter-abschnitt">
+        Gegenstände <span className="leise">· stehen als Spuren zur Wahl</span>
+      </h3>
+      <div className="marken-reihe">
+        {alleItems.map((it) => (
+          <button
+            key={it.id}
+            className="marke-knopf"
+            data-aktiv={entwurf.items.some((x) => x.id === it.id)}
+            onClick={() => itemUmschalten(it)}
+          >
+            {it.name}
+          </button>
+        ))}
+      </div>
+
       <h3 className="unter-abschnitt">Was der Spieler sieht</h3>
 
       <label className="feld">

@@ -346,6 +346,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         </h2>
         <FallEditor
           fall={akte.fall}
+          alleCharaktere={stammdaten.charaktere}
+          alleOrte={stammdaten.orte}
+          alleItems={stammdaten.items}
           laeuft={speichert}
           onSpeichern={(fall) => void akteSpeichern(fall)}
           onAbbrechen={() => setAkte(null)}

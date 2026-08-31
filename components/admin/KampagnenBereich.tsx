@@ -207,6 +207,9 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         </label>
         <FallEditor
           fall={akte.fall}
+          alleCharaktere={stammdaten.charaktere}
+          alleOrte={stammdaten.orte}
+          alleItems={stammdaten.items}
           laeuft={speichert}
           onSpeichern={(fall) => void akteSpeichern(fall)}
           onAbbrechen={() => setAkte(null)}
