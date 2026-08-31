@@ -15,12 +15,14 @@ export async function postJson<T>(
   body: unknown,
   /** Nach so vielen Sekunden gibt der Browser von sich aus auf. */
   sekunden = 75,
+  /** Zusätzliche Kopfzeilen, etwa das Admin-Passwort. */
+  kopfzeilen?: Record<string, string>,
 ): Promise<T> {
   let antwort: Response;
   try {
     antwort = await fetch(pfad, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...kopfzeilen },
       body: JSON.stringify(body ?? {}),
       signal: AbortSignal.timeout(sekunden * 1000),
     });

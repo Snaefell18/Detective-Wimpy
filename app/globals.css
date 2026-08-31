@@ -1446,6 +1446,16 @@ a.zurueck {
   padding: 0 16px 16px;
 }
 
+/* Der Akten-Editor im Admin-Menü. */
+.akte {
+  display: flex;
+  flex-direction: column;
+}
+
+.akte .marken-reihe {
+  margin: 4px 0 10px;
+}
+
 .beziehungs-feld {
   margin: 10px 0;
 }

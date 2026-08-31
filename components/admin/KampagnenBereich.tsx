@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import { Bild } from "@/components/Bild";
 import { useAdmin } from "@/lib/adminStore";
+import { akteLesen, akteSchreiben } from "@/lib/akte";
 import { erzeugeFall } from "@/lib/fallErzeugen";
+import { leererFall } from "@/lib/leereAkte";
+import { FallEditor } from "./FallEditor";
+import { PasswortFeld } from "./PasswortFeld";
 import { alsStaedte } from "@/lib/csv";
 import { ladeKampagnen, loescheKampagne, speichereKampagne } from "@/lib/db";
 import { useStammdaten } from "@/lib/stammdaten";
 import {
   STANDARD_VORGABEN,
+  type CaseFile,
   type Kampagne,
   type Vorgaben,
 } from "@/lib/types";
@@ -44,6 +49,9 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
   const [name, setName] = useState("");
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
+  /** Geöffnete Akte: die Kampagne und ihr Fall im Klartext. */
+  const [akte, setAkte] = useState<{ kampagne: Kampagne; fall: CaseFile } | null>(null);
+  const [speichert, setSpeichert] = useState(false);
 
   const staedte = alsStaedte(stammdaten.orte);
   const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
@@ -112,6 +120,101 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
     }
   };
 
+  /** Die Akte einer gespeicherten Kampagne öffnen. */
+  const akteOeffnen = async (kampagne: Kampagne) => {
+    onFehler(null);
+    try {
+      setAkte({ kampagne, fall: await akteLesen(kampagne.siegel) });
+    } catch (fehler) {
+      onFehler(fehler instanceof Error ? fehler.message : "Die Akte ließ sich nicht öffnen.");
+    }
+  };
+
+  /** Geänderte Akte versiegeln und speichern. */
+  const akteSpeichern = async (fall: CaseFile) => {
+    if (!akte) return;
+    setSpeichert(true);
+    onFehler(null);
+    try {
+      const versiegelt = await akteSchreiben(fall);
+      const kampagne: Kampagne = {
+        ...akte.kampagne,
+        name: akte.kampagne.name || versiegelt.fall.titel,
+        fall: versiegelt.fall,
+        siegel: versiegelt.siegel,
+      };
+      await speichereKampagne(kampagne);
+      await laden();
+      setAkte(null);
+      onMeldung(`„${kampagne.name}“ gespeichert.`);
+    } catch (fehler) {
+      onFehler(fehler instanceof Error ? fehler.message : "Die Akte ließ sich nicht speichern.");
+    } finally {
+      setSpeichert(false);
+    }
+  };
+
+  /** Eine Kampagne ganz ohne Modell anlegen. */
+  const vonHand = (stadt: string) => {
+    const fall = leererFall({
+      charaktere: stammdaten.charaktere,
+      orte: stammdaten.orte,
+      items: stammdaten.items,
+      stadt,
+    });
+    if (!fall) {
+      onFehler("Für diese Stadt fehlen Schauplätze, Tiere oder Gegenstände.");
+      return;
+    }
+    setAkte({
+      kampagne: {
+        id: fall.id,
+        name: name.trim() || "Von Hand",
+        fall: {
+          id: fall.id,
+          besetzung: fall.besetzung,
+          stadt: fall.stadt,
+          orte: fall.orte,
+          titel: fall.titel,
+          tatbeschreibung: fall.tatbeschreibung,
+          introText: fall.introText,
+          schlagworte: fall.schlagworte,
+          tatort: fall.tatort,
+          aufenthalt: {},
+          erstelltAm: fall.erstelltAm,
+        },
+        siegel: "",
+        vorgaben: null,
+        erstelltAm: fall.erstelltAm,
+      },
+      fall,
+    });
+  };
+
+  if (akte) {
+    return (
+      <>
+        <h2 className="abschnitt">Akte: {akte.kampagne.name}</h2>
+        <label className="feld">
+          <span className="leise">Name der Kampagne</span>
+          <input
+            value={akte.kampagne.name}
+            onChange={(e) =>
+              setAkte({ ...akte, kampagne: { ...akte.kampagne, name: e.target.value } })
+            }
+            maxLength={80}
+          />
+        </label>
+        <FallEditor
+          fall={akte.fall}
+          laeuft={speichert}
+          onSpeichern={(fall) => void akteSpeichern(fall)}
+          onAbbrechen={() => setAkte(null)}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <p className="leise">
@@ -119,6 +222,10 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         gespeichert. Im Spiel steht er unter „Kampagnen“ und startet ohne
         Wartezeit - das spart bei jedem weiteren Spielen den Modellaufruf.
       </p>
+
+      <div className="knopf-reihe">
+        <PasswortFeld />
+      </div>
 
       <h2 className="abschnitt">Neuen Fall vorbereiten</h2>
 
@@ -282,6 +389,21 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         </p>
       )}
 
+      <h3 className="unter-abschnitt">
+        Oder von Hand <span className="leise">· ohne Modell, alles selbst schreiben</span>
+      </h3>
+      <div className="marken-reihe">
+        {staedte.map((stadt) => (
+          <button
+            key={stadt.id}
+            className="marke-knopf"
+            onClick={() => vonHand(stadt.name)}
+          >
+            Leere Kampagne in {stadt.name}
+          </button>
+        ))}
+      </div>
+
       <h2 className="abschnitt">
         Gespeicherte Kampagnen ({kampagnen?.length ?? 0})
       </h2>
@@ -309,6 +431,9 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
               <span className="leise klein">{k.fall.titel}</span>
             </div>
             <div className="listen-aktionen">
+              <button className="knopf klein" onClick={() => void akteOeffnen(k)}>
+                Bearbeiten
+              </button>
               <button
                 className="knopf klein"
                 onClick={async () => {

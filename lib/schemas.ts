@@ -182,6 +182,55 @@ export const VorgabenSchema = z.object({
   absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]).default("verspielt"),
 });
 
+/**
+ * Ein kompletter Fall, wie ihn das Admin-Menü zurückschickt.
+ *
+ * Bewusst großzügig: Ob der Fall danach noch spielbar ist, prüft
+ * lib/aktePruefen.ts - dort gibt es verständliche Meldungen statt
+ * Schema-Fehlern.
+ */
+export const CaseFileSchema = z.object({
+  id: z.string().min(1).max(80),
+  besetzung: CharacterSchema.array().min(3).max(24),
+  items: ItemSchema.array().min(1).max(60),
+  ton: z.enum(["kindgerecht", "spannend", "albern"]),
+  reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]).default("kindgerecht"),
+  absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]).default("verspielt"),
+  stadt: z.string().min(1).max(60),
+  orte: LocationSchema.array().min(2).max(12),
+  introText: z.string().max(2000),
+  schlagworte: z.array(z.string().max(80)).max(8),
+  titel: z.string().max(160),
+  tatbeschreibung: z.string().max(4000),
+  tatort: z.string().max(80),
+  taeterId: z.string().max(40),
+  motiv: z.string().max(2000),
+  tathergang: z.string().max(4000),
+  verdaechtige: z
+    .array(
+      z.object({
+        charakterId: z.string().max(40),
+        aufenthaltsort: z.string().max(80),
+        alibi: z.string().max(1000),
+        geheimnis: z.string().max(1000),
+        alibiIstGelogen: z.boolean(),
+      }),
+    )
+    .max(24),
+  spuren: z
+    .array(
+      z.object({
+        itemId: z.string().max(80),
+        ortId: z.string().max(80),
+        bedeutung: z.string().max(1000),
+        zeigtAufCharakterId: z.string().max(40),
+        fuehrtInDieIrre: z.boolean(),
+      }),
+    )
+    .max(20),
+  erstelltAm: z.number(),
+});
+
 /** Vorgaben für eine ganze Saga aus dem Admin-Menü. */
 export const SagaVorgabenSchema = z.object({
   name: z.string().max(120),
