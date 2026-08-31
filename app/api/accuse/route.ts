@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
+import { ergebnisAus, fehlerText, istZeitueberschreitung, sauberText } from "@/lib/antwort";
 import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { AccuseSchema } from "@/lib/schemas";
@@ -82,8 +82,8 @@ export async function POST(request: Request) {
     const richtig = body.charakterId === fall.taeterId;
     const ergebnis: AccuseResult & { taeterId: string } = {
       richtig,
-      aufloesung: aufloesung.aufloesung,
-      reaktion: aufloesung.reaktion,
+      aufloesung: sauberText(aufloesung.aufloesung),
+      reaktion: sauberText(aufloesung.reaktion),
       taeterId: fall.taeterId,
     };
 

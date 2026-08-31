@@ -55,7 +55,29 @@ export function ergebnisAus<T>(
   };
 }
 
-/** Macht aus einem Fehler eine Meldung, die im Spiel weiterhilft. */
+/**
+ * Räumt Formatreste aus einem Text, der im Spiel angezeigt wird.
+ *
+ * Manchmal rutscht dem Modell etwas aus der Verpackung in den Inhalt: ein
+ * Codezaun, ein einzelnes "json" davor oder ein Tag wie <thinking>. Im Mund
+ * eines Tieres hat das nichts verloren.
+ */
+export function sauberText(text: string | null | undefined): string {
+  if (!text) return "";
+  return (
+    text
+      // Codezäune samt Sprachangabe
+      .replace(/```[a-zA-Z]*\s*/g, "")
+      .replace(/```/g, "")
+      // ein vorangestelltes "json" (auch mit Doppelpunkt)
+      .replace(/^\s*json\s*:?\s*/i, "")
+      // Tags wie <thinking> oder </antwort>
+      .replace(/<\/?[a-zA-Z][^>\n]{0,40}>/g, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim()
+  );
+}
+
 /** Lief der Aufruf in sein Zeitlimit (oder wurde abgebrochen)? */
 export function istZeitueberschreitung(fehler: unknown): boolean {
   if (!(fehler instanceof Error)) return false;
@@ -67,6 +89,7 @@ export function istZeitueberschreitung(fehler: unknown): boolean {
   );
 }
 
+/** Macht aus einem Fehler eine Meldung, die im Spiel weiterhilft. */
 export function fehlerText(fehler: unknown, bereich: string): string {
   console.error(`[${bereich}]`, fehler);
 

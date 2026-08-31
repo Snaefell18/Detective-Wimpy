@@ -13,8 +13,17 @@ import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resource
  */
 export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
-/** Modell für Gespräche; ohne eigene Angabe dasselbe wie oben. */
-export const MODEL_GESPRAECH = process.env.ANTHROPIC_MODEL_TALK ?? MODEL;
+/**
+ * Modell für Gespräche: Haiku 4.5.
+ *
+ * Gespräche sind der mit Abstand häufigste Aufruf und der einzige, bei dem
+ * jemand wartend auf den Bildschirm schaut. Haiku antwortet deutlich schneller
+ * als Sonnet und kostet 1 $/5 $ statt 2 $/10 $ je Million Token. Wer lieber
+ * die vollere Rollenprosa möchte, stellt um:
+ *
+ *   ANTHROPIC_MODEL_TALK=claude-sonnet-5
+ */
+export const MODEL_GESPRAECH = process.env.ANTHROPIC_MODEL_TALK ?? "claude-haiku-4-5";
 
 /**
  * Ältere Modelle (Haiku 4.5, Sonnet 4.5 ...) kennen weder adaptives Denken
@@ -28,16 +37,17 @@ const kenntEffort = (modell: string) =>
 /**
  * Optionen für eine Antwort, die schnell kommen muss.
  *
- * Ein Tier antwortet mit ein paar Sätzen - dafür braucht es kein Nachdenken.
- * Adaptives Denken hat die Antwort je nach Fall um viele Sekunden verzögert,
- * gerade in Sagas mit langen Prompts. Ohne Denken reicht auch ein kleines
- * Token-Budget, was zusätzlich Zeit spart.
+ * Der Denkaufwand steht auf "low" - ein Tier sagt ein paar Sätze, mehr braucht
+ * es nicht. Ganz abschalten lässt sich das Denken zwar auch, aber dann
+ * schreiben manche Modelle Formatreste wie "json" oder Tags in den Antworttext.
+ * Ältere Modelle (Haiku 4.5, Sonnet 4.5 ...) kennen weder adaptives Denken noch
+ * "effort" und bekommen deshalb keins von beidem.
  */
 export function schnellOptionen(modell: string, format: object) {
   return (
     kenntEffort(modell)
       ? {
-          thinking: { type: "disabled" },
+          thinking: { type: "adaptive" },
           output_config: { effort: "low", format },
         }
       : { output_config: { format } }

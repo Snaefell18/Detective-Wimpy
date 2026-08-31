@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
+import { ergebnisAus, fehlerText, istZeitueberschreitung, sauberText } from "@/lib/antwort";
 import { passendeId, stimmungAus } from "@/lib/zuordnen";
 import { MODEL_GESPRAECH, budget, getAnthropic, schnellOptionen } from "@/lib/anthropic";
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
@@ -45,8 +45,9 @@ export async function POST(request: Request) {
 
     const response = await getAnthropic().messages.create({
       model: MODEL_GESPRAECH,
-      // Ohne Denken reichen ein paar hundert Token für Antwort und Notiz.
-      max_tokens: 2000,
+      // Reicht für Antwort und Notiz - bei denkenden Modellen zählt das
+      // Nachdenken mit, deshalb nicht zu knapp.
+      max_tokens: 8000,
       system: [
         {
           type: "text",
@@ -95,9 +96,10 @@ export async function POST(request: Request) {
       .map((s) => s.itemId);
 
     const ergebnis: TalkResult = {
-      antwort: parsed.antwort,
+      // Formatreste wie "json" oder Tags gehören nicht in den Mund eines Tieres.
+      antwort: sauberText(parsed.antwort),
       stimmung: stimmungAus(parsed.stimmung),
-      neueNotiz: parsed.neueNotiz,
+      neueNotiz: sauberText(parsed.neueNotiz) || null,
       gefundeneSpurItemId: passendeId(parsed.gefundeneSpurItemId, spurenHier),
       // Grenzen erzwingen, damit ein Ausrutscher des Modells die Anzeige nicht sprengt.
       verdachtsaenderung: Math.max(-20, Math.min(20, Math.round(parsed.verdachtsaenderung))),
@@ -106,8 +108,19 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ergebnis);
   } catch (error) {
+    const text = fehlerText(error, "api/talk");
+    // Lehnt ein Modell die Parameter ab, ist das mit einer Zeile behoben -
+    // also auch so sagen statt die Rohmeldung durchzureichen.
+    if (/output_config|thinking|effort|structured/i.test(text)) {
+      return NextResponse.json(
+        {
+          fehler: `Das Gesprächsmodell „${MODEL_GESPRAECH}“ kommt mit den Einstellungen nicht zurecht (${text.slice(0, 160)}). Bitte ANTHROPIC_MODEL_TALK auf claude-sonnet-5 stellen.`,
+        },
+        { status: 500 },
+      );
+    }
     return NextResponse.json(
-      { fehler: fehlerText(error, "api/talk") },
+      { fehler: text },
       { status: istZeitueberschreitung(error) ? 504 : 500 },
     );
   }
