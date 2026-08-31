@@ -140,6 +140,7 @@ export const CharacterSchema = z.object({
   beschreibung: z.string().max(600),
   bild: z.string().max(300),
   istDetektiv: z.boolean(),
+  sprachstil: z.string().max(800).optional(),
   beziehungen: z
     .object({
       besteFreunde: z.array(z.string().max(40)).max(24),

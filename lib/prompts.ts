@@ -121,7 +121,10 @@ CHARAKTERE
 ${besetzung
   .map((c) => {
     const bez = beziehungsText(c, besetzung);
-    return `- [${c.id}] ${characterBrief(c)}${bez ? ` ${bez}.` : ""}`;
+    const stil = c.sprachstil?.trim();
+    return `- [${c.id}] ${characterBrief(c)}${bez ? ` ${bez}.` : ""}${
+      stil ? ` Sprachstil: ${stil}` : ""
+    }`;
   })
   .join("\n")}
 
@@ -299,6 +302,10 @@ export function buildTalkPrompt(args: {
 DEIN CHARAKTER
 ${characterBrief(charakter)}
 ${
+  charakter.sprachstil?.trim()
+    ? `\nSO REDEST UND BENIMMST DU DICH (wichtiger als alles andere in deiner Antwort)\n${charakter.sprachstil.trim()}\n`
+    : ""
+}${
   beziehungsText(charakter, fall.besetzung)
     ? `\nDEINE BEZIEHUNGEN\n${beziehungsText(charakter, fall.besetzung)}.\n${BEZIEHUNGS_REGELN}\n`
     : ""

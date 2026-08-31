@@ -484,6 +484,19 @@ function CharakterFormular({
         />
       </label>
 
+      <label className="feld">
+        <span className="leise">
+          Sprachstil und Verhalten · wird im Gespräch wörtlich befolgt
+        </span>
+        <textarea
+          rows={3}
+          value={entwurf.sprachstil ?? ""}
+          onChange={(e) => aendern({ sprachstil: e.target.value })}
+          placeholder="z.B. Spricht in ganz kurzen Sätzen, nennt Wimpy immer „Chef“ und fängt jede Antwort mit einem Seufzer an."
+          maxLength={800}
+        />
+      </label>
+
       <h4 className="unter-abschnitt">
         Beziehungen <span className="leise">· wirken sich im Spiel aus</span>
       </h4>

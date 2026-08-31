@@ -253,6 +253,35 @@ export function FallEditor({
       })}
 
       <h3 className="unter-abschnitt">
+        Sprachstil <span className="leise">· gilt nur in diesem Fall</span>
+      </h3>
+      <p className="leise klein">
+        Was hier steht, befolgt das Tier im Gespräch wörtlich. Leer heißt: der
+        Stil aus den Stammdaten gilt.
+      </p>
+      {entwurf.besetzung.map((c, i) => (
+        <label className="feld" key={c.id}>
+          <span className="leise">
+            {c.name}
+            {c.istDetektiv ? " (Wimpy)" : ""}
+          </span>
+          <textarea
+            rows={2}
+            value={c.sprachstil ?? ""}
+            onChange={(e) =>
+              aendern({
+                besetzung: entwurf.besetzung.map((x, j) =>
+                  j === i ? { ...x, sprachstil: e.target.value } : x,
+                ),
+              })
+            }
+            placeholder="z.B. Redet sehr langsam und wiederholt Wimpys letzte Worte."
+            maxLength={800}
+          />
+        </label>
+      ))}
+
+      <h3 className="unter-abschnitt">
         Spuren <span className="leise">· {entwurf.spuren.length} Stück</span>
       </h3>
       {entwurf.spuren.map((spur, i) => (

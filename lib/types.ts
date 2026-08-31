@@ -37,6 +37,12 @@ export type Character = {
   /** Pfad im Ordner /public/charaktere */
   bild: string;
   istDetektiv: boolean;
+  /**
+   * Wie dieses Tier redet und sich benimmt - freier Text, der im Gespräch
+   * wörtlich befolgt wird ("spricht in kurzen Sätzen und nennt Wimpy immer
+   * 'Chef'"). Leer heißt: nur die Werte und die Beschreibung zählen.
+   */
+  sprachstil?: string;
   /** Freundschaften und Feindschaften - optional, ältere Daten haben sie nicht. */
   beziehungen?: Beziehungen;
 };
