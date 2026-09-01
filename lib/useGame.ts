@@ -194,7 +194,12 @@ export function useGame() {
     setLaedt("suche");
     try {
       const daten = await post<{
-        spur: { itemId: string; name: string; bedeutung: string } | null;
+        spur: {
+          itemId: string;
+          name: string;
+          beobachtung: string;
+          vermutung: string | null;
+        } | null;
         text: string;
       }>("/api/search", {
         siegel: jetzt.siegel,
@@ -208,7 +213,7 @@ export function useGame() {
           gefundeneSpuren: [...alt.gefundeneSpuren, daten.spur!.itemId],
           notizen: [
             ...alt.notizen,
-            notiz(`${daten.spur!.name}: ${daten.spur!.bedeutung}`, "Fund"),
+            notiz(`${daten.spur!.name}: ${daten.spur!.beobachtung}`, "Fund"),
           ],
         }));
       }
@@ -255,9 +260,14 @@ export function useGame() {
               ? [...alt.gefundeneSpuren, daten.gefundeneSpurItemId]
               : alt.gefundeneSpuren;
 
-          const neueNotizen = daten.neueNotiz
+          // Was das Tier erzählt, und - falls es Wimpy auf etwas gestoßen
+          // hat - der Fund selbst. Sonst läge das Stück ohne Text im Inventar.
+          let neueNotizen = daten.neueNotiz
             ? [...alt.notizen, notiz(daten.neueNotiz, charakterId)]
             : alt.notizen;
+          if (neueSpuren !== alt.gefundeneSpuren && daten.gefundeneSpurNotiz) {
+            neueNotizen = [...neueNotizen, notiz(daten.gefundeneSpurNotiz, "Fund")];
+          }
 
           return {
             ...alt,

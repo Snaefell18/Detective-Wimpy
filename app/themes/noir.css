@@ -2148,3 +2148,11 @@
 [data-theme="noir"] .vorspann-kapitel li[data-finale="true"] {
   color: var(--text);
 }
+
+/* Hinweise im Akten-Editor: dieselbe Haarlinie wie die Probleme. */
+[data-theme="noir"] .akte-hinweise {
+  border-radius: 0;
+  background: var(--hover-akzent);
+  box-shadow: none;
+  border-left: 2px solid var(--akzent);
+}

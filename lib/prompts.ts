@@ -252,6 +252,15 @@ Anforderungen:
 - Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
 - ${SCHWIERIGKEIT_TEXT[vorgaben?.schwierigkeit ?? "mittel"]}
 - Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
+
+JEDE SPUR HAT DREI TEXTE - HALTE SIE STRIKT AUSEINANDER
+- "beobachtung" ist das Einzige, was der Spieler zu lesen bekommt. Ein bis zwei Sätze, rein beschreibend: was man sieht, riecht, hört, ertastet. Alle harten Einzelheiten gehören hinein - Farbe, Fellart, Uhrzeit, Geruch, Material, Größe, wo genau es lag -, denn nur damit kann der Spieler kombinieren. Aber sie zieht selbst keinen Schluss: kein "also", kein "das beweist", und niemals "entlastet X" oder "belastet X".
+  Gut: "Auf dem letzten Bild der Kamera steht jemand mit hellem Fell vor der Hintertür. Zeitstempel 22:41."
+  Falsch: "Die Kamera zeigt, dass Mikkeli um 22:41 da war - sein Alibi stimmt also nicht."
+- "vermutung" ist Wimpys erster Gedanke, höchstens ein kurzer Satz, hörbar als Vermutung. Er nennt keinen Verdächtigen beim Namen, löst nichts auf und darf danebenliegen. Leer lassen, wenn nichts Gutes einfällt.
+  Gut: "Helles Fell haben hier einige. Trotzdem, 22:41 ist spät."
+- "bedeutung" ist die Auflösung dieser Spur, mit Namen und Schlussfolgerung. Sie bleibt im Verschlossenen und wird dem Spieler nie gezeigt - schreibe hier also ruhig deutlich, was der Fund beweist.
+- Prüfe zum Schluss: Wer nur die Beobachtungen aller Spuren liest, muss den Täter erschließen können. Fehlt dafür eine Einzelheit, gehört sie in die Beobachtung - nicht in die Bedeutung.
 - Nutze die Gegenstände, die zu diesem Fall passen - gerade die, die selten drankommen. Bevorzuge nicht immer dieselben.
 - Der Fall muss lösbar sein: aus den Spuren zusammen ergibt sich der Täter eindeutig.
 - Eine irreführende Spur darf ruhig auf einen Erzfeind des Täters zeigen - so wirkt sie wie gelegt.
@@ -328,9 +337,19 @@ Dein Geheimnis: ${brief?.geheimnis ?? "keins"}
 
 SITUATION
 Ihr steht am Schauplatz: ${ort?.name ?? ortId} in ${fall.stadt}. Atmosphäre: ${ort?.atmosphaere || "neutral"}.
-Wimpy hat bisher diese Spuren gefunden: ${
-    gefundeneSpuren.length ? gefundeneSpuren.join(", ") : "noch keine"
-  }.
+Wimpy hat bisher diese Spuren gefunden - du weißt, was sie bedeuten, sagst es aber nie von dir aus:
+${
+    gefundeneSpuren.length
+      ? gefundeneSpuren
+          .map((id) => {
+            const spur = fall.spuren.find((s) => s.itemId === id);
+            const name = fall.items?.find((i) => i.id === id)?.name ?? id;
+            return `- ${name}: ${spur?.bedeutung ?? "(nichts hinterlegt)"}`;
+          })
+          .join("\n")
+      : "- noch keine"
+  }
+Hält Wimpy dir eine davon vor, die dich betrifft, komm ins Schleudern: erst ausweichen, dann eine Kleinigkeit zugeben.
 Unentdeckte Spuren an diesem Ort: ${
     spurenHier.length ? spurenHier.map((s) => s.itemId).join(", ") : "keine"
   }.
@@ -375,11 +394,22 @@ Die Beschuldigung ist damit ${richtig ? "RICHTIG" : "FALSCH"}.
 Fall: ${fall.titel} - ${fall.tatbeschreibung}
 Motiv: ${fall.motiv}
 Hergang: ${fall.tathergang}
-Gefundene Spuren: ${gefundeneSpuren.length ? gefundeneSpuren.join(", ") : "keine"}
+Gefundene Spuren und was sie beweisen:
+${
+    gefundeneSpuren.length
+      ? gefundeneSpuren
+          .map((id) => {
+            const spur = fall.spuren.find((s) => s.itemId === id);
+            const name = fall.items?.find((i) => i.id === id)?.name ?? id;
+            return `- ${name}: ${spur?.bedeutung ?? "(nichts hinterlegt)"}`;
+          })
+          .join("\n")
+      : "- keine"
+  }
 Wimpys Begründung: ${begruendung || "(keine)"}
 
 Schreibe:
-- aufloesung: Wie Wimpy den Fall auflöst - was wirklich passiert ist, in 3-5 Sätzen, spannend erzählt. Bei einer falschen Beschuldigung erklärst du, wie der echte Täter davonkommt bzw. entlarvt wird.
+- aufloesung: Wie Wimpy den Fall auflöst - was wirklich passiert ist, in 3-5 Sätzen, spannend erzählt. Greife dabei die gefundenen Spuren beim Namen auf und sage endlich, was sie bewiesen haben - darauf hat der Spieler die ganze Zeit hingearbeitet. Bei einer falschen Beschuldigung erklärst du, wie der echte Täter davonkommt bzw. entlarvt wird.
 - reaktion: Was der Beschuldigte in diesem Moment sagt, 1-2 Sätze wörtliche Rede, passend zu seinem Charakter.
 Setze richtig auf ${richtig}.`;
 }

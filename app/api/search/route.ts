@@ -46,14 +46,25 @@ export async function POST(request: Request) {
     // Erst im Fall nachschlagen - er kann Gegenstände aus der Datenbank
     // enthalten, die es in lib/items.ts gar nicht gibt.
     const item = fall.items?.find((i) => i.id === spur.itemId) ?? getItem(spur.itemId);
+    const name = item?.name ?? spur.itemId;
+
+    // Der Spieler bekommt die Beobachtung, nie die Bedeutung: Was der Fund
+    // beweist, soll er selbst erschließen. Ältere Fälle haben keine
+    // Beobachtung - dort bleibt es beim alten Text, sonst stünde nichts da.
+    const beobachtung = spur.beobachtung?.trim() || spur.bedeutung;
+    const vermutung = spur.vermutung?.trim();
+
     return NextResponse.json({
       spur: {
         itemId: spur.itemId,
-        name: item?.name ?? spur.itemId,
+        name,
         bild: item?.bild ?? null,
-        bedeutung: spur.bedeutung,
+        beobachtung,
+        vermutung: vermutung || null,
       },
-      text: `Wimpy hebt etwas auf: ${item?.name ?? spur.itemId}. ${spur.bedeutung}`,
+      text: `Wimpy hebt etwas auf: ${name}. ${beobachtung}${
+        vermutung ? `\n\nWimpy murmelt: „${vermutung}“` : ""
+      }`,
     });
   } catch (error) {
     console.error("[api/search]", error);

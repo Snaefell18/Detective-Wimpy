@@ -51,7 +51,9 @@ export function leererFall(args: {
       {
         itemId: items[0].id,
         ortId: orte[0].id,
-        bedeutung: "Hier steht, was der Fund verrät.",
+        beobachtung: "Hier steht, was Wimpy sieht - ohne Schluss.",
+        vermutung: "",
+        bedeutung: "Hier steht, was der Fund wirklich beweist. Bleibt verschlossen.",
         zeigtAufCharakterId: taeter.id,
         fuehrtInDieIrre: false,
       },

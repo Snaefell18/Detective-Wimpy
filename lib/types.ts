@@ -168,7 +168,24 @@ export type SuspectBrief = {
 export type CaseClue = {
   itemId: string;
   ortId: string;
-  /** Was der Fund über den Fall verrät. */
+  /**
+   * Was Wimpy sieht, riecht oder ertastet - nüchtern und ohne Schluss. Das
+   * ist der einzige Text, den der Spieler beim Fund zu lesen bekommt; er
+   * enthält alles, was man zum Kombinieren braucht, sagt es aber nicht.
+   *
+   * Optional, weil ältere versiegelte Fälle das Feld nicht haben - für die
+   * gilt weiter die Bedeutung.
+   */
+  beobachtung?: string;
+  /**
+   * Wimpys erster Gedanke dazu: höchstens ein Satz, Vermutung statt Befund,
+   * darf auch danebenliegen. Leer heißt: kein Gedanke.
+   */
+  vermutung?: string;
+  /**
+   * Was der Fund wirklich beweist. Bleibt im Siegel - der Spieler sieht es
+   * nie. Damit arbeiten die Auflösung und die Tiere im Gespräch.
+   */
   bedeutung: string;
   /** Auf wen der Hinweis zeigt (kann in die Irre führen). */
   zeigtAufCharakterId: string;
@@ -207,6 +224,11 @@ export type TalkResult = {
   stimmung: "freundlich" | "nervös" | "genervt" | "ausweichend" | "panisch" | "amüsiert";
   neueNotiz: string | null;
   gefundeneSpurItemId: string | null;
+  /**
+   * Name und Beobachtung der Spur, auf die das Tier gestoßen hat - damit sie
+   * im Inventar nicht ohne Text landet. Wie beim Umsehen nie die Bedeutung.
+   */
+  gefundeneSpurNotiz: string | null;
   verdachtsaenderung: number;
   luegt: boolean;
 };

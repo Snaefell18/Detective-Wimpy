@@ -74,3 +74,22 @@ export function pruefeFall(fall: CaseFile): string[] {
 
   return fehler;
 }
+
+/**
+ * Weiche Hinweise: Dinge, die den Fall nicht kaputt machen, aber das Spiel
+ * schlechter. Sie blockieren das Speichern absichtlich nicht - ältere Fälle
+ * bringen sie fast alle mit, und die sind weiter einwandfrei spielbar.
+ */
+export function hinweiseZumFall(fall: CaseFile): string[] {
+  const hinweise: string[] = [];
+
+  for (const s of fall.spuren ?? []) {
+    if (!s.beobachtung?.trim()) {
+      hinweise.push(
+        `„${s.itemId}“ hat keine Beobachtung - beim Fund erscheint dann die Bedeutung und verrät die Lösung.`,
+      );
+    }
+  }
+
+  return hinweise;
+}

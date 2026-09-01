@@ -82,7 +82,21 @@ export function makeSpurenSchema(
       z.object({
         itemId,
         ortId: locationId,
-        bedeutung: z.string(),
+        beobachtung: z
+          .string()
+          .describe(
+            "Was Wimpy hier sieht, riecht oder ertastet - ein bis zwei Sätze, rein beschreibend. Nennt alle harten Einzelheiten (Farbe, Uhrzeit, Geruch, Material, Lage), zieht aber selbst keinen Schluss und sagt nie, wen das belastet oder entlastet.",
+          ),
+        vermutung: z
+          .string()
+          .describe(
+            "Wimpys erster Gedanke: höchstens ein kurzer Satz, klar als Vermutung. Nennt keinen Verdächtigen beim Namen, löst nichts auf und darf ruhig danebenliegen. Leerer String, wenn ihm nichts einfällt.",
+          ),
+        bedeutung: z
+          .string()
+          .describe(
+            "Was der Fund wirklich beweist, inklusive Namen. Sieht nur der Server - niemals Teil der Beobachtung.",
+          ),
         zeigtAufCharakterId: characterId,
         fuehrtInDieIrre: z.boolean(),
       }),

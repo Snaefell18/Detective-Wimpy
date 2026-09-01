@@ -95,12 +95,20 @@ export async function POST(request: Request) {
       .filter((s) => s.ortId === body.ortId)
       .map((s) => s.itemId);
 
+    const spurId = passendeId(parsed.gefundeneSpurItemId, spurenHier);
+    const spur = spurId ? fall.spuren.find((s) => s.itemId === spurId) : null;
+    const spurName =
+      (fall.items?.find((i) => i.id === spurId)?.name ?? spurId) || spurId;
+
     const ergebnis: TalkResult = {
       // Formatreste wie "json" oder Tags gehören nicht in den Mund eines Tieres.
       antwort: sauberText(parsed.antwort),
       stimmung: stimmungAus(parsed.stimmung),
       neueNotiz: sauberText(parsed.neueNotiz) || null,
-      gefundeneSpurItemId: passendeId(parsed.gefundeneSpurItemId, spurenHier),
+      gefundeneSpurItemId: spurId,
+      gefundeneSpurNotiz: spur
+        ? `${spurName}: ${spur.beobachtung?.trim() || spur.bedeutung}`
+        : null,
       // Grenzen erzwingen, damit ein Ausrutscher des Modells die Anzeige nicht sprengt.
       verdachtsaenderung: Math.max(-20, Math.min(20, Math.round(parsed.verdachtsaenderung))),
       luegt: parsed.luegt,

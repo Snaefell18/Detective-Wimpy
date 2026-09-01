@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { pruefeFall } from "@/lib/aktePruefen";
+import { hinweiseZumFall, pruefeFall } from "@/lib/aktePruefen";
 import { alsStaedte } from "@/lib/csv";
 import type {
   CaseClue,
@@ -43,6 +43,8 @@ export function FallEditor({
 
   // Läuft im Browser mit, bei jeder Änderung.
   const probleme = useMemo(() => pruefeFall(entwurf), [entwurf]);
+  // Blockieren nicht - ältere Fälle bringen sie fast alle mit.
+  const hinweise = useMemo(() => hinweiseZumFall(entwurf), [entwurf]);
 
   const verdaechtige = entwurf.besetzung.filter((c) => !c.istDetektiv);
   const name = (id: string) => entwurf.besetzung.find((c) => c.id === id)?.name ?? id;
@@ -75,6 +77,8 @@ export function FallEditor({
         {
           itemId: frei.id,
           ortId: alt.orte[0].id,
+          beobachtung: "",
+          vermutung: "",
           bedeutung: "",
           zeigtAufCharakterId: alt.taeterId,
           fuehrtInDieIrre: false,
@@ -519,11 +523,37 @@ export function FallEditor({
           </div>
 
           <label className="feld">
-            <span className="leise">Bedeutung · was der Fund verrät</span>
+            <span className="leise">
+              Beobachtung · das Einzige, was der Spieler liest
+            </span>
+            <textarea
+              rows={2}
+              value={spur.beobachtung ?? ""}
+              onChange={(e) => spurAendern(i, { beobachtung: e.target.value })}
+              placeholder="Was man sieht, riecht, ertastet - ohne Schluss. z.B. „Zimtkrümel auf dem Notenpult. Riecht nach frischem Teig.“"
+              maxLength={1000}
+            />
+          </label>
+
+          <label className="feld">
+            <span className="leise">Wimpys Vermutung · optional, darf danebenliegen</span>
+            <input
+              value={spur.vermutung ?? ""}
+              onChange={(e) => spurAendern(i, { vermutung: e.target.value })}
+              placeholder="z.B. „Zimt. Hier backt doch niemand.“"
+              maxLength={300}
+            />
+          </label>
+
+          <label className="feld">
+            <span className="leise">
+              Bedeutung · bleibt verschlossen, der Spieler sieht sie nie
+            </span>
             <textarea
               rows={2}
               value={spur.bedeutung}
               onChange={(e) => spurAendern(i, { bedeutung: e.target.value })}
+              placeholder="Was der Fund wirklich beweist, ruhig mit Namen."
               maxLength={1000}
             />
           </label>
@@ -579,6 +609,17 @@ export function FallEditor({
           Spielbar: {name(entwurf.taeterId)} ist überführbar, alle Verdächtigen haben
           einen Eintrag, alle Spuren liegen an gültigen Orten.
         </p>
+      )}
+
+      {hinweise.length > 0 && (
+        <div className="akte-hinweise">
+          <strong>Spielbar, aber verschenkt:</strong>
+          <ul>
+            {hinweise.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="knopf-reihe" style={{ marginTop: 12 }}>
