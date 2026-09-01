@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Szene } from "./Bild";
-import { spiele, stoppe } from "@/lib/introAudio";
+import { laeuft, spiele, stoppe } from "@/lib/introAudio";
 import type { Character } from "@/lib/types";
 import type { Ergebnis } from "@/lib/useGame";
 
@@ -28,10 +28,21 @@ export function ErgebnisScreen({
   const taeter = besetzung.find((c) => c.id === ergebnis.taeterId);
   const beschuldigt = besetzung.find((c) => c.id === ergebnis.beschuldigtId);
 
+  // Blockiert der Browser den Ton trotz Freigabe, kommt hier ein Knopf.
+  const [tonBlockiert, setTonBlockiert] = useState(false);
+
   // Gelöster Fall: Siegermusik. Sie hört auf, wenn der Bildschirm verschwindet.
   useEffect(() => {
-    if (ergebnis.richtig) void spiele("jubel");
-    return () => stoppe();
+    let sichtbar = true;
+    if (ergebnis.richtig) {
+      void spiele("jubel").then((geklappt) => {
+        if (sichtbar) setTonBlockiert(!geklappt);
+      });
+    }
+    return () => {
+      sichtbar = false;
+      stoppe();
+    };
   }, [ergebnis.richtig]);
 
   return (
@@ -52,6 +63,15 @@ export function ErgebnisScreen({
           <p className="ergebnis-name">
             Der Täter war <strong>{taeter?.name}</strong> ({taeter?.tierart})
           </p>
+
+          {tonBlockiert && !laeuft("jubel") && (
+            <button
+              className="knopf dezent schmal"
+              onClick={() => void spiele("jubel").then((ok) => setTonBlockiert(!ok))}
+            >
+              Musik anmachen
+            </button>
+          )}
 
           <h2 className="abschnitt">Die Auflösung</h2>
           <p className="fliesstext">{ergebnis.aufloesung}</p>

@@ -45,9 +45,11 @@ export default function Home() {
    * wartet die Intro-Phase kurz mit "Die Akte wird geöffnet …".
    */
   const fallStarten = async () => {
+    // Die Freigabe gehört in jeden Klick, der ein Spiel beginnt - auch ohne
+    // Intro, sonst bleibt die Siegermusik am Ende stumm.
+    void tonFreigeben();
     if (admin.einstellungen.intro) {
       spieleSofort("prolog");
-      void tonFreigeben();
       setPhase("prolog");
     }
     const geklappt = await spiel.neuerFall();
@@ -56,10 +58,8 @@ export default function Home() {
 
   /** Vorbereiteter Fall aus der Datenbank - startet ohne Modellaufruf. */
   const kampagneStarten = (kampagne: Parameters<typeof spiel.kampagneStarten>[0]) => {
-    if (admin.einstellungen.intro) {
-      spieleSofort("prolog");
-      void tonFreigeben();
-    }
+    void tonFreigeben();
+    if (admin.einstellungen.intro) spieleSofort("prolog");
     spiel.kampagneStarten(kampagne);
     setKampagnenOffen(false);
     if (admin.einstellungen.intro) setPhase("prolog");
@@ -73,6 +73,7 @@ export default function Home() {
   );
 
   const sagaStarten = (gewaehlt: Saga, vonVorn: boolean) => {
+    void tonFreigeben();
     setSagenOffen(false);
 
     const weiter = !vonVorn && saga.stand?.saga.id === gewaehlt.id;
@@ -97,6 +98,7 @@ export default function Home() {
 
   /** Den Fall des aktuellen Kapitels (oder das Finale) beginnen. */
   const sagaFallStarten = (finale: boolean) => {
+    void tonFreigeben();
     if (!saga.stand) return;
     const quelle = finale
       ? saga.stand.saga.finale

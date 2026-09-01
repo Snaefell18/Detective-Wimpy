@@ -43,28 +43,41 @@ export const audioVon = (stueck: Stueck): HTMLAudioElement => hole(stueck);
 /**
  * Im Klick-Handler aufrufen: gibt alle Stücke frei und lädt sie vor.
  *
+ * Wichtig: die Freigabe muss *hörbar* passieren. iOS erlaubt stummes
+ * Abspielen ohne Geste - genau deshalb hebt es die Sperre für hörbaren Ton
+ * nicht auf. Ein stumm freigegebenes Stück blieb später also still.
+ *
+ * Damit trotzdem nichts zu hören ist, wird play() nicht abgewartet, sondern
+ * im selben Tick wieder pausiert: der Browser vermerkt die Geste, kommt aber
+ * nicht dazu, ein Sample auszugeben.
+ *
  * Das Ergebnis wird gemerkt, damit ein späteres spiele() abwarten kann - sonst
  * könnte die Freigabe ein gerade gestartetes Stück wieder anhalten.
  */
 export function tonFreigeben(): Promise<void> {
-  freigabe = (async () => {
-    await Promise.all(
-      (Object.keys(DATEIEN) as Stueck[]).map(async (stueck) => {
-        // Ein Stück, das gerade im Klick gestartet wurde, nicht wieder anhalten.
-        if (stueck === laufend) return;
-        const audio = hole(stueck);
-        audio.muted = true;
-        try {
-          await audio.play();
-          audio.pause();
-          audio.currentTime = 0;
-        } catch {
-          // Blockiert der Browser, hilft später der "Ton an"-Knopf.
-        }
-        audio.muted = false;
-      }),
-    );
-  })();
+  const laeuft: Promise<unknown>[] = [];
+
+  for (const stueck of Object.keys(DATEIEN) as Stueck[]) {
+    // Ein Stück, das gerade im Klick gestartet wurde, nicht wieder anhalten.
+    if (stueck === laufend) continue;
+    const audio = hole(stueck);
+    audio.muted = false;
+    // Blockiert der Browser, hilft später der "Ton an"-Knopf.
+    const versuch = audio.play().catch(() => {});
+    audio.pause();
+    audio.currentTime = 0;
+    laeuft.push(versuch);
+  }
+
+  freigabe = Promise.all(laeuft).then(() => {
+    // play() kann nach dem pause() noch durchlaufen - sicherheitshalber
+    // alles anhalten, was nicht bewusst gestartet wurde.
+    for (const [name, audio] of spieler) {
+      if (name === laufend) continue;
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  });
   return freigabe;
 }
 

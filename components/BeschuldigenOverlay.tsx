@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bild } from "./Bild";
+import { tonFreigeben } from "@/lib/introAudio";
 import type { Character } from "@/lib/types";
 
 export function BeschuldigenOverlay({
@@ -75,7 +76,13 @@ export function BeschuldigenOverlay({
           <button
             className="knopf rot"
             disabled={!gewaehlt || laedt}
-            onClick={() => gewaehlt && onBestaetigen(gewaehlt, begruendung)}
+            onClick={() => {
+              if (!gewaehlt) return;
+              // Der letzte Klick vor der Auflösung: hier den Ton freigeben,
+              // damit die Siegermusik gleich auch wirklich spielen darf.
+              void tonFreigeben();
+              onBestaetigen(gewaehlt, begruendung);
+            }}
           >
             {laedt ? "Wimpy holt tief Luft …" : "Beschuldigung aussprechen"}
           </button>
