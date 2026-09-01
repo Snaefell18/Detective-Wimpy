@@ -115,7 +115,6 @@
 
 [data-theme="noir"] .zeile,
 [data-theme="noir"] .start-himmel .knopf,
-[data-theme="noir"] .figur,
 [data-theme="noir"] .knopf.umsehen {
   position: relative;
   display: flex;
@@ -145,7 +144,6 @@
    damit die Textkante beim Wechsel nicht springt. */
 [data-theme="noir"] .zeile::before,
 [data-theme="noir"] .start-himmel .knopf::before,
-[data-theme="noir"] .figur::before,
 [data-theme="noir"] .knopf.umsehen::before {
   content: "";
   position: absolute;
@@ -448,30 +446,20 @@
 
 /* =================================================================
    02 Ort - das Ortsbild ist der Screen
+
+   Der Aufbau bleibt der klassische: oben die Szene, unten in der Bühne
+   der Streifen der anwesenden Tiere, darunter Umsehen und die
+   Ortsleiste. So bleibt der größte Teil des Bildes frei.
    ================================================================= */
 
-/*
- * Noir führt "Umsehen" und die anwesenden Figuren in einer Liste. Statt das
- * Markup zu verzweigen, lösen sich die beiden Container auf (display: contents)
- * und ihre Kinder ordnen sich als eine Spalte - dieselbe Struktur, andere
- * Reihenfolge. So bleibt der Klassisch-Aufbau unangetastet.
- */
-[data-theme="noir"] .ort-buehne,
-[data-theme="noir"] .ort-fuss {
-  display: contents;
-}
-
-[data-theme="noir"] .ort-ansicht {
-  justify-content: flex-end;
-  /* Unten Platz für die Navigation, die frei darüber schwebt. */
-  padding: calc(var(--safe-top) + 46px) 24px calc(var(--nav-hoehe) + var(--safe-bottom) + 8px);
+[data-theme="noir"] .ort-buehne {
+  /* Reichlich Luft nach oben - das Bild ist der Screen. */
+  padding: calc(var(--safe-top) + 96px) 24px 0;
 }
 
 [data-theme="noir"] .ort-titel {
   position: relative;
   z-index: 2;
-  order: 1;
-  margin-top: auto;
   padding-left: 26px;
 }
 
@@ -494,7 +482,7 @@
 
 [data-theme="noir"] .ort-titel h2 {
   margin: 0 0 0 -26px;
-  font-size: 56px;
+  font-size: 46px;
   line-height: 0.86;
   letter-spacing: 0.01em;
   color: var(--text);
@@ -502,19 +490,71 @@
 }
 
 [data-theme="noir"] .ort-titel p {
-  margin: 12px 0 0 -26px;
+  margin: 10px 0 0 -26px;
   max-width: 32ch;
   font-size: 14.5px;
   line-height: 1.6;
   color: var(--text-leise);
 }
 
+/* --- Anwesende Tiere: Porträtstreifen ----------------------------- */
+
+[data-theme="noir"] .figuren {
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+  padding-bottom: 4px;
+}
+
+[data-theme="noir"] .figur {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+[data-theme="noir"] .figur-bild {
+  display: block;
+  width: 88px;
+  height: 104px;
+}
+
+/* Die Tiere müssen klar zu erkennen sein - sie sind der Grund, hier zu
+   stehen. Nur leicht entfärbt, nicht abgedunkelt. */
+[data-theme="noir"] .figur-bild .bild {
+  filter: saturate(0.55) contrast(1.06) brightness(0.98);
+}
+
+[data-theme="noir"] .figur .figur-name {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+}
+
+/* Tierart und "anwesend" stehen in der Tierakte - hier zählt das Bild. */
+[data-theme="noir"] .figur .zeilen-meta {
+  display: none;
+}
+
+/* --- Fuß: Fund, Umsehen, Ortsleiste ------------------------------- */
+
+[data-theme="noir"] .ort-fuss {
+  padding: 10px 24px calc(var(--nav-hoehe) + var(--safe-bottom) + 10px);
+  gap: 0;
+}
+
 [data-theme="noir"] .fund {
   position: relative;
-  z-index: 2;
-  order: 2;
-  margin-top: 22px;
-  padding: 15px 0 15px 16px;
+  padding: 14px 0 14px 16px;
   border: none;
   border-top: 1px solid var(--linie);
   border-radius: 0;
@@ -536,64 +576,24 @@
 }
 
 [data-theme="noir"] .knopf.umsehen {
-  order: 3;
-  margin-top: 22px;
   flex-wrap: wrap;
   align-items: baseline;
 }
 
 /* Die Zeile trägt Titel und Meta untereinander. */
-[data-theme="noir"] .knopf.umsehen .zeilen-text,
-[data-theme="noir"] .figur .figur-name {
+[data-theme="noir"] .knopf.umsehen .zeilen-text {
   flex: 1 0 100%;
   width: 100%;
 }
 
-[data-theme="noir"] .knopf.umsehen .zeilen-meta,
-[data-theme="noir"] .figur .zeilen-meta {
+[data-theme="noir"] .knopf.umsehen .zeilen-meta {
   flex: 1 0 100%;
   margin-top: 6px;
 }
 
-[data-theme="noir"] .figuren {
-  order: 4;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  overflow: visible;
-}
-
-[data-theme="noir"] .figur {
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-/* Das Porträt in der Zeile entfällt - die Zeile ist Typografie. */
-[data-theme="noir"] .figur-bild {
-  display: none;
-}
-
-[data-theme="noir"] .figur .figur-name {
-  font-family: var(--f-display);
-  font-weight: 800;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  max-width: none;
-  white-space: normal;
-}
-
-[data-theme="noir"] .figur .figur-name::after {
-  content: " ansprechen";
-}
-
 [data-theme="noir"] .ort-leer {
-  order: 5;
   margin: 0;
-  padding: 15px 0;
+  padding: 14px 0;
   border-top: 1px solid var(--linie);
   font-family: var(--f-text);
   font-weight: 600;
@@ -607,10 +607,9 @@
 /* --- Ortsleiste: Rechtecke mit Haarlinie -------------------------- */
 
 [data-theme="noir"] .orte-leiste {
-  order: 6;
   gap: 8px;
-  padding: 22px 0 18px;
-  margin: 0;
+  margin: 0 -24px;
+  padding: 16px 24px 0;
 }
 
 [data-theme="noir"] .ort-chip {
@@ -691,47 +690,94 @@
   background: var(--grund);
 }
 
+/*
+ * Beide Figuren stehen nebeneinander in einem Band unter der Kopfzeile:
+ * links die Befragte, rechts Wimpy. Der Dialog läuft darunter, deshalb
+ * verdeckt nie ein langer Text eine der beiden.
+ */
+[data-theme="noir"] .gespraech .szene {
+  inset: auto 0 auto 0;
+  top: calc(var(--safe-top) + 54px);
+  height: 24vh;
+  min-height: 156px;
+}
+
+[data-theme="noir"] .gespraech .szene img {
+  object-fit: contain;
+  object-position: 18% 100%;
+  /* Die Befragte muss klar zu erkennen sein - nur leicht entfärbt. */
+  filter: saturate(0.55) contrast(1.06) brightness(0.98);
+}
+
+/* Kein Schleier über dem Band, nur ein weicher Fuß. */
 [data-theme="noir"] .gespraech .szene::before {
-  background: radial-gradient(
-    120% 80% at 50% 30%,
-    rgba(8, 8, 8, 0) 0%,
-    rgba(8, 8, 8, 0.7) 58%,
-    var(--tief) 100%
-  );
+  background: none;
 }
 
 [data-theme="noir"] .gespraech .szene-verlauf {
-  background: linear-gradient(
-    to top,
-    rgba(4, 4, 4, 0.97) 30%,
-    rgba(4, 4, 4, 0.3) 64%,
-    rgba(4, 4, 4, 0.5)
-  );
+  background: linear-gradient(to top, var(--grund) 2%, rgba(8, 8, 8, 0) 34%);
 }
 
-/*
- * Wimpy ist Vordergrundmasse, keine Illustration: fast schwarz, leicht
- * unscharf, rechts unten angeschnitten. Zusammen mit der ganzseitigen
- * Befragten liest sich der Screen wie eine Über-die-Schulter-Aufnahme.
- */
+/* Wimpy steht rechts im selben Band, gleich hell wie sein Gegenüber. */
 [data-theme="noir"] .frager {
   position: absolute;
-  right: -18px;
-  bottom: 0;
+  top: calc(var(--safe-top) + 54px);
+  right: 4px;
+  bottom: auto;
   left: auto;
-  width: 132px;
-  height: 230px;
-  filter: saturate(0) brightness(0.3) contrast(1.2) blur(3px);
+  width: 38vw;
+  max-width: 152px;
+  height: 24vh;
+  min-height: 156px;
+  filter: saturate(0.55) contrast(1.06) brightness(0.98);
   pointer-events: none;
   z-index: 3;
 }
 
-[data-theme="noir"] .frager[data-modus="befragen"] {
-  filter: saturate(0) brightness(0.34) contrast(1.2) blur(3px);
+[data-theme="noir"] .frager .bild {
+  object-fit: contain;
+  object-position: right bottom;
 }
 
+[data-theme="noir"] .frager[data-modus="befragen"],
 [data-theme="noir"] .frager[data-modus="beschuldigen"] {
-  filter: saturate(0) brightness(0.4) contrast(1.2) blur(3px);
+  filter: saturate(0.55) contrast(1.1) brightness(1);
+}
+
+/* Eine Haarlinie schließt das Band nach unten ab. */
+[data-theme="noir"] .gespraech .szene::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 0;
+  height: 1px;
+  background: var(--linie);
+  z-index: 3;
+}
+
+/* Der Dialog beginnt unter dem Band - als Abstand, nicht als Innenrand:
+   ein langer Text soll scrollen, nicht über die Figuren wachsen. */
+[data-theme="noir"] .overlay.gespraech .chat {
+  margin-top: calc(24vh + 8px);
+  padding-top: 0;
+}
+
+/* justify-content: flex-end schiebt überlaufenden Inhalt oben aus dem
+   Kasten heraus, wo er unerreichbar ist. Der Auto-Rand am ersten Kind
+   hält den Dialog unten und lässt ihn trotzdem scrollen. */
+[data-theme="noir"] .overlay.gespraech .chat {
+  justify-content: flex-start;
+}
+
+[data-theme="noir"] .overlay.gespraech .chat > *:first-child {
+  margin-top: auto;
+}
+
+/* Überlaufender Text soll nicht hart an der Bandkante abreißen. */
+[data-theme="noir"] .overlay.gespraech .chat {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
 }
 
 /* --- Kopfzeile ---------------------------------------------------- */
@@ -804,9 +850,9 @@
    vorletzte div, nicht der letzte. */
 [data-theme="noir"] .blase:nth-last-of-type(2) {
   border-top: none;
-  padding: 22px 0 0;
-  font-size: 20px;
-  line-height: 1.45;
+  padding: 16px 0 0;
+  font-size: 18px;
+  line-height: 1.42;
   letter-spacing: 0.01em;
   color: var(--text);
   text-align: center;
@@ -1610,10 +1656,8 @@
   background: var(--akzent);
 }
 
-/* Zeilen mit Meta-Label unter dem Titel: Klassisch stellt .figur auf
-   Spalte mit Umbruch - dabei rutscht das Label in eine zweite Spalte
-   und aus dem Bild. */
-[data-theme="noir"] .figur,
+/* Umsehen trägt Titel und Meta untereinander; in der Spalte würde
+   flex:1 den Titel senkrecht aufblähen. */
 [data-theme="noir"] .knopf.umsehen {
   flex-direction: column;
   align-items: flex-start;
@@ -1621,16 +1665,6 @@
   gap: 6px;
 }
 
-[data-theme="noir"] .figur .figur-name {
-  font: inherit;
-  color: inherit;
-  text-shadow: none;
-}
-
-/* In der Spalte würde flex:1 den Titel senkrecht aufblähen und das
-   Meta-Label nach unten treiben. */
-[data-theme="noir"] .figur .zeilen-text,
-[data-theme="noir"] .figur .figur-name,
 [data-theme="noir"] .knopf.umsehen .zeilen-text {
   flex: 0 0 auto;
 }
