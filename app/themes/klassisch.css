@@ -37,9 +37,13 @@
   display: none;
 }
 
-/* Der Schriftzug erscheint weiterhin nur, solange kein Titelbild da ist. */
-[data-theme="klassisch"] .start-logo[data-ohne-bild="false"] {
-  display: none;
+/*
+ * Der Schriftzug stand früher im Titelbild selbst - deshalb war er hier
+ * ausgeblendet, sobald ein Bild da war. Das neue Startbild trägt keine
+ * Schrift mehr, also steht der Titel wieder im Text.
+ */
+[data-theme="klassisch"] .start-himmel {
+  margin-top: 22vh;
 }
 
 /*

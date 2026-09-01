@@ -213,6 +213,7 @@ export default function Home() {
             teil={sagaDaten.finale.epilog}
             titel={`${sagaDaten.name} - Ende`}
             weiterText="Zum Hauptmenü ›"
+            musik="jubel"
             onWeiter={() => {
               saga.beenden();
               spiel.aufgeben();
@@ -275,6 +276,8 @@ export default function Home() {
           onWeiter={
             sagaFallLaeuft
               ? () => {
+                  // Gleich läuft der nächste Erzählerteil - Freigabe erneuern.
+                  void tonFreigeben();
                   if (saga.stand?.lauf.phase === "finale") saga.setzePhase("epilog");
                   else saga.kapitelGeschafft();
                   spiel.aufgeben();

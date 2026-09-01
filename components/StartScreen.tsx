@@ -36,7 +36,7 @@ export function StartScreen({
   return (
     <div className="start">
       <Szene
-        src="/start.png"
+        src="/start_neu.png"
         alt="Detektiv Wimpy"
         platzhalter=""
         variante="titel"
@@ -51,10 +51,6 @@ export function StartScreen({
         Detektiv
         <span>Wimpy</span>
       </h1>
-
-      <p className="start-unterzeile">
-        Fünf Orte. Ein Lügner. Zwei Versuche, bevor die Akte zugeht.
-      </p>
 
       {/* Schmale Knöpfe: Das Titelbild soll so weit wie möglich frei bleiben. */}
       <div className="start-himmel" data-ohne-bild={ohneBild}>

@@ -205,6 +205,32 @@
 }
 
 /*
+ * Der Startbildschirm ist die Ausnahme: Sein Bild soll man erkennen. Nur so
+ * viel Unschärfe, dass der Schriftzug darüber steht, und deutlich heller als
+ * die übrigen Titelflächen.
+ */
+[data-theme="noir"] .start .szene-titel img {
+  filter: saturate(0.72) contrast(1.04) brightness(1.02) blur(4px);
+  /* Kein Zoom: sonst fällt Wimpy an der unteren Kante aus dem Bild. */
+  transform: none;
+}
+
+[data-theme="noir"] .start .szene-titel::before {
+  background: radial-gradient(
+    150% 105% at 50% 48%,
+    rgba(8, 8, 8, 0) 0%,
+    rgba(8, 8, 8, 0.12) 66%,
+    rgba(4, 4, 4, 0.44) 100%
+  );
+}
+
+[data-theme="noir"] .start .szene-titel .szene-verlauf {
+  background:
+    linear-gradient(180deg, rgba(4, 4, 4, 0.66) 0%, rgba(4, 4, 4, 0) 22%),
+    linear-gradient(to top, rgba(4, 4, 4, 0.7) 0%, rgba(4, 4, 4, 0.22) 26%, transparent 52%);
+}
+
+/*
  * Der Ort ist der Screen - hier darf man das Bild wirklich sehen.
  * Deutlich heller und farbiger als die übrigen Szenen; die Lesbarkeit
  * tragen der Verlauf unten und die Textschatten.
@@ -361,16 +387,6 @@
   -webkit-text-stroke: 0;
 }
 
-[data-theme="noir"] .start-unterzeile {
-  position: relative;
-  z-index: 2;
-  margin: 18px 0 0;
-  max-width: 30ch;
-  font-size: 15px;
-  line-height: 1.55;
-  letter-spacing: 0.02em;
-  color: var(--text-leise);
-}
 
 [data-theme="noir"] .start-himmel {
   margin-top: 30px;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { spiele, stoppe, type Stueck } from "@/lib/introAudio";
 import type { Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
@@ -16,11 +17,17 @@ export function ErzaehlerScreen({
   teil,
   titel,
   weiterText = "Weiter ›",
+  musik,
   onWeiter,
 }: {
   teil: Erzaehlerteil;
   titel?: string;
   weiterText?: string;
+  /**
+   * Musik unter dem Text - für gewonnene Abschnitte einer Saga. Eine eigene
+   * Sprecherdatei hat immer Vorrang, die soll die Musik nicht übertönen.
+   */
+  musik?: Stueck;
   onWeiter: () => void;
 }) {
   const zeilen = teil.text
@@ -40,6 +47,8 @@ export function ErzaehlerScreen({
       void audio.play().catch(() => {
         // Blockiert der Browser den Ton, läuft die Szene stumm weiter.
       });
+    } else if (musik) {
+      void spiele(musik);
     }
 
     const tick = () => {
@@ -63,8 +72,9 @@ export function ErzaehlerScreen({
       cancelAnimationFrame(id);
       audioRef.current?.pause();
       audioRef.current = null;
+      if (musik) stoppe(musik);
     };
-  }, [teil.audio]);
+  }, [teil.audio, musik]);
 
   const sichtbar = Math.min(zeilen.length, Math.floor(fortschritt * zeilen.length) + 1);
 
