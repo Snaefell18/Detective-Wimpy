@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detective Wimpy — Noir Design-Referenz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#151413;font-family:'Barlow Condensed',system-ui,sans-serif;padding:40px;color:#efe9dd}
+  h1.doc{font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:46px;line-height:.9;letter-spacing:.01em;text-transform:uppercase;margin:0 0 10px;text-shadow:2px 2px 0 #0c0b0a,4px 4px 0 #070605}
+  p.doc{margin:0 0 34px;font:400 15px/1.6 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83;max-width:80ch}
+  p.doc b{color:#efe9dd;font-weight:600}
+  .sheet{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+  figure.card{margin:0;display:flex;flex-direction:column;gap:10px}
+  figcaption{display:flex;flex-direction:column;gap:4px;max-width:390px}
+  figcaption .num{font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;color:#c2913f}
+  figcaption .ttl{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:20px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd}
+  figcaption .note{font:400 12.5px/1.45 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83}
+  a{color:#c2913f}a:hover{color:#efe9dd}
+  @keyframes blinken{0%,100%{opacity:.35}50%{opacity:1}}
+</style>
+</head>
+<body>
+<h1 class="doc">Noir — Design-Referenz</h1>
+<p class="doc">Neun Screens für <b>Detective Wimpy</b> im Redesign <b>Noir</b>. Fast schwarzer Grund (<b>#080808</b>), das jeweilige Szenenbild liegt großflächig dahinter — unscharf, abgedunkelt, mit Vignette. Alles Weitere ist Typografie: <b>Big Shoulders Display 900</b> mit harter Extrusion für Titel, <b>Barlow Condensed</b> gesperrt für Labels und Fließtext. Keine Flächen, keine Rahmen, keine Radien — nur Haarlinien (<b>rgba(239,233,221,.16)</b>). Genau ein Akzent: Messing <b>#c2913f</b> für Auswahl, Beweise und irreversible Aktionen. Die grauen Streifenflächen sind Platzhalter für die echten Bilder aus <b>/public</b>; der Pfad steht jeweils im Bild. Alle Werte, Zustände und Regeln stehen in <a href="README.md">README.md</a>. Diese Datei ist eine Referenz zum Nachbauen, kein Produktionscode.</p>
+<div class="sheet">
+<figure class="card" id="start">
+<figcaption><span class="num">01</span><span class="ttl">Hauptmenü — StartScreen.tsx</span><span class="note">Ganzseitiges Titelbild, unscharf und abgedunkelt; Menü als Haarlinien-Liste.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:-40px;background:repeating-linear-gradient(112deg,#2a2926 0 26px,#141312 26px 52px,#38352f 52px 74px,#0e0d0c 74px 112px);filter:blur(22px) brightness(.5) contrast(1.15)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 85% at 50% 42%,rgba(8,8,8,.1) 0%,rgba(8,8,8,.72) 62%,#050505 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(5,5,5,.94) 12%,rgba(5,5,5,.2) 48%,rgba(5,5,5,.5))"></div>
+  <span style="position:absolute;left:24px;top:150px;font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#4c4944">/start.png · unscharf</span>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 30px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:20px;height:1px;background:#c2913f"></span>
+      <span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Fall 001 — Venedig</span>
+    </div>
+    <div style="margin-top:auto">
+      <h1 style="margin:0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:82px;line-height:.82;letter-spacing:.005em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0c0b09,6px 7px 0 #070605,0 18px 34px rgba(0,0,0,.95)">Detektiv<br>Wimpy</h1>
+      <p style="margin:20px 0 0;font:400 15px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83;max-width:30ch">Fünf Orte. Ein Lügner. Zwei Versuche, bevor die Akte zugeht.</p>
+    </div>
+    <div style="margin-top:30px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:#c2913f"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:27px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Neuer Fall</span>
+        <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#c2913f">Start</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:transparent"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:27px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#6d6a64">Fortsetzen</span>
+        <span style="font:400 11px/1 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#8e8a83">Venedig</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:transparent"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:27px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#6d6a64">Kampagnen</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:transparent"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:27px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#6d6a64">Sagas</span>
+      </div>
+    </div>
+    <div style="margin-top:22px;display:flex;align-items:center;gap:20px">
+      <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#6d6a64">18 Verdächtige</span>
+      <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#6d6a64">6 Städte</span>
+      <span style="margin-left:auto;font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83;cursor:pointer">Admin</span>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="ort">
+<figcaption><span class="num">02</span><span class="ttl">Ort — OrtScreen.tsx</span><span class="note">Ortsbild füllt den Screen (scharf im Zentrum, unscharf am Rand); Aktionsliste, Ortsleiste, Tabbar.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:-40px;background:repeating-linear-gradient(98deg,#312e29 0 30px,#171614 30px 58px,#3f3a32 58px 82px,#100f0e 82px 124px);filter:blur(20px) brightness(.46) contrast(1.15)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 34%,rgba(8,8,8,.06) 0%,rgba(8,8,8,.7) 60%,#050505 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(5,5,5,.96) 34%,rgba(5,5,5,.28) 66%,rgba(5,5,5,.45))"></div>
+  <span style="position:absolute;left:24px;top:196px;font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#4c4944">/orte/venedig-markusplatz.png</span>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font:600 13px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#8e8a83;cursor:pointer">‹ Orte</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:9px"><span style="width:5px;height:5px;background:#c2913f;animation:blinken 2.6s ease-in-out infinite"></span><span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#c2913f">3 Beweise</span></span>
+      <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.24em;color:#6d6a64">18:40</span>
+    </div>
+    <div style="margin-top:auto">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="width:16px;height:1px;background:#6d6a64"></span>
+        <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#8e8a83">Schauplatz 2 von 5</span>
+      </div>
+      <h1 style="margin:0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:56px;line-height:.86;letter-spacing:.01em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0a0908,0 14px 28px rgba(0,0,0,.9)">Markus&shy;platz</h1>
+      <p style="margin:16px 0 0;font:400 14.5px/1.6 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83">Der Taktstock lag unter dem Notenpult. Drei Tauben sahen zu und schweigen wie bestellt.</p>
+    </div>
+    <div style="margin-top:26px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:24px;background:#c2913f"></span>
+        <span style="flex:1"><span style="display:block;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:23px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Umsehen</span><span style="display:block;margin-top:5px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#c2913f">Spur möglich</span></span>
+        <span style="color:#6d6a64;font-size:15px">›</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:24px;background:transparent"></span>
+        <span style="flex:1"><span style="display:block;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:23px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Fanny ansprechen</span><span style="display:block;margin-top:5px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#6d6a64">Fuchs · anwesend</span></span>
+        <span style="color:#6d6a64;font-size:15px">›</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);opacity:.5;cursor:pointer">
+        <span style="width:2px;height:24px;background:transparent"></span>
+        <span style="flex:1"><span style="display:block;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:23px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Tauben beobachten</span><span style="display:block;margin-top:5px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#6d6a64">Erledigt</span></span>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:8px;overflow:hidden">
+      <span style="flex:none;padding:10px 12px;border:1px solid #c2913f;font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#c2913f">Markusplatz</span>
+      <span style="flex:none;padding:10px 12px;border:1px solid rgba(239,233,221,.2);font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#8e8a83">Rialto · 2</span>
+      <span style="flex:none;padding:10px 12px;border:1px solid rgba(239,233,221,.2);font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#8e8a83">Oper</span>
+      <span style="flex:none;padding:10px 12px;border:1px solid rgba(239,233,221,.2);font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#8e8a83">Bahnhof</span>
+    </div>
+    <div style="margin-top:auto;display:flex;padding:0 0 26px">
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:2px solid #c2913f"><span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#efe9dd">Orte</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Tiere</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16);position:relative"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Beweise</span><span style="position:absolute;top:16px;right:8px;font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#c2913f">3</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Notizen</span></div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="gespraech">
+<figcaption><span class="num">03</span><span class="ttl">Gespräch — ChatOverlay.tsx</span><span class="note">Befragte ganzseitig, Wimpy als Silhouette rechts unten; Dialog als Filmuntertitel.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:-40px;background:repeating-linear-gradient(84deg,#3a352d 0 34px,#191715 34px 66px,#4a443a 66px 90px,#121110 90px 134px);filter:blur(24px) brightness(.42) contrast(1.2)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(95% 62% at 50% 30%,rgba(8,8,8,0) 0%,rgba(8,8,8,.66) 58%,#040404 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(4,4,4,.97) 30%,rgba(4,4,4,.3) 64%,rgba(4,4,4,.5))"></div>
+  <span style="position:absolute;left:50%;top:22%;transform:translateX(-50%);font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#4c4944">/charaktere/fan.png · befragte</span>
+  <div style="position:absolute;right:-18px;bottom:0;width:132px;height:230px;background:repeating-linear-gradient(84deg,#26231f 0 14px,#131211 14px 28px);filter:blur(3px) brightness(.3);clip-path:polygon(18% 0,100% 0,100% 100%,0 100%)"></div>
+  <span style="position:absolute;right:14px;bottom:12px;font:500 8.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#4c4944">/charaktere/wimpy.png</span>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 30px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font:600 13px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#8e8a83;cursor:pointer">‹ Zurück</span>
+      <span style="margin-left:auto;font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Verhör</span>
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:19px;line-height:1;color:#c2913f">02</span>
+    </div>
+    <div style="margin-top:44%;text-align:center">
+      <p style="margin:0;font:400 20px/1.45 'Barlow Condensed',sans-serif;letter-spacing:.01em;color:#efe9dd;text-shadow:0 2px 12px rgba(0,0,0,.95);max-width:26ch;margin-left:auto;margin-right:auto">„Am Ofen. Der Teig war zickig.“</p>
+      <div style="margin-top:14px;display:inline-flex;align-items:center;gap:9px"><span style="width:5px;height:5px;background:#c2913f;animation:blinken 1.4s ease-in-out infinite"></span><span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#c2913f">Widerspruch zu Spur 3</span></div>
+    </div>
+    <div style="margin-top:auto">
+      <h1 style="margin:0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:50px;line-height:.86;letter-spacing:.01em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0a0908,0 14px 28px rgba(0,0,0,.9)">Fanny</h1>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:#6d6a64"></span><span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Fuchs · 6 Jahre · Bäckerin</span></div>
+    </div>
+    <div style="margin-top:22px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83;width:14px">01</span>
+        <span style="flex:1;font:500 16px/1.25 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Wer war noch am Ofen?</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83;width:14px">02</span>
+        <span style="flex:1;font:500 16px/1.25 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Zeig mir deine Pfoten.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(194,145,63,.12)">
+        <span style="width:2px;height:24px;background:#c2913f"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:20px;line-height:1.1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Der Taktstock riecht nach Zimt</span>
+        <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#c2913f">Beweis</span>
+      </div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="tierakte">
+<figcaption><span class="num">04</span><span class="ttl">Tierakte — VerdaechtigeScreen.tsx</span><span class="note">Dossierzeilen mit Verdachts-Haarlinie und Stat-Zeile.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 20%,#141312 0%,#0a0a09 55%,#050505 100%)"></div>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:#c2913f"></span><span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Tierakte</span></div>
+        <h1 style="margin:10px 0 0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:52px;line-height:.86;letter-spacing:.01em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0a0908">Verdächtige</h1>
+      </div>
+      <div style="text-align:right"><div style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;color:#c2913f">02</div><div style="margin-top:4px;font:600 8.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#8e8a83">Versuche</div></div>
+    </div>
+    <div style="flex:1;margin-top:24px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;background:#c2913f;flex:none"></span>
+        <div style="width:74px;height:74px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Fanny</span><span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Fuchs · 6 J.</span></div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:2px;background:rgba(239,233,221,.16)"><div style="width:78%;height:100%;background:#c2913f"></div></div>
+            <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#c2913f">78 %</span>
+          </div>
+          <div style="margin-top:9px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#8e8a83">Schelm 9 · Klugheit 7 · Charisma 6 · Fitness 5</div>
+          <p style="margin:10px 0 0;font:400 13.5px/1.5 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Behauptet, die ganze Nacht am Ofen gestanden zu haben.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;flex:none"></span>
+        <div style="width:74px;height:74px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Bruno</span><span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Bär · 11 J.</span></div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:2px;background:rgba(239,233,221,.16)"><div style="width:24%;height:100%;background:#8e8a83"></div></div>
+            <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">24 %</span>
+          </div>
+          <div style="margin-top:9px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#8e8a83">Fitness 10 · Freundlich 8</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;flex:none"></span>
+        <div style="width:74px;height:74px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Pippa</span><span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Taube · 3 J.</span></div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:2px;background:rgba(239,233,221,.16)"><div style="width:11%;height:100%;background:#8e8a83"></div></div>
+            <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">11 %</span>
+          </div>
+          <div style="margin-top:9px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#8e8a83">Charisma 8 · Schelm 4</div>
+        </div>
+      </div>
+      <p style="margin:16px 0 0;font:400 13px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83">Wer Wimpy an den Schauplätzen über den Weg läuft und mit ihm spricht, landet hier in der Akte.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(194,145,63,.12)">
+      <span style="width:2px;height:26px;background:#c2913f"></span>
+      <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Fall auflösen</span>
+      <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#c2913f">Kein Zurück</span>
+    </div>
+    <div style="display:flex;padding:0 0 26px">
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Orte</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:2px solid #c2913f"><span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#efe9dd">Tiere</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16);position:relative"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Beweise</span><span style="position:absolute;top:16px;right:8px;font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#c2913f">3</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Notizen</span></div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="beweise">
+<figcaption><span class="num">05</span><span class="ttl">Beweise — InventarScreen.tsx</span><span class="note">Fundstücke als Zeilen, erste geöffnet mit Fundnotiz.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 20%,#141312 0%,#0a0a09 55%,#050505 100%)"></div>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:#c2913f"></span><span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">3 von 5 gefunden</span></div>
+    <h1 style="margin:10px 0 0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:52px;line-height:.86;letter-spacing:.01em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0a0908">Beweise</h1>
+    <div style="flex:1;margin-top:24px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;background:#c2913f;flex:none"></span>
+        <div style="width:64px;height:64px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:24px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Zimtkrümel</span><span style="font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#c2913f">Markusplatz</span></div>
+          <p style="margin:9px 0 0;font:400 13.5px/1.5 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Auf dem Notenpult. Riecht nach Bäckerei — und nach jemandem, der behauptet, nie hier gewesen zu sein.</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;flex:none;align-self:stretch"></span>
+        <div style="width:64px;height:64px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1"><div style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:24px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Taktstock</div><div style="margin-top:7px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Oper</div></div>
+        <span style="color:#8e8a83;font-size:15px">›</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;flex:none;align-self:stretch"></span>
+        <div style="width:64px;height:64px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <div style="flex:1"><div style="font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:24px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Taschenlampe</div><div style="margin-top:7px;font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Rialto</div></div>
+        <span style="color:#8e8a83;font-size:15px">›</span>
+      </div>
+      <p style="margin:16px 0 0;font:500 10px/1.6 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Noch 2 Funde möglich — an den Orten umsehen</p>
+    </div>
+    <div style="display:flex;padding:0 0 26px">
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Orte</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Tiere</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:2px solid #c2913f;position:relative"><span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#efe9dd">Beweise</span><span style="position:absolute;top:16px;right:8px;font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#c2913f">3</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Notizen</span></div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="notizen">
+<figcaption><span class="num">06</span><span class="ttl">Notizen — NotizbuchScreen.tsx</span><span class="note">Einträge neueste zuerst, Fundnotiz mit Messing-Marke.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 20%,#141312 0%,#0a0a09 55%,#050505 100%)"></div>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:#c2913f"></span><span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">6 Einträge</span></div>
+    <h1 style="margin:10px 0 0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:52px;line-height:.86;letter-spacing:.01em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0a0908">Notizen</h1>
+    <div style="flex:1;margin-top:24px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16)">
+        <span style="width:2px;background:#c2913f;flex:none"></span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#c2913f">Fund · Markusplatz</span><span style="font:500 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">18:40</span></div>
+          <p style="margin:9px 0 0;font:400 14.5px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#efe9dd">Zimtkrümel auf dem Notenpult. Riecht nach Bäckerei.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16)">
+        <span style="width:2px;flex:none"></span>
+        <div style="flex:1">
+          <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Fanny</span>
+          <p style="margin:9px 0 0;font:400 14.5px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">„War die ganze Nacht am Ofen.“ — passt nicht zum Zimt am Tatort.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16)">
+        <span style="width:2px;flex:none"></span>
+        <div style="flex:1">
+          <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Bruno</span>
+          <p style="margin:9px 0 0;font:400 14.5px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Hat um sieben Kisten geschleppt. Drei Zeugen bestätigen das.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16)">
+        <span style="width:2px;flex:none"></span>
+        <div style="flex:1">
+          <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Erzähler</span>
+          <p style="margin:9px 0 0;font:400 14.5px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Taktstock-Etui offen, kein Einbruchsschaden. Jemand kannte den Code.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16)">
+        <span style="width:2px;flex:none"></span>
+        <div style="flex:1">
+          <span style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8e8a83">Pippa</span>
+          <p style="margin:9px 0 0;font:400 14.5px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Will „nichts gesehen“ haben, sass aber direkt über der Bühne.</p>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;padding:0 0 26px">
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Orte</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16)"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Tiere</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:1px solid rgba(239,233,221,.16);position:relative"><span style="font:500 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8e8a83">Beweise</span><span style="position:absolute;top:16px;right:8px;font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#c2913f">3</span></div>
+      <div style="flex:1;padding:16px 0 0;text-align:center;border-top:2px solid #c2913f"><span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#efe9dd">Notizen</span></div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="beschuldigen">
+<figcaption><span class="num">07</span><span class="ttl">Beschuldigen — BeschuldigenOverlay.tsx</span><span class="note">Wahl-Liste mit Verdachtswert, Begründungsfeld, irreversible Aktion.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 18%,#16110f 0%,#0a0908 55%,#050404 100%)"></div>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 30px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font:600 13px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#8e8a83;cursor:pointer">✕ Abbrechen</span>
+      <span style="margin-left:auto;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:19px;line-height:1;color:#c2913f">02</span>
+      <span style="font:600 8.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#8e8a83">Versuche</span>
+    </div>
+    <h1 style="margin:22px 0 0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:66px;line-height:.82;letter-spacing:.005em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0c0b09,0 16px 30px rgba(0,0,0,.9)">Wer war<br>es?</h1>
+    <div style="margin-top:26px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(194,145,63,.12)">
+        <span style="width:2px;height:44px;background:#c2913f"></span>
+        <div style="width:44px;height:44px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Fanny</span>
+        <span style="font:600 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#c2913f">78 %</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:44px;background:transparent"></span>
+        <div style="width:44px;height:44px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Bruno</span>
+        <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">24 %</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:44px;background:transparent"></span>
+        <div style="width:44px;height:44px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Pippa</span>
+        <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">11 %</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:44px;background:transparent"></span>
+        <div style="width:44px;height:44px;flex:none;background:repeating-linear-gradient(102deg,#2a2926 0 10px,#161514 10px 20px);filter:blur(1px) brightness(.9)"></div>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c8c2b8">Gustav</span>
+        <span style="font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em;color:#8e8a83">4 %</span>
+      </div>
+    </div>
+    <div style="margin-top:22px">
+      <div style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#8e8a83">Wimpys Begründung — optional</div>
+      <div style="margin-top:10px;padding:12px 0;border-bottom:1px solid rgba(239,233,221,.16);font:400 14.5px/1.5 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#6d6a64;min-height:44px">Der Zimt am Notenpult passt nur zu einer Bäckerin …</div>
+    </div>
+    <div style="margin-top:auto;padding-top:20px">
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid rgba(194,145,63,.5);border-bottom:1px solid rgba(194,145,63,.5);cursor:pointer" style-hover="background:rgba(194,145,63,.14)">
+        <span style="width:2px;height:28px;background:#c2913f"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:27px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#c2913f">Fanny beschuldigen</span>
+      </div>
+      <p style="margin:14px 0 0;font:400 13px/1.55 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83">Danach gibt es kein Zurück. Bei zwei Fehlversuchen wandert der Fall ins Regal „ungelöst“.</p>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="ergebnis-geloest">
+<figcaption><span class="num">08</span><span class="ttl">Ergebnis gelöst — ErgebnisScreen.tsx</span><span class="note">ergebnis.richtig = true, Täterbild im Hintergrund.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:-40px;background:repeating-linear-gradient(76deg,#33302a 0 32px,#161514 32px 62px,#443e35 62px 86px,#111010 86px 128px);filter:blur(26px) brightness(.38) contrast(1.2)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(110% 74% at 50% 36%,rgba(8,8,8,.04) 0%,rgba(8,8,8,.74) 58%,#040404 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(4,4,4,.97) 26%,rgba(4,4,4,.3) 62%,rgba(4,4,4,.5))"></div>
+  <span style="position:absolute;left:50%;top:20%;transform:translateX(-50%);font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#4c4944">/charaktere/fan.png</span>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 30px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:20px;height:1px;background:#c2913f"></span>
+      <span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Fall 001 · Erster Versuch</span>
+    </div>
+    <div style="margin-top:auto">
+      <h1 style="margin:0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:74px;line-height:.8;letter-spacing:.005em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0c0b09,6px 7px 0 #070605,0 18px 34px rgba(0,0,0,.95)">Fall<br>gelöst</h1>
+      <p style="margin:20px 0 0;font:400 15px/1.5 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Die Täterin war <span style="color:#efe9dd;font-weight:600">Fanny</span>, die Bäckerin vom Markusplatz.</p>
+    </div>
+    <div style="margin-top:26px;padding-top:16px;border-top:1px solid rgba(239,233,221,.16)">
+      <div style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#8e8a83">Die Auflösung</div>
+      <p style="margin:9px 0 0;font:400 14.5px/1.6 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83">Sie wollte das Konzert verhindern, weil der Dirigent ihre Bäckerei ruinieren wollte. Der Zimt an ihren Pfoten verriet sie.</p>
+    </div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(239,233,221,.16)">
+      <div style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Fanny sagt</div>
+      <p style="margin:9px 0 0;font:400 18px/1.45 'Barlow Condensed',sans-serif;letter-spacing:.01em;color:#efe9dd">„Okay. Der Zimt war ein Fehler.“</p>
+    </div>
+    <div style="margin-top:26px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:#c2913f"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Nächster Fall</span>
+        <span style="color:#6d6a64;font-size:15px">›</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:transparent"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#6d6a64">Hauptmenü</span>
+      </div>
+    </div>
+  </div>
+</div>
+</figure>
+
+<figure class="card" id="ergebnis-daneben">
+<figcaption><span class="num">09</span><span class="ttl">Ergebnis daneben — ErgebnisScreen.tsx</span><span class="note">ergebnis.richtig = false, ein Versuch übrig.</span></figcaption>
+<div style="width:390px;height:844px;border-radius:36px;overflow:hidden;position:relative;background:#080808;color:#efe9dd;font-family:'Barlow Condensed',system-ui,sans-serif;box-shadow:0 22px 50px rgba(0,0,0,.5)">
+  <div style="position:absolute;inset:-40px;background:repeating-linear-gradient(70deg,#302c26 0 30px,#151413 30px 60px,#413a31 60px 84px,#100f0e 84px 126px);filter:blur(26px) brightness(.34) contrast(1.2)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(110% 74% at 50% 34%,rgba(8,8,8,.06) 0%,rgba(8,8,8,.78) 58%,#040404 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(4,4,4,.97) 26%,rgba(4,4,4,.34) 62%,rgba(4,4,4,.5))"></div>
+  <span style="position:absolute;left:50%;top:20%;transform:translateX(-50%);font:500 9.5px/1 'Barlow Condensed',sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#4c4944">/charaktere/bruno.png</span>
+  <div style="position:relative;height:100%;box-sizing:border-box;padding:56px 24px 30px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:20px;height:1px;background:#c2913f"></span>
+      <span style="font:600 10px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Noch ein Versuch</span>
+    </div>
+    <div style="margin-top:auto">
+      <h1 style="margin:0;font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:74px;line-height:.8;letter-spacing:.005em;text-transform:uppercase;color:#efe9dd;text-shadow:2px 2px 0 #14130f,4px 4px 0 #0c0b09,6px 7px 0 #070605,0 18px 34px rgba(0,0,0,.95)">Daneben</h1>
+      <p style="margin:20px 0 0;font:400 15px/1.5 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#c8c2b8">Bruno hat ein Alibi — und drei Zeugen, die es bestätigen.</p>
+    </div>
+    <div style="margin-top:26px;padding-top:16px;border-top:1px solid rgba(239,233,221,.16)">
+      <div style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#c2913f">Bruno sagt</div>
+      <p style="margin:9px 0 0;font:400 18px/1.45 'Barlow Condensed',sans-serif;letter-spacing:.01em;color:#efe9dd">„Ich? Ich hab Kisten geschleppt. Frag die Tauben.“</p>
+    </div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(239,233,221,.16)">
+      <div style="font:600 9px/1 'Barlow Condensed',sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#8e8a83">Wimpys Notiz</div>
+      <p style="margin:9px 0 0;font:400 14.5px/1.6 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#8e8a83">Falsche Fährte. Der Zimt bleibt die heißeste Spur — wer riecht danach, ohne es zugeben zu wollen?</p>
+    </div>
+    <div style="margin-top:26px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:#c2913f"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#efe9dd">Weiter ermitteln</span>
+        <span style="color:#8e8a83;font-size:15px">›</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid rgba(239,233,221,.16);border-bottom:1px solid rgba(239,233,221,.16);cursor:pointer" style-hover="background:rgba(239,233,221,.05)">
+        <span style="width:2px;height:26px;background:transparent"></span>
+        <span style="flex:1;font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;line-height:1;letter-spacing:.03em;text-transform:uppercase;color:#8e8a83">Hauptmenü</span>
+      </div>
+    </div>
+  </div>
+</div>
+</figure>
+</div>
+</body>
+</html>
