@@ -54,20 +54,32 @@ export function useSagaLauf() {
     });
   }, []);
 
-  const setzePhase = useCallback((phase: SagaLauf["phase"], fallId?: string | null) => {
-    setStand((alt) =>
-      alt
-        ? {
-            ...alt,
-            lauf: {
-              ...alt.lauf,
-              phase,
-              fallId: fallId === undefined ? alt.lauf.fallId : fallId,
-            },
-          }
-        : alt,
-    );
-  }, []);
+  const setzePhase = useCallback(
+    (
+      phase: SagaLauf["phase"],
+      fallId?: string | null,
+      /** Nur beim Sprung in den Epilog: Wurde das Finale gelöst? */
+      finaleGeschafft?: boolean,
+    ) => {
+      setStand((alt) =>
+        alt
+          ? {
+              ...alt,
+              lauf: {
+                ...alt.lauf,
+                phase,
+                fallId: fallId === undefined ? alt.lauf.fallId : fallId,
+                finaleGeschafft:
+                  finaleGeschafft === undefined
+                    ? alt.lauf.finaleGeschafft
+                    : finaleGeschafft,
+              },
+            }
+          : alt,
+      );
+    },
+    [],
+  );
 
   /** Kapitel gelöst - weiter zum nächsten Erzählerteil oder zum Finale. */
   const kapitelGeschafft = useCallback(() => {

@@ -43,31 +43,57 @@ export const audioVon = (stueck: Stueck): HTMLAudioElement => hole(stueck);
 /**
  * Im Klick-Handler aufrufen: gibt alle Stücke frei und lädt sie vor.
  *
- * Wichtig: die Freigabe muss *hörbar* passieren. iOS erlaubt stummes
- * Abspielen ohne Geste - genau deshalb hebt es die Sperre für hörbaren Ton
- * nicht auf. Ein stumm freigegebenes Stück blieb später also still.
+ * Warum überhaupt: iOS erlaubt hörbares Abspielen nur als Folge einer
+ * Nutzergeste, und zwar je Audio-Element. Ein Stück, das nie in einer Geste
+ * angespielt wurde, bleibt später still - stumm anzuspielen zählt nicht, denn
+ * stummes Abspielen ist ohnehin erlaubt und hebt die Sperre nicht auf.
  *
- * Damit trotzdem nichts zu hören ist, wird play() nicht abgewartet, sondern
- * im selben Tick wieder pausiert: der Browser vermerkt die Geste, kommt aber
- * nicht dazu, ein Sample auszugeben.
+ * Damit dabei nichts zu hören ist, gleich zwei Vorkehrungen: die Lautstärke
+ * geht auf null (greift überall außer auf iOS, wo sie schreibgeschützt ist),
+ * und play() wird nicht abgewartet, sondern im selben Tick wieder pausiert.
  *
- * Das Ergebnis wird gemerkt, damit ein späteres spiele() abwarten kann - sonst
- * könnte die Freigabe ein gerade gestartetes Stück wieder anhalten.
+ * Und vor allem: Jedes Stück wird nur EINMAL freigegeben. Sonst tippt jeder
+ * spätere Klick die Siegermusik erneut an - genau das war zu hören, wenn man
+ * den Täter benannt hatte und die Auflösung noch gar nicht stand.
  */
-export function tonFreigeben(): Promise<void> {
-  const laeuft: Promise<unknown>[] = [];
+const freigegeben = new Set<Stueck>();
 
-  for (const stueck of Object.keys(DATEIEN) as Stueck[]) {
-    // Ein Stück, das gerade im Klick gestartet wurde, nicht wieder anhalten.
-    if (stueck === laufend) continue;
+export function tonFreigeben(): Promise<void> {
+  const offen = (Object.keys(DATEIEN) as Stueck[]).filter(
+    // Was schon frei ist, wird nicht noch einmal angetippt. Und ein Stück,
+    // das gerade in diesem Klick gestartet wurde, erst recht nicht.
+    (stueck) => stueck !== laufend && !freigegeben.has(stueck),
+  );
+  if (offen.length === 0) return freigabe ?? Promise.resolve();
+
+  const laeuft = offen.map((stueck) => {
     const audio = hole(stueck);
     audio.muted = false;
-    // Blockiert der Browser, hilft später der "Ton an"-Knopf.
-    const versuch = audio.play().catch(() => {});
+    const lautstaerke = audio.volume;
+    audio.volume = 0;
+
+    const versuch = audio
+      .play()
+      .then(() => {
+        freigegeben.add(stueck);
+      })
+      .catch((grund: unknown) => {
+        // AbortError heißt: Abspielen war erlaubt, wir haben es selbst
+        // unterbrochen - das Stück ist also frei. NotAllowedError heißt
+        // blockiert; dann hilft später der "Ton an"-Knopf oder die nächste
+        // Geste, bei der es erneut versucht wird.
+        if ((grund as { name?: string })?.name === "AbortError") {
+          freigegeben.add(stueck);
+        }
+      })
+      .finally(() => {
+        audio.volume = lautstaerke;
+      });
+
     audio.pause();
     audio.currentTime = 0;
-    laeuft.push(versuch);
-  }
+    return versuch;
+  });
 
   freigabe = Promise.all(laeuft).then(() => {
     // play() kann nach dem pause() noch durchlaufen - sicherheitshalber
@@ -76,6 +102,7 @@ export function tonFreigeben(): Promise<void> {
       if (name === laufend) continue;
       audio.pause();
       audio.currentTime = 0;
+      audio.volume = 1;
     }
   });
   return freigabe;

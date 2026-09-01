@@ -142,4 +142,9 @@ export type SagaLauf = {
   fallId: string | null;
   /** Nummern der bereits gelösten Kapitel. */
   geloest: number[];
+  /**
+   * Wurde das Finale wirklich gelöst? Der Epilog kommt auch nach einer
+   * verlorenen Finalrunde - dann aber ohne Siegermusik.
+   */
+  finaleGeschafft?: boolean;
 };

@@ -213,7 +213,7 @@ export default function Home() {
             teil={sagaDaten.finale.epilog}
             titel={`${sagaDaten.name} - Ende`}
             weiterText="Zum Hauptmenü ›"
-            musik="jubel"
+            musik={lauf.finaleGeschafft ? "jubel" : undefined}
             onWeiter={() => {
               saga.beenden();
               spiel.aufgeben();
@@ -278,8 +278,11 @@ export default function Home() {
               ? () => {
                   // Gleich läuft der nächste Erzählerteil - Freigabe erneuern.
                   void tonFreigeben();
-                  if (saga.stand?.lauf.phase === "finale") saga.setzePhase("epilog");
-                  else saga.kapitelGeschafft();
+                  if (saga.stand?.lauf.phase === "finale") {
+                    // Der Epilog kommt auch nach einer verlorenen Finalrunde -
+                    // die Siegermusik gehört dann aber nicht dazu.
+                    saga.setzePhase("epilog", null, stand.ergebnis?.richtig === true);
+                  } else saga.kapitelGeschafft();
                   spiel.aufgeben();
                 }
               : undefined
