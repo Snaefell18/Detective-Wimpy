@@ -682,3 +682,1333 @@
   font-size: 13px;
   color: var(--text-leise);
 }
+
+/* =================================================================
+   03 Gespräch - beide Figuren im Bild
+   ================================================================= */
+
+[data-theme="noir"] .overlay.gespraech {
+  background: var(--grund);
+}
+
+[data-theme="noir"] .gespraech .szene::before {
+  background: radial-gradient(
+    120% 80% at 50% 30%,
+    rgba(8, 8, 8, 0) 0%,
+    rgba(8, 8, 8, 0.7) 58%,
+    var(--tief) 100%
+  );
+}
+
+[data-theme="noir"] .gespraech .szene-verlauf {
+  background: linear-gradient(
+    to top,
+    rgba(4, 4, 4, 0.97) 30%,
+    rgba(4, 4, 4, 0.3) 64%,
+    rgba(4, 4, 4, 0.5)
+  );
+}
+
+/*
+ * Wimpy ist Vordergrundmasse, keine Illustration: fast schwarz, leicht
+ * unscharf, rechts unten angeschnitten. Zusammen mit der ganzseitigen
+ * Befragten liest sich der Screen wie eine Über-die-Schulter-Aufnahme.
+ */
+[data-theme="noir"] .frager {
+  position: absolute;
+  right: -18px;
+  bottom: 0;
+  left: auto;
+  width: 132px;
+  height: 230px;
+  filter: saturate(0) brightness(0.3) contrast(1.2) blur(3px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+[data-theme="noir"] .frager[data-modus="befragen"] {
+  filter: saturate(0) brightness(0.34) contrast(1.2) blur(3px);
+}
+
+[data-theme="noir"] .frager[data-modus="beschuldigen"] {
+  filter: saturate(0) brightness(0.4) contrast(1.2) blur(3px);
+}
+
+/* --- Kopfzeile ---------------------------------------------------- */
+
+[data-theme="noir"] .gespraech-kopf {
+  padding: calc(var(--safe-top) + 14px) 24px 0;
+  background: none;
+  border: none;
+}
+
+[data-theme="noir"] .gespraech-kopf h1 {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .gespraech-kopf .unterzeile {
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .zurueck {
+  width: auto;
+  height: auto;
+  padding: 0 10px 0 0;
+  border-radius: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--text-leise);
+}
+
+/* --- Dialog als Untertitel ---------------------------------------- */
+
+[data-theme="noir"] .scroll.chat {
+  justify-content: flex-end;
+  gap: 0;
+  padding: 0 24px 18px;
+}
+
+/* Ältere Züge bleiben erreichbar, treten aber zurück. */
+[data-theme="noir"] .blase {
+  max-width: none;
+  padding: 12px 0;
+  border-radius: 0;
+  border-top: 1px solid var(--linie);
+  background: none;
+  font-family: var(--f-text);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-leise);
+  text-align: left;
+  align-self: stretch;
+}
+
+[data-theme="noir"] .blase.eigen {
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .blase.eigen::before {
+  content: "— ";
+}
+
+/* Der letzte Zug ist der Untertitel: groß, mittig, ohne Linie.
+   Hinter den Blasen steht noch der Scroll-Anker - deshalb der
+   vorletzte div, nicht der letzte. */
+[data-theme="noir"] .blase:nth-last-of-type(2) {
+  border-top: none;
+  padding: 22px 0 0;
+  font-size: 20px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+  max-width: 26ch;
+  margin: 0 auto;
+}
+
+[data-theme="noir"] .blase.tippt {
+  gap: 6px;
+  justify-content: center;
+}
+
+[data-theme="noir"] .blase.tippt span {
+  width: 5px;
+  height: 5px;
+  border-radius: 0;
+  background: var(--text-leise);
+}
+
+[data-theme="noir"] .chat-leer {
+  font-family: var(--f-text);
+  font-size: 15px;
+  color: var(--text-leise);
+  text-align: center;
+}
+
+/* --- Fuß: Modus, Vorschläge, Eingabe ------------------------------ */
+
+[data-theme="noir"] .chat-fuss {
+  padding: 0 24px calc(var(--safe-bottom) + 16px);
+  background: linear-gradient(to top, var(--grund) 70%, rgba(8, 8, 8, 0));
+  border: none;
+  gap: 0;
+}
+
+[data-theme="noir"] .modus-reihe {
+  gap: 22px;
+  justify-content: flex-start;
+  padding: 12px 0 14px;
+}
+
+[data-theme="noir"] .modus {
+  flex: 0 0 auto;
+  padding: 6px 0 0;
+  border-top: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .modus[data-aktiv="true"] {
+  border-top-color: var(--akzent);
+  background: none;
+  color: var(--text);
+}
+
+[data-theme="noir"] .vorschlaege {
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+}
+
+[data-theme="noir"] .vorschlag {
+  width: 100%;
+  padding: 13px 0;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  font-family: var(--f-text);
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  text-align: left;
+  white-space: normal;
+}
+
+[data-theme="noir"] .eingabe {
+  gap: 12px;
+  margin-top: 14px;
+  padding: 0;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+}
+
+[data-theme="noir"] .eingabe input {
+  padding: 14px 0;
+  border: none;
+  background: none;
+  font-family: var(--f-text);
+  font-size: 15px;
+  color: var(--text);
+}
+
+[data-theme="noir"] .eingabe input::placeholder {
+  color: var(--text-aus);
+}
+
+[data-theme="noir"] .senden {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--akzent);
+  font-size: 0;
+}
+
+[data-theme="noir"] .senden::after {
+  content: "Senden";
+  font-size: 9.5px;
+}
+
+[data-theme="noir"] .senden:disabled::after {
+  color: var(--text-aus);
+}
+
+/* =================================================================
+   Listen-Screens: Tierakte, Inventar, Notizen
+   Bewusst ohne Bild - das sind Akten, keine Szenen.
+   ================================================================= */
+
+[data-theme="noir"] .scroll {
+  background: radial-gradient(120% 70% at 50% 0%, #141312 0%, #050505 70%);
+}
+
+[data-theme="noir"] .inhalt {
+  padding: 20px 24px calc(var(--nav-hoehe) + var(--safe-bottom) + 24px);
+}
+
+[data-theme="noir"] .abschnitt {
+  position: relative;
+  margin: 26px 0 18px;
+  padding-top: 16px;
+  font-family: var(--f-display);
+  font-weight: 900;
+  /* Groß, aber so, dass auch "Beweisstücke (3)" in eine Zeile passt. */
+  font-size: 44px;
+  line-height: 0.86;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .abschnitt::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 22px;
+  height: 1px;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .abschnitt .leise {
+  font-family: var(--f-text);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+}
+
+/* --- 04 Tierakte -------------------------------------------------- */
+
+[data-theme="noir"] .dossier {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 16px 0 16px 16px;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+
+[data-theme="noir"] .dossier::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 2px;
+  height: 44px;
+  background: transparent;
+}
+
+/* Nur wer wirklich verdächtig ist, bekommt die Marke. */
+[data-theme="noir"] .dossier:has(.verdacht-balken[data-hoch="true"])::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .dossier-bild {
+  flex: 0 0 74px;
+  width: 74px;
+  height: 74px;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+[data-theme="noir"] .dossier-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+[data-theme="noir"] .dossier-kopf {
+  display: block;
+}
+
+[data-theme="noir"] .dossier-kopf strong {
+  display: block;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .dossier-kopf .leise {
+  display: block;
+  margin-top: 5px;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .verdacht-balken {
+  height: 2px;
+  margin: 12px 0 6px;
+  border-radius: 0;
+  background: var(--linie);
+}
+
+[data-theme="noir"] .verdacht-balken span {
+  border-radius: 0;
+  background: var(--text-leise);
+}
+
+[data-theme="noir"] .verdacht-balken[data-hoch="true"] span {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .dossier .leise.klein {
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* Die Balken je Wert entfallen - die Zahl trägt dieselbe Information. */
+[data-theme="noir"] .stats {
+  display: block;
+  margin-top: 10px;
+}
+
+[data-theme="noir"] .stat {
+  display: inline;
+}
+
+[data-theme="noir"] .stat-balken {
+  display: none;
+}
+
+[data-theme="noir"] .stat-label,
+[data-theme="noir"] .stat-wert {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .stat-wert::after {
+  content: " · ";
+}
+
+[data-theme="noir"] .stat:last-child .stat-wert::after {
+  content: "";
+}
+
+[data-theme="noir"] .dossier-hinweise {
+  margin-top: 12px;
+  padding-left: 0;
+  list-style: none;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+/* --- 05 Inventar -------------------------------------------------- */
+
+[data-theme="noir"] .inventar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-theme="noir"] .beweis {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0 14px 16px;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  flex-wrap: wrap;
+}
+
+[data-theme="noir"] .beweis::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 32px;
+  background: transparent;
+}
+
+[data-theme="noir"] .beweis[data-offen="true"]::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .beweis-bild {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+[data-theme="noir"] .beweis strong {
+  flex: 1;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .beweis[data-offen="true"] strong {
+  color: var(--text);
+}
+
+[data-theme="noir"] .beweis-text {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+/* --- 06 Notizen --------------------------------------------------- */
+
+[data-theme="noir"] .notizen {
+  padding: 0;
+  list-style: none;
+}
+
+[data-theme="noir"] .notizen li {
+  position: relative;
+  padding: 14px 0 14px 16px;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .notizen li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 28px;
+  background: transparent;
+}
+
+[data-theme="noir"] .notiz-quelle {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+/* Fundnotizen sind Beweise - sie tragen die Marke. */
+[data-theme="noir"] .notizen li[data-fund="true"]::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .notizen li[data-fund="true"] {
+  color: var(--text);
+}
+
+[data-theme="noir"] .notizen li[data-fund="true"] .notiz-quelle {
+  color: var(--akzent);
+}
+
+/* =================================================================
+   07 Beschuldigen
+   ================================================================= */
+
+[data-theme="noir"] .overlay {
+  background: radial-gradient(120% 70% at 50% 24%, #16110f 0%, #050404 68%);
+}
+
+[data-theme="noir"] .wahl-gitter {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-theme="noir"] .wahl-kachel {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0 14px 16px;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+
+[data-theme="noir"] .wahl-kachel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 30px;
+  background: transparent;
+}
+
+[data-theme="noir"] .wahl-kachel[data-aktiv="true"]::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .wahl-bild {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+[data-theme="noir"] .wahl-kachel strong {
+  flex: 1;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .wahl-kachel[data-aktiv="true"] strong {
+  color: var(--text);
+}
+
+[data-theme="noir"] .wahl-kachel .leise.klein {
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .wahl-kachel[data-aktiv="true"] .leise.klein {
+  color: var(--akzent);
+}
+
+/* Eingabefelder tragen nur eine untere Haarlinie. */
+[data-theme="noir"] .feld input,
+[data-theme="noir"] .feld textarea {
+  padding: 10px 0;
+  border: none;
+  border-bottom: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  font-family: var(--f-text);
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+[data-theme="noir"] .feld input::placeholder,
+[data-theme="noir"] .feld textarea::placeholder {
+  color: var(--text-aus);
+}
+
+[data-theme="noir"] .feld .leise {
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+/* Die irreversible Aktion: Haarlinie in Messing, kein Kasten. */
+[data-theme="noir"] .knopf.rot,
+[data-theme="noir"] .knopf.aktion:not(.schmal) {
+  position: relative;
+  justify-content: flex-start;
+  padding: 16px 0 16px 16px;
+  border: none;
+  border-top: 1px solid var(--linie-akzent);
+  border-bottom: 1px solid var(--linie-akzent);
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1.02;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--akzent);
+  text-shadow: none;
+}
+
+[data-theme="noir"] .knopf.rot::before,
+[data-theme="noir"] .knopf.aktion:not(.schmal)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 30px;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .knopf.rot:disabled,
+[data-theme="noir"] .knopf.aktion:not(.schmal):disabled {
+  color: var(--text-aus);
+  border-color: var(--linie);
+}
+
+[data-theme="noir"] .knopf.rot:disabled::before,
+[data-theme="noir"] .knopf.aktion:not(.schmal):disabled::before {
+  background: transparent;
+}
+
+[data-theme="noir"] .knopf.dezent:not(.umsehen) {
+  justify-content: flex-start;
+  padding: 16px 0 16px 16px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 23px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-aus);
+}
+
+/* =================================================================
+   08/09 Ergebnis
+   ================================================================= */
+
+[data-theme="noir"] .ergebnis .szene::before {
+  background: radial-gradient(
+    120% 80% at 50% 36%,
+    rgba(8, 8, 8, 0.05) 0%,
+    rgba(8, 8, 8, 0.72) 60%,
+    var(--tief) 100%
+  );
+}
+
+[data-theme="noir"] .ergebnis .szene-verlauf {
+  background: linear-gradient(
+    to top,
+    rgba(4, 4, 4, 0.97) 26%,
+    rgba(4, 4, 4, 0.3) 62%,
+    rgba(4, 4, 4, 0.5)
+  );
+}
+
+[data-theme="noir"] .ergebnis-inhalt {
+  background: none;
+}
+
+[data-theme="noir"] .ergebnis-titel {
+  margin: 0 0 18px;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 74px;
+  line-height: 0.8;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  text-align: left;
+  text-shadow: var(--titel-schatten);
+}
+
+/* Kein Rot, kein Grün - die Größe trägt die Bedeutung. */
+[data-theme="noir"] .ergebnis-titel[data-richtig="true"],
+[data-theme="noir"] .ergebnis-titel[data-richtig="false"] {
+  color: var(--text);
+}
+
+[data-theme="noir"] .ergebnis-name {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .ergebnis-name strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+[data-theme="noir"] .ergebnis-inhalt .abschnitt {
+  margin: 22px 0 8px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--linie);
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  text-shadow: none;
+}
+
+[data-theme="noir"] .ergebnis-inhalt .abschnitt::before {
+  display: none;
+}
+
+[data-theme="noir"] .fliesstext {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .fliesstext.zitat {
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--text);
+  font-style: normal;
+  border: none;
+  padding: 0;
+}
+
+/* --- Fehler: eine Zeile, kein Kasten ------------------------------ */
+
+[data-theme="noir"] .fehler {
+  padding: 12px 0 0;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}
+
+/* =================================================================
+   Nachzug: Rahmen, Kopfzeile, Aktendetails
+   ================================================================= */
+
+/* Der App-Rahmen selbst trug noch den blauen Nachthimmel - im Noir
+   ist er einfach der Grund. Die beiden Zierebenen entfallen. */
+[data-theme="noir"] .app {
+  background: var(--grund);
+}
+
+[data-theme="noir"] .app::before,
+[data-theme="noir"] .app::after {
+  display: none;
+}
+
+/* --- Kopfzeile ---------------------------------------------------- */
+
+[data-theme="noir"] .kopf {
+  align-items: flex-start;
+  gap: 14px;
+  padding: calc(var(--safe-top) + 16px) 24px 12px;
+  border-bottom: 1px solid var(--linie);
+}
+
+/* Über dem Ortsbild darf keine Linie liegen - dort trägt ein weicher
+   Verlauf die Lesbarkeit. */
+[data-theme="noir"] .kopf.schwebend {
+  border-bottom: none;
+  background: linear-gradient(180deg, rgba(4, 4, 4, 0.92), transparent);
+}
+
+[data-theme="noir"] .kopf h1 {
+  font-size: 27px;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .kopf .unterzeile {
+  margin-top: 7px;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .kopf-knoepfe {
+  gap: 4px;
+  padding-top: 4px;
+}
+
+[data-theme="noir"] .rund-knopf {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .rund-knopf:active {
+  transform: none;
+  color: var(--akzent);
+}
+
+/* --- 04 Tierakte, Nachzug ----------------------------------------- */
+
+/* .dossier ist ein <button>; ohne das hier zentriert der Browser. */
+[data-theme="noir"] .dossier {
+  align-items: flex-start;
+  text-align: left;
+}
+
+/* Klassisch schiebt den Text über das Bild - im Noir stehen sie
+   nebeneinander. */
+[data-theme="noir"] .dossier-text {
+  margin-top: 0;
+}
+
+[data-theme="noir"] .dossier-bild::after {
+  display: none;
+}
+
+[data-theme="noir"] .dossier-bild img {
+  filter: saturate(0) brightness(0.72) contrast(1.15);
+}
+
+[data-theme="noir"] .beweis-bild img {
+  filter: saturate(0) brightness(0.78) contrast(1.15);
+}
+
+/* Ein echtes Leerzeichen zwischen Wert und Namen: ein normales
+   kollabiert an der Kante des Flex-Kindes. */
+[data-theme="noir"] .stat-label::after {
+  content: "\00a0";
+}
+
+[data-theme="noir"] .dossier-hinweise li::marker {
+  color: transparent;
+}
+
+[data-theme="noir"] .dossier-hinweise li {
+  position: relative;
+  padding-left: 14px;
+}
+
+[data-theme="noir"] .dossier-hinweise li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 1px;
+  background: var(--akzent);
+}
+
+/* Zeilen mit Meta-Label unter dem Titel: Klassisch stellt .figur auf
+   Spalte mit Umbruch - dabei rutscht das Label in eine zweite Spalte
+   und aus dem Bild. */
+[data-theme="noir"] .figur,
+[data-theme="noir"] .knopf.umsehen {
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+[data-theme="noir"] .figur .figur-name {
+  font: inherit;
+  color: inherit;
+  text-shadow: none;
+}
+
+/* In der Spalte würde flex:1 den Titel senkrecht aufblähen und das
+   Meta-Label nach unten treiben. */
+[data-theme="noir"] .figur .zeilen-text,
+[data-theme="noir"] .figur .figur-name,
+[data-theme="noir"] .knopf.umsehen .zeilen-text {
+  flex: 0 0 auto;
+}
+
+/* =================================================================
+   Ungezeichnete Screens: Intro, Prolog, Erzähler, Kampagnen, Sagas
+   Für sie gibt es keine Vorlage - sie folgen denselben Regeln:
+   fast schwarzer Grund, Extrusionstitel, Meta-Label, Haarlinienzeile,
+   genau ein Akzent.
+   ================================================================= */
+
+/* --- Intro -------------------------------------------------------- */
+
+[data-theme="noir"] .intro,
+[data-theme="noir"] .intro-hintergrund {
+  background: var(--grund);
+}
+
+/* Blau angehauchte Effektebenen gehören nicht ins Noir. */
+[data-theme="noir"] .intro-regen,
+[data-theme="noir"] .intro-strahl,
+[data-theme="noir"] .intro-puls,
+[data-theme="noir"] .blitz,
+[data-theme="noir"] .prolog-vignette {
+  display: none;
+}
+
+[data-theme="noir"] .intro-vollbild-verlauf {
+  background:
+    linear-gradient(180deg, rgba(4, 4, 4, 0.62) 0%, rgba(4, 4, 4, 0.1) 36%),
+    linear-gradient(0deg, rgba(4, 4, 4, 0.96) 6%, rgba(4, 4, 4, 0.5) 44%, transparent 70%);
+}
+
+[data-theme="noir"] .intro-oberzeile,
+[data-theme="noir"] .intro-nummer,
+[data-theme="noir"] .intro-wert,
+[data-theme="noir"] .intro-skip,
+[data-theme="noir"] .intro-ton {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .intro-nummer {
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .intro-skip,
+[data-theme="noir"] .intro-ton {
+  padding: 8px 0;
+  border-radius: 0;
+  background: none;
+}
+
+[data-theme="noir"] .intro-skip {
+  margin-left: auto;
+}
+
+/* Die großen Intro-Titel tragen alle dieselbe Extrusion. */
+[data-theme="noir"] .intro-logo,
+[data-theme="noir"] .intro-stadt,
+[data-theme="noir"] .intro-ortsname,
+[data-theme="noir"] .schlagwort,
+[data-theme="noir"] .intro-frage,
+[data-theme="noir"] .akte-titel {
+  font-family: var(--f-display);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-stroke: 0;
+  text-shadow: var(--titel-schatten);
+}
+
+[data-theme="noir"] .intro-logo span {
+  display: block;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--text);
+  -webkit-text-stroke: 0;
+}
+
+[data-theme="noir"] .schlagwort,
+[data-theme="noir"] .schlagwort[data-nr="1"],
+[data-theme="noir"] .schlagwort[data-nr="3"],
+[data-theme="noir"] .schlagwort[data-nr="5"] {
+  color: var(--text);
+  text-shadow: var(--titel-schatten);
+}
+
+[data-theme="noir"] .intro-frage {
+  color: var(--akzent);
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .intro-atmosphaere {
+  font-family: var(--f-text);
+  font-size: 15px;
+  color: var(--text-2);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.95);
+}
+
+[data-theme="noir"] .intro-fortschritt {
+  height: 1px;
+  border-radius: 0;
+  background: var(--linie);
+}
+
+[data-theme="noir"] .intro-fortschritt span {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .intro-wert-balken {
+  height: 2px;
+  border-radius: 0;
+  background: var(--linie);
+}
+
+[data-theme="noir"] .intro-wert-balken span {
+  border-radius: 0;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .intro-portraet img,
+[data-theme="noir"] .intro-gesicht img,
+[data-theme="noir"] .intro-streifen-bild img {
+  filter: saturate(0) brightness(0.62) contrast(1.2);
+}
+
+/* --- Fallakte ----------------------------------------------------- */
+
+[data-theme="noir"] .akte-titel {
+  font-size: 56px;
+}
+
+[data-theme="noir"] .akte-text {
+  font-family: var(--f-text);
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+/* Der Übernehmen-Text ist kein Kasten, sondern der eine Akzent. */
+[data-theme="noir"] .akte-start {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  color: var(--akzent);
+}
+
+/* --- Prolog und Erzähler ------------------------------------------ */
+
+[data-theme="noir"] .prolog {
+  background: radial-gradient(120% 70% at 50% 30%, #121110 0%, #030303 72%);
+}
+
+[data-theme="noir"] .prolog-zeile {
+  font-family: var(--f-text);
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .prolog-zeile[data-letzte="true"] {
+  color: var(--text);
+}
+
+[data-theme="noir"] .erzaehler-titel {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .erzaehler-weiter {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  color: var(--akzent);
+}
+
+/* --- Kampagnen- und Sagenliste ------------------------------------ */
+
+[data-theme="noir"] .zurueck {
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+  background: none;
+  font-size: 16px;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .kampagne {
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  padding: 16px 0 16px 16px;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  position: relative;
+}
+
+[data-theme="noir"] .kampagne::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 2px;
+  height: 34px;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .kampagne-bild {
+  width: 74px;
+  height: 74px;
+  border-radius: 0;
+}
+
+[data-theme="noir"] .kampagne-bild img {
+  filter: saturate(0) brightness(0.72) contrast(1.15);
+}
+
+[data-theme="noir"] .kampagne-text strong {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+[data-theme="noir"] .kampagne-text .leise,
+[data-theme="noir"] .kampagne-text .leise.klein {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .kampagne-anriss {
+  font-family: var(--f-text);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .reife-marke {
+  border-radius: 0;
+  background: none;
+  padding: 2px 0 2px 8px;
+  border-left: 1px solid var(--linie-akzent);
+  color: var(--akzent);
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .saga-knoepfe {
+  gap: 18px;
+}
+
+[data-theme="noir"] .knopf.klein {
+  width: auto;
+  min-height: 0;
+  padding: 8px 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .knopf.klein.aktion {
+  color: var(--akzent);
+}
+
+/* =================================================================
+   Nachzug Gespräch
+   ================================================================= */
+
+/* Klassisch legt den Verlauf noch einmal mit höherer Spezifität nach. */
+[data-theme="noir"] .overlay.gespraech .chat-fuss {
+  background: linear-gradient(to top, var(--grund) 72%, rgba(8, 8, 8, 0));
+  border-top: none;
+}
+
+[data-theme="noir"] .overlay.gespraech {
+  background: var(--grund);
+}
+
+/* Der Untertitel steht mittig - .blase.fremd zieht ihn sonst nach links. */
+[data-theme="noir"] .blase:nth-last-of-type(2) {
+  align-self: center;
+}
+
+[data-theme="noir"] .eingabe {
+  gap: 16px;
+  border-top: 1px solid var(--linie);
+  padding-top: 4px;
+}
+
+[data-theme="noir"] .senden {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 64px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Auch die Auswahlbilder der Beschuldigung sind entfärbt. */
+[data-theme="noir"] .wahl-bild img,
+[data-theme="noir"] .listen-bild img,
+[data-theme="noir"] .item-bild img,
+[data-theme="noir"] .ort-kachel-bild img {
+  filter: saturate(0) brightness(0.74) contrast(1.15);
+}
+
+/* Die Extrusion braucht oben Luft, sonst schneidet der Container sie ab. */
+[data-theme="noir"] .ergebnis-titel {
+  padding-top: 10px;
+}
+
+/* =================================================================
+   Admin: derselbe Grund, aber kompakter - hier stehen viele
+   Abschnitte untereinander.
+   ================================================================= */
+
+[data-theme="noir"] .admin .abschnitt {
+  margin: 22px 0 12px;
+  font-size: 30px;
+}
+
+/* Auswahl-Chips: ohne Kasten braucht die Wahl eine eigene Marke. */
+[data-theme="noir"] .wahl-chip {
+  position: relative;
+  padding: 12px 8px 12px 14px;
+  border-top: 1px solid var(--linie);
+  text-align: left;
+  align-items: flex-start;
+}
+
+[data-theme="noir"] .wahl-chip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: transparent;
+}
+
+[data-theme="noir"] .wahl-chip[data-aktiv="true"] {
+  background: var(--hover-akzent);
+  box-shadow: none;
+  color: var(--text);
+}
+
+[data-theme="noir"] .wahl-chip[data-aktiv="true"]::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .wahl-chip[data-aktiv="true"] strong {
+  color: var(--akzent);
+}

@@ -20,7 +20,7 @@ export function NotizbuchScreen({
       ) : (
         <ul className="notizen">
           {[...notizen].reverse().map((n) => (
-            <li key={n.id}>
+            <li key={n.id} data-fund={n.quelle === "Fund"}>
               <span className="notiz-quelle">{nameVon(n.quelle)}</span>
               <p style={{ margin: "4px 0 0" }}>{n.text}</p>
             </li>

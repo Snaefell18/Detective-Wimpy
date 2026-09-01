@@ -68,7 +68,11 @@ export function VerdaechtigeScreen({
                 </span>
               </div>
 
-              <div className="verdacht-balken" aria-label={`Verdacht ${punkte} von 100`}>
+              <div
+                className="verdacht-balken"
+                data-hoch={punkte > 60}
+                aria-label={`Verdacht ${punkte} von 100`}
+              >
                 <span style={{ width: `${punkte}%` }} />
               </div>
               <span className="leise klein">

@@ -125,7 +125,8 @@ export function ChatOverlay({
               data-aktiv={m.id === modus}
               onClick={() => setModus(m.id)}
             >
-              {m.symbol} {m.label}
+              <span className="symbol">{m.symbol}</span>
+              <span className="zeilen-text">{m.label}</span>
             </button>
           ))}
         </div>

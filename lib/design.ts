@@ -20,7 +20,7 @@ export const DESIGNS: { id: Design; label: string; hinweis: string }[] = [
 export const DESIGN_KEY = "wimpy-design";
 
 /** Das Design, mit dem gestartet wird, solange niemand etwas gewählt hat. */
-export const STANDARD_DESIGN: Design = "klassisch";
+export const STANDARD_DESIGN: Design = "noir";
 
 export function leseDesign(): Design {
   if (typeof document === "undefined") return STANDARD_DESIGN;

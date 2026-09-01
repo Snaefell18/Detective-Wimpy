@@ -49,6 +49,7 @@
  */
 /* Ein geschütztes Leerzeichen - ein normales fiele am Rand eines
    Flex-Elements weg. */
+[data-theme="klassisch"] .modus .symbol::after,
 [data-theme="klassisch"] .knopf .symbol::after,
 [data-theme="klassisch"] .nav-zaehler::before {
   content: "\00a0";
