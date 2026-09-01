@@ -746,24 +746,34 @@
 }
 
 [data-theme="noir"] .gespraech .szene img {
-  /* Bildfüllend und angeschnitten: ein weicher Schatten hinter dem Text,
-     kein Porträt. Wer es ist, sagt die Marke in der Kopfzeile. */
-  object-fit: cover;
-  object-position: 55% 26%;
-  filter: saturate(0.14) contrast(1.06) brightness(1.05);
-  opacity: 0.2;
-  transform: none;
+  /* Das ganze Tier, groß hinter dem Text - erkennbar, aber zurückgenommen. */
+  object-fit: contain;
+  /* Weit oben: Der Kopf steht in der freien Fläche über dem Dialog,
+     der Körper liegt hinter dem Text. */
+  object-position: 50% 2%;
+  filter: saturate(0.32) contrast(1.02) brightness(1);
+  opacity: 0.34;
+  transform: scale(1.1);
 }
 
-/* Der Schatten wird nach links hin weich, damit der Text ruhig steht. */
+/* Nur so viel Schleier, dass die Zeilen ruhig stehen - das Tier soll man
+   sehen. Die Lesbarkeit trägt zusätzlich der Schatten am Untertitel. */
 [data-theme="noir"] .gespraech .szene::before {
-  background: linear-gradient(
-    100deg,
-    rgba(8, 8, 8, 0.97) 0%,
-    rgba(8, 8, 8, 0.86) 34%,
-    rgba(8, 8, 8, 0.42) 72%,
-    rgba(8, 8, 8, 0.3) 100%
-  );
+  background:
+    /* Oben bleibt das Gesicht frei, unten liegt der Text ruhiger. */
+    linear-gradient(
+      180deg,
+      rgba(8, 8, 8, 0.22) 0%,
+      rgba(8, 8, 8, 0.1) 28%,
+      rgba(8, 8, 8, 0.5) 56%,
+      rgba(8, 8, 8, 0.72) 100%
+    ),
+    radial-gradient(
+      130% 85% at 50% 30%,
+      rgba(8, 8, 8, 0) 0%,
+      rgba(8, 8, 8, 0.3) 66%,
+      rgba(8, 8, 8, 0.6) 100%
+    );
 }
 
 [data-theme="noir"] .gespraech .szene-verlauf {
@@ -820,11 +830,14 @@
   max-width: none;
 }
 
-/* Der Dialog beginnt direkt unter der Kopfzeile und füllt den Rest. */
+/* Der Dialog beginnt direkt unter der Kopfzeile und füllt den Rest.
+   Wichtig: keine Fläche - die Listen-Screens geben .scroll einen
+   deckenden Verlauf, der sonst genau hier den Schatten verdeckt. */
 [data-theme="noir"] .overlay.gespraech .chat {
   margin-top: 0;
   padding-top: 10px;
   justify-content: flex-start;
+  background: none;
 }
 
 [data-theme="noir"] .overlay.gespraech .chat > *:first-child {
