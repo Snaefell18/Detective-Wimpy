@@ -71,12 +71,25 @@ export function ChatOverlay({
         <button className="zurueck" onClick={onSchliessen} aria-label="Zurück">
           ✕
         </button>
-        <div>
+
+        {/* Beide Gesichter klein in der Kopfzeile - im Klassisch stehen sie
+            groß in der Szene, dort sind sie per CSS ausgeblendet. */}
+        <div className="gespraech-marke gegenueber" aria-hidden>
+          <Bild src={charakter.bild} alt="" platzhalter={charakter.name} groesse="80px" />
+        </div>
+
+        <div className="gespraech-titel">
           <h1>{charakter.name}</h1>
           <p className="unterzeile">
             {charakter.tierart}, {charakter.alter} Jahre
           </p>
         </div>
+
+        {detektiv && (
+          <div className="gespraech-marke ich" aria-hidden>
+            <Bild src={detektiv.bild} alt="" platzhalter={detektiv.name} groesse="80px" />
+          </div>
+        )}
       </div>
 
       <div className="scroll chat">

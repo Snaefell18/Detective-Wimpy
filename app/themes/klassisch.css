@@ -68,3 +68,11 @@
 [data-theme="klassisch"] .knopf:has(.zeilen-text) {
   gap: 0;
 }
+
+/*
+ * Die kleinen Gesichter in der Kopfzeile gehören zum Noir - im Klassisch
+ * stehen beide Figuren groß in der Szene.
+ */
+[data-theme="klassisch"] .gespraech-marke {
+  display: none;
+}

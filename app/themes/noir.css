@@ -735,82 +735,95 @@
 }
 
 /*
- * Beide Figuren stehen nebeneinander in einem Band unter der Kopfzeile:
- * links die Befragte, rechts Wimpy. Der Dialog läuft darunter, deshalb
- * verdeckt nie ein langer Text eine der beiden.
+ * Der Text bekommt den ganzen Bildschirm. Die Figuren bleiben trotzdem
+ * präsent, nur anders: das Gegenüber steht als großer, fast durchsichtiger
+ * Schatten rechts hinter dem Dialog, beide zusätzlich als kleine Marken in
+ * der Kopfzeile. So liest man von ganz oben und sieht trotzdem, wer da
+ * gerade spricht.
  */
 [data-theme="noir"] .gespraech .szene {
-  inset: auto 0 auto 0;
-  top: calc(var(--safe-top) + 54px);
-  height: 24vh;
-  min-height: 156px;
+  inset: 0;
 }
 
 [data-theme="noir"] .gespraech .szene img {
-  object-fit: contain;
-  object-position: 18% 100%;
-  /* Die Befragte muss klar zu erkennen sein - nur leicht entfärbt. */
-  filter: saturate(0.55) contrast(1.06) brightness(0.98);
+  /* Bildfüllend und angeschnitten: ein weicher Schatten hinter dem Text,
+     kein Porträt. Wer es ist, sagt die Marke in der Kopfzeile. */
+  object-fit: cover;
+  object-position: 55% 26%;
+  filter: saturate(0.14) contrast(1.06) brightness(1.05);
+  opacity: 0.2;
+  transform: none;
 }
 
-/* Kein Schleier über dem Band, nur ein weicher Fuß. */
+/* Der Schatten wird nach links hin weich, damit der Text ruhig steht. */
 [data-theme="noir"] .gespraech .szene::before {
-  background: none;
+  background: linear-gradient(
+    100deg,
+    rgba(8, 8, 8, 0.97) 0%,
+    rgba(8, 8, 8, 0.86) 34%,
+    rgba(8, 8, 8, 0.42) 72%,
+    rgba(8, 8, 8, 0.3) 100%
+  );
 }
 
 [data-theme="noir"] .gespraech .szene-verlauf {
-  background: linear-gradient(to top, var(--grund) 2%, rgba(8, 8, 8, 0) 34%);
+  background:
+    linear-gradient(180deg, var(--grund) 0%, rgba(8, 8, 8, 0) 18%),
+    linear-gradient(to top, var(--grund) 0%, rgba(8, 8, 8, 0) 22%);
 }
 
-/* Wimpy steht rechts im selben Band, gleich hell wie sein Gegenüber. */
+/* Wimpy steht jetzt als Marke in der Kopfzeile - die große Masse entfällt. */
 [data-theme="noir"] .frager {
-  position: absolute;
-  top: calc(var(--safe-top) + 54px);
-  right: 4px;
-  bottom: auto;
-  left: auto;
-  width: 38vw;
-  max-width: 152px;
-  height: 24vh;
-  min-height: 156px;
-  filter: saturate(0.55) contrast(1.06) brightness(0.98);
-  pointer-events: none;
-  z-index: 3;
+  display: none;
 }
 
-[data-theme="noir"] .frager .bild {
+/* --- Marken in der Kopfzeile -------------------------------------- */
+
+[data-theme="noir"] .gespraech-marke {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 44px;
+  overflow: hidden;
+}
+
+[data-theme="noir"] .gespraech-marke .bild {
   object-fit: contain;
-  object-position: right bottom;
+  object-position: center bottom;
 }
 
-[data-theme="noir"] .frager[data-modus="befragen"],
-[data-theme="noir"] .frager[data-modus="beschuldigen"] {
-  filter: saturate(0.55) contrast(1.1) brightness(1);
+[data-theme="noir"] .gespraech-marke.gegenueber .bild {
+  filter: saturate(0.6) contrast(1.06) brightness(1);
 }
 
-/* Eine Haarlinie schließt das Band nach unten ab. */
-[data-theme="noir"] .gespraech .szene::after {
-  content: "";
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 0;
-  height: 1px;
-  background: var(--linie);
-  z-index: 3;
+/* Wimpy tritt eine Spur zurück - er hört zu, er spricht nicht. */
+[data-theme="noir"] .gespraech-marke.ich {
+  margin-left: auto;
+  width: 34px;
+  height: 40px;
+  opacity: 0.72;
 }
 
-/* Der Dialog beginnt unter dem Band - als Abstand, nicht als Innenrand:
-   ein langer Text soll scrollen, nicht über die Figuren wachsen. */
+[data-theme="noir"] .gespraech-marke.ich .bild {
+  filter: saturate(0.25) contrast(1.1) brightness(0.85);
+}
+
+[data-theme="noir"] .gespraech-titel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Klassisch schiebt die Blasen nach rechts, weil Wimpy links in der Szene
+   steht - im Noir steht er in der Kopfzeile, der Platz wird nicht gebraucht. */
+[data-theme="noir"] .overlay.gespraech .blase.fremd {
+  margin-left: 0;
+  max-width: none;
+}
+
+/* Der Dialog beginnt direkt unter der Kopfzeile und füllt den Rest. */
 [data-theme="noir"] .overlay.gespraech .chat {
-  margin-top: calc(24vh + 8px);
-  padding-top: 0;
-}
-
-/* justify-content: flex-end schiebt überlaufenden Inhalt oben aus dem
-   Kasten heraus, wo er unerreichbar ist. Der Auto-Rand am ersten Kind
-   hält den Dialog unten und lässt ihn trotzdem scrollen. */
-[data-theme="noir"] .overlay.gespraech .chat {
+  margin-top: 0;
+  padding-top: 10px;
   justify-content: flex-start;
 }
 
@@ -818,10 +831,10 @@
   margin-top: auto;
 }
 
-/* Überlaufender Text soll nicht hart an der Bandkante abreißen. */
+/* Überlaufender Text soll nicht hart an der Kopfzeile abreißen. */
 [data-theme="noir"] .overlay.gespraech .chat {
-  mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
 }
 
 /* --- Kopfzeile ---------------------------------------------------- */
