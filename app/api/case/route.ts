@@ -5,6 +5,7 @@ import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { idOderStandard, passendeId } from "@/lib/zuordnen";
 import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
+import { repariereFall } from "@/lib/fallReparieren";
 import { LOCATIONS, findeOrt, waehleSchauplaetze } from "@/lib/locations";
 import {
   buildGeruestPrompt,
@@ -511,11 +512,40 @@ async function spurenSchritt(entwurf: Entwurf) {
     }))
     .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
 
+  // Letzte Instanz vor dem Ausliefern: Der Fall muss lösbar sein. Ein
+  // einziger Ausrutscher des Modells - zwei Spuren auf demselben Gegenstand,
+  // eine falsche Fährte auf den Täter - macht ihn sonst unspielbar.
+  const kur = repariereFall({
+    spuren,
+    verdaechtige: entwurf.verdaechtige,
+    besetzung: entwurf.besetzung,
+    taeterId: entwurf.taeterId,
+    ortIds,
+    itemIds,
+  });
+  if (kur.aenderungen.length) {
+    console.warn("[api/case:spuren] Fall nachgebessert:", kur.aenderungen.join(" "));
+  }
+  if (kur.fehler) {
+    console.error("[api/case:spuren] Fall unlösbar:", kur.fehler);
+    return NextResponse.json(
+      {
+        fehler:
+          "Dieser Fall wäre nicht lösbar gewesen und wurde verworfen. Bitte starte ihn noch einmal.",
+      },
+      { status: 502 },
+    );
+  }
+
   // Vorgaben und Saga-Briefing braucht nur die Erzeugung. Sie fliegen hier
   // raus, damit das Siegel klein bleibt - der Browser schickt es bei jeder
   // Frage an ein Tier wieder mit.
   const { vorgaben: _v, sagaBriefing: _b, ...rest } = entwurf;
-  const fall: CaseFile = { ...rest, spuren };
+  const fall: CaseFile = {
+    ...rest,
+    verdaechtige: kur.verdaechtige,
+    spuren: kur.spuren,
+  };
 
   // Der vollständige Fall verlässt den Server nur verschlüsselt.
   return NextResponse.json({

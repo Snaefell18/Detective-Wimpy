@@ -1,3 +1,4 @@
+import { pruefeLoesbarkeit } from "./fallReparieren";
 import type { CaseFile } from "./types";
 
 /**
@@ -72,6 +73,19 @@ export function pruefeFall(fall: CaseFile): string[] {
       fehler.push(`Die Spur „${s.itemId}“ sagt nichts aus - ohne Bedeutung nützt sie nichts.`);
   }
 
+  // Dieselben Regeln, die auch ein frisch erzeugter Fall bestehen muss.
+  // Ein doppelter Gegenstand oder eine falsche Fährte auf den Täter machen
+  // den Fall kaputt - beides ist im Editor mit einem Griff behoben.
+  for (const problem of pruefeLoesbarkeit({
+    spuren,
+    besetzung: fall.besetzung ?? [],
+    taeterId: fall.taeterId,
+  })) {
+    if (!fehler.includes(problem) && !problem.includes("genauso viele")) {
+      fehler.push(problem);
+    }
+  }
+
   return fehler;
 }
 
@@ -82,6 +96,14 @@ export function pruefeFall(fall: CaseFile): string[] {
  */
 export function hinweiseZumFall(fall: CaseFile): string[] {
   const hinweise: string[] = [];
+
+  for (const problem of pruefeLoesbarkeit({
+    spuren: fall.spuren ?? [],
+    besetzung: fall.besetzung ?? [],
+    taeterId: fall.taeterId,
+  })) {
+    if (problem.includes("genauso viele")) hinweise.push(problem);
+  }
 
   for (const s of fall.spuren ?? []) {
     if (!s.beobachtung?.trim()) {

@@ -11,7 +11,8 @@
     "import:csv": "node scripts/import-csv.mjs",
     "import:orte": "node scripts/import-locations.mjs",
     "bilder:optimieren": "node scripts/optimize-images.mjs",
-    "firebase:rules": "npx --yes firebase-tools deploy --only firestore:rules,firestore:indexes"
+    "firebase:rules": "npx --yes firebase-tools deploy --only firestore:rules,firestore:indexes",
+    "test": "npx tsx tests/fallReparieren.test.mjs && npx tsx tests/loesbarkeit.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
