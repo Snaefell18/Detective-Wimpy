@@ -68,6 +68,8 @@ export function buildKapitelPrompt(args: {
   wunsch: string;
   stadt: string;
   twist: boolean;
+  /** Tiere, die in genau diesem Kapitel zum ersten Mal auftauchen. */
+  neueTiere: string[];
 }): string {
   const {
     nummer,
@@ -81,6 +83,7 @@ export function buildKapitelPrompt(args: {
     wunsch,
     stadt,
     twist,
+    neueTiere,
   } = args;
 
   const vorher = bisher.length
@@ -113,7 +116,15 @@ Anforderungen:
       ? "\n- Die Enthüllung beschreibt den Drahtzieher über eine Eigenschaft oder eine Spur, niemals über seinen Namen - der Spieler soll ihn sich zusammensetzen können, bevor er ihn je gesehen hat."
       : ""
   }
-- Der Erzählertext klingt wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede, kein "Kapitel ${nummer}".
+- Der Erzählertext klingt wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede, kein "Kapitel ${nummer}".${
+    neueTiere.length
+      ? `\n- NEU IN DER STADT: ${neueTiere.join(", ")} - ${
+          neueTiere.length === 1 ? "taucht" : "tauchen"
+        } hier zum ersten Mal auf. Der Erzählertext erklärt beiläufig, warum: zugezogen, zurückgekehrt, angereist, aus dem Urlaub zurück. Danach ${
+          neueTiere.length === 1 ? "bleibt" : "bleiben"
+        } ${neueTiere.length === 1 ? "es" : "sie"} bis zum Ende dabei.`
+      : ""
+  }
 - Alles auf Deutsch.${wunsch ? `\n\nWUNSCH FÜR DIESES KAPITEL (unbedingt einhalten): ${wunsch}` : ""}`;
 }
 
@@ -125,8 +136,10 @@ export function buildFinalePrompt(args: {
   motiv: string;
   bisher: { name: string; enthuellung: string }[];
   twist: boolean;
+  /** Tiere, die erst im Finale dazustoßen. */
+  neueTiere: string[];
 }): string {
-  const { thema, wahrheit, drahtzieherName, motiv, bisher, twist } = args;
+  const { thema, wahrheit, drahtzieherName, motiv, bisher, twist, neueTiere } = args;
 
   return `Entwirf das Finale der Saga.
 
@@ -148,7 +161,11 @@ Anforderungen:
 - Der Auftrag des Finalfalls sagt ausdrücklich, dass der Gesuchte zum ersten Mal greifbar ist.`
       : ""
   }
-- Der Epilog kommt nach dem gelösten Fall und darf alles aussprechen.
+- Der Epilog kommt nach dem gelösten Fall und darf alles aussprechen.${
+    neueTiere.length
+      ? `\n- ZUM FINALE STOSSEN DAZU: ${neueTiere.join(", ")}. Sie waren in keinem Kapitel dabei. Der Erzählertext vor dem Finale bringt sie in die Stadt, ohne zu verraten, wer von ihnen der Gesuchte ist - eine Ankunft, eine Einladung, eine Zusammenkunft, zu der plötzlich alle da sind.`
+      : ""
+  }
 - Erzählertexte in kurzen Zeilen, keine Anrede. Alles auf Deutsch.`;
 }
 

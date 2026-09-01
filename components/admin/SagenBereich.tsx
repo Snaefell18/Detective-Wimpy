@@ -69,6 +69,11 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
   const staedte = alsStaedte(stammdaten.orte);
   const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
+  // Nur wer in dieser Saga vorkommt - leere Auswahl heißt: alle.
+  const mitspieler =
+    vorgaben.charaktere.length >= 2
+      ? verdaechtige.filter((c) => vorgaben.charaktere.includes(c.id))
+      : verdaechtige;
 
   const laden = () =>
     ladeSagas()
@@ -718,6 +723,47 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         Namen: eine Handschrift, ein Geruch, ein Siegel. Der Erzählertext vor
         dem Finale inszeniert dann seinen Auftritt.
       </p>
+
+      <h3 className="unter-abschnitt">
+        Auftritte <span className="leise">· wer wann dazustößt</span>
+      </h3>
+      <p className="leise klein">
+        Standard ist „Von Anfang an“. Wer später einsteigt, taucht in dem
+        Kapitel zum ersten Mal auf und bleibt dann bis zum Ende dabei; der
+        Erzählertext davor erklärt seine Ankunft. „Erst im Finale“ heißt: In
+        keinem Kapitel zu sehen. Das darf auch der Drahtzieher sein - mit der
+        Twist-Wahl oben steht er ohnehin schon auf „Erst im Finale“.
+      </p>
+      {mitspieler.map((c) => {
+        const finale = vorgaben.kapitelAnzahl + 1;
+        const gesperrt = vorgaben.twist && c.id === vorgaben.drahtzieherId;
+        const jetzt = gesperrt ? finale : (vorgaben.neuzugaenge?.[c.id] ?? 1);
+        return (
+          <div key={c.id} className="auftritt-zeile">
+            <span className="leise klein">
+              {c.name}
+              {c.id === vorgaben.drahtzieherId ? " · Drahtzieher" : ""}
+            </span>
+            <div className="marken-reihe">
+              {Array.from({ length: finale }, (_, i) => i + 1).map((ab) => (
+                <button
+                  key={ab}
+                  className="marke-knopf"
+                  disabled={gesperrt}
+                  data-aktiv={jetzt === ab}
+                  onClick={() =>
+                    setzen({
+                      neuzugaenge: { ...(vorgaben.neuzugaenge ?? {}), [c.id]: ab },
+                    })
+                  }
+                >
+                  {ab === 1 ? "Von Anfang an" : ab === finale ? "Erst im Finale" : `Ab Kapitel ${ab}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
 
       <h3 className="unter-abschnitt">Publikum</h3>
       <div className="wahl-reihe">

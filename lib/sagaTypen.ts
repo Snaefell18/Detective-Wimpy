@@ -59,6 +59,13 @@ export type SagaVorgaben = {
    * betritt er die Bühne, und der Erzählertext davor inszeniert genau das.
    */
   twist: boolean;
+  /**
+   * Wer wann dazustößt: Charakter-Id -> Kapitelnummer, ab der das Tier
+   * mitspielt. 1 (oder gar kein Eintrag) heißt "von Anfang an", ein Wert
+   * über der Kapitelanzahl heißt "erst im Finale". Wer einmal da ist,
+   * bleibt bis zum Ende.
+   */
+  neuzugaenge: Record<string, number>;
   schwierigkeit: Vorgaben["schwierigkeit"];
   reifegrad: Reifegrad;
   absurditaet: Absurditaet;
@@ -81,6 +88,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   items: [],
   drahtzieherId: "",
   twist: false,
+  neuzugaenge: {},
   schwierigkeit: "mittel",
   reifegrad: "kindgerecht",
   absurditaet: "verspielt",
@@ -157,22 +165,79 @@ export type SagaLauf = {
   finaleGeschafft?: boolean;
 };
 
+/** Ab welchem Kapitel ein Tier mitspielt. Finale = kapitelAnzahl + 1. */
+export function auftrittVon(args: {
+  charakterId: string;
+  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  drahtzieherId: string;
+}): number {
+  const { charakterId, vorgaben, drahtzieherId } = args;
+  const finale = vorgaben.kapitelAnzahl + 1;
+
+  // Der Twist ist die stärkere Ansage: Der Drahtzieher kommt erst zum Schluss.
+  if (vorgaben.twist && charakterId === drahtzieherId) return finale;
+
+  const gesetzt = vorgaben.neuzugaenge?.[charakterId];
+  if (!Number.isFinite(gesetzt)) return 1;
+  return Math.min(Math.max(1, Math.round(gesetzt as number)), finale);
+}
+
 /**
  * Wer in einem Saga-Fall mitspielt.
  *
- * Mit Twist tritt der Drahtzieher in den Kapiteln überhaupt nicht auf - er
- * steht dort weder am Ort herum noch in der Tierakte. Erst im Finale
- * (kapitel 0) gehört er zur Besetzung. Bleiben ohne ihn weniger als zwei
- * Verdächtige übrig, hat die Spielbarkeit Vorrang vor dem Kniff.
+ * Im Finale (kapitel 0) sind alle dabei - dort laufen die Fäden zusammen.
+ * In den Kapiteln nur, wer schon aufgetreten ist: Wer einmal da war, bleibt
+ * bis zum Ende. Bleiben so weniger als zwei Verdächtige übrig, rücken die
+ * mit dem frühesten Auftritt nach - Spielbarkeit vor Inszenierung.
  */
 export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolean }>(args: {
   besetzung: T[];
   drahtzieherId: string;
   kapitel: number;
-  twist: boolean;
+  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
 }): T[] {
-  const { besetzung, drahtzieherId, kapitel, twist } = args;
-  if (!twist || kapitel === 0) return besetzung;
-  const ohne = besetzung.filter((c) => c.id !== drahtzieherId);
-  return ohne.filter((c) => !c.istDetektiv).length >= 2 ? ohne : besetzung;
+  const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
+  if (kapitel === 0) return besetzung;
+
+  const auftritt = (c: T) =>
+    auftrittVon({ charakterId: c.id, vorgaben, drahtzieherId });
+
+  const dabei = besetzung.filter((c) => c.istDetektiv || auftritt(c) <= kapitel);
+  const fehlen = 2 - dabei.filter((c) => !c.istDetektiv).length;
+  if (fehlen <= 0) return dabei;
+
+  // Wer nachrückt, wird nach dem frühesten Auftritt gewählt - der
+  // Twist-Drahtzieher aber erst ganz zuletzt: Dass er in den Kapiteln nicht
+  // vorkommt, ist die halbe Saga.
+  const zurueckgestellt = (c: T) =>
+    vorgaben.twist && c.id === drahtzieherId ? 1 : 0;
+  const nachruecker = besetzung
+    .filter((c) => !c.istDetektiv && !dabei.includes(c))
+    .sort(
+      (a, b) => zurueckgestellt(a) - zurueckgestellt(b) || auftritt(a) - auftritt(b),
+    )
+    .slice(0, fehlen);
+
+  // Reihenfolge der Ausgangsbesetzung beibehalten.
+  return besetzung.filter((c) => dabei.includes(c) || nachruecker.includes(c));
+}
+
+/** Wer in diesem Kapitel zum ersten Mal auftaucht. */
+export function neuInKapitel<T extends { id: string; istDetektiv: boolean }>(args: {
+  besetzung: T[];
+  drahtzieherId: string;
+  kapitel: number;
+  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+}): T[] {
+  const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
+  const jetzt = besetzungFuerKapitel(args);
+  if (kapitel === 1) return [];
+  const vorher = besetzungFuerKapitel({
+    besetzung,
+    drahtzieherId,
+    vorgaben,
+    // Vor dem Finale steht das letzte Kapitel.
+    kapitel: kapitel === 0 ? vorgaben.kapitelAnzahl : kapitel - 1,
+  });
+  return jetzt.filter((c) => !c.istDetektiv && !vorher.includes(c));
 }

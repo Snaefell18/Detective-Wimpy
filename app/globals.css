@@ -2972,3 +2972,11 @@ a.zurueck {
   content: "★ ";
   color: var(--orange);
 }
+
+/* Auftritte je Tier im Saga-Formular. */
+.auftritt-zeile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}

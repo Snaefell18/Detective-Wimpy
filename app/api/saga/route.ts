@@ -15,7 +15,12 @@ import {
 } from "@/lib/sagaPrompts";
 import type { FinaleDraft, KapitelDraft, KernDraft } from "@/lib/sagaSchemas";
 import { FinaleSchema, KernSchema, makeKapitelSchema } from "@/lib/sagaSchemas";
-import { STANDARD_SAGA_VORGABEN, type SagaVorgaben } from "@/lib/sagaTypen";
+import {
+  STANDARD_SAGA_VORGABEN,
+  besetzungFuerKapitel,
+  neuInKapitel,
+  type SagaVorgaben,
+} from "@/lib/sagaTypen";
 import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
 import { seal, unseal } from "@/lib/seal";
 import type { Character, City, Location } from "@/lib/types";
@@ -225,14 +230,28 @@ async function kapitelSchritt(
     return NextResponse.json({ fehler: "Unbekanntes Kapitel." }, { status: 400 });
   }
 
-  const moeglich = bogen.besetzung.filter(
+  // Nur wer in diesem Kapitel überhaupt auftritt, kann sein Täter sein -
+  // sonst zeigten die Spuren auf jemanden, den man nie zu Gesicht bekommt.
+  const dabei = besetzungFuerKapitel({
+    besetzung: bogen.besetzung,
+    drahtzieherId: bogen.drahtzieherId,
+    kapitel: nummer,
+    vorgaben: bogen.vorgaben,
+  });
+  const moeglich = dabei.filter(
     (c) => !c.istDetektiv && c.id !== bogen.drahtzieherId,
   );
+  const neue = neuInKapitel({
+    besetzung: bogen.besetzung,
+    drahtzieherId: bogen.drahtzieherId,
+    kapitel: nummer,
+    vorgaben: bogen.vorgaben,
+  });
   const stadt = stadtFuer(bogen.vorgaben, nummer, staedte);
 
   const response = await getAnthropic().messages.create(
     modellOptionen(
-      welt(bogen.besetzung, orte, staedte, bogen.vorgaben),
+      welt(dabei, orte, staedte, bogen.vorgaben),
       buildKapitelPrompt({
         nummer,
         anzahl: bogen.vorgaben.kapitelAnzahl,
@@ -245,8 +264,9 @@ async function kapitelSchritt(
         wunsch: bogen.vorgaben.kapitelWuensche[nummer - 1] ?? "",
         stadt: stadtName(stadt, staedte),
         twist: bogen.vorgaben.twist === true,
+        neueTiere: neue.map((c) => c.name),
       }),
-      zodOutputFormat(makeKapitelSchema(bogen.besetzung)),
+      zodOutputFormat(makeKapitelSchema(dabei)),
       3000,
     ),
     budget(45),
@@ -306,6 +326,12 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         motiv: bogen.drahtzieherMotiv,
         bisher: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
         twist: bogen.vorgaben.twist === true,
+        neueTiere: neuInKapitel({
+          besetzung: bogen.besetzung,
+          drahtzieherId: bogen.drahtzieherId,
+          kapitel: 0,
+          vorgaben: bogen.vorgaben,
+        }).map((c) => c.name),
       }),
       zodOutputFormat(FinaleSchema),
       3000,

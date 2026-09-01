@@ -264,7 +264,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
         besetzung: saga.bogen.besetzung,
         drahtzieherId: saga.bogen.drahtzieherId,
         kapitel: saga.kapitel,
-        twist: saga.bogen.vorgaben.twist === true,
+        vorgaben: saga.bogen.vorgaben,
       })
     : besetzungAus(body?.charaktere);
   const einstellungen = saga
