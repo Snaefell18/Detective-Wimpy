@@ -1,0 +1,42 @@
+/* ---------------------------------------------------------------
+   Design "Noir" - fast schwarzer Grund, das Szenenbild dahinter,
+   alles Weitere ist Typografie. Genau ein Akzent: Messing.
+
+   Alles hier hängt an [data-theme="noir"] und überschreibt gezielt
+   das Klassisch-Aussehen aus globals.css. Wird das Design zurück auf
+   "klassisch" gestellt, greift keine einzige Regel dieser Datei mehr.
+   --------------------------------------------------------------- */
+
+[data-theme="noir"] {
+  --grund: #080808;
+  --tief: #040404;
+
+  --text: #efe9dd;
+  --text-2: #c8c2b8;
+  --text-leise: #8e8a83;
+  --text-aus: #6d6a64;
+
+  --akzent: #c2913f;
+  --signal: #c2913f;
+
+  --linie: rgba(239, 233, 221, 0.16);
+  --linie-akzent: rgba(194, 145, 63, 0.5);
+  --hover: rgba(239, 233, 221, 0.05);
+  --hover-akzent: rgba(194, 145, 63, 0.12);
+
+  --flaeche: transparent;
+  --radius: 0px;
+  --schatten: none;
+  --glas: none;
+
+  --f-display: var(--f-display-noir), "Barlow Condensed", system-ui, sans-serif;
+  --f-text: var(--f-text-noir), system-ui, sans-serif;
+
+  /* Zentral nachziehbar, falls helle Ortsbilder zu hell wirken. */
+  --bild-helligkeit: 0.66;
+
+  /* Extrusion der großen Titel. */
+  --titel-schatten: 2px 2px 0 #14130f, 4px 4px 0 #0c0b09, 6px 7px 0 #070605,
+    0 18px 34px rgba(0, 0, 0, 0.95);
+  --titel-schatten-klein: 2px 2px 0 #14130f, 4px 4px 0 #0a0908, 0 14px 28px rgba(0, 0, 0, 0.9);
+}

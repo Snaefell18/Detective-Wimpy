@@ -1,0 +1,28 @@
+/* ---------------------------------------------------------------
+   Design "Klassisch" - das bisherige Aussehen.
+
+   Die Regeln dafür stehen unverändert in app/globals.css; hier
+   stehen nur die Variablen, damit beide Designs an derselben Stelle
+   nachschlagbar sind. Wer das Design zurückholt, bekommt exakt das,
+   was vorher da war - es wurde nichts verschoben und nichts umgebaut.
+   --------------------------------------------------------------- */
+
+[data-theme="klassisch"] {
+  --grund: var(--nacht);
+  --flaeche: var(--karte);
+  --linie: var(--rand);
+  --akzent: var(--orange);
+  --signal: var(--rot);
+
+  --radius: 14px;
+  --schatten: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --glas: blur(12px);
+
+  --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
+    sans-serif;
+  --f-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
+    sans-serif;
+
+  /* Wie stark Bilder abgedunkelt werden - im Klassisch gar nicht. */
+  --bild-helligkeit: 1;
+}

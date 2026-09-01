@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { alsStaedte } from "@/lib/csv";
+import { DESIGNS, leseDesign, setzeDesign, type Design } from "@/lib/design";
 import { useAdmin } from "@/lib/adminStore";
 import { useStammdaten } from "@/lib/stammdaten";
 import { SPEICHER_KEY } from "@/lib/useGame";
@@ -15,12 +17,39 @@ const TOENE: { id: Einstellungen["ton"]; label: string; hinweis: string }[] = [
 
 export function SpielBereich({ onMeldung }: BereichProps) {
   const { daten, aendern } = useAdmin();
+  // Das Design steht am <html>-Element; hier wird nur die Anzeige nachgeführt.
+  const [design, setDesign] = useState<Design | null>(null);
+  useEffect(() => setDesign(leseDesign()), []);
   const stammdaten = useStammdaten();
   const staedte = alsStaedte(stammdaten.orte);
   const e = daten.einstellungen;
 
   return (
     <>
+      <h2 className="abschnitt">Design</h2>
+      <p className="leise">
+        Noir ist das neue Aussehen: fast schwarz, das Szenenbild großflächig
+        dahinter, Messing als einziger Akzent. Klassisch ist das bisherige
+        Aussehen - es bleibt vollständig erhalten und ist mit einem Klick zurück.
+      </p>
+      <div className="wahl-reihe">
+        {DESIGNS.map((d) => (
+          <button
+            key={d.id}
+            className="wahl-chip"
+            data-aktiv={design === d.id}
+            onClick={() => {
+              setzeDesign(d.id);
+              setDesign(d.id);
+              onMeldung(`Design „${d.label}“ ist aktiv.`);
+            }}
+          >
+            <strong>{d.label}</strong>
+            <span className="leise">{d.hinweis}</span>
+          </button>
+        ))}
+      </div>
+
       <h2 className="abschnitt">Erzählton</h2>
       <div className="wahl-reihe">
         {TOENE.map((ton) => (
