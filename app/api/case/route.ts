@@ -27,6 +27,7 @@ import {
 } from "@/lib/schemas";
 import type { Bogen } from "@/lib/sagaBogen";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
+import { besetzungFuerKapitel } from "@/lib/sagaTypen";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
@@ -196,6 +197,7 @@ function briefingVon(bogen: Bogen, kapitelNr: number): string {
     kapitelNummer: kapitelNr,
     kapitelAnzahl: bogen.kapitel.length,
     auftrag: istFinale ? bogen.finale.auftrag : (kapitel?.auftrag ?? ""),
+    twist: bogen.vorgaben.twist === true,
     enthuellung: kapitel?.enthuellung ?? "",
     vorherigeEnthuellungen: vorher,
     istFinale,
@@ -257,7 +259,14 @@ export async function POST(request: Request) {
 async function geruestSchritt(body: Record<string, unknown>) {
   const saga = sagaTeil(body);
 
-  const besetzung = saga ? saga.bogen.besetzung : besetzungAus(body?.charaktere);
+  const besetzung = saga
+    ? besetzungFuerKapitel({
+        besetzung: saga.bogen.besetzung,
+        drahtzieherId: saga.bogen.drahtzieherId,
+        kapitel: saga.kapitel,
+        twist: saga.bogen.vorgaben.twist === true,
+      })
+    : besetzungAus(body?.charaktere);
   const einstellungen = saga
     ? {
         ...STANDARD_EINSTELLUNGEN,

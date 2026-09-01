@@ -690,6 +690,35 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         ))}
       </div>
 
+      <h3 className="unter-abschnitt">
+        Twist <span className="leise">· der Drahtzieher bleibt bis zum Finale unsichtbar</span>
+      </h3>
+      <div className="wahl-reihe">
+        <button
+          className="wahl-chip"
+          data-aktiv={!vorgaben.twist}
+          onClick={() => setzen({ twist: false })}
+        >
+          <strong>Normal</strong>
+          <span className="leise">Er läuft in den Kapiteln beiläufig mit</span>
+        </button>
+        <button
+          className="wahl-chip"
+          data-aktiv={vorgaben.twist}
+          onClick={() => setzen({ twist: true })}
+        >
+          <strong>Twist</strong>
+          <span className="leise">Man begegnet ihm erst im Finale</span>
+        </button>
+      </div>
+      <p className="leise klein">
+        Mit Twist kommt der Drahtzieher in keinem Kapitel vor - man sieht ihn
+        nicht und kann ihn nicht befragen. Die Hinweise auf ihn gibt es
+        trotzdem von Anfang an, nur über Eigenschaften statt über seinen
+        Namen: eine Handschrift, ein Geruch, ein Siegel. Der Erzählertext vor
+        dem Finale inszeniert dann seinen Auftritt.
+      </p>
+
       <h3 className="unter-abschnitt">Publikum</h3>
       <div className="wahl-reihe">
         {REIFEGRADE.map((r) => (

@@ -259,6 +259,7 @@ export const SagaVorgabenSchema = z.object({
   charaktere: z.array(z.string().max(40)).max(24),
   items: z.array(z.string().max(40)).max(24),
   drahtzieherId: z.string().max(40),
+  twist: z.boolean().default(false),
   schwierigkeit: z.enum(["leicht", "mittel", "knifflig"]),
   reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]),
   absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]),

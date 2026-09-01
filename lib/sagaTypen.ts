@@ -52,6 +52,13 @@ export type SagaVorgaben = {
   items: string[];
   /** Wer hinter allem steckt - leer heißt: zufällig. */
   drahtzieherId: string;
+  /**
+   * Twist: Der Drahtzieher tritt in den Kapiteln überhaupt nicht auf - man
+   * begegnet ihm nie, spricht nie mit ihm. Die Spuren führen trotzdem zu
+   * ihm, nur eben über Eigenschaften statt über einen Namen. Erst im Finale
+   * betritt er die Bühne, und der Erzählertext davor inszeniert genau das.
+   */
+  twist: boolean;
   schwierigkeit: Vorgaben["schwierigkeit"];
   reifegrad: Reifegrad;
   absurditaet: Absurditaet;
@@ -73,6 +80,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   charaktere: [],
   items: [],
   drahtzieherId: "",
+  twist: false,
   schwierigkeit: "mittel",
   reifegrad: "kindgerecht",
   absurditaet: "verspielt",
@@ -148,3 +156,23 @@ export type SagaLauf = {
    */
   finaleGeschafft?: boolean;
 };
+
+/**
+ * Wer in einem Saga-Fall mitspielt.
+ *
+ * Mit Twist tritt der Drahtzieher in den Kapiteln überhaupt nicht auf - er
+ * steht dort weder am Ort herum noch in der Tierakte. Erst im Finale
+ * (kapitel 0) gehört er zur Besetzung. Bleiben ohne ihn weniger als zwei
+ * Verdächtige übrig, hat die Spielbarkeit Vorrang vor dem Kniff.
+ */
+export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolean }>(args: {
+  besetzung: T[];
+  drahtzieherId: string;
+  kapitel: number;
+  twist: boolean;
+}): T[] {
+  const { besetzung, drahtzieherId, kapitel, twist } = args;
+  if (!twist || kapitel === 0) return besetzung;
+  const ohne = besetzung.filter((c) => c.id !== drahtzieherId);
+  return ohne.filter((c) => !c.istDetektiv).length >= 2 ? ohne : besetzung;
+}
