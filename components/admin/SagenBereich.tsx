@@ -226,6 +226,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         wahrheit: "Noch offen.",
         drahtzieherMotiv: "Noch offen.",
         auftaktText: "Es beginnt mit einer Kleinigkeit.",
+        schlagworte: ["Schatten", "Verrat", "Wahrheit"],
         kapitel: Array.from({ length: anzahl }, (_, i) => ({
           nummer: i + 1,
           name: `Kapitel ${i + 1}`,
@@ -279,6 +280,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         thema: rohBogen.thema,
         klappentext: rohBogen.klappentext,
         vorgaben,
+        schlagworte: rohBogen.schlagworte,
         auftakt: { text: rohBogen.auftaktText, audio: "" },
         kapitel,
         finale: {
@@ -320,6 +322,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       kopie.bogenSiegel = siegel;
       kopie.thema = bogen.bogen.thema;
       kopie.klappentext = bogen.bogen.klappentext;
+      kopie.schlagworte = bogen.bogen.schlagworte;
       kopie.name = bogen.bogen.name || kopie.name;
       await speichereSaga(kopie);
       await laden();
@@ -386,6 +389,26 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         <label className="feld">
           <span className="leise">Klappentext · steht in der Auswahlliste</span>
           <textarea rows={3} value={b.klappentext} onChange={(e) => setzeBogen({ klappentext: e.target.value })} maxLength={2000} />
+        </label>
+
+        <label className="feld">
+          <span className="leise">
+            Vorspann-Schlagworte · je ein Wort pro Bildschirm, mit Komma getrennt
+          </span>
+          <input
+            value={(b.schlagworte ?? []).join(", ")}
+            onChange={(e) =>
+              setzeBogen({
+                schlagworte: e.target.value
+                  .split(",")
+                  .map((w) => w.trim())
+                  .filter(Boolean)
+                  .slice(0, 6),
+              })
+            }
+            placeholder="Nebel, Verrat, Gold, Schweigen"
+            maxLength={200}
+          />
         </label>
 
         <h3 className="unter-abschnitt">

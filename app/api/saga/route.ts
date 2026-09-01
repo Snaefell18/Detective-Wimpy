@@ -194,6 +194,7 @@ async function kernSchritt(body: Record<string, unknown>) {
     wahrheit: antwort.daten.wahrheit,
     drahtzieherMotiv: antwort.daten.drahtzieherMotiv,
     auftaktText: antwort.daten.auftaktText,
+    schlagworte: antwort.daten.schlagworte.slice(0, 6),
     kapitel: [],
     finale: { frage: "", auftrag: "", erzaehlerText: "", epilogText: "", stadt: "zufall" },
     erstelltAm: Date.now(),
@@ -207,6 +208,7 @@ async function kernSchritt(body: Record<string, unknown>) {
     thema: bogen.thema,
     klappentext: bogen.klappentext,
     auftaktText: bogen.auftaktText,
+    schlagworte: bogen.schlagworte,
     kapitelAnzahl: vorgaben.kapitelAnzahl,
   });
 }

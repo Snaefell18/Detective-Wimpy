@@ -433,32 +433,51 @@ export function FallEditor({
       })}
 
       <h3 className="unter-abschnitt">
-        Sprachstil <span className="leise">· gilt nur in diesem Fall</span>
+        Beruf und Kommunikationsstil{" "}
+        <span className="leise">· gelten nur in diesem Fall</span>
       </h3>
       <p className="leise klein">
-        Was hier steht, befolgt das Tier im Gespräch wörtlich. Leer heißt: der
-        Stil aus den Stammdaten gilt.
+        Der Beruf färbt Alibis und Gesprächsthemen, den Stil befolgt das Tier
+        wörtlich. Leer heißt: es gilt, was in den Stammdaten steht.
       </p>
       {entwurf.besetzung.map((c, i) => (
-        <label className="feld" key={c.id}>
-          <span className="leise">
+        <div className="kapitel-block" key={c.id}>
+          <h4 className="unter-abschnitt">
             {c.name}
             {c.istDetektiv ? " (Wimpy)" : ""}
-          </span>
-          <textarea
-            rows={2}
-            value={c.sprachstil ?? ""}
-            onChange={(e) =>
-              aendern({
-                besetzung: entwurf.besetzung.map((x, j) =>
-                  j === i ? { ...x, sprachstil: e.target.value } : x,
-                ),
-              })
-            }
-            placeholder="z.B. Redet sehr langsam und wiederholt Wimpys letzte Worte."
-            maxLength={800}
-          />
-        </label>
+          </h4>
+          <label className="feld">
+            <span className="leise">Beruf</span>
+            <input
+              value={c.beruf ?? ""}
+              onChange={(e) =>
+                aendern({
+                  besetzung: entwurf.besetzung.map((x, j) =>
+                    j === i ? { ...x, beruf: e.target.value } : x,
+                  ),
+                })
+              }
+              placeholder="z.B. Bäckerin"
+              maxLength={200}
+            />
+          </label>
+          <label className="feld">
+            <span className="leise">Kommunikationsstil</span>
+            <textarea
+              rows={2}
+              value={c.sprachstil ?? ""}
+              onChange={(e) =>
+                aendern({
+                  besetzung: entwurf.besetzung.map((x, j) =>
+                    j === i ? { ...x, sprachstil: e.target.value } : x,
+                  ),
+                })
+              }
+              placeholder="z.B. Redet sehr langsam und wiederholt Wimpys letzte Worte."
+              maxLength={800}
+            />
+          </label>
+        </div>
       ))}
 
       <h3 className="unter-abschnitt">

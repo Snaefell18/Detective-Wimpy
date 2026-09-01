@@ -34,6 +34,7 @@ Anforderungen:
 - Die Wahrheit muss groß genug für ${vorgaben.kapitelAnzahl} Fälle sein, aber in einem Satz erzählbar.
 - Der Klappentext verrät den Drahtzieher nicht.
 - Der Auftakttext klingt wie eine Krimi-Ansage: kurze Zeilen, Atmosphäre, keine Anrede.
+- Die Schlagworte sind der Vorspann: einzelne, harte Wörter, die zusammen die Stimmung der ganzen Saga aufspannen.
 - Alles auf Deutsch.`;
 }
 

@@ -277,12 +277,18 @@
   background: linear-gradient(to top, rgba(5, 5, 5, 0.94) 12%, rgba(5, 5, 5, 0.2) 48%);
 }
 
-/* Kleine Bilder in Listen bleiben Textur, nicht Hauptdarsteller. */
+/*
+ * Kleine Bilder in Listen treten zurück, bleiben aber erkennbar: nur
+ * entfärbt, nicht unscharf. Unschärfe hat hier nichts zu suchen - man
+ * will sehen, welches Tier oder welcher Gegenstand gemeint ist.
+ */
 [data-theme="noir"] .dossier-bild .bild,
 [data-theme="noir"] .beweis-bild .bild,
 [data-theme="noir"] .listen-bild .bild,
-[data-theme="noir"] .wahl-bild .bild {
-  filter: saturate(0.2) brightness(0.9) blur(1px);
+[data-theme="noir"] .wahl-bild .bild,
+[data-theme="noir"] .item-bild .bild,
+[data-theme="noir"] .ort-kachel-bild .bild {
+  filter: saturate(0.5) contrast(1.05) brightness(0.95);
 }
 
 [data-theme="noir"] .bild-platzhalter {
@@ -1645,13 +1651,7 @@
   display: none;
 }
 
-[data-theme="noir"] .dossier-bild img {
-  filter: saturate(0) brightness(0.72) contrast(1.15);
-}
 
-[data-theme="noir"] .beweis-bild img {
-  filter: saturate(0) brightness(0.78) contrast(1.15);
-}
 
 /* Ein echtes Leerzeichen zwischen Wert und Namen: ein normales
    kollabiert an der Kante des Flex-Kindes. */
@@ -2013,13 +2013,7 @@
   text-align: right;
 }
 
-/* Auch die Auswahlbilder der Beschuldigung sind entfärbt. */
-[data-theme="noir"] .wahl-bild img,
-[data-theme="noir"] .listen-bild img,
-[data-theme="noir"] .item-bild img,
-[data-theme="noir"] .ort-kachel-bild img {
-  filter: saturate(0) brightness(0.74) contrast(1.15);
-}
+
 
 /* Die Extrusion braucht oben Luft, sonst schneidet der Container sie ab. */
 [data-theme="noir"] .ergebnis-titel {
@@ -2067,4 +2061,48 @@
 
 [data-theme="noir"] .wahl-chip[data-aktiv="true"] strong {
   color: var(--akzent);
+}
+
+/* =================================================================
+   Vorspann einer Saga - dieselbe Sprache wie das Fall-Intro
+   ================================================================= */
+
+[data-theme="noir"] .vorspann-mitte {
+  gap: 18px;
+}
+
+[data-theme="noir"] .vorspann-thema {
+  font-family: var(--f-text);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-2);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9);
+}
+
+[data-theme="noir"] .vorspann-kapitel {
+  gap: 12px;
+}
+
+[data-theme="noir"] .vorspann-kapitel li {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .vorspann-kapitel li::before,
+[data-theme="noir"] .vorspann-kapitel li[data-finale="true"]::before {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .vorspann-kapitel li[data-finale="true"] {
+  color: var(--text);
 }

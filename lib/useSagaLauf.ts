@@ -48,7 +48,8 @@ export function useSagaLauf() {
       }
       return {
         saga,
-        lauf: { sagaId: saga.id, kapitel: 0, phase: "auftakt", fallId: null, geloest: [] },
+        // Ganz von vorn: erst der Vorspann, dann der Auftakt des Erzählers.
+        lauf: { sagaId: saga.id, kapitel: 0, phase: "vorspann", fallId: null, geloest: [] },
       };
     });
   }, []);

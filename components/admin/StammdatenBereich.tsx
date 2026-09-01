@@ -485,8 +485,18 @@ function CharakterFormular({
       </label>
 
       <label className="feld">
+        <span className="leise">Beruf · färbt Alibis, Spuren und Gesprächsthemen</span>
+        <input
+          value={entwurf.beruf ?? ""}
+          onChange={(e) => aendern({ beruf: e.target.value })}
+          placeholder="z.B. Bäckerin, Nachtwächter am Hafen, Opernsouffleuse"
+          maxLength={200}
+        />
+      </label>
+
+      <label className="feld">
         <span className="leise">
-          Sprachstil und Verhalten · wird im Gespräch wörtlich befolgt
+          Kommunikationsstil · wird im Gespräch wörtlich befolgt
         </span>
         <textarea
           rows={3}

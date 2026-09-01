@@ -8,6 +8,7 @@ import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
 import { ErzaehlerScreen } from "@/components/ErzaehlerScreen";
+import { SagaVorspann } from "@/components/SagaVorspann";
 import { Prolog } from "@/components/Prolog";
 import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
@@ -37,6 +38,8 @@ export default function Home() {
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
   const introFertig = useCallback(() => setPhase("aus"), []);
+  const sagaSetzePhase = saga.setzePhase;
+  const sagaAuftakt = useCallback(() => sagaSetzePhase("auftakt"), [sagaSetzePhase]);
 
   /**
    * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
@@ -155,6 +158,14 @@ export default function Home() {
   // Erzählerteile einer Saga.
   if (saga.stand && phase === "aus" && !fremderFallLaeuft) {
     const { saga: sagaDaten, lauf } = saga.stand;
+
+    if (lauf.phase === "vorspann") {
+      return (
+        <main className="app">
+          <SagaVorspann saga={sagaDaten} onFertig={sagaAuftakt} />
+        </main>
+      );
+    }
 
     if (lauf.phase === "auftakt") {
       return (

@@ -37,5 +37,8 @@ export function describeStats(character: Character): string {
 
 /** Kompakter Steckbrief für den Prompt. */
 export function characterBrief(character: Character): string {
-  return `${character.name} (${character.tierart}, ${character.alter} Jahre) - ${character.beschreibung} Werte: ${describeStats(character)}.`;
+  const beruf = character.beruf?.trim();
+  return `${character.name} (${character.tierart}, ${character.alter} Jahre${
+    beruf ? `, ${beruf}` : ""
+  }) - ${character.beschreibung} Werte: ${describeStats(character)}.`;
 }

@@ -33,6 +33,8 @@ export type Bogen = {
   wahrheit: string;
   drahtzieherMotiv: string;
   auftaktText: string;
+  /** Einzelne Wörter für den Vorspann. */
+  schlagworte: string[];
   kapitel: BogenKapitel[];
   finale: {
     frage: string;

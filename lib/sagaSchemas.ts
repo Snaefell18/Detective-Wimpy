@@ -35,6 +35,11 @@ export const KernSchema = z.object({
   auftaktText: z
     .string()
     .describe("Erzählertext vor dem ersten Kapitel: vier bis sechs kurze Zeilen"),
+  schlagworte: z
+    .array(z.string())
+    .describe(
+      "Vier bis sechs einzelne Wörter für den Vorspann - je eins pro Bildschirm, groß und hart geschnitten. Keine Sätze, keine Namen, die den Drahtzieher verraten.",
+    ),
 });
 
 export type KernDraft = z.infer<typeof KernSchema>;

@@ -5,7 +5,7 @@ import type { Character, City, Location } from "./types";
  *
  * Spalten: Nummer;Name;Tierart;Alter;Charisma;Freundlichkeit;Fitness;
  *          Zauberkraft;Schelmischkeit;Kriminalitätslevel;Intelligenz;
- *          Charakter[;Bild]
+ *          Charakter[;Bild][;Beruf][;Kommunikationsstil]
  *
  * Wird sowohl vom Admin-Menü im Browser als auch von scripts/import-csv.mjs
  * benutzt - es gibt also nur eine Stelle, an der das Format definiert ist.
@@ -68,6 +68,9 @@ export function parseCharacterCsv(text: string): Character[] {
         beschreibung: zellen[11] || "",
         bild: zellen[12] || `/charaktere/${id}.png`,
         istDetektiv: /detektiv/i.test(zellen[11] || ""),
+        // Beide Spalten sind optional - ältere Tabellen haben sie nicht.
+        ...(zellen[13] ? { beruf: zellen[13] } : {}),
+        ...(zellen[14] ? { sprachstil: zellen[14] } : {}),
       } satisfies Character;
     });
 }

@@ -38,6 +38,12 @@ export type Character = {
   bild: string;
   istDetektiv: boolean;
   /**
+   * Was dieses Tier beruflich macht - freier Text ("Bäckerin", "Nachtwächter
+   * am Hafen"). Färbt Alibis, Spuren und Gesprächsthemen. Leer heißt: das
+   * Modell denkt sich etwas Passendes aus.
+   */
+  beruf?: string;
+  /**
    * Wie dieses Tier redet und sich benimmt - freier Text, der im Gespräch
    * wörtlich befolgt wird ("spricht in kurzen Sätzen und nennt Wimpy immer
    * 'Chef'"). Leer heißt: nur die Werte und die Beschreibung zählen.

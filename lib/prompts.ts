@@ -302,6 +302,10 @@ export function buildTalkPrompt(args: {
 DEIN CHARAKTER
 ${characterBrief(charakter)}
 ${
+  charakter.beruf?.trim()
+    ? `\nDEIN BERUF\n${charakter.beruf.trim()}. Er prägt, worüber du redest, was du gesehen haben willst und wie dein Alibi klingt.\n`
+    : ""
+}${
   charakter.sprachstil?.trim()
     ? `\nSO REDEST UND BENIMMST DU DICH (wichtiger als alles andere in deiner Antwort)\n${charakter.sprachstil.trim()}\n`
     : ""

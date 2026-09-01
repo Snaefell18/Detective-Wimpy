@@ -111,6 +111,8 @@ export type Saga = {
   /** Beschreibung in der Auswahlliste. */
   klappentext: string;
   vorgaben: SagaVorgaben;
+  /** Einzelne Wörter, die im Vorspann aufblitzen. */
+  schlagworte?: string[];
   auftakt: Erzaehlerteil;
   kapitel: SagaKapitel[];
   finale: SagaFinale;
@@ -124,7 +126,14 @@ export type SagaLauf = {
   sagaId: string;
   /** 0-basiert; entspricht dem Index in kapitel[]. */
   kapitel: number;
-  phase: "auftakt" | "erzaehler" | "fall" | "finale-erzaehler" | "finale" | "epilog";
+  phase:
+    | "vorspann"
+    | "auftakt"
+    | "erzaehler"
+    | "fall"
+    | "finale-erzaehler"
+    | "finale"
+    | "epilog";
   /**
    * Id des Falls, der gerade zu dieser Saga läuft. Damit lässt sich ein
    * einzelner Fall zwischendurch spielen, ohne dass sein Ende die Saga

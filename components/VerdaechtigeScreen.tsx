@@ -65,6 +65,7 @@ export function VerdaechtigeScreen({
                 <strong>{c.name}</strong>
                 <span className="leise">
                   {c.tierart}, {c.alter} J.
+                  {c.beruf?.trim() ? ` · ${c.beruf.trim()}` : ""}
                 </span>
               </div>
 

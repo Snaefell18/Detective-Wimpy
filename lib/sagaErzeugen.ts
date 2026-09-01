@@ -20,6 +20,7 @@ type KernAntwort = {
   thema: string;
   klappentext: string;
   auftaktText: string;
+  schlagworte: string[];
   kapitelAnzahl: number;
 };
 
@@ -126,6 +127,7 @@ export async function erzeugeSaga(
     thema: kern.thema,
     klappentext: kern.klappentext,
     vorgaben: eingaben.vorgaben,
+    schlagworte: kern.schlagworte ?? [],
     auftakt: { text: kern.auftaktText, audio: "" },
     kapitel,
     finale: {
