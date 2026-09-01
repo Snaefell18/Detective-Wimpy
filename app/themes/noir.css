@@ -204,10 +204,30 @@
   transform: scale(1.06);
 }
 
+/*
+ * Der Ort ist der Screen - hier darf man das Bild wirklich sehen.
+ * Deutlich heller und farbiger als die übrigen Szenen; die Lesbarkeit
+ * tragen der Verlauf unten und die Textschatten.
+ */
 [data-theme="noir"] .szene-ort img {
   object-position: center top;
   transform: none;
-  filter: saturate(0.34) contrast(1.05) brightness(var(--bild-helligkeit));
+  filter: saturate(0.58) contrast(1.04) brightness(calc(var(--bild-helligkeit) * 1.42));
+}
+
+[data-theme="noir"] .szene-ort::before {
+  background: radial-gradient(
+    140% 95% at 50% 32%,
+    rgba(8, 8, 8, 0) 0%,
+    rgba(8, 8, 8, 0.28) 62%,
+    rgba(4, 4, 4, 0.78) 100%
+  );
+}
+
+[data-theme="noir"] .szene-ort .szene-verlauf {
+  background:
+    linear-gradient(180deg, rgba(4, 4, 4, 0.82) 0%, rgba(4, 4, 4, 0) 22%),
+    linear-gradient(to top, rgba(4, 4, 4, 0.95) 14%, rgba(4, 4, 4, 0.3) 46%, transparent 70%);
 }
 
 [data-theme="noir"] .szene-portraet img {
@@ -452,9 +472,11 @@
    Ortsleiste. So bleibt der größte Teil des Bildes frei.
    ================================================================= */
 
+/* Der Ortsname steht oben unter dem Falltitel, die anwesenden Tiere
+   unten - dazwischen bleibt das Bild frei. */
 [data-theme="noir"] .ort-buehne {
-  /* Reichlich Luft nach oben - das Bild ist der Screen. */
-  padding: calc(var(--safe-top) + 96px) 24px 0;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 74px) 24px 0;
 }
 
 [data-theme="noir"] .ort-titel {
