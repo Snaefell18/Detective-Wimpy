@@ -54,7 +54,7 @@ export const viewport: Viewport = {
   userScalable: false,
   // Randlos bis unter Dynamic Island und Home-Indicator (iPhone 16 Pro).
   viewportFit: "cover",
-  themeColor: "#0d0b14",
+  themeColor: "#080808",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

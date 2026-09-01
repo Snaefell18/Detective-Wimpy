@@ -43,32 +43,42 @@ export function StartScreen({
         onLeer={merken}
       />
 
-      {/* Solange kein Titelbild hinterlegt ist, trägt der Schriftzug den Screen. */}
-      {ohneBild && (
-        <h1 className="start-logo">
-          Detektiv
-          <span>Wimpy</span>
-        </h1>
-      )}
+      {/* Im Noir trägt der Schriftzug den Screen immer; im Klassisch nur,
+          solange kein Titelbild hinterlegt ist (per CSS gesteuert). */}
+      <span className="start-marke">{laufenderFall ? "Fall pausiert" : "Ein Fall wartet"}</span>
+
+      <h1 className="start-logo" data-ohne-bild={ohneBild}>
+        Detektiv
+        <span>Wimpy</span>
+      </h1>
+
+      <p className="start-unterzeile">
+        Fünf Orte. Ein Lügner. Zwei Versuche, bevor die Akte zugeht.
+      </p>
 
       {/* Schmale Knöpfe: Das Titelbild soll so weit wie möglich frei bleiben. */}
       <div className="start-himmel" data-ohne-bild={ohneBild}>
         <button className="knopf aktion schmal" onClick={onStart} disabled={laedt}>
-          {laedt ? "Wird ausgeheckt …" : "Neuer Fall"}
+          <span className="zeilen-text">{laedt ? "Wird ausgeheckt …" : "Neuer Fall"}</span>
+          <span className="zeilen-meta">{laedt ? (schritt ?? "…") : "Start"}</span>
         </button>
 
         {onFortsetzen && (
           <button className="knopf glas schmal" onClick={onFortsetzen}>
-            ▶ Fortsetzen
+            <span className="symbol">▶</span>
+            <span className="zeilen-text">Fortsetzen</span>
+            <span className="zeilen-meta">{laufenderFall ?? ""}</span>
           </button>
         )}
 
         <button className="knopf glas schmal" onClick={onKampagnen}>
-          🗂 Kampagnen
+          <span className="symbol">🗂</span>
+          <span className="zeilen-text">Kampagnen</span>
         </button>
 
         <button className="knopf glas schmal" onClick={onSagas}>
-          📖 Sagas
+          <span className="symbol">📖</span>
+          <span className="zeilen-text">Sagas</span>
         </button>
 
         <span className="start-info">
@@ -86,8 +96,9 @@ export function StartScreen({
 
       <div className="start-fuss">
         <Link href="/admin" className="knopf klein glas" aria-label="Admin-Menü">
-          ⚙︎ Admin
-        </Link>
+            <span className="symbol">⚙︎</span>
+            <span className="zeilen-text">Admin</span>
+          </Link>
       </div>
     </div>
   );

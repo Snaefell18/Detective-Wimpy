@@ -28,9 +28,11 @@ export function Nav({
           aria-label={tab.label}
         >
           <span className="symbol">{tab.symbol}</span>
-          <span>
+          <span className="nav-text">
             {tab.label}
-            {tab.id === "inventar" && spurenAnzahl > 0 ? ` ${spurenAnzahl}` : ""}
+            {tab.id === "inventar" && spurenAnzahl > 0 && (
+              <span className="nav-zaehler">{spurenAnzahl}</span>
+            )}
           </span>
         </button>
       ))}

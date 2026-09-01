@@ -40,3 +40,645 @@
     0 18px 34px rgba(0, 0, 0, 0.95);
   --titel-schatten-klein: 2px 2px 0 #14130f, 4px 4px 0 #0a0908, 0 14px 28px rgba(0, 0, 0, 0.9);
 }
+
+/* =================================================================
+   Fundament
+   ================================================================= */
+
+[data-theme="noir"] body {
+  background: var(--grund);
+  color: var(--text);
+  font-family: var(--f-text);
+  letter-spacing: 0.02em;
+}
+
+/* Keine Flächen, keine Radien, keine Schatten, kein Glas. */
+[data-theme="noir"] .knopf,
+[data-theme="noir"] .karte,
+[data-theme="noir"] .kopf,
+[data-theme="noir"] .nav,
+[data-theme="noir"] .overlay,
+[data-theme="noir"] .dossier,
+[data-theme="noir"] .beweis,
+[data-theme="noir"] .ort-chip-bild,
+[data-theme="noir"] .figur-bild,
+[data-theme="noir"] .rund-knopf,
+[data-theme="noir"] .wahl-chip,
+[data-theme="noir"] .marke-knopf {
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: none;
+  border: none;
+}
+
+/* Emoji kommen im Noir nicht vor. */
+[data-theme="noir"] .symbol {
+  display: none;
+}
+
+/* --- Typografie --------------------------------------------------- */
+
+[data-theme="noir"] h1,
+[data-theme="noir"] h2,
+[data-theme="noir"] h3 {
+  font-family: var(--f-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.86;
+}
+
+/* Meta-Label: das zweite Erkennungsmerkmal neben der Extrusion. */
+[data-theme="noir"] .zeilen-meta,
+[data-theme="noir"] .start-marke,
+[data-theme="noir"] .stadt-marke,
+[data-theme="noir"] .abschnitt,
+[data-theme="noir"] .ort-chip,
+[data-theme="noir"] .nav button {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .leise,
+[data-theme="noir"] .klein,
+[data-theme="noir"] .unterzeile {
+  color: var(--text-leise);
+}
+
+/* --- Haarlinien-Zeile: das einzige Layoutelement ------------------- */
+
+[data-theme="noir"] .zeile,
+[data-theme="noir"] .start-himmel .knopf,
+[data-theme="noir"] .figur,
+[data-theme="noir"] .knopf.umsehen {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 15px 0 15px 16px;
+  border: none;
+  border-top: 1px solid var(--linie);
+  background: none;
+  text-align: left;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-2);
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+
+/* Auswahlmarke: der Balken sitzt auch an nicht gewählten Zeilen,
+   damit die Textkante beim Wechsel nicht springt. */
+[data-theme="noir"] .zeile::before,
+[data-theme="noir"] .start-himmel .knopf::before,
+[data-theme="noir"] .figur::before,
+[data-theme="noir"] .knopf.umsehen::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 28px;
+  background: transparent;
+}
+
+[data-theme="noir"] .start-himmel .knopf.aktion,
+[data-theme="noir"] .knopf.umsehen {
+  color: var(--text);
+}
+
+[data-theme="noir"] .start-himmel .knopf.aktion::before,
+[data-theme="noir"] .knopf.umsehen::before {
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .knopf:disabled,
+[data-theme="noir"] .zeile[data-aus="true"] {
+  color: var(--text-aus);
+  opacity: 1;
+}
+
+[data-theme="noir"] .knopf:disabled::before {
+  background: transparent;
+}
+
+[data-theme="noir"] .zeilen-text {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-theme="noir"] .zeilen-meta {
+  flex: 0 0 auto;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .knopf.aktion .zeilen-meta,
+[data-theme="noir"] .knopf.umsehen .zeilen-meta {
+  color: var(--akzent);
+}
+
+/* =================================================================
+   Bilder - das Bild ist der Screen
+   ================================================================= */
+
+[data-theme="noir"] .szene img {
+  filter: saturate(0.32) contrast(1.06) brightness(var(--bild-helligkeit));
+}
+
+[data-theme="noir"] .szene-titel img {
+  filter: saturate(0.28) contrast(1.12) brightness(calc(var(--bild-helligkeit) * 0.76))
+    blur(22px);
+  transform: scale(1.06);
+}
+
+[data-theme="noir"] .szene-ort img {
+  object-position: center top;
+  transform: none;
+  filter: saturate(0.34) contrast(1.05) brightness(var(--bild-helligkeit));
+}
+
+[data-theme="noir"] .szene-portraet img {
+  object-fit: cover;
+  object-position: center 12%;
+  filter: saturate(0.3) contrast(1.08) brightness(calc(var(--bild-helligkeit) * 0.9));
+}
+
+[data-theme="noir"] .szene-portraet {
+  background: var(--grund);
+}
+
+/* Vignette und Lesbarkeitsverlauf - immer beide, immer in dieser Reihenfolge. */
+[data-theme="noir"] .szene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    120% 80% at 50% 34%,
+    rgba(8, 8, 8, 0.05) 0%,
+    rgba(8, 8, 8, 0.72) 60%,
+    var(--tief) 100%
+  );
+}
+
+[data-theme="noir"] .szene-verlauf {
+  z-index: 2;
+  background: linear-gradient(
+    to top,
+    rgba(4, 4, 4, 0.96) 30%,
+    rgba(4, 4, 4, 0.3) 64%,
+    rgba(4, 4, 4, 0.5)
+  );
+}
+
+[data-theme="noir"] .szene-titel::before {
+  background: radial-gradient(
+    120% 80% at 50% 42%,
+    rgba(8, 8, 8, 0.1) 0%,
+    rgba(8, 8, 8, 0.72) 60%,
+    #050505 100%
+  );
+}
+
+[data-theme="noir"] .szene-titel .szene-verlauf {
+  background: linear-gradient(to top, rgba(5, 5, 5, 0.94) 12%, rgba(5, 5, 5, 0.2) 48%);
+}
+
+/* Kleine Bilder in Listen bleiben Textur, nicht Hauptdarsteller. */
+[data-theme="noir"] .dossier-bild .bild,
+[data-theme="noir"] .beweis-bild .bild,
+[data-theme="noir"] .listen-bild .bild,
+[data-theme="noir"] .wahl-bild .bild {
+  filter: saturate(0.2) brightness(0.9) blur(1px);
+}
+
+[data-theme="noir"] .bild-platzhalter {
+  background: repeating-linear-gradient(
+    135deg,
+    #14130f 0 6px,
+    #0d0c0a 6px 12px
+  );
+  color: var(--text-aus);
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+/* =================================================================
+   01 Hauptmenü
+   ================================================================= */
+
+[data-theme="noir"] .start {
+  justify-content: flex-end;
+  padding: calc(var(--safe-top) + 46px) 24px calc(var(--safe-bottom) + 26px);
+}
+
+[data-theme="noir"] .start-marke {
+  position: relative;
+  z-index: 2;
+  order: -1;
+  margin-bottom: auto;
+  padding-left: 30px;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .start-marke::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 20px;
+  height: 1px;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .start-logo {
+  display: block;
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: 82px;
+  line-height: 0.82;
+  font-weight: 900;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: none;
+  -webkit-text-fill-color: var(--text);
+  -webkit-text-stroke: 0;
+  text-align: left;
+  text-shadow: var(--titel-schatten);
+}
+
+[data-theme="noir"] .start-logo span {
+  display: block;
+  font-size: 82px;
+  color: var(--text);
+  background: none;
+  -webkit-text-fill-color: var(--text);
+  -webkit-text-stroke: 0;
+}
+
+[data-theme="noir"] .start-unterzeile {
+  position: relative;
+  z-index: 2;
+  margin: 18px 0 0;
+  max-width: 30ch;
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .start-himmel {
+  margin-top: 30px;
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+}
+
+[data-theme="noir"] .start-himmel .knopf {
+  min-width: 0;
+  font-size: 27px;
+}
+
+[data-theme="noir"] .start-himmel .knopf:last-of-type {
+  border-bottom: 1px solid var(--linie);
+}
+
+[data-theme="noir"] .start-himmel .knopf:active {
+  background: var(--hover);
+}
+
+[data-theme="noir"] .start-info {
+  order: 9;
+  margin-top: 14px;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  text-shadow: none;
+}
+
+[data-theme="noir"] .start-laden {
+  order: 8;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--akzent);
+  text-shadow: none;
+}
+
+[data-theme="noir"] .start-fuss {
+  margin: 0;
+  padding: 0;
+  justify-content: flex-end;
+}
+
+[data-theme="noir"] .start-fuss .knopf {
+  padding: 0;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+/* =================================================================
+   Untere Navigation
+   ================================================================= */
+
+[data-theme="noir"] .nav {
+  gap: 0;
+  padding: 0 24px calc(var(--safe-bottom) + 14px);
+  background: linear-gradient(to top, var(--grund) 62%, rgba(8, 8, 8, 0));
+  border-top: none;
+}
+
+[data-theme="noir"] .nav button {
+  gap: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .nav button[data-aktiv="true"] {
+  border-top: 2px solid var(--akzent);
+  color: var(--text);
+  background: none;
+}
+
+[data-theme="noir"] .nav-text {
+  position: relative;
+}
+
+[data-theme="noir"] .nav-zaehler {
+  position: absolute;
+  top: -0.9em;
+  right: -0.9em;
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--akzent);
+}
+
+/* =================================================================
+   02 Ort - das Ortsbild ist der Screen
+   ================================================================= */
+
+/*
+ * Noir führt "Umsehen" und die anwesenden Figuren in einer Liste. Statt das
+ * Markup zu verzweigen, lösen sich die beiden Container auf (display: contents)
+ * und ihre Kinder ordnen sich als eine Spalte - dieselbe Struktur, andere
+ * Reihenfolge. So bleibt der Klassisch-Aufbau unangetastet.
+ */
+[data-theme="noir"] .ort-buehne,
+[data-theme="noir"] .ort-fuss {
+  display: contents;
+}
+
+[data-theme="noir"] .ort-ansicht {
+  justify-content: flex-end;
+  /* Unten Platz für die Navigation, die frei darüber schwebt. */
+  padding: calc(var(--safe-top) + 46px) 24px calc(var(--nav-hoehe) + var(--safe-bottom) + 8px);
+}
+
+[data-theme="noir"] .ort-titel {
+  position: relative;
+  z-index: 2;
+  order: 1;
+  margin-top: auto;
+  padding-left: 26px;
+}
+
+[data-theme="noir"] .stadt-marke {
+  position: relative;
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .stadt-marke::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 0.5em;
+  width: 16px;
+  height: 1px;
+  background: var(--text-leise);
+}
+
+[data-theme="noir"] .ort-titel h2 {
+  margin: 0 0 0 -26px;
+  font-size: 56px;
+  line-height: 0.86;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .ort-titel p {
+  margin: 12px 0 0 -26px;
+  max-width: 32ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .fund {
+  position: relative;
+  z-index: 2;
+  order: 2;
+  margin-top: 22px;
+  padding: 15px 0 15px 16px;
+  border: none;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+[data-theme="noir"] .fund::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 28px;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .knopf.umsehen {
+  order: 3;
+  margin-top: 22px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+/* Die Zeile trägt Titel und Meta untereinander. */
+[data-theme="noir"] .knopf.umsehen .zeilen-text,
+[data-theme="noir"] .figur .figur-name {
+  flex: 1 0 100%;
+  width: 100%;
+}
+
+[data-theme="noir"] .knopf.umsehen .zeilen-meta,
+[data-theme="noir"] .figur .zeilen-meta {
+  flex: 1 0 100%;
+  margin-top: 6px;
+}
+
+[data-theme="noir"] .figuren {
+  order: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+[data-theme="noir"] .figur {
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Das Porträt in der Zeile entfällt - die Zeile ist Typografie. */
+[data-theme="noir"] .figur-bild {
+  display: none;
+}
+
+[data-theme="noir"] .figur .figur-name {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  max-width: none;
+  white-space: normal;
+}
+
+[data-theme="noir"] .figur .figur-name::after {
+  content: " ansprechen";
+}
+
+[data-theme="noir"] .ort-leer {
+  order: 5;
+  margin: 0;
+  padding: 15px 0;
+  border-top: 1px solid var(--linie);
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  text-align: left;
+}
+
+/* --- Ortsleiste: Rechtecke mit Haarlinie -------------------------- */
+
+[data-theme="noir"] .orte-leiste {
+  order: 6;
+  gap: 8px;
+  padding: 22px 0 18px;
+  margin: 0;
+}
+
+[data-theme="noir"] .ort-chip {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--linie);
+  opacity: 1;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .ort-chip[data-aktiv="true"] {
+  border-color: var(--akzent);
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .ort-chip-bild {
+  display: none;
+}
+
+[data-theme="noir"] .ort-chip .punkt {
+  position: static;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+[data-theme="noir"] .ort-chip .punkt::before {
+  content: "· ";
+}
+
+/* --- Kopfzeile über dem Ort --------------------------------------- */
+
+[data-theme="noir"] .kopf {
+  padding: calc(var(--safe-top) + 14px) 24px 10px;
+  background: none;
+  border: none;
+}
+
+[data-theme="noir"] .kopf h1 {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  line-height: 1.4;
+}
+
+[data-theme="noir"] .kopf .unterzeile {
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .rund-knopf {
+  width: auto;
+  height: auto;
+  padding: 4px 6px;
+  font-size: 13px;
+  color: var(--text-leise);
+}

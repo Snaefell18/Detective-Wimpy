@@ -26,3 +26,40 @@
   /* Wie stark Bilder abgedunkelt werden - im Klassisch gar nicht. */
   --bild-helligkeit: 1;
 }
+
+/*
+ * Elemente, die nur das Noir-Design braucht. Im Klassisch bleiben sie
+ * unsichtbar, damit es genauso aussieht wie vorher.
+ */
+[data-theme="klassisch"] .start-marke,
+[data-theme="klassisch"] .start-unterzeile,
+[data-theme="klassisch"] .zeilen-meta {
+  display: none;
+}
+
+/* Der Schriftzug erscheint weiterhin nur, solange kein Titelbild da ist. */
+[data-theme="klassisch"] .start-logo[data-ohne-bild="false"] {
+  display: none;
+}
+
+/*
+ * Die Symbole und der Zähler standen früher direkt im Text. Damit die Zeilen
+ * millimetergenau so umbrechen wie vorher, kommt das Leerzeichen zurück -
+ * kein Abstand über margin, der wäre minimal anders.
+ */
+/* Ein geschütztes Leerzeichen - ein normales fiele am Rand eines
+   Flex-Elements weg. */
+[data-theme="klassisch"] .knopf .symbol::after,
+[data-theme="klassisch"] .nav-zaehler::before {
+  content: "\00a0";
+}
+
+/*
+ * .knopf ist ein Flex-Container mit 8px Abstand. Weil der Text jetzt in zwei
+ * Spans steckt, käme dieser Abstand zusätzlich zum Leerzeichen dazu - die
+ * Zeile wäre breiter als vorher. Nur bei den aufgeteilten Knöpfen also kein
+ * Flex-Abstand.
+ */
+[data-theme="klassisch"] .knopf:has(.zeilen-text) {
+  gap: 0;
+}

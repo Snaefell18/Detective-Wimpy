@@ -51,6 +51,7 @@ export function OrtScreen({
                   <Bild src={c.bild} alt={c.name} platzhalter={c.name} />
                 </div>
                 <span className="figur-name">{c.name}</span>
+                <span className="zeilen-meta">{c.tierart} · anwesend</span>
               </button>
             ))}
           </div>
@@ -68,8 +69,10 @@ export function OrtScreen({
           <p className="ort-leer">Keine Menschenseele. Beziehungsweise Tierseele.</p>
         )}
 
-        <button className="knopf dezent" onClick={umsehen} disabled={suchtGerade}>
-          {suchtGerade ? "Wimpy sucht …" : "🔍 Umsehen"}
+        <button className="knopf dezent umsehen" onClick={umsehen} disabled={suchtGerade}>
+          <span className="symbol">🔍</span>
+          <span className="zeilen-text">{suchtGerade ? "Wimpy sucht …" : "Umsehen"}</span>
+          <span className="zeilen-meta">Spur möglich</span>
         </button>
 
         <div className="orte-leiste">
