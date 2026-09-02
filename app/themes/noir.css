@@ -2205,3 +2205,93 @@
 [data-theme="noir"] .rund-knopf:last-child::before {
   background: var(--linie-akzent);
 }
+
+/* --- Arc-Übersicht -------------------------------------------------- */
+
+/* Wie die Kampagnenliste: keine Kacheln, sondern Zeilen mit Haarlinie.
+   Der senkrechte Faden links verbindet die Stationen zu einer Reihe. */
+[data-theme="noir"] .arc-station {
+  margin: 0;
+  padding: 16px 0 16px 4px;
+  border-top: 1px solid var(--linie);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+[data-theme="noir"] .arc-station[data-stand="dran"] {
+  background: none;
+}
+
+[data-theme="noir"] .arc-station-marke {
+  position: relative;
+  width: 26px;
+}
+
+/* Der Faden nach unten - bei der letzten Station endet er. */
+[data-theme="noir"] .arc-station-marke::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  bottom: -34px;
+  width: 1px;
+  background: var(--linie);
+}
+
+[data-theme="noir"] .arc-station:last-of-type .arc-station-marke::after {
+  display: none;
+}
+
+[data-theme="noir"] .arc-station-nummer {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .arc-station[data-stand="dran"] .arc-station-nummer,
+[data-theme="noir"] .arc-station[data-stand="geschafft"] .arc-station-haken {
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .arc-station-haken {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .arc-station-bild {
+  width: 66px;
+  height: 66px;
+  border-radius: 0;
+}
+
+[data-theme="noir"] .arc-station-bild img {
+  filter: saturate(0) brightness(0.72) contrast(1.15);
+}
+
+/* Was noch verschlossen ist, bleibt im Dunkeln - kein Bild, nur die Zeile. */
+[data-theme="noir"] .arc-station[data-stand="gesperrt"] .arc-station-bild {
+  opacity: 0.5;
+}
+
+[data-theme="noir"] .arc-station-text strong {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+[data-theme="noir"] .arc-station-text .leise,
+[data-theme="noir"] .arc-station-text .leise.klein {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .arc-station-finale .arc-station-text strong {
+  color: var(--akzent);
+}

@@ -104,11 +104,15 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
 2. Zu jeder Station gehören ein Erzählertext (optional mit Tondatei) und eine
    Saga. Die Saga lässt sich direkt hier erzeugen oder aus den vorhandenen
    auswählen.
-3. **Der Arc muss nicht am Stück entstehen.** Sobald die erste Station eine
+3. Im Spiel öffnet **Arcs** zuerst die Übersicht: alle Sagen untereinander,
+   mit Haken an dem, was durch ist. Starten lässt sich immer nur die nächste
+   offene - die Reihenfolge ist die Geschichte. Wer mittendrin pausiert,
+   findet dort „Weiterspielen“, und nach jeder Saga geht es dorthin zurück.
+4. **Der Arc muss nicht am Stück entstehen.** Sobald die erste Station eine
    Saga hat, taucht er im Spiel unter **Arcs** auf und lässt sich spielen. Die
    übrigen Stationen dürfen nachwachsen, während schon gespielt wird - der
    Spielstand liegt auf dem Gerät und liest den Arc bei jedem Start neu.
-4. Am Ende steht das große Finale. Gebaut ist bisher der Abschlusstext; die
+5. Am Ende steht das große Finale. Gebaut ist bisher der Abschlusstext; die
    Gerichtsverhandlung ist als Art schon vorgesehen und kommt später.
 
 Der Culprit ist dabei mehr als eine Notiz: Bis zur letzten Station bleibt er

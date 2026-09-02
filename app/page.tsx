@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { ArcsListe } from "@/components/ArcsListe";
+import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
@@ -38,6 +39,12 @@ export default function Home() {
   const [sagenOffen, setSagenOffen] = useState(false);
   const [arcsOffen, setArcsOffen] = useState(false);
   const [arcMeldung, setArcMeldung] = useState<string | null>(null);
+  /**
+   * Der Arc liegt beiseite, ohne beendet zu sein: Der Fortschritt bleibt
+   * gespeichert, das Hauptmenü ist wieder erreichbar. Über "Arcs" geht es
+   * weiter.
+   */
+  const [arcRuht, setArcRuht] = useState(false);
   const saga = useSagaLauf();
   const arc = useArcLauf();
 
@@ -49,7 +56,7 @@ export default function Home() {
   const sagaSetzePhase = saga.setzePhase;
   const sagaAuftakt = useCallback(() => sagaSetzePhase("auftakt"), [sagaSetzePhase]);
   const arcSetzePhase = arc.setzePhase;
-  const arcErzaehler = useCallback(() => arcSetzePhase("erzaehler"), [arcSetzePhase]);
+  const arcUebersicht = useCallback(() => arcSetzePhase("uebersicht"), [arcSetzePhase]);
 
   /**
    * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
@@ -139,6 +146,7 @@ export default function Home() {
     void tonFreigeben();
     setArcsOffen(false);
     setArcMeldung(null);
+    setArcRuht(false);
 
     const weiter = !vonVorn && arc.stand?.arc.id === gewaehlt.id;
     if (!weiter) {
@@ -148,10 +156,42 @@ export default function Home() {
       return;
     }
 
+    // Weiterspielen führt immer in die Übersicht - von dort sieht man, was
+    // ansteht, und nimmt auch eine pausierte Saga wieder auf.
     arc.starten(gewaehlt, false);
-    // Eine abgebrochene Saga wird nicht mitten im Kapitel wieder aufgenommen -
-    // die Station beginnt dann noch einmal mit ihrem Erzählertext.
-    if (arc.stand!.lauf.phase === "saga" && !saga.stand) arc.setzePhase("erzaehler", null);
+  };
+
+  /**
+   * Liegt ein Fall dieses Arcs pausiert herum? Dann heißt der Knopf in der
+   * Übersicht "Weiterspielen" statt "Saga beginnen".
+   */
+  const arcPausiert =
+    arc.stand && saga.stand && stand.status === "pausiert" && sagaFallLaeuft
+      ? (arc.stand.arc.teile.find((t) => t.sagaId === saga.stand?.saga.id)?.nummer ?? null)
+      : null;
+
+  /**
+   * Eine Station beginnen: erst der Erzählertext, dann ihre Saga.
+   *
+   * Wer sie schon angefangen und pausiert hat, landet direkt wieder im Fall -
+   * der Erzähler war ja schon dran.
+   */
+  const arcTeilStarten = (index: number) => {
+    void tonFreigeben();
+    if (!arc.stand) return;
+    const teil = arc.stand.arc.teile[index];
+    if (!teil?.sagaId) {
+      setArcMeldung("Dieser Teil wird noch vorbereitet.");
+      return;
+    }
+    setArcMeldung(null);
+
+    if (arcPausiert === teil.nummer && saga.stand) {
+      arc.setzePhase("saga", saga.stand.saga.id);
+      spiel.fortsetzen();
+      return;
+    }
+    arc.waehleTeil(index);
   };
 
   /** Die Saga der aktuellen Station holen und starten. */
@@ -171,7 +211,8 @@ export default function Home() {
         setArcMeldung("Die Saga zu diesem Teil ist gerade nicht abrufbar.");
         return;
       }
-      saga.starten(gefunden, true);
+      // Eine angefangene Saga läuft weiter, wo sie stand.
+      saga.starten(gefunden, saga.stand?.saga.id !== gefunden.id);
       arc.setzePhase("saga", gefunden.id);
     } catch {
       setArcMeldung("Die Saga zu diesem Teil konnte nicht geladen werden.");
@@ -223,15 +264,39 @@ export default function Home() {
     stand.fall && stand.status !== "kein-fall" && !sagaFallLaeuft,
   );
 
-  // Bildschirme des Arcs - solange keine seiner Sagen läuft.
-  if (arc.stand && !saga.stand && phase === "aus" && !fremderFallLaeuft) {
+  // Bildschirme des Arcs. Läuft gerade eine seiner Sagen, hat die Vorrang -
+  // dann steht die Phase auf "saga" und der Block darunter übernimmt.
+  if (
+    arc.stand &&
+    !arcRuht &&
+    arc.stand.lauf.phase !== "saga" &&
+    phase === "aus" &&
+    !fremderFallLaeuft
+  ) {
     const { arc: arcDaten, lauf } = arc.stand;
     const teil = arcDaten.teile[lauf.teil];
 
     if (lauf.phase === "vorspann") {
       return (
         <main className="app">
-          <ArcVorspann arc={arcDaten} onFertig={arcErzaehler} />
+          <ArcVorspann arc={arcDaten} onFertig={arcUebersicht} />
+        </main>
+      );
+    }
+
+    if (lauf.phase === "uebersicht") {
+      return (
+        <main className="app">
+          <ArcUebersicht
+            arc={arcDaten}
+            lauf={lauf}
+            pausiert={arcPausiert}
+            onStarten={arcTeilStarten}
+            onFinale={() => arc.setzePhase("finale")}
+            // Der Arc bleibt liegen - über "Arcs" geht es später weiter.
+            onSchliessen={() => setArcRuht(true)}
+          />
+          {arcMeldung && <p className="fehler schwebend">{arcMeldung}</p>}
         </main>
       );
     }
@@ -250,16 +315,16 @@ export default function Home() {
       );
     }
 
-    // "erzaehler" und - falls die Saga unterwegs verloren ging - auch "saga".
+    // Der Erzählertext vor einer Station.
     return (
       <main className="app">
         <ErzaehlerScreen
           teil={teil?.erzaehler ?? { text: "", audio: "" }}
           titel={`${arcDaten.name} · ${teil?.name ?? "Weiter"}`}
-          weiterText={teil?.sagaId ? "Saga beginnen ›" : "Zum Hauptmenü ›"}
+          weiterText={teil?.sagaId ? "Saga beginnen ›" : "Zurück zur Übersicht ›"}
           onWeiter={() => {
             if (teil?.sagaId) void arcSagaStarten();
-            else arc.beenden();
+            else arc.setzePhase("uebersicht");
           }}
         />
         {arcMeldung && <p className="fehler schwebend">{arcMeldung}</p>}

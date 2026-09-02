@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Arc, ArcLauf } from "./arcTypen";
+import { naechsterTeil, type Arc, type ArcLauf } from "./arcTypen";
 
 /**
  * Der Fortschritt in einem Arc - liegt nur auf dem Gerät.
@@ -45,8 +45,17 @@ export function useArcLauf() {
     setStand((alt) => {
       if (!vonVorn && alt?.arc.id === arc.id) {
         // Weiterspielen: der Arc frisch aus der Datenbank (er kann inzwischen
-        // gewachsen sein), der Fortschritt bleibt.
-        return { arc, lauf: { ...alt.lauf, teil: Math.min(alt.lauf.teil, arc.teile.length - 1) } };
+        // gewachsen sein), der Fortschritt bleibt. Man landet immer in der
+        // Übersicht - auch wenn eine Saga noch pausiert herumliegt: Von dort
+        // aus geht es sichtbar weiter.
+        return {
+          arc,
+          lauf: {
+            ...alt.lauf,
+            teil: naechsterTeil(arc, alt.lauf.geschafft) ?? arc.teile.length - 1,
+            phase: alt.lauf.phase === "vorspann" ? "vorspann" : "uebersicht",
+          },
+        };
       }
       return {
         arc,
@@ -70,36 +79,38 @@ export function useArcLauf() {
     );
   }, []);
 
+  /** Eine Station auswählen - erst der Erzähler, dann ihre Saga. */
+  const waehleTeil = useCallback((index: number) => {
+    setStand((alt) =>
+      alt ? { ...alt, lauf: { ...alt.lauf, teil: index, phase: "erzaehler", sagaId: null } } : alt,
+    );
+  }, []);
+
   /**
-   * Eine Station ist durch - weiter zum nächsten Erzählerteil oder zum Finale.
-   *
-   * Fehlt die nächste Saga noch, bleibt der Lauf trotzdem stehen: Die Liste
-   * zeigt dann, dass es hier vorerst nicht weitergeht.
+   * Eine Station ist durch. Zurück in die Übersicht: Dort sieht man den Haken
+   * und was als Nächstes ansteht - auch, wenn die nächste Saga noch fehlt.
    */
   const teilGeschafft = useCallback(() => {
     setStand((alt) => {
       if (!alt) return alt;
-      const nummer = alt.lauf.teil + 1;
+      const nummer = alt.arc.teile[alt.lauf.teil]?.nummer ?? alt.lauf.teil + 1;
       const geschafft = alt.lauf.geschafft.includes(nummer)
         ? alt.lauf.geschafft
         : [...alt.lauf.geschafft, nummer];
-      const letzte = alt.lauf.teil >= alt.arc.teile.length - 1;
       return {
         ...alt,
-        lauf: letzte
-          ? { ...alt.lauf, geschafft, phase: "finale", sagaId: null }
-          : {
-              ...alt.lauf,
-              geschafft,
-              teil: alt.lauf.teil + 1,
-              phase: "erzaehler",
-              sagaId: null,
-            },
+        lauf: {
+          ...alt.lauf,
+          geschafft,
+          teil: naechsterTeil(alt.arc, geschafft) ?? alt.lauf.teil,
+          phase: "uebersicht",
+          sagaId: null,
+        },
       };
     });
   }, []);
 
   const beenden = useCallback(() => setStand(null), []);
 
-  return { stand, geladen, starten, setzePhase, teilGeschafft, beenden };
+  return { stand, geladen, starten, setzePhase, waehleTeil, teilGeschafft, beenden };
 }

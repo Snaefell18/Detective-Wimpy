@@ -77,7 +77,11 @@ export type ArcLauf = {
   arcId: string;
   /** 0-basiert: Index in teile[]. */
   teil: number;
-  phase: "vorspann" | "erzaehler" | "saga" | "finale";
+  /**
+   * "uebersicht" ist die Drehscheibe: Von dort startet man die nächste Saga,
+   * kehrt nach jeder zurück und sieht, was schon geschafft ist.
+   */
+  phase: "vorspann" | "uebersicht" | "erzaehler" | "saga" | "finale";
   /** Id der Saga, die gerade zu diesem Arc läuft. */
   sagaId: string | null;
   /** Nummern der abgeschlossenen Stationen. */
@@ -186,3 +190,34 @@ export function besetzungFuerTeil(
   const ohne = verdaechtigenIds.filter((id) => id !== arc.culprit.charakterId);
   return ohne.length >= 3 && ohne.length < verdaechtigenIds.length ? ohne : [];
 }
+
+/**
+ * Die nächste Station, die dran ist - der erste Teil, der noch nicht
+ * geschafft ist. Sind alle durch, kommt null: Dann steht das Finale an.
+ */
+export const naechsterTeil = (arc: Arc, geschafft: number[]): number | null => {
+  const index = arc.teile.findIndex((t) => !geschafft.includes(t.nummer));
+  return index < 0 ? null : index;
+};
+
+/** Wie eine Station in der Übersicht dasteht. */
+export type TeilStand = "geschafft" | "dran" | "wartet" | "gesperrt";
+
+/**
+ * Der Stand einer Station.
+ *
+ * "dran" ist immer nur eine - die nächste offene, und nur wenn ihre Saga
+ * schon existiert. Fehlt die noch, "wartet" sie; alles dahinter bleibt
+ * "gesperrt", damit niemand die Reihenfolge überspringt.
+ */
+export function teilStand(arc: Arc, geschafft: number[], index: number): TeilStand {
+  const teil = arc.teile[index];
+  if (!teil) return "gesperrt";
+  if (geschafft.includes(teil.nummer)) return "geschafft";
+  if (naechsterTeil(arc, geschafft) !== index) return "gesperrt";
+  return teil.sagaId ? "dran" : "wartet";
+}
+
+/** Das Finale steht erst offen, wenn jede Station durch ist. */
+export const finaleOffen = (arc: Arc, geschafft: number[]): boolean =>
+  arc.teile.every((t) => geschafft.includes(t.nummer));
