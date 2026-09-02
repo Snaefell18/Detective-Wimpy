@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AdminSchloss, abmelden } from "@/components/admin/AdminSchloss";
 import { ArcsBereich } from "@/components/admin/ArcsBereich";
 import { BilderBereich } from "@/components/admin/BilderBereich";
 import { KampagnenBereich } from "@/components/admin/KampagnenBereich";
@@ -22,7 +23,16 @@ const REITER: { id: Bereich; label: string }[] = [
   { id: "spiel", label: "Spiel" },
 ];
 
+/** Alles hinter dem Schloss. */
 export default function AdminSeite() {
+  return (
+    <AdminSchloss>
+      <AdminInhalt />
+    </AdminSchloss>
+  );
+}
+
+function AdminInhalt() {
   const [bereich, setBereich] = useState<Bereich>("kampagnen");
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -44,6 +54,17 @@ export default function AdminSeite() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1>Admin</h1>
           <p className="unterzeile">Kampagnen, Stammdaten und Einstellungen</p>
+        </div>
+        <div className="kopf-knoepfe">
+          <button
+            className="rund-knopf"
+            onClick={abmelden}
+            aria-label="Abschließen"
+            title="Abschließen"
+          >
+            <span className="symbol">🔒</span>
+            <span className="knopf-wort">Zu</span>
+          </button>
         </div>
       </header>
 

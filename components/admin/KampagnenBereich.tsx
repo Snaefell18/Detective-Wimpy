@@ -7,7 +7,6 @@ import { akteLesen, akteSchreiben } from "@/lib/akte";
 import { erzeugeFall } from "@/lib/fallErzeugen";
 import { leererFall } from "@/lib/leereAkte";
 import { FallEditor } from "./FallEditor";
-import { PasswortFeld } from "./PasswortFeld";
 import { alsStaedte } from "@/lib/csv";
 import { ladeKampagnen, loescheKampagne, speichereKampagne } from "@/lib/db";
 import { useStammdaten } from "@/lib/stammdaten";
@@ -225,10 +224,6 @@ export function KampagnenBereich({ onMeldung, onFehler }: BereichProps) {
         gespeichert. Im Spiel steht er unter „Kampagnen“ und startet ohne
         Wartezeit - das spart bei jedem weiteren Spielen den Modellaufruf.
       </p>
-
-      <div className="knopf-reihe">
-        <PasswortFeld />
-      </div>
 
       <h2 className="abschnitt">Neuen Fall vorbereiten</h2>
 

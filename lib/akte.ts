@@ -33,6 +33,21 @@ export function setzeAdminToken(token: string): void {
 const senden = <T,>(body: unknown) =>
   postJson<T>("/api/akte", body, 60, { "x-admin-token": adminToken() });
 
+/**
+ * Stimmt dieses Passwort? Fragt den Server - nur der kennt das ADMIN_TOKEN.
+ *
+ * `ohnePasswort` heißt: Auf dem Server ist gar keins gesetzt. Dann steht der
+ * Admin-Bereich jedem offen, der die Adresse kennt; das Schloss sagt das auch
+ * so und lässt einen trotzdem hinein.
+ */
+export const pruefeZugang = (token: string) =>
+  postJson<{ ok: boolean; ohnePasswort: boolean }>(
+    "/api/akte",
+    { aktion: "zugang" },
+    20,
+    { "x-admin-token": token },
+  );
+
 export const akteLesen = (siegel: string) =>
   senden<{ fall: CaseFile }>({ aktion: "fall-lesen", siegel }).then((a) => a.fall);
 

@@ -54,11 +54,24 @@ function oeffentlichVon(fall: CaseFile): PublicCase {
 
 export async function POST(request: Request) {
   try {
-    const gesperrt = zugangGeprueft(request);
-    if (gesperrt) return NextResponse.json({ fehler: gesperrt }, { status: 403 });
-
     const body = await request.json().catch(() => ({}));
     const aktion = String(body?.aktion ?? "");
+
+    // Nur nachfragen, ob das Passwort stimmt - daran hängt das Schloss vor
+    // dem Admin-Bereich. Es antwortet auch, wenn gar keines gesetzt ist:
+    // Sonst käme man an sein eigenes Menü nicht mehr heran, ohne vorher neu
+    // zu deployen.
+    if (aktion === "zugang") {
+      const erwartet = process.env.ADMIN_TOKEN;
+      if (!erwartet) return NextResponse.json({ ok: true, ohnePasswort: true });
+      const mitgeschickt = request.headers.get("x-admin-token") ?? "";
+      return mitgeschickt === erwartet
+        ? NextResponse.json({ ok: true, ohnePasswort: false })
+        : NextResponse.json({ fehler: "Falsches Admin-Passwort." }, { status: 403 });
+    }
+
+    const gesperrt = zugangGeprueft(request);
+    if (gesperrt) return NextResponse.json({ fehler: gesperrt }, { status: 403 });
 
     if (aktion === "fall-lesen") {
       let fall: CaseFile;

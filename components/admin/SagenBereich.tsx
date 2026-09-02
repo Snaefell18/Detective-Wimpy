@@ -18,7 +18,6 @@ import {
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
 import { FallEditor } from "./FallEditor";
-import { PasswortFeld } from "./PasswortFeld";
 import type { BereichProps } from "./typen";
 
 const SCHWIERIGKEITEN: { id: SagaVorgaben["schwierigkeit"]; label: string }[] = [
@@ -532,10 +531,6 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         spricht der Erzähler - den Ton dazu legst du danach in /public/audio ab
         und trägst den Pfad hier ein.
       </p>
-
-      <div className="knopf-reihe">
-        <PasswortFeld />
-      </div>
 
       <h2 className="abschnitt">Neue Saga vorbereiten</h2>
 

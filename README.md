@@ -23,6 +23,8 @@ npm run dev                    # http://localhost:3000
    - `ANTHROPIC_MODEL` - optional, Default ist `claude-opus-5`.
    - `CASE_SECRET` - optional, langer Zufallsstring zum Verschlüsseln des Falls.
      Ohne Angabe wird der API-Key als Schlüsselbasis benutzt.
+   - `ADMIN_TOKEN` - das Passwort für den Admin-Bereich. Ohne Angabe steht das
+     Menü jedem offen, der die Adresse kennt (die Akten bleiben trotzdem zu).
 3. Deployen. Fertig - kein Server, keine Datenbank nötig.
 
 ## Firebase einrichten
@@ -206,7 +208,21 @@ Spiel funktioniert also auch ganz ohne Grafiken.
 
 ## Admin-Menü
 
-Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`):
+Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`).
+
+**Der ganze Bereich hängt an einem Passwort:** dem `ADMIN_TOKEN` vom Server -
+demselben, mit dem auch die Akten geöffnet werden. Geprüft wird es beim Server,
+der Browser bekommt nur ein Ja oder Nein; danach bleibt es auf dem Gerät, bis
+man oben rechts wieder abschließt. Ist auf dem Server keines gesetzt, sagt der
+Bildschirm das und lässt einen trotzdem hinein - sonst käme man an sein eigenes
+Menü nicht mehr heran.
+
+Was das schützt und was nicht: Es hält Neugierige vom Menü fern und ist die
+einzige Tür zu den Akten - Täter und Lösung gibt der Server ohne dieses
+Passwort nicht heraus. Die Stammdaten in Firestore hängen dagegen an den
+Datenbankregeln; dieser Bildschirm ersetzt sie nicht.
+
+Dahinter:
 
 - **Tiere / Orte / Dinge** - Einträge anlegen, ändern und löschen; die Werte
   (Charisma, Kriminalität …) stellt man direkt mit Schiebereglern ein. Für
