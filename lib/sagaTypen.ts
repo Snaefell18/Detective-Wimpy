@@ -147,6 +147,15 @@ export type Saga = {
   finale: SagaFinale;
   /** Der verschlüsselte Bogen: Drahtzieher, Wahrheit, Enthüllung je Kapitel. */
   bogenSiegel: string;
+  /**
+   * Aus welchem Arc heraus diese Saga erzeugt wurde.
+   *
+   * Nur eine Herkunftsnotiz, keine Bindung: Die Saga bleibt einzeln spielbar
+   * und lässt sich jedem Arc zuordnen. Sie sagt aber, ob die Texte die
+   * Vorgaben dieses Arcs überhaupt kannten - eine später zugeordnete Saga
+   * weiß nichts von seinem Ziel und seinem Culprit.
+   */
+  arcId?: string;
   erstelltAm: number;
 };
 

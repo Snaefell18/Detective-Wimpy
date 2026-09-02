@@ -115,8 +115,14 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    im Saga-Bereich - Kapitelzahl, Städte, Täter je Kapitel, Reifegrad, Ton,
    Schwierigkeit. Was der Arc vorgibt (Überthema samt Culprit-Ansage, die
    Besetzung ohne den Culprit, im letzten Teil der Drahtzieher samt Twist), ist
-   dort vorbelegt und markiert - ändern lässt es sich trotzdem. Alternativ
-   ordnet man eine bereits vorhandene Saga zu.
+   dort vorbelegt und markiert - ändern lässt es sich trotzdem.
+
+   Eine **bereits vorhandene Saga** lässt sich ebenfalls zuordnen, wirkt dann
+   aber nur als Station: Ihre Texte sind längst geschrieben und kennen weder
+   das Ziel des Arcs noch seinen Culprit. Der Admin sagt das an der Station
+   auch - und warnt, wenn diese Saga den Culprit sogar schon als den
+   Verantwortlichen ausweist. Wer die Vorgaben des Arcs in den Texten haben
+   will, erzeugt die Saga aus der Station heraus.
 3. Im Spiel öffnet **Arcs** zuerst die Übersicht: alle Sagen untereinander,
    mit Haken an dem, was durch ist. Starten lässt sich immer nur die nächste
    offene - die Reihenfolge ist die Geschichte. Wer mittendrin pausiert,

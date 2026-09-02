@@ -29,7 +29,7 @@ import {
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
-import { nenntNamen } from "@/lib/namenSchutz";
+import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
 import type { BereichProps } from "./typen";
@@ -57,6 +57,27 @@ export function vorgabenFuerTeil(
     drahtzieherId: letzte ? arc.culprit.charakterId : "",
     twist: letzte && Boolean(arc.culprit.charakterId),
   };
+}
+
+/**
+ * Verrät diese Saga den Culprit des Arcs schon in ihren sichtbaren Texten?
+ *
+ * Gefragt sind nicht Namensnennungen an sich - in einer fremden Saga darf er
+ * ruhig vorkommen -, sondern Sätze, die ihn als den Kopf hinter allem
+ * ausweisen. Genau die nehmen dem Arc sein Ende vorweg.
+ */
+function enttarntDenCulprit(saga: Saga, name: string): boolean {
+  const texte = [
+    saga.name,
+    saga.thema,
+    saga.klappentext,
+    saga.auftakt.text,
+    ...saga.kapitel.flatMap((k) => [k.name, k.teaser, k.erzaehler.text]),
+    saga.finale.erzaehler.text,
+    saga.finale.epilog.text,
+  ];
+  // Was ohneEnttarnung streichen würde, ist genau das, was hier stört.
+  return texte.some((text) => text && ohneEnttarnung(text, name) !== text);
 }
 
 /** Einer Station ihre Saga zuweisen - oder sie wieder freimachen. */
@@ -198,7 +219,9 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
         },
         setSchritt,
       );
-      await speichereSaga(saga);
+      // Die Herkunft merken: Nur so lässt sich später sagen, ob die Texte die
+      // Vorgaben dieses Arcs kannten.
+      await speichereSaga({ ...saga, arcId: arc.id });
       await speichereArc(mitSaga(arc, index, saga.id));
       await laden();
       setEntwurfSaga(null);
@@ -378,6 +401,12 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
 
               {arc.teile.map((teil, i) => {
                 const saga = sagas.find((s) => s.id === teil.sagaId);
+                const fremd = Boolean(saga && saga.arcId !== arc.id);
+                const culpritName = verdaechtige.find(
+                  (c) => c.id === arc.culprit.charakterId,
+                )?.name;
+                const verraet =
+                  saga && culpritName ? enttarntDenCulprit(saga, culpritName) : false;
                 return (
                   <div key={teil.nummer} className="erzaehler-feld">
                     <h4 className="unter-abschnitt">
@@ -402,6 +431,18 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                         maxLength={120}
                       />
                     </label>
+
+                    {fremd && (
+                      <p className="hinweis">
+                        Diese Saga ist außerhalb des Arcs entstanden. Ihre Texte
+                        kennen weder das Ziel noch den Culprit - spielbar ist sie
+                        trotzdem, und die Erzählertexte des Arcs kommen wie
+                        gewohnt davor.
+                        {verraet
+                          ? ` Achtung: Sie weist ${culpritName} bereits als den Verantwortlichen aus.`
+                          : ""}
+                      </p>
+                    )}
 
                     <ErzaehlerFeld
                       teil={teil.erzaehler}
