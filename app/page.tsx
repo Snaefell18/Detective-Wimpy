@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
@@ -10,12 +10,14 @@ import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
-import { ErzaehlerScreen } from "@/components/ErzaehlerScreen";
+import { ErzaehlerScreen, roemisch } from "@/components/ErzaehlerScreen";
 import { SagaVorspann } from "@/components/SagaVorspann";
 import { Prolog } from "@/components/Prolog";
 import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NeuerSpieler } from "@/components/NeuerSpieler";
+import { ReaktionScreen } from "@/components/ReaktionScreen";
+import { VerdachtsMeldung, type Verdachtsmeldung } from "@/components/VerdachtsMeldung";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
@@ -49,10 +51,41 @@ export default function Home() {
   const [arcRuht, setArcRuht] = useState(false);
   /** Wer gleich zum ersten Mal mitspielt - wird vor dem Kapitel angekündigt. */
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
+  /** Die Reaktion des Beschuldigten - steht zwischen Beschuldigung und Urteil. */
+  const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
+  const [verdachtsMeldung, setVerdachtsMeldung] = useState<Verdachtsmeldung | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
 
   const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
+
+  /**
+   * Bewegt sich ein Verdacht, fährt rechts kurz eine Meldung herein. Verglichen
+   * wird mit dem letzten Stand; beim ersten Fall gibt es nichts zu vergleichen.
+   */
+  const verdachtVorher = useRef<Record<string, number> | null>(null);
+  useEffect(() => {
+    const jetzt = stand.verdacht;
+    const vorher = verdachtVorher.current;
+    verdachtVorher.current = jetzt;
+    if (!vorher || !stand.fall) return;
+
+    for (const [id, wert] of Object.entries(jetzt)) {
+      const alt = vorher[id];
+      if (alt === undefined || alt === wert) continue;
+      const charakter = stand.fall.besetzung.find((c) => c.id === id);
+      if (!charakter) continue;
+      setVerdachtsMeldung({
+        id: Date.now(),
+        charakter,
+        richtung: wert > alt ? "hoch" : "runter",
+        wert,
+      });
+      // Nur die stärkste Bewegung zeigen - zwei Meldungen übereinander wären
+      // Krach statt Information.
+      break;
+    }
+  }, [stand.verdacht, stand.fall]);
 
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
@@ -355,6 +388,10 @@ export default function Home() {
         <ErzaehlerScreen
           teil={teil?.erzaehler ?? { text: "", audio: "" }}
           titel={`${arcDaten.name} · ${teil?.name ?? "Weiter"}`}
+          karte={{
+            marke: `Teil ${roemisch(teil?.nummer ?? lauf.teil + 1)}`,
+            name: teil?.name ?? arcDaten.name,
+          }}
           weiterText={teil?.sagaId ? "Saga beginnen ›" : "Zurück zur Übersicht ›"}
           onWeiter={() => {
             if (teil?.sagaId) void arcSagaStarten();
@@ -397,6 +434,11 @@ export default function Home() {
           <ErzaehlerScreen
             teil={kapitel.erzaehler}
             titel={`Kapitel ${kapitel.nummer}: ${kapitel.name}`}
+            karte={{
+              marke: `Kapitel ${roemisch(kapitel.nummer)}`,
+              name: kapitel.name,
+              bild: kapitel.fall?.orte[0]?.bild,
+            }}
             weiterText="Fall übernehmen ›"
             onWeiter={() => sagaFallStarten(false)}
           />
@@ -410,6 +452,11 @@ export default function Home() {
           <ErzaehlerScreen
             teil={sagaDaten.finale.erzaehler}
             titel={sagaDaten.finale.frage}
+            karte={{
+              marke: "Finale",
+              name: sagaDaten.name,
+              bild: sagaDaten.finale.fall?.orte[0]?.bild,
+            }}
             weiterText="Ins Finale ›"
             onWeiter={() => sagaFallStarten(true)}
           />
@@ -483,6 +530,19 @@ export default function Home() {
             }
           />
         )}
+      </main>
+    );
+  }
+
+  // Zwischen Beschuldigung und Urteil: die Reaktion des Beschuldigten.
+  if (reaktion && stand.fall) {
+    return (
+      <main className="app">
+        <ReaktionScreen
+          charakter={stand.fall.besetzung.find((c) => c.id === reaktion.charakterId)}
+          text={reaktion.text}
+          onFertig={() => setReaktion(null)}
+        />
       </main>
     );
   }
@@ -609,6 +669,13 @@ export default function Home() {
 
       {fehler && tab !== "ort" && !chatMit && <p className="fehler schwebend">{fehler}</p>}
 
+      {verdachtsMeldung && (
+        <VerdachtsMeldung
+          meldung={verdachtsMeldung}
+          onFertig={() => setVerdachtsMeldung(null)}
+        />
+      )}
+
       <Nav aktiv={tab} onWechsel={setTab} spurenAnzahl={stand.gefundeneSpuren.length} />
 
       {chatMit && chatCharakter && (
@@ -633,7 +700,10 @@ export default function Home() {
           versucheUebrig={stand.beschuldigungenUebrig}
           onBestaetigen={async (id, begruendung) => {
             const ergebnis = await spiel.beschuldige(id, begruendung);
-            if (ergebnis) setBeschuldigenOffen(false);
+            if (!ergebnis) return;
+            setBeschuldigenOffen(false);
+            // Erst das Gesicht und der Satz - das Urteil kommt danach.
+            if (ergebnis.reaktion) setReaktion({ charakterId: id, text: ergebnis.reaktion });
           }}
           onSchliessen={() => {
             setFehler(null);

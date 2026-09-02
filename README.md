@@ -172,6 +172,26 @@ sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des
 vorherigen nicht, ist neu. Das stimmt auch bei von Hand nachbearbeiteten
 Sagas.
 
+## Effekte im Spiel
+
+Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
+
+- **Der Fund.** Findet Wimpy etwas, blitzt es kurz auf: Gegenstand, Name, was
+  er sieht - als Einblendung über dem Ort, nach vier Sekunden von allein
+  wieder weg, auf Fingertipp sofort. Der Text steht danach wie gehabt im
+  Notizbuch.
+- **Vor dem Urteil.** Zwischen Beschuldigung und Auflösung sieht man den
+  Beschuldigten und hört, was er dazu sagt. Erst danach fällt das Urteil - und
+  mit ihm die Siegermusik, die zu einem Satz, der noch nichts entschieden hat,
+  nichts verloren hat.
+- **Wetter am Schauplatz** (Admin → Spiel): Regen, Nebel, Schnee, Nacht oder
+  „Zufall“ - eine Lage je Fall, damit sie nicht mitten im Herumlaufen
+  umschlägt. Alles reines CSS, keine zusätzlichen Dateien.
+- **Verdacht in Bewegung.** Ändert sich ein Verdacht, fährt rechts kurz eine
+  Meldung herein - ohne Knopf und ohne Berührungen zu schlucken.
+- **Titelkarten.** Vor jedem Kapitel steht zwei Sekunden „Kapitel II“ und der
+  Kapitelname über dem Schauplatz, dann übernimmt der Erzähler.
+
 ## Modelle und Kosten
 
 Standard ist **Claude Sonnet 5** (2 $ / 10 $ je Million Token) - stark genug für

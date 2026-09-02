@@ -3131,3 +3131,380 @@ a.zurueck {
     opacity: 0;
   }
 }
+
+/* --- Fund-Moment ---------------------------------------------------- */
+
+/* Liegt über dem Ort, nicht statt seiner: Der Fund bekommt einen Schlag,
+   reißt aber niemanden aus dem Spiel. */
+.fund-moment {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 8, 26, 0.72);
+  backdrop-filter: blur(3px);
+  animation: einblenden 220ms ease-out both;
+}
+
+.fund-moment[data-zu="true"] {
+  animation: ausblenden 240ms ease-in both;
+}
+
+@keyframes ausblenden {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Der Blitz einer Tatortaufnahme - einmal, kurz. */
+.fund-blitz {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+  animation: fund-blitz 420ms ease-out both;
+}
+
+@keyframes fund-blitz {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fund-karte {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+  text-align: center;
+  animation: fund-auftritt 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes fund-auftritt {
+  from {
+    transform: scale(0.9) rotate(-2deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.fund-bild {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.6));
+}
+
+.fund-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fund-text strong {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.fund-text p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.fund-murmel {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+/* --- Wetter --------------------------------------------------------- */
+
+/* Liegt über dem Ortsbild und schluckt keine Berührungen. */
+.wetter {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wetter[data-lage="nacht"] {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(10, 24, 62, 0.25) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(4, 10, 30, 0.55) 0%, rgba(2, 6, 20, 0.7) 100%);
+}
+
+.wetter[data-lage="nebel"] {
+  background:
+    radial-gradient(90% 50% at 30% 70%, rgba(210, 220, 235, 0.22) 0%, transparent 70%),
+    radial-gradient(80% 40% at 75% 55%, rgba(210, 220, 235, 0.18) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 40%, rgba(200, 212, 230, 0.22) 100%);
+  animation: nebel-ziehen 26s ease-in-out infinite alternate;
+}
+
+@keyframes nebel-ziehen {
+  from {
+    transform: translateX(-3%);
+  }
+  to {
+    transform: translateX(3%);
+  }
+}
+
+.wetter[data-lage="regen"] {
+  background: linear-gradient(180deg, rgba(6, 14, 34, 0.35) 0%, rgba(4, 10, 26, 0.45) 100%);
+}
+
+.wetter[data-lage="schnee"] {
+  background: linear-gradient(180deg, rgba(20, 30, 55, 0.28) 0%, rgba(12, 20, 40, 0.34) 100%);
+}
+
+/* Drei Schichten in verschiedenen Tempi ergeben Tiefe - ohne ein einziges
+   Bild: Der Regen ist ein wiederholter Farbverlauf, der nach unten läuft. */
+.wetter-schicht {
+  position: absolute;
+  inset: -20% -10%;
+  background-repeat: repeat;
+}
+
+.wetter[data-lage="regen"] .wetter-schicht {
+  background-image: repeating-linear-gradient(
+    100deg,
+    transparent 0 34px,
+    rgba(214, 228, 255, 0.42) 34px 35px,
+    transparent 35px 70px
+  );
+  background-size: 300px 300px;
+  opacity: 0.3;
+  animation: regen-fallen 0.55s linear infinite;
+}
+
+.wetter[data-lage="regen"] .wetter-schicht[data-tiefe="2"] {
+  opacity: 0.18;
+  animation-duration: 0.85s;
+  transform: scale(1.3) translateX(4%);
+}
+
+.wetter[data-lage="regen"] .wetter-schicht[data-tiefe="3"] {
+  opacity: 0.1;
+  animation-duration: 1.3s;
+  transform: scale(1.7) translateX(-6%);
+}
+
+@keyframes regen-fallen {
+  to {
+    background-position: -60px 300px;
+  }
+}
+
+.wetter[data-lage="schnee"] .wetter-schicht {
+  background-image:
+    radial-gradient(2.5px 2.5px at 30px 40px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 120px 90px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(3px 3px at 200px 30px, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(2px 2px at 260px 140px, rgba(255, 255, 255, 0.85), transparent);
+  background-size: 300px 300px;
+  animation: schnee-fallen 9s linear infinite;
+}
+
+.wetter[data-lage="schnee"] .wetter-schicht[data-tiefe="2"] {
+  opacity: 0.7;
+  animation-duration: 14s;
+  transform: scale(1.6);
+}
+
+.wetter[data-lage="schnee"] .wetter-schicht[data-tiefe="3"] {
+  opacity: 0.45;
+  animation-duration: 20s;
+  transform: scale(2.3);
+}
+
+@keyframes schnee-fallen {
+  to {
+    background-position: 40px 300px;
+  }
+}
+
+/* Wer Bewegung nicht verträgt, bekommt die Stimmung ohne den Flug. */
+@media (prefers-reduced-motion: reduce) {
+  .wetter-schicht,
+  .wetter[data-lage="nebel"] {
+    animation: none;
+  }
+}
+
+/* --- Verdachts-Einblendung ------------------------------------------ */
+
+/* Fährt von rechts herein und schluckt keine Berührungen. */
+.verdacht-meldung {
+  position: absolute;
+  right: 12px;
+  top: calc(var(--safe-top) + 74px);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 999px;
+  background: rgba(8, 16, 38, 0.9);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: von-rechts 320ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+.verdacht-meldung[data-zu="true"] {
+  animation: nach-rechts 340ms ease-in both;
+}
+
+@keyframes von-rechts {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes nach-rechts {
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+.verdacht-meldung-bild {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: none;
+}
+
+.verdacht-meldung-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.verdacht-meldung-text strong {
+  font-size: 14px;
+}
+
+.verdacht-meldung-text span {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.verdacht-meldung[data-richtung="hoch"] .verdacht-meldung-text span {
+  color: var(--gelb, #ffb547);
+}
+
+/* --- Reaktion vor dem Urteil ---------------------------------------- */
+
+.reaktion {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: #05091c;
+}
+
+.reaktion-inhalt {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px 22px calc(var(--safe-bottom) + 34px);
+  background: linear-gradient(180deg, transparent 0%, rgba(3, 8, 24, 0.9) 45%);
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 420ms ease-out,
+    transform 420ms ease-out;
+}
+
+.reaktion-inhalt[data-zeigen="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reaktion-satz {
+  margin: 6px 0 0;
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+.reaktion-hinweis {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  animation: pulsieren 1.6s ease-in-out infinite;
+}
+
+/* --- Titelkarte vor einem Kapitel ----------------------------------- */
+
+.kapitel-karte {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #04081a;
+}
+
+.kapitel-karte-bild {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  filter: blur(2px);
+  animation: karte-schub 2.4s ease-out both;
+}
+
+@keyframes karte-schub {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.kapitel-karte-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 0 24px;
+  animation: einblenden 500ms ease-out both;
+}
+
+.kapitel-karte-text h1 {
+  margin: 0;
+}

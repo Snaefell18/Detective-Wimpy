@@ -2318,3 +2318,130 @@
 [data-theme="noir"] .neuzugang .intro-portraet {
   filter: saturate(0.15) contrast(1.1) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.8));
 }
+
+/* --- Fund-Moment ---------------------------------------------------- */
+
+/* Im Noir ist der Fund eine Akte, keine Karteikarte: harte Kanten, ein
+   Haarlinienrahmen, Messing für die Überschrift. */
+[data-theme="noir"] .fund-moment {
+  background: rgba(8, 8, 8, 0.86);
+}
+
+[data-theme="noir"] .fund-bild {
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--linie);
+}
+
+[data-theme="noir"] .fund-bild .bild {
+  filter: saturate(0.1) contrast(1.2) brightness(0.95);
+}
+
+[data-theme="noir"] .fund-text strong {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .fund-text p {
+  font-family: var(--f-text);
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .fund-murmel {
+  color: var(--akzent);
+  font-style: normal;
+}
+
+/* --- Wetter --------------------------------------------------------- */
+
+/* Der Noir-Schauplatz ist ohnehin entsättigt - das Wetter darf deshalb
+   kühler und härter liegen als im Klassisch. */
+[data-theme="noir"] .wetter[data-lage="nacht"] {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+[data-theme="noir"] .wetter[data-lage="nebel"] {
+  background:
+    radial-gradient(90% 50% at 30% 70%, rgba(232, 232, 228, 0.16) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 40%, rgba(232, 232, 228, 0.16) 100%);
+}
+
+/* --- Verdachts-Einblendung ------------------------------------------ */
+
+[data-theme="noir"] .verdacht-meldung {
+  border-radius: 0;
+  background: rgba(8, 8, 8, 0.92);
+  box-shadow: none;
+  border-left: 2px solid var(--akzent);
+  padding: 8px 14px 8px 10px;
+}
+
+[data-theme="noir"] .verdacht-meldung-bild {
+  border-radius: 0;
+}
+
+[data-theme="noir"] .verdacht-meldung-bild .bild {
+  filter: saturate(0) contrast(1.15) brightness(0.8);
+}
+
+[data-theme="noir"] .verdacht-meldung-text strong {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="noir"] .verdacht-meldung-text span {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+/* --- Reaktion vor dem Urteil ---------------------------------------- */
+
+[data-theme="noir"] .reaktion {
+  background: var(--grund);
+}
+
+[data-theme="noir"] .reaktion-inhalt {
+  background: linear-gradient(180deg, transparent 0%, rgba(8, 8, 8, 0.94) 45%);
+}
+
+[data-theme="noir"] .reaktion-satz {
+  font-family: var(--f-text);
+  color: var(--text);
+}
+
+[data-theme="noir"] .reaktion-hinweis {
+  color: var(--akzent);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+}
+
+/* --- Titelkarte ----------------------------------------------------- */
+
+[data-theme="noir"] .kapitel-karte {
+  background: var(--grund);
+}
+
+[data-theme="noir"] .kapitel-karte-bild {
+  opacity: 0.22;
+}
+
+[data-theme="noir"] .kapitel-karte-bild .bild {
+  filter: saturate(0) contrast(1.2) brightness(0.7);
+}
+
+/* Eine Haarlinie über und unter dem Titel - wie ein Kapitelvorspann. */
+[data-theme="noir"] .kapitel-karte-text::before,
+[data-theme="noir"] .kapitel-karte-text::after {
+  content: "";
+  width: 46px;
+  height: 1px;
+  background: var(--linie-akzent);
+}

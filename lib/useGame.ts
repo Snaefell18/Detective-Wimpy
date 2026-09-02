@@ -24,6 +24,22 @@ export type Ergebnis = {
   beschuldigtId: string;
 };
 
+/**
+ * Was beim Umsehen herauskommt: der Text fürs Notizbuch und - wenn etwas
+ * gefunden wurde - der Fund selbst. Der Fund bekommt seinen eigenen kurzen
+ * Moment auf dem Bildschirm, deshalb reicht der Text allein nicht mehr.
+ */
+export type Fund = {
+  spur: {
+    itemId: string;
+    name: string;
+    bild: string | null;
+    beobachtung: string;
+    vermutung: string | null;
+  } | null;
+  text: string;
+};
+
 export type Spielstand = {
   fall: PublicCase | null;
   siegel: string | null;
@@ -187,21 +203,13 @@ export function useGame() {
     }));
   }, []);
 
-  const umsehen = useCallback(async (): Promise<string | null> => {
+  const umsehen = useCallback(async (): Promise<Fund | null> => {
     const jetzt = standRef.current;
     if (!jetzt.siegel) return null;
     setFehler(null);
     setLaedt("suche");
     try {
-      const daten = await post<{
-        spur: {
-          itemId: string;
-          name: string;
-          beobachtung: string;
-          vermutung: string | null;
-        } | null;
-        text: string;
-      }>("/api/search", {
+      const daten = await post<Fund>("/api/search", {
         siegel: jetzt.siegel,
         ortId: jetzt.ortId,
         gefundeneSpuren: jetzt.gefundeneSpuren,
@@ -217,7 +225,7 @@ export function useGame() {
           ],
         }));
       }
-      return daten.text;
+      return daten;
     } catch (error) {
       setFehler(error instanceof Error ? error.message : "Unbekannter Fehler");
       return null;

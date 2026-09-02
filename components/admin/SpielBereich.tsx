@@ -7,8 +7,17 @@ import { useAdmin } from "@/lib/adminStore";
 import { useStammdaten } from "@/lib/stammdaten";
 import { SPEICHER_KEY } from "@/lib/useGame";
 import { dateiAlsStimme, istStimme, spracheErzeugen } from "@/lib/stimme";
-import { STANDARD_EINSTELLUNGEN, type Einstellungen } from "@/lib/types";
+import { STANDARD_EINSTELLUNGEN, type Einstellungen, type Wetterlage } from "@/lib/types";
 import type { BereichProps } from "./typen";
+
+const WETTER: { id: Wetterlage; label: string; hinweis: string }[] = [
+  { id: "aus", label: "Klar", hinweis: "wie bisher" },
+  { id: "zufall", label: "Zufall", hinweis: "je Fall eine Lage" },
+  { id: "regen", label: "Regen", hinweis: "Tropfen und nasse Nacht" },
+  { id: "nebel", label: "Nebel", hinweis: "Schwaden über allem" },
+  { id: "schnee", label: "Schnee", hinweis: "leise Flocken" },
+  { id: "nacht", label: "Nacht", hinweis: "spät und blau" },
+];
 
 const TOENE: { id: Einstellungen["ton"]; label: string; hinweis: string }[] = [
   { id: "kindgerecht", label: "Kindgerecht", hinweis: "warm und witzig" },
@@ -109,6 +118,26 @@ export function SpielBereich({ onMeldung }: BereichProps) {
         Vor jeder Runde spricht der Prolog, danach läuft der Titelsong, während
         Fall, Verdächtige und Schauplätze vorgestellt werden.
       </p>
+
+      <h2 className="abschnitt">Wetter am Schauplatz</h2>
+      <p className="leise">
+        Legt sich über das Ortsbild - Regen, Nebel, Schnee oder späte Nacht.
+        „Zufall“ würfelt einmal je Fall, damit das Wetter nicht mitten im
+        Herumlaufen umschlägt.
+      </p>
+      <div className="wahl-reihe">
+        {WETTER.map((w) => (
+          <button
+            key={w.id}
+            className="wahl-chip"
+            data-aktiv={e.wetter === w.id}
+            onClick={() => aendern({ einstellungen: { ...e, wetter: w.id } })}
+          >
+            <strong>{w.label}</strong>
+            <span className="leise klein">{w.hinweis}</span>
+          </button>
+        ))}
+      </div>
 
       <h2 className="abschnitt">Auftritt eines neuen Tiers</h2>
       <p className="leise">

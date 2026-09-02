@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { Bild, Szene } from "./Bild";
+import { FundMoment } from "./FundMoment";
+import { Wetter, lageFuer } from "./Wetter";
+import { useAdmin } from "@/lib/adminStore";
 import { findeOrt } from "@/lib/locations";
 import type { Character, PublicCase } from "@/lib/types";
+import type { Fund } from "@/lib/useGame";
 
 export function OrtScreen({
   fall,
@@ -17,24 +21,31 @@ export function OrtScreen({
   ortId: string;
   onOrtWechsel: (id: string) => void;
   onCharakter: (id: string) => void;
-  onUmsehen: () => Promise<string | null>;
+  onUmsehen: () => Promise<Fund | null>;
   suchtGerade: boolean;
 }) {
   const [fundText, setFundText] = useState<string | null>(null);
+  /** Der kurze Moment über dem Ort, wenn wirklich etwas gefunden wurde. */
+  const [moment, setMoment] = useState<Fund | null>(null);
+  const { daten: admin } = useAdmin();
   const ort = findeOrt(fall.orte, ortId);
   const verdaechtige: Character[] = fall.besetzung.filter((c) => !c.istDetektiv);
   const anwesend = verdaechtige.filter((c) => fall.aufenthalt[c.id] === ortId);
 
   const umsehen = async () => {
     setFundText(null);
-    const text = await onUmsehen();
-    if (text) setFundText(text);
+    const fund = await onUmsehen();
+    if (!fund) return;
+    // Ein Fund bekommt seinen Moment; wer nichts findet, liest nur die Zeile.
+    if (fund.spur) setMoment(fund);
+    else setFundText(fund.text);
   };
 
   return (
     <div className="ort-ansicht">
       {/* Der Ort füllt den ganzen Bildschirm, alles andere schwebt darüber. */}
       <Szene src={ort?.bild} alt={ort?.name ?? ortId} platzhalter="" />
+      <Wetter lage={lageFuer(admin.einstellungen.wetter, fall.id)} />
 
       <div className="ort-buehne">
         <div className="ort-titel">
@@ -95,6 +106,16 @@ export function OrtScreen({
           })}
         </div>
       </div>
+
+      {moment && (
+        <FundMoment
+          fund={moment}
+          onFertig={() => {
+            setFundText(moment.text);
+            setMoment(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -111,7 +111,12 @@ export type Einstellungen = {
    * Dunkeln; enthüllt wird sie erst am Ende.
    */
   neuzugangTon: string;
+  /** Wetter und Tageszeit über dem Schauplatz. */
+  wetter: Wetterlage;
 };
+
+/** Was über dem Ortsbild liegt - reines CSS, keine zusätzlichen Dateien. */
+export type Wetterlage = "aus" | "zufall" | "regen" | "nebel" | "schnee" | "nacht";
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   beschuldigungen: 2,
@@ -121,6 +126,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   ortsAnzahl: 5,
   intro: true,
   neuzugangTon: "",
+  wetter: "aus",
 };
 
 /** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */

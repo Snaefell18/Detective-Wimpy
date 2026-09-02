@@ -3,7 +3,7 @@
 import { postJson } from "./api";
 import { erzeugeFall } from "./fallErzeugen";
 import { LEERER_ERZAEHLER, type Saga, type SagaVorgaben } from "./sagaTypen";
-import type { Character, Item, Location, PublicCase } from "./types";
+import type { Character, Einstellungen, Item, Location, PublicCase } from "./types";
 
 /**
  * Eine ganze Saga bauen - in lauter kleinen Aufrufen.
@@ -80,15 +80,16 @@ export async function erzeugeSaga(
   siegel = finaleBogen.bogenSiegel;
 
   // 4. Jetzt die eigentlichen Fälle - jeder wieder in drei Schritten.
-  const einstellungen = {
+  const einstellungen: Einstellungen = {
     beschuldigungen: eingaben.vorgaben.beschuldigungen,
     startverdacht: 20,
     ton: eingaben.vorgaben.ton,
     stadt: eingaben.vorgaben.stadt,
     ortsAnzahl: eingaben.vorgaben.ortsAnzahl,
     intro: true,
-    // Der Auftrittston hängt am Gerät, nicht am Fall.
+    // Auftrittston und Wetter hängen am Gerät, nicht am Fall.
     neuzugangTon: "",
+    wetter: "aus",
   };
 
   const fallFuer = (kapitel: number, was: string) =>
