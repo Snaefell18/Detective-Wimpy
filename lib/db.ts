@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { anmelden, getDb } from "./firebase";
 import type { Saga } from "./sagaTypen";
+import type { Arc } from "./arcTypen";
 import type { Character, Item, Kampagne, Location } from "./types";
 
 /**
@@ -120,3 +121,14 @@ export async function speichereSaga(saga: Saga): Promise<void> {
 }
 
 export const loescheSaga = (id: string) => loesche("sagen", id);
+
+/* --- Arcs: mehrere Sagen unter einem Dach -------------------------- */
+
+export const ladeArcs = () => alle<Arc>("arcs");
+
+export async function speichereArc(arc: Arc): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "arcs", arc.id), sauber(arc));
+}
+
+export const loescheArc = (id: string) => loesche("arcs", id);

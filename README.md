@@ -54,6 +54,8 @@ die Datenbank und lassen sich dort bearbeiten.
 | `orte`       | Schauplätze mit Stadt und Atmosphäre                |
 | `items`      | Gegenstände und Spuren                              |
 | `faelle`     | vorbereitete Fälle („Kampagnen“)                    |
+| `sagen`      | Sagas: mehrere Fälle mit gemeinsamem Überthema      |
+| `arcs`       | Arcs: mehrere Sagas unter einem Bogen               |
 
 Die Lösung eines Falls steht **nicht** im Klartext in der Datenbank: Täter,
 Motiv und gelogene Alibis stecken im Feld `siegel` - AES-256-verschlüsselt mit
@@ -77,6 +79,30 @@ kosten ihn genau einmal:
 2. „Fall erzeugen und speichern“ legt ihn in der Datenbank ab.
 3. Im Spiel steht er unter **Kampagnen** (Knopf unter „Neuen Fall starten“) und
    startet sofort - beliebig oft, ohne weitere Kosten.
+
+## Sagas und Arcs
+
+Eine **Saga** ist eine Reihe von Fällen mit gemeinsamem Überthema und einem
+Finale, in dem der Drahtzieher auffliegt. Sie entsteht im Admin-Menü unter
+**Sagas**; zwischen den Kapiteln spricht der Erzähler, wahlweise mit eigener
+Tondatei aus `public/audio`.
+
+Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
+
+1. Admin-Menü → **Arcs**. Name, Klappentext, eigener Titelsong (Pfad in
+   `public/audio`) und wie viele Sagas es werden sollen - eine bis zehn.
+2. Zu jeder Station gehören ein Erzählertext (optional mit Tondatei) und eine
+   Saga. Die Saga lässt sich direkt hier erzeugen oder aus den vorhandenen
+   auswählen.
+3. **Der Arc muss nicht am Stück entstehen.** Sobald die erste Station eine
+   Saga hat, taucht er im Spiel unter **Arcs** auf und lässt sich spielen. Die
+   übrigen Stationen dürfen nachwachsen, während schon gespielt wird - der
+   Spielstand liegt auf dem Gerät und liest den Arc bei jedem Start neu.
+4. Am Ende steht das große Finale. Gebaut ist bisher der Abschlusstext; die
+   Gerichtsverhandlung ist als Art schon vorgesehen und kommt später.
+
+Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
+spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.
 
 ## Modelle und Kosten
 
@@ -174,6 +200,8 @@ Auf dem Startbildschirm oben rechts das Zahnrad (oder direkt `/admin`):
   Tiere und Orte lässt sich weiterhin eine CSV einlesen - sie landet dann
   direkt in der Datenbank.
 - **Kampagnen** - Fälle vorbereiten und verwalten (siehe oben).
+- **Sagas / Arcs** - lange Reihen anlegen, Erzählertexte und Tondateien
+  pflegen (siehe oben).
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
   inklusive Titelbild des Startbildschirms.
 - **Spiel** - Stadt (oder Zufall), Schauplätze pro Fall, Intro an/aus,

@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ArcsBereich } from "@/components/admin/ArcsBereich";
 import { BilderBereich } from "@/components/admin/BilderBereich";
 import { KampagnenBereich } from "@/components/admin/KampagnenBereich";
 import { SagenBereich } from "@/components/admin/SagenBereich";
 import { SpielBereich } from "@/components/admin/SpielBereich";
 import { StammdatenBereich } from "@/components/admin/StammdatenBereich";
 
-type Bereich = "kampagnen" | "sagen" | "tiere" | "orte" | "items" | "bilder" | "spiel";
+type Bereich = "kampagnen" | "sagen" | "arcs" | "tiere" | "orte" | "items" | "bilder" | "spiel";
 
 const REITER: { id: Bereich; label: string }[] = [
   { id: "kampagnen", label: "Kampagnen" },
   { id: "sagen", label: "Sagas" },
+  { id: "arcs", label: "Arcs" },
   { id: "tiere", label: "Tiere" },
   { id: "orte", label: "Orte" },
   { id: "items", label: "Dinge" },
@@ -67,6 +69,7 @@ export default function AdminSeite() {
 
           {bereich === "kampagnen" && <KampagnenBereich {...gemeinsam} />}
           {bereich === "sagen" && <SagenBereich {...gemeinsam} />}
+          {bereich === "arcs" && <ArcsBereich {...gemeinsam} />}
           {bereich === "tiere" && <StammdatenBereich art="charaktere" {...gemeinsam} />}
           {bereich === "orte" && <StammdatenBereich art="orte" {...gemeinsam} />}
           {bereich === "items" && <StammdatenBereich art="items" {...gemeinsam} />}

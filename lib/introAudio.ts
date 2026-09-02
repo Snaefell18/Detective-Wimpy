@@ -12,13 +12,23 @@
  *    auch später starten, etwa nachdem der Fall erzeugt wurde.
  */
 
-export type Stueck = "prolog" | "intro" | "jubel";
+/**
+ * Die festen Stücke des Spiels - und daneben jeder Pfad in /public/audio.
+ * So kann ein Arc seinen eigenen Titelsong mitbringen, ohne dass der Manager
+ * davon wissen muss: Der Pfad ist zugleich sein Schlüssel.
+ */
+export type FestesStueck = "prolog" | "intro" | "jubel";
+export type Stueck = FestesStueck | `/${string}`;
 
-const DATEIEN: Record<Stueck, string> = {
+const DATEIEN: Record<FestesStueck, string> = {
   prolog: "/audio/introdark.mp3",
   intro: "/audio/intro.mp3",
   jubel: "/audio/winner.mp3",
 };
+
+/** Der Pfad zu einem Stück - eigene Dateien sind ihr eigener Schlüssel. */
+const dateiVon = (stueck: Stueck): string =>
+  stueck in DATEIEN ? DATEIEN[stueck as FestesStueck] : stueck;
 
 const spieler = new Map<Stueck, HTMLAudioElement>();
 let laufend: Stueck | null = null;
@@ -27,7 +37,7 @@ let freigabe: Promise<void> | null = null;
 function hole(stueck: Stueck): HTMLAudioElement {
   let audio = spieler.get(stueck);
   if (!audio) {
-    audio = new Audio(DATEIEN[stueck]);
+    audio = new Audio(dateiVon(stueck));
     audio.preload = "auto";
     audio.dataset.stueck = stueck;
     // Im Dokument verankert, damit iOS das Element nicht wegräumt.

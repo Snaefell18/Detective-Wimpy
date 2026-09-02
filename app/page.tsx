@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ArcsListe } from "@/components/ArcsListe";
+import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
@@ -17,8 +19,11 @@ import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
+import type { Arc } from "@/lib/arcTypen";
+import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import type { Saga } from "@/lib/sagaTypen";
+import { useArcLauf } from "@/lib/useArcLauf";
 import { useGame } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
 
@@ -31,7 +36,10 @@ export default function Home() {
   const [phase, setPhase] = useState<"aus" | "prolog" | "intro">("aus");
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
   const [sagenOffen, setSagenOffen] = useState(false);
+  const [arcsOffen, setArcsOffen] = useState(false);
+  const [arcMeldung, setArcMeldung] = useState<string | null>(null);
   const saga = useSagaLauf();
+  const arc = useArcLauf();
 
   const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
 
@@ -40,6 +48,8 @@ export default function Home() {
   const introFertig = useCallback(() => setPhase("aus"), []);
   const sagaSetzePhase = saga.setzePhase;
   const sagaAuftakt = useCallback(() => sagaSetzePhase("auftakt"), [sagaSetzePhase]);
+  const arcSetzePhase = arc.setzePhase;
+  const arcErzaehler = useCallback(() => arcSetzePhase("erzaehler"), [arcSetzePhase]);
 
   /**
    * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
@@ -118,7 +128,65 @@ export default function Home() {
     saga.setzePhase(finale ? "finale" : "fall", quelle.fall.id);
   };
 
-  if (!geladen || !saga.geladen) {
+  /* --- Arcs: mehrere Sagen unter einem Bogen -------------------------- */
+
+  /** Gehört die laufende Saga zur aktuellen Station des Arcs? */
+  const sagaGehoertZumArc = Boolean(
+    arc.stand && saga.stand && arc.stand.lauf.sagaId === saga.stand.saga.id,
+  );
+
+  const arcStarten = (gewaehlt: Arc, vonVorn: boolean) => {
+    void tonFreigeben();
+    setArcsOffen(false);
+    setArcMeldung(null);
+
+    const weiter = !vonVorn && arc.stand?.arc.id === gewaehlt.id;
+    if (!weiter) {
+      // Der Titelsong startet direkt im Klick - iOS lässt Ton nur so zu.
+      spieleSofort(themeVon(gewaehlt));
+      arc.starten(gewaehlt, true);
+      return;
+    }
+
+    arc.starten(gewaehlt, false);
+    // Eine abgebrochene Saga wird nicht mitten im Kapitel wieder aufgenommen -
+    // die Station beginnt dann noch einmal mit ihrem Erzählertext.
+    if (arc.stand!.lauf.phase === "saga" && !saga.stand) arc.setzePhase("erzaehler", null);
+  };
+
+  /** Die Saga der aktuellen Station holen und starten. */
+  const arcSagaStarten = async () => {
+    void tonFreigeben();
+    if (!arc.stand) return;
+    const teil = arc.stand.arc.teile[arc.stand.lauf.teil];
+    if (!teil?.sagaId) {
+      setArcMeldung("Dieser Teil wird noch vorbereitet.");
+      return;
+    }
+    setArcMeldung(null);
+    try {
+      const { daten } = await ladeSagas();
+      const gefunden = daten.find((s) => s.id === teil.sagaId);
+      if (!gefunden) {
+        setArcMeldung("Die Saga zu diesem Teil ist gerade nicht abrufbar.");
+        return;
+      }
+      saga.starten(gefunden, true);
+      arc.setzePhase("saga", gefunden.id);
+    } catch {
+      setArcMeldung("Die Saga zu diesem Teil konnte nicht geladen werden.");
+    }
+  };
+
+  /** Eine Saga des Arcs ist durch - weiter zur nächsten Station. */
+  const arcWeiter = () => {
+    void tonFreigeben();
+    saga.beenden();
+    spiel.aufgeben();
+    arc.teilGeschafft();
+  };
+
+  if (!geladen || !saga.geladen || !arc.geladen) {
     return <main className="app" />;
   }
 
@@ -154,6 +222,50 @@ export default function Home() {
   const fremderFallLaeuft = Boolean(
     stand.fall && stand.status !== "kein-fall" && !sagaFallLaeuft,
   );
+
+  // Bildschirme des Arcs - solange keine seiner Sagen läuft.
+  if (arc.stand && !saga.stand && phase === "aus" && !fremderFallLaeuft) {
+    const { arc: arcDaten, lauf } = arc.stand;
+    const teil = arcDaten.teile[lauf.teil];
+
+    if (lauf.phase === "vorspann") {
+      return (
+        <main className="app">
+          <ArcVorspann arc={arcDaten} onFertig={arcErzaehler} />
+        </main>
+      );
+    }
+
+    if (lauf.phase === "finale") {
+      return (
+        <main className="app">
+          <ErzaehlerScreen
+            teil={arcDaten.finale.erzaehler}
+            titel={`${arcDaten.name} - Finale`}
+            weiterText="Zum Hauptmenü ›"
+            musik="jubel"
+            onWeiter={arc.beenden}
+          />
+        </main>
+      );
+    }
+
+    // "erzaehler" und - falls die Saga unterwegs verloren ging - auch "saga".
+    return (
+      <main className="app">
+        <ErzaehlerScreen
+          teil={teil?.erzaehler ?? { text: "", audio: "" }}
+          titel={`${arcDaten.name} · ${teil?.name ?? "Weiter"}`}
+          weiterText={teil?.sagaId ? "Saga beginnen ›" : "Zum Hauptmenü ›"}
+          onWeiter={() => {
+            if (teil?.sagaId) void arcSagaStarten();
+            else arc.beenden();
+          }}
+        />
+        {arcMeldung && <p className="fehler schwebend">{arcMeldung}</p>}
+      </main>
+    );
+  }
 
   // Erzählerteile einer Saga.
   if (saga.stand && phase === "aus" && !fremderFallLaeuft) {
@@ -212,9 +324,13 @@ export default function Home() {
           <ErzaehlerScreen
             teil={sagaDaten.finale.epilog}
             titel={`${sagaDaten.name} - Ende`}
-            weiterText="Zum Hauptmenü ›"
             musik={lauf.finaleGeschafft ? "jubel" : undefined}
+            weiterText={sagaGehoertZumArc ? "Weiter im Arc ›" : "Zum Hauptmenü ›"}
             onWeiter={() => {
+              if (sagaGehoertZumArc) {
+                arcWeiter();
+                return;
+              }
               saga.beenden();
               spiel.aufgeben();
             }}
@@ -232,6 +348,7 @@ export default function Home() {
           onStart={() => void fallStarten()}
           onKampagnen={() => setKampagnenOffen(true)}
           onSagas={() => setSagenOffen(true)}
+          onArcs={() => setArcsOffen(true)}
           onFortsetzen={stand.status === "pausiert" ? spiel.fortsetzen : undefined}
           laufenderFall={stand.status === "pausiert" ? stand.fall?.titel : undefined}
           laedt={laedt === "fall"}
@@ -243,6 +360,16 @@ export default function Home() {
           <KampagnenListe
             onStarten={kampagneStarten}
             onSchliessen={() => setKampagnenOffen(false)}
+          />
+        )}
+
+        {arcsOffen && (
+          <ArcsListe
+            onStarten={arcStarten}
+            onSchliessen={() => setArcsOffen(false)}
+            laufend={
+              arc.stand ? { arcId: arc.stand.arc.id, teil: arc.stand.lauf.teil } : null
+            }
           />
         )}
 

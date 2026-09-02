@@ -11,6 +11,7 @@ export function StartScreen({
   onStart,
   onKampagnen,
   onSagas,
+  onArcs,
   onFortsetzen,
   laufenderFall,
   laedt,
@@ -20,6 +21,7 @@ export function StartScreen({
   onStart: () => void;
   onKampagnen: () => void;
   onSagas: () => void;
+  onArcs: () => void;
   /** Nur gesetzt, wenn ein pausierter Fall wartet. */
   onFortsetzen?: () => void;
   laufenderFall?: string;
@@ -75,6 +77,11 @@ export function StartScreen({
         <button className="knopf glas schmal" onClick={onSagas}>
           <span className="symbol">📖</span>
           <span className="zeilen-text">Sagas</span>
+        </button>
+
+        <button className="knopf glas schmal" onClick={onArcs}>
+          <span className="symbol">🎞</span>
+          <span className="zeilen-text">Arcs</span>
         </button>
 
         <span className="start-info">

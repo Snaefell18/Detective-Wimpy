@@ -70,6 +70,17 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Arcs: mehrere Sagen unter einem Dach. Sie enthalten selbst keine
+    // Lösung - nur Texte, den Titelsong und Verweise auf Sagen.
+    match /arcs/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && textLimit('name', 120)
+        && textLimit('klappentext', 2000)
+        && textLimit('themeSong', 200);
+      allow delete: if angemeldet();
+    }
+
     // Alles andere ist gesperrt.
     match /{document=**} {
       allow read, write: if false;
