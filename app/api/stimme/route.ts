@@ -21,6 +21,29 @@ export const maxDuration = 60;
  * eingerichtet ist, und Tondateien lassen sich weiterhin von Hand ablegen.
  */
 
+/**
+ * Welches Modell spricht.
+ *
+ * Voreingestellt ist das mehrsprachige - sonst klingt Deutsch wie Englisch
+ * mit Akzent. Über ELEVENLABS_MODEL lässt sich ein anderes wählen, etwa
+ * "eleven_v3"; ob das Konto es über die Schnittstelle darf, entscheidet
+ * ElevenLabs, nicht diese App.
+ */
+const modellName = (): string => process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2";
+
+/**
+ * Die Regler je Modell.
+ *
+ * v3 nimmt für "stability" nur drei Werte an (0, 0.5 und 1) und kennt "style"
+ * nicht - schickt man die feinen Werte der älteren Modelle, lehnt es die
+ * Anfrage ab. Deshalb hier zwei Sätze statt einem.
+ */
+function einstellungenFuer(modell: string): Record<string, number> {
+  return modell.includes("_v3")
+    ? { stability: 0.5, similarity_boost: 0.8 }
+    : { stability: 0.45, similarity_boost: 0.8, style: 0.35 };
+}
+
 /** Genug für einen Erzählertext - und eine Bremse für die Kosten. */
 const MAX_ZEICHEN = 2500;
 
@@ -60,6 +83,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const modell = modellName();
     const body = await request.json().catch(() => ({}));
     const text = String(body?.text ?? "").trim();
     if (!text) {
@@ -88,10 +112,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           text,
-          // Das mehrsprachige Modell - sonst klingt Deutsch wie Englisch
-          // mit Akzent.
-          model_id: process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2",
-          voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.35 },
+          model_id: modell,
+          voice_settings: einstellungenFuer(modell),
         }),
         signal: AbortSignal.timeout(50_000),
       },
@@ -99,14 +121,15 @@ export async function POST(request: Request) {
 
     if (!antwort.ok) {
       const grund = await antwort.text().catch(() => "");
-      const hinweis =
-        antwort.status === 401
-          ? "Der ELEVENLABS_API_KEY stimmt nicht."
-          : antwort.status === 404
-            ? "Diese ELEVENLABS_VOICE_ID gibt es nicht."
-            : antwort.status === 429
-              ? "Das Kontingent bei ElevenLabs ist aufgebraucht."
-              : "";
+      const hinweise: Record<number, string> = {
+        401: "Der ELEVENLABS_API_KEY stimmt nicht.",
+        403: "Der Schlüssel darf diese Stimme nicht benutzen.",
+        404: "Diese ELEVENLABS_VOICE_ID gibt es nicht.",
+        400: `Das Modell „${modell}“ hat die Anfrage abgelehnt. Ist es für dieses Konto über die Schnittstelle freigeschaltet?`,
+        422: `Das Modell „${modell}“ hat die Anfrage abgelehnt. Ist es für dieses Konto über die Schnittstelle freigeschaltet?`,
+        429: "Das Kontingent bei ElevenLabs ist aufgebraucht.",
+      };
+      const hinweis = hinweise[antwort.status] ?? "";
       return NextResponse.json(
         {
           fehler: `Die Sprachausgabe hat abgelehnt (${antwort.status}). ${hinweis} ${grund.slice(

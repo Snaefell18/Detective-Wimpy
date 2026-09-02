@@ -154,6 +154,12 @@ ELEVENLABS_VOICE_ID=…            # aus der Voice Library kopieren
 ELEVENLABS_MODEL=eleven_multilingual_v2   # optional, das ist der Default
 ```
 
+Ein anderes Modell trägt man einfach dort ein, etwa `eleven_v3`. Die App
+schickt dann die Regler, die dieses Modell erwartet (v3 kennt für „stability“
+nur 0, 0.5 und 1 und kein „style“). Ob das Konto ein Modell über die
+Schnittstelle nutzen darf, entscheidet ElevenLabs - sagt es nein, steht der
+Modellname in der Fehlermeldung.
+
 Danach steht unter jedem Erzählertext im Admin-Menü ein Knopf **„Sprechen
 lassen“**. Wichtig ist, wie das läuft:
 
