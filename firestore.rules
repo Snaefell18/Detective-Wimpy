@@ -70,6 +70,17 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Gesprochene Erzählertexte: eine Tonaufnahme je Dokument, als
+    // data:-URL. Sie verrät nichts - es ist derselbe Text, den der Spieler
+    // ohnehin zu lesen bekommt.
+    match /stimmen/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && request.resource.data.audio is string
+        && request.resource.data.audio.size() < 1000000;
+      allow delete: if angemeldet();
+    }
+
     // Arcs: mehrere Sagen unter einem Dach. Sie enthalten selbst keine
     // Lösung - nur Texte, den Titelsong und Verweise auf Sagen.
     match /arcs/{id} {

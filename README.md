@@ -25,6 +25,8 @@ npm run dev                    # http://localhost:3000
      Ohne Angabe wird der API-Key als Schlüsselbasis benutzt.
    - `ADMIN_TOKEN` - das Passwort für den Admin-Bereich. Ohne Angabe steht das
      Menü jedem offen, der die Adresse kennt (die Akten bleiben trotzdem zu).
+   - `ELEVENLABS_API_KEY` und `ELEVENLABS_VOICE_ID` - optional, für gesprochene
+     Erzählertexte (siehe unten). Ohne sie bleibt alles beim Text.
 3. Deployen. Fertig - kein Server, keine Datenbank nötig.
 
 ## Firebase einrichten
@@ -58,6 +60,7 @@ die Datenbank und lassen sich dort bearbeiten.
 | `faelle`     | vorbereitete Fälle („Kampagnen“)                    |
 | `sagen`      | Sagas: mehrere Fälle mit gemeinsamem Überthema      |
 | `arcs`       | Arcs: mehrere Sagas unter einem Bogen               |
+| `stimmen`    | gesprochene Erzählertexte (siehe unten)             |
 
 Die Sammlungen `sagen` und `arcs` kamen später dazu. Wer seine Regeln vor
 diesen Zeilen veröffentlicht hat, bekommt beim Öffnen der Arcs ein
@@ -122,6 +125,35 @@ die Bühne.
 
 Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
 spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.
+
+## Erzählertexte sprechen lassen
+
+Die Texte zwischen den Kapiteln, Sagas und Arc-Stationen kann ElevenLabs
+sprechen. Dafür im Konto einen Schlüssel und eine Stimme aussuchen und beides
+in die Umgebungsvariablen legen:
+
+```
+ELEVENLABS_API_KEY=…
+ELEVENLABS_VOICE_ID=…            # aus der Voice Library kopieren
+ELEVENLABS_MODEL=eleven_multilingual_v2   # optional, das ist der Default
+```
+
+Danach steht unter jedem Erzählertext im Admin-Menü ein Knopf **„Sprechen
+lassen“**. Wichtig ist, wie das läuft:
+
+- Gesprochen wird **einmal**, im Admin-Menü, hinter dem Passwort. Die Aufnahme
+  landet als mp3 (32 kbit/s) in der Sammlung `stimmen`, der Erzählerteil merkt
+  sich nur `stimme:<id>`.
+- Im Spiel wird nichts erzeugt, nur abgespielt. Kein Schlüssel im Browser,
+  keine Kosten pro Runde, und ohne Netz hilft der Zwischenspeicher von
+  Firestore.
+- Der Weg ist bewusst nicht offen: Jeder Aufruf kostet Geld, und eine offene
+  Adresse dafür wäre eine Rechnung, die jeder Fremde hochtreiben kann.
+- Grenzen: 2500 Zeichen je Text, 700 KB je Aufnahme (etwa drei Minuten) - ein
+  Firestore-Dokument darf nur 1 MB groß sein. Längere Texte teilt man auf.
+
+Eine selbst aufgenommene Datei in `public/audio` funktioniert unverändert
+weiter; das Feld nimmt beides.
 
 ## Modelle und Kosten
 

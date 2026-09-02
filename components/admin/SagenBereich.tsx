@@ -17,6 +17,7 @@ import {
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
+import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { FallEditor } from "./FallEditor";
 import type { BereichProps } from "./typen";
 
@@ -1025,44 +1026,5 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         </div>
       ))}
     </>
-  );
-}
-
-/** Text und Tondatei eines Erzählerteils bearbeiten. */
-function ErzaehlerFeld({
-  titel,
-  hinweis,
-  teil,
-  onAendern,
-}: {
-  titel: string;
-  hinweis?: string;
-  teil: Erzaehlerteil;
-  onAendern: (teil: Partial<Erzaehlerteil>) => void;
-}) {
-  return (
-    <div className="erzaehler-feld">
-      <h4 className="unter-abschnitt">
-        {titel} {hinweis && <span className="leise">· {hinweis}</span>}
-      </h4>
-      <label className="feld">
-        <span className="leise">Erzählertext</span>
-        <textarea
-          rows={4}
-          value={teil.text}
-          onChange={(e) => onAendern({ text: e.target.value })}
-          maxLength={2000}
-        />
-      </label>
-      <label className="feld">
-        <span className="leise">Tondatei in /public/audio (leer = nur Text)</span>
-        <input
-          value={teil.audio}
-          onChange={(e) => onAendern({ audio: e.target.value })}
-          placeholder="/audio/saga-kapitel-1.mp3"
-          maxLength={200}
-        />
-      </label>
-    </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -142,3 +143,29 @@ export async function speichereArc(arc: Arc): Promise<void> {
 }
 
 export const loescheArc = (id: string) => loesche("arcs", id);
+
+
+/* --- Gesprochene Erzählertexte ------------------------------------- */
+
+/**
+ * Eine Aufnahme aus der Sprachausgabe - als data:-URL in einem eigenen
+ * Dokument.
+ *
+ * Warum nicht im Erzählerteil selbst: Ein Firestore-Dokument darf 1 MB groß
+ * sein, und eine Saga mit einem Dutzend Aufnahmen wäre schnell darüber. So
+ * liegt jede für sich, wird nur geladen, wenn sie gebraucht wird, und der
+ * Erzählerteil merkt sich bloß "stimme:<id>".
+ */
+export type Stimme = { id: string; audio: string; text: string; erstelltAm: number };
+
+export async function speichereStimme(stimme: Stimme): Promise<void> {
+  await anmelden();
+  await setDoc(doc(getDb(), "stimmen", stimme.id), sauber(stimme));
+}
+
+export async function ladeStimme(id: string): Promise<Stimme | null> {
+  const schnappschuss = await getDoc(doc(getDb(), "stimmen", id));
+  return schnappschuss.exists() ? ({ ...(schnappschuss.data() as Stimme), id }) : null;
+}
+
+export const loescheStimme = (id: string) => loesche("stimmen", id);

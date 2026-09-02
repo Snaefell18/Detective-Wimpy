@@ -25,12 +25,12 @@ import {
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
 import {
   STANDARD_SAGA_VORGABEN,
-  type Erzaehlerteil,
   type Saga,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen } from "@/lib/namenSchutz";
+import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import type { BereichProps } from "./typen";
 
 /** Einer Station ihre Saga zuweisen - oder sie wieder freimachen. */
@@ -550,38 +550,6 @@ function ArcFelder({
           value={arc.themeSong}
           onChange={(e) => onAendern({ themeSong: e.target.value })}
           placeholder="/audio/arc-theme.mp3"
-          maxLength={200}
-        />
-      </label>
-    </>
-  );
-}
-
-/** Text und Tondatei eines Erzählerteils - wie bei den Sagen. */
-function ErzaehlerFeld({
-  teil,
-  onAendern,
-}: {
-  teil: Erzaehlerteil;
-  onAendern: (teil: Partial<Erzaehlerteil>) => void;
-}) {
-  return (
-    <>
-      <label className="feld">
-        <span className="leise">Erzählertext</span>
-        <textarea
-          rows={4}
-          value={teil.text}
-          onChange={(e) => onAendern({ text: e.target.value })}
-          maxLength={2000}
-        />
-      </label>
-      <label className="feld">
-        <span className="leise">Tondatei in /public/audio (leer = nur Text)</span>
-        <input
-          value={teil.audio}
-          onChange={(e) => onAendern({ audio: e.target.value })}
-          placeholder="/audio/arc-teil-1.mp3"
           maxLength={200}
         />
       </label>

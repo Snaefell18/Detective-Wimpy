@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { spiele, stoppe, type Stueck } from "@/lib/introAudio";
+import { tonQuelle } from "@/lib/stimme";
 import type { Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
@@ -42,10 +43,15 @@ export function ErzaehlerScreen({
     let laeuftNoch = true;
 
     if (teil.audio) {
-      const audio = new Audio(teil.audio);
-      audioRef.current = audio;
-      void audio.play().catch(() => {
-        // Blockiert der Browser den Ton, läuft die Szene stumm weiter.
+      // Eine gesprochene Fassung kann in der Datenbank liegen ("stimme:…").
+      // Das Nachschlagen dauert einen Moment; bis dahin läuft der Text schon.
+      void tonQuelle(teil.audio).then((quelle) => {
+        if (!laeuftNoch || !quelle) return;
+        const audio = new Audio(quelle);
+        audioRef.current = audio;
+        void audio.play().catch(() => {
+          // Blockiert der Browser den Ton, läuft die Szene stumm weiter.
+        });
       });
     } else if (musik) {
       void spiele(musik);
