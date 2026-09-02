@@ -30,6 +30,7 @@ import {
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
+import { nenntNamen } from "@/lib/namenSchutz";
 import type { BereichProps } from "./typen";
 
 /** Einer Station ihre Saga zuweisen - oder sie wieder freimachen. */
@@ -419,6 +420,20 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   );
 }
 
+/** Wo der Culprit beim Namen genannt wird - das verrät ihn zu früh. */
+function verraeterisch(arc: Arc, name: string): string[] {
+  const stellen: string[] = [];
+  if (nenntNamen(arc.name, [name]).length) stellen.push("Der Name des Arcs");
+  if (nenntNamen(arc.klappentext, [name]).length) stellen.push("der Klappentext");
+  const teile = arc.teile
+    .slice(0, -1)
+    .filter((t) => nenntNamen(`${t.name}\n${t.erzaehler.text}`, [name]).length);
+  if (teile.length) {
+    stellen.push(`${teile.length === 1 ? "Teil" : "die Teile"} ${teile.map((t) => t.nummer).join(", ")}`);
+  }
+  return stellen;
+}
+
 /**
  * Die Angaben, die für den ganzen Arc gelten - beim Anlegen und später beim
  * Bearbeiten dieselben. Alles davon lässt sich jederzeit ändern; nur die Sagen,
@@ -515,6 +530,15 @@ function ArcFelder({
           Bis zur letzten Saga bleibt {gewaehlt.name} aus der Besetzung heraus und
           kommt nur als „{arc.culprit.wort.trim() || "…"}“ vor. In der letzten Saga
           ist er der Drahtzieher und betritt erst im Finale die Bühne.
+        </p>
+      )}
+
+      {gewaehlt && verraeterisch(arc, gewaehlt.name).length > 0 && (
+        <p className="hinweis">
+          Achtung: {verraeterisch(arc, gewaehlt.name).join(" und ")} nennt
+          {verraeterisch(arc, gewaehlt.name).length > 1 ? "" : "t"} {gewaehlt.name}
+          {" "}beim Namen. Im Vorspann wird das herausgenommen - besser, du
+          schreibst dort „{arc.culprit.wort.trim() || "das Wort für ihn"}“.
         </p>
       )}
 

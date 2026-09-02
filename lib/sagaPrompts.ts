@@ -1,4 +1,5 @@
 import { characterBrief } from "./characters";
+import { nochNichtDa } from "./namenSchutz";
 import type { SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
 
@@ -29,6 +30,16 @@ export function buildKernPrompt(
 ): string {
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
 
+  // Titel, Klappentext, Auftakt und Schlagworte sind der Vorspann. Wer erst
+  // später auftritt, darf dort nicht vorkommen - sonst ist die Überraschung
+  // vor dem ersten Satz verbraucht.
+  const spaeter = nochNichtDa({
+    besetzung,
+    drahtzieherId: drahtzieher.id,
+    vorgaben,
+    kapitel: 0,
+  }).map((c) => c.name);
+
   return `Entwirf den Kern einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale. Die einzelnen Kapitel kommen später - hier geht es nur um den großen Bogen.
 
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
@@ -52,7 +63,13 @@ Anforderungen:
       ? "\n- Die Wahrheit muss ohne die Anwesenheit des Drahtziehers erzählbar sein: Er wirkt aus dem Hintergrund, über Handlanger, Aufträge und Spuren."
       : ""
   }
-- Alles auf Deutsch.`;
+- Alles auf Deutsch.${
+    spaeter.length
+      ? `\n\nNIEMALS NENNEN - diese Tiere treten erst später auf: ${spaeter.join(
+          ", ",
+        )}. Weder im Titel noch im Klappentext, im Überthema, im Auftakttext oder in den Schlagworten darf einer dieser Namen stehen. Der Vorspann darf sie nicht verraten.`
+      : ""
+  }`;
 }
 
 /** Schritt 2: ein einzelnes Kapitel, das die vorherigen kennt. */
@@ -72,6 +89,8 @@ export function buildKapitelPrompt(args: {
   neueTiere: string[];
   /** Von Hand gesetzter Täter dieses Kapitels - leer heißt: freie Wahl. */
   wunschTaeter: string;
+  /** Tiere, die erst nach diesem Kapitel dazustoßen. */
+  nochNichtDaTiere?: string[];
 }): string {
   const {
     nummer,
@@ -87,6 +106,7 @@ export function buildKapitelPrompt(args: {
     twist,
     neueTiere,
     wunschTaeter,
+    nochNichtDaTiere = [],
   } = args;
 
   const vorher = bisher.length
@@ -132,7 +152,15 @@ Anforderungen:
         } ${neueTiere.length === 1 ? "es" : "sie"} bis zum Ende dabei.`
       : ""
   }
-- Alles auf Deutsch.${wunsch ? `\n\nWUNSCH FÜR DIESES KAPITEL (unbedingt einhalten): ${wunsch}` : ""}`;
+- Alles auf Deutsch.${
+    nochNichtDaTiere.length
+      ? `\n- NIEMALS NENNEN - ${nochNichtDaTiere.join(
+          ", ",
+        )} ${nochNichtDaTiere.length === 1 ? "stößt" : "stoßen"} erst später dazu und ${
+          nochNichtDaTiere.length === 1 ? "kommt" : "kommen"
+        } in diesem Kapitel überhaupt nicht vor - auch nicht beiläufig, auch nicht im Erzählertext.`
+      : ""
+  }${wunsch ? `\n\nWUNSCH FÜR DIESES KAPITEL (unbedingt einhalten): ${wunsch}` : ""}`;
 }
 
 /** Schritt 3: das Finale. */

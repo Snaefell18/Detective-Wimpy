@@ -294,7 +294,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         name: rohBogen.name,
         thema: rohBogen.thema,
         klappentext: rohBogen.klappentext,
-        vorgaben,
+        // Ohne Drahtzieher und Kapiteltäter: Die Vorgaben liegen offen in der
+        // Datenbank, die Lösung steht im versiegelten Bogen.
+        vorgaben: { ...vorgaben, drahtzieherId: "", kapitelTaeter: [] },
         schlagworte: rohBogen.schlagworte,
         auftakt: { text: rohBogen.auftaktText, audio: "" },
         kapitel,

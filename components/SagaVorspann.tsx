@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Szene } from "./Bild";
 import { spiele, stand, stoppe } from "@/lib/introAudio";
+import { ohneNamen, spaeteNamen, worteOhneNamen } from "@/lib/namenSchutz";
 import type { Saga } from "@/lib/sagaTypen";
 
 /**
@@ -26,6 +27,33 @@ type Szenenbild =
   | { art: "thema"; von: number; bis: number }
   | { art: "kapitel"; von: number; bis: number }
   | { art: "einsatz"; von: number; bis: number };
+
+/**
+ * Die Saga, wie der Vorspann sie zeigen darf.
+ *
+ * Namen von Tieren, die erst in einem späteren Kapitel auftreten, haben hier
+ * nichts verloren - ein einziges Wort verrät sonst, wer noch kommt. Betroffene
+ * Sätze fallen weg, betroffene Kapitelnamen werden zur bloßen Nummer.
+ */
+function ohneSpaete(saga: Saga): Saga {
+  const namen = spaeteNamen({
+    besetzung: saga.finale.fall?.besetzung ?? saga.kapitel[0]?.fall?.besetzung ?? [],
+    vorgaben: saga.vorgaben,
+    kapitel: 0,
+  });
+  if (namen.length === 0) return saga;
+
+  return {
+    ...saga,
+    thema: ohneNamen(saga.thema, namen),
+    klappentext: ohneNamen(saga.klappentext, namen),
+    schlagworte: worteOhneNamen(saga.schlagworte ?? [], namen),
+    kapitel: saga.kapitel.map((k) => ({
+      ...k,
+      name: ohneNamen(k.name, namen) || `Kapitel ${k.nummer}`,
+    })),
+  };
+}
 
 /**
  * Fällt für eine ältere Saga das Schlagwort-Feld weg, werden Wörter aus dem
@@ -72,10 +100,15 @@ export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => v
   const [fortschritt, setFortschritt] = useState(0);
   const [tonAn, setTonAn] = useState(true);
 
-  const worte = useMemo(() => schlagworte(saga), [saga]);
+  // Das letzte Gitter: Wer erst später dazustößt, kommt hier nicht vor. Der
+  // Server hält seine Texte schon davon frei; das hier greift auch bei von
+  // Hand geschriebenen Sagas und bei allem, was später bearbeitet wurde.
+  const gezeigt = useMemo(() => ohneSpaete(saga), [saga]);
+
+  const worte = useMemo(() => schlagworte(gezeigt), [gezeigt]);
   const plan = useMemo(
-    () => szenenPlan(worte, saga.kapitel.length),
-    [worte, saga.kapitel.length],
+    () => szenenPlan(worte, gezeigt.kapitel.length),
+    [worte, gezeigt.kapitel.length],
   );
 
   useEffect(() => {
@@ -126,7 +159,7 @@ export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => v
       </div>
 
       <div className="intro-buehne">
-        <VorspannSzene szene={szene} saga={saga} key={`${szene.art}-${"nr" in szene ? szene.nr : 0}`} />
+        <VorspannSzene szene={szene} saga={gezeigt} key={`${szene.art}-${"nr" in szene ? szene.nr : 0}`} />
       </div>
 
       <div className="intro-leiste">

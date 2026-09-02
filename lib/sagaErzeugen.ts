@@ -126,7 +126,10 @@ export async function erzeugeSaga(
     name: kern.name,
     thema: kern.thema,
     klappentext: kern.klappentext,
-    vorgaben: eingaben.vorgaben,
+    // Die Vorgaben liegen offen in der Datenbank - deshalb ohne die beiden
+    // Felder, die die Lösung verraten würden. Im versiegelten Bogen stehen
+    // sie vollständig, dort kommt niemand heran.
+    vorgaben: { ...eingaben.vorgaben, drahtzieherId: "", kapitelTaeter: [] },
     schlagworte: kern.schlagworte ?? [],
     auftakt: { text: kern.auftaktText, audio: "" },
     kapitel,

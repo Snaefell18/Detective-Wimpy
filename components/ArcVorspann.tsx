@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { spiele, stand, stoppe, type Stueck } from "@/lib/introAudio";
+import { nenntNamen, ohneNamen } from "@/lib/namenSchutz";
+import { useStammdaten } from "@/lib/stammdaten";
 import type { Arc } from "@/lib/arcTypen";
 
 /**
@@ -24,6 +26,22 @@ export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void 
   const [fortschritt, setFortschritt] = useState(0);
   const [tonAn, setTonAn] = useState(true);
   const stueck = useMemo(() => themeVon(arc), [arc]);
+
+  // Der Culprit steht erst in der letzten Saga auf der Bühne - im Vorspann
+  // darf sein Name nirgends auftauchen.
+  const { charaktere } = useStammdaten();
+  const gezeigt = useMemo(() => {
+    const name = charaktere.find((c) => c.id === arc.culprit.charakterId)?.name;
+    if (!name) return arc;
+    return {
+      ...arc,
+      klappentext: ohneNamen(arc.klappentext, [name]),
+      teile: arc.teile.map((t) => ({
+        ...t,
+        name: nenntNamen(t.name, [name]).length ? `Teil ${t.nummer}` : t.name,
+      })),
+    };
+  }, [arc, charaktere]);
 
   useEffect(() => {
     let laeuftNoch = true;
@@ -72,7 +90,7 @@ export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void 
       }}
     >
       <div className="intro-buehne">
-        <ArcSzene szene={szene} arc={arc} key={szene} />
+        <ArcSzene szene={szene} arc={gezeigt} key={szene} />
       </div>
 
       <div className="intro-leiste">

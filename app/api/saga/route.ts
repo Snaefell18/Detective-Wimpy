@@ -22,6 +22,12 @@ import {
   neuInKapitel,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
+import {
+  nochNichtDa,
+  ohneNamen,
+  titelOhneNamen,
+  worteOhneNamen,
+} from "@/lib/namenSchutz";
 import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
 import { seal, unseal } from "@/lib/seal";
 import type { Character, City, Location } from "@/lib/types";
@@ -188,19 +194,32 @@ async function kernSchritt(body: Record<string, unknown>) {
     return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
   }
 
+  // Wer erst später auftritt, darf hier noch nirgends stehen: Titel,
+  // Klappentext, Auftakt und Schlagworte sind der Vorspann - das Erste, was
+  // der Spieler sieht.
+  const zuFrueh = nochNichtDa({
+    besetzung: spielendeBesetzung,
+    drahtzieherId: drahtzieher.id,
+    vorgaben,
+    kapitel: 0,
+  }).map((c) => c.name);
+
   const bogen: Bogen = {
     id: crypto.randomUUID(),
-    name: vorgaben.name.trim() || antwort.daten.name,
-    thema: antwort.daten.thema,
-    klappentext: antwort.daten.klappentext,
+    name:
+      vorgaben.name.trim() ||
+      titelOhneNamen(antwort.daten.name, zuFrueh) ||
+      "Die Spur im Schatten",
+    thema: ohneNamen(antwort.daten.thema, zuFrueh),
+    klappentext: ohneNamen(antwort.daten.klappentext, zuFrueh),
     vorgaben,
     besetzung: spielendeBesetzung,
     drahtzieherId: drahtzieher.id,
     drahtzieherName: drahtzieher.name,
     wahrheit: antwort.daten.wahrheit,
     drahtzieherMotiv: antwort.daten.drahtzieherMotiv,
-    auftaktText: antwort.daten.auftaktText,
-    schlagworte: antwort.daten.schlagworte.slice(0, 6),
+    auftaktText: ohneNamen(antwort.daten.auftaktText, zuFrueh),
+    schlagworte: worteOhneNamen(antwort.daten.schlagworte, zuFrueh).slice(0, 6),
     kapitel: [],
     finale: { frage: "", auftrag: "", erzaehlerText: "", epilogText: "", stadt: "zufall" },
     erstelltAm: Date.now(),
@@ -251,6 +270,15 @@ async function kapitelSchritt(
   });
   const stadt = stadtFuer(bogen.vorgaben, nummer, staedte);
 
+  // Wer erst nach diesem Kapitel dazustößt, kommt hier weder vor noch zur
+  // Sprache - das sagt schon der Prompt, geprüft wird es danach trotzdem.
+  const zuFrueh = nochNichtDa({
+    besetzung: bogen.besetzung,
+    drahtzieherId: bogen.drahtzieherId,
+    vorgaben: bogen.vorgaben,
+    kapitel: nummer,
+  }).map((c) => c.name);
+
   const response = await getAnthropic().messages.create(
     modellOptionen(
       welt(dabei, orte, staedte, bogen.vorgaben),
@@ -268,6 +296,7 @@ async function kapitelSchritt(
         twist: bogen.vorgaben.twist === true,
         neueTiere: neue.map((c) => c.name),
         wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
+        nochNichtDaTiere: zuFrueh,
       }),
       zodOutputFormat(makeKapitelSchema(dabei)),
       3000,
@@ -290,9 +319,9 @@ async function kapitelSchritt(
 
   const kapitel = {
     nummer,
-    name: d.name || `Kapitel ${nummer}`,
-    teaser: d.teaser ?? "",
-    erzaehlerText: d.erzaehlerText ?? "",
+    name: titelOhneNamen(d.name ?? "", zuFrueh) || `Kapitel ${nummer}`,
+    teaser: ohneNamen(d.teaser ?? "", zuFrueh),
+    erzaehlerText: ohneNamen(d.erzaehlerText ?? "", zuFrueh),
     auftrag: d.auftrag ?? "",
     enthuellung: d.enthuellung ?? "",
     taeterId,
