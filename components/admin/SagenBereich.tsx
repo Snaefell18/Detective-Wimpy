@@ -10,6 +10,7 @@ import { ladeSagas, loescheSaga, speichereSaga } from "@/lib/db";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
 import {
   STANDARD_SAGA_VORGABEN,
+  auftrittVon,
   type Erzaehlerteil,
   type Saga,
   type SagaVorgaben,
@@ -103,6 +104,14 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         ? alt[feld].filter((x) => x !== id)
         : [...alt[feld], id],
     }));
+
+  /** Täter für Kapitel i (0-basiert) - leerer Wert heißt: freie Wahl. */
+  const kapitelTaeterSetzen = (i: number, id: string) =>
+    setVorgaben((alt) => {
+      const liste = [...(alt.kapitelTaeter ?? [])];
+      liste[i] = id;
+      return { ...alt, kapitelTaeter: liste };
+    });
 
   const wunschSetzen = (i: number, text: string) =>
     setVorgaben((alt) => {
@@ -239,7 +248,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           erzaehlerText: "Und dann geschah es wieder.",
           auftrag: "Noch offen.",
           enthuellung: "Noch offen.",
-          taeterId: andere[i % andere.length].id,
+          taeterId:
+            andere.find((c) => c.id === vorgaben.kapitelTaeter?.[i])?.id ??
+            andere[i % andere.length].id,
           stadt: vorgaben.kapitelStaedte[i] || "zufall",
         })),
         finale: {
@@ -582,6 +593,50 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                   maxLength={400}
                 />
               </label>
+            )}
+
+            {!istFinale && (
+              <>
+                <span className="leise klein">Täter dieses Kapitels</span>
+                <div className="marken-reihe">
+                  <button
+                    className="marke-knopf"
+                    data-aktiv={!(vorgaben.kapitelTaeter?.[i] ?? "")}
+                    onClick={() => kapitelTaeterSetzen(i, "")}
+                  >
+                    Zufällig
+                  </button>
+                  {mitspieler
+                    // Der Drahtzieher ist erst im Finale schuldig, und wer im
+                    // Kapitel noch gar nicht auftritt, kann es nicht gewesen sein.
+                    .filter((c) => c.id !== vorgaben.drahtzieherId)
+                    .filter(
+                      (c) =>
+                        auftrittVon({
+                          charakterId: c.id,
+                          vorgaben,
+                          drahtzieherId: vorgaben.drahtzieherId,
+                        }) <=
+                        i + 1,
+                    )
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        className="marke-knopf"
+                        data-aktiv={vorgaben.kapitelTaeter?.[i] === c.id}
+                        onClick={() => kapitelTaeterSetzen(i, c.id)}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+
+            {istFinale && (
+              <p className="leise klein">
+                Im Finale ist der Drahtzieher der Täter - das steht oben.
+              </p>
             )}
 
             <span className="leise klein">Stadt</span>

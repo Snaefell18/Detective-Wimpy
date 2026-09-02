@@ -310,6 +310,8 @@ export default function Home() {
             {stand.fall.stadt} · {stand.gefundeneSpuren.length} Spuren
           </p>
         </div>
+        {/* Im Klassisch trägt das Symbol den Knopf, im Noir das Wort - beide
+            stehen im Markup, das Design blendet aus, was es nicht braucht. */}
         <div className="kopf-knoepfe">
           <button
             className="rund-knopf"
@@ -317,7 +319,8 @@ export default function Home() {
             aria-label="Pausieren"
             title="Pausieren"
           >
-            ⏸
+            <span className="symbol">⏸</span>
+            <span className="knopf-wort">Pause</span>
           </button>
           <button
             className="rund-knopf"
@@ -327,7 +330,8 @@ export default function Home() {
             aria-label="Fall beenden"
             title="Fall beenden"
           >
-            ✕
+            <span className="symbol">✕</span>
+            <span className="knopf-wort">Ende</span>
           </button>
         </div>
       </header>

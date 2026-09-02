@@ -38,6 +38,11 @@ export type SagaVorgaben = {
   /** Freitext je Kapitel - leer heißt: das Modell entscheidet. */
   kapitelWuensche: string[];
   /**
+   * Täter je Kapitel als Charakter-Id, leer heißt: das Modell entscheidet.
+   * Der Drahtzieher ist hier nie zulässig - er ist erst im Finale schuldig.
+   */
+  kapitelTaeter: string[];
+  /**
    * Stadt je Kapitel: Stadt-Id, "zufall" oder leer für die allgemeine
    * Einstellung darunter. Das Finale steht an letzter Stelle.
    */
@@ -81,6 +86,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   thema: "",
   kapitelAnzahl: 3,
   kapitelWuensche: [],
+  kapitelTaeter: [],
   kapitelStaedte: [],
   stadt: "zufall",
   staedteWechseln: true,
@@ -240,4 +246,26 @@ export function neuInKapitel<T extends { id: string; istDetektiv: boolean }>(arg
     kapitel: kapitel === 0 ? vorgaben.kapitelAnzahl : kapitel - 1,
   });
   return jetzt.filter((c) => !c.istDetektiv && !vorher.includes(c));
+}
+
+/**
+ * Wer den Fall eines Kapitels begangen hat.
+ *
+ * Reihenfolge: Ein von Hand gesetzter Täter gewinnt - aber nur, wenn er in
+ * diesem Kapitel überhaupt auftritt und nicht der Drahtzieher ist. Sonst der
+ * Vorschlag des Modells, sonst reihum, damit nicht immer dasselbe Tier dran
+ * ist. Zurück kommt immer jemand aus `moeglich`.
+ */
+export function kapitelTaeterFuer<T extends { id: string }>(args: {
+  moeglich: T[];
+  wunsch: string;
+  vorschlag: string;
+  nummer: number;
+}): string {
+  const { moeglich, wunsch, vorschlag, nummer } = args;
+  return (
+    moeglich.find((c) => c.id === wunsch)?.id ??
+    moeglich.find((c) => c.id === vorschlag)?.id ??
+    moeglich[(nummer - 1) % moeglich.length].id
+  );
 }

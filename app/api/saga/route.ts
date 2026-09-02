@@ -18,6 +18,7 @@ import { FinaleSchema, KernSchema, makeKapitelSchema } from "@/lib/sagaSchemas";
 import {
   STANDARD_SAGA_VORGABEN,
   besetzungFuerKapitel,
+  kapitelTaeterFuer,
   neuInKapitel,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
@@ -241,6 +242,7 @@ async function kapitelSchritt(
   const moeglich = dabei.filter(
     (c) => !c.istDetektiv && c.id !== bogen.drahtzieherId,
   );
+  const wunschTaeter = bogen.vorgaben.kapitelTaeter?.[nummer - 1] ?? "";
   const neue = neuInKapitel({
     besetzung: bogen.besetzung,
     drahtzieherId: bogen.drahtzieherId,
@@ -265,6 +267,7 @@ async function kapitelSchritt(
         stadt: stadtName(stadt, staedte),
         twist: bogen.vorgaben.twist === true,
         neueTiere: neue.map((c) => c.name),
+        wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
       }),
       zodOutputFormat(makeKapitelSchema(dabei)),
       3000,
@@ -278,9 +281,12 @@ async function kapitelSchritt(
   }
 
   const d = antwort.daten;
-  const taeterId =
-    moeglich.find((c) => c.id === d.taeterId)?.id ??
-    moeglich[(nummer - 1) % moeglich.length].id;
+  const taeterId = kapitelTaeterFuer({
+    moeglich,
+    wunsch: wunschTaeter,
+    vorschlag: d.taeterId,
+    nummer,
+  });
 
   const kapitel = {
     nummer,

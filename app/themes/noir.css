@@ -2156,3 +2156,52 @@
   box-shadow: none;
   border-left: 2px solid var(--akzent);
 }
+
+/* =================================================================
+   Pause und Ende: Wörter statt Emoji
+   Die Kopfzeile spricht Meta-Label - zwei kleine Piktogramme fielen
+   dort heraus. Der Balken links macht sie zu Knöpfen, ohne einen
+   Kasten zu brauchen.
+   ================================================================= */
+
+[data-theme="noir"] .kopf-knoepfe {
+  gap: 16px;
+  padding-top: 8px;
+}
+
+[data-theme="noir"] .rund-knopf {
+  position: relative;
+  width: auto;
+  height: auto;
+  padding: 3px 0 3px 9px;
+  font-family: var(--f-text);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .rund-knopf::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 11px;
+  background: var(--linie);
+}
+
+[data-theme="noir"] .rund-knopf:active {
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .rund-knopf:active::before {
+  background: var(--akzent);
+}
+
+/* Das Ende ist die härtere der beiden Wahlen - es trägt den Akzent. */
+[data-theme="noir"] .rund-knopf:last-child::before {
+  background: var(--linie-akzent);
+}

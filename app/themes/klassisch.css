@@ -31,6 +31,7 @@
  * Elemente, die nur das Noir-Design braucht. Im Klassisch bleiben sie
  * unsichtbar, damit es genauso aussieht wie vorher.
  */
+[data-theme="klassisch"] .knopf-wort,
 [data-theme="klassisch"] .start-marke,
 [data-theme="klassisch"] .start-unterzeile,
 [data-theme="klassisch"] .zeilen-meta {

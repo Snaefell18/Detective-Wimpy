@@ -2,7 +2,7 @@
  * Der Twist: Der Drahtzieher darf in keinem Kapitel auftauchen - und im
  * Finale muss er da sein. Ohne Twist ändert sich nichts.
  */
-import { besetzungFuerKapitel, neuInKapitel } from "../lib/sagaTypen.ts";
+import { besetzungFuerKapitel, kapitelTaeterFuer, neuInKapitel } from "../lib/sagaTypen.ts";
 import { repariereFall } from "../lib/fallReparieren.ts";
 
 const alle = [
@@ -134,6 +134,27 @@ console.log("\n9. Der Twist sticht die Auftrittswahl");
   const vorgaben = v({ twist: true, neuzugaenge: { boss: 1 } });
   const k1 = besetzungFuerKapitel({ besetzung: alle, drahtzieherId: "boss", kapitel: 1, vorgaben });
   pruefe("trotz „von Anfang an“ nicht dabei", !k1.some((c) => c.id === "boss"), ids(k1));
+}
+
+console.log("\n10. Täter je Kapitel");
+{
+  const moeglich = [{ id: "mikkeli" }, { id: "nala" }, { id: "fanny" }];
+  const nimm = (wunsch, vorschlag, nummer = 1) =>
+    kapitelTaeterFuer({ moeglich, wunsch, vorschlag, nummer });
+
+  pruefe("gesetzter Täter gewinnt", nimm("fanny", "nala") === "fanny");
+  pruefe("ohne Wunsch zählt der Vorschlag", nimm("", "nala") === "nala");
+  pruefe("unbekannter Wunsch fällt auf den Vorschlag zurück",
+    nimm("gibtsnicht", "nala") === "nala");
+  pruefe("gar nichts Gültiges: reihum, aber immer jemand Mögliches",
+    moeglich.some((c) => c.id === nimm("", "")), nimm("", ""));
+  pruefe("reihum wechselt mit der Kapitelnummer",
+    nimm("", "", 1) !== nimm("", "", 2));
+
+  // Ein Tier, das im Kapitel gar nicht auftritt, steht nicht in moeglich -
+  // der Wunsch darf den Fall dann nicht kapern.
+  pruefe("abwesendes Wunschtier wird ignoriert",
+    nimm("boss", "mikkeli") === "mikkeli");
 }
 
 console.log(`\n${fehlgeschlagen === 0 ? "Alles sauber." : `${fehlgeschlagen} fehlgeschlagen.`}`);

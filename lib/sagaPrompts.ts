@@ -70,6 +70,8 @@ export function buildKapitelPrompt(args: {
   twist: boolean;
   /** Tiere, die in genau diesem Kapitel zum ersten Mal auftauchen. */
   neueTiere: string[];
+  /** Von Hand gesetzter Täter dieses Kapitels - leer heißt: freie Wahl. */
+  wunschTaeter: string;
 }): string {
   const {
     nummer,
@@ -84,6 +86,7 @@ export function buildKapitelPrompt(args: {
     stadt,
     twist,
     neueTiere,
+    wunschTaeter,
   } = args;
 
   const vorher = bisher.length
@@ -104,8 +107,12 @@ DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel 
       : " und wirkt höchstens beiläufig harmlos."
   }${twist ? `\n${TWIST_REGELN}` : ""}${vorher}
 
-MÖGLICHE TÄTER FÜR DIESES KAPITEL
-${moeglicheTaeter.map((c) => `- ${c.name} [${c.id}]`).join("\n")}
+${
+    wunschTaeter
+      ? `DER TÄTER DIESES KAPITELS STEHT FEST: ${wunschTaeter}. Bau den Fall um ihn herum - Motiv, Gelegenheit und Verbindung zum Drahtzieher müssen zu ihm passen.`
+      : `MÖGLICHE TÄTER FÜR DIESES KAPITEL
+${moeglicheTaeter.map((c) => `- ${c.name} [${c.id}]`).join("\n")}`
+  }
 
 Anforderungen:
 - Das Kapitel spielt in ${stadt}.
