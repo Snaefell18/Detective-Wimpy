@@ -57,6 +57,11 @@ die Datenbank und lassen sich dort bearbeiten.
 | `sagen`      | Sagas: mehrere Fälle mit gemeinsamem Überthema      |
 | `arcs`       | Arcs: mehrere Sagas unter einem Bogen               |
 
+Die Sammlungen `sagen` und `arcs` kamen später dazu. Wer seine Regeln vor
+diesen Zeilen veröffentlicht hat, bekommt beim Öffnen der Arcs ein
+„permission-denied“ - dann einmal `firestore.rules` aus dem Projekt in der
+Firebase-Konsole neu veröffentlichen.
+
 Die Lösung eines Falls steht **nicht** im Klartext in der Datenbank: Täter,
 Motiv und gelogene Alibis stecken im Feld `siegel` - AES-256-verschlüsselt mit
 einem Schlüssel, den nur der Server kennt. Deshalb dürfen Fälle öffentlich
@@ -90,7 +95,10 @@ Tondatei aus `public/audio`.
 Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
 
 1. Admin-Menü → **Arcs**. Name, Klappentext, eigener Titelsong (Pfad in
-   `public/audio`) und wie viele Sagas es werden sollen - eine bis zehn.
+   `public/audio`) und wie viele Sagas es werden sollen - eine bis zehn. Dazu
+   gleich am Anfang: worauf alles hinausläuft, wer am Ende der Culprit ist und
+   unter welchem Wort er in den Texten vorkommt („Der Schattenkanzler war
+   weiterhin auf der Flucht.“). Alles davon lässt sich später ändern.
 2. Zu jeder Station gehören ein Erzählertext (optional mit Tondatei) und eine
    Saga. Die Saga lässt sich direkt hier erzeugen oder aus den vorhandenen
    auswählen.
@@ -100,6 +108,11 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    Spielstand liegt auf dem Gerät und liest den Arc bei jedem Start neu.
 4. Am Ende steht das große Finale. Gebaut ist bisher der Abschlusstext; die
    Gerichtsverhandlung ist als Art schon vorgesehen und kommt später.
+
+Der Culprit ist dabei mehr als eine Notiz: Bis zur letzten Station bleibt er
+aus der Besetzung der erzeugten Sagas heraus - dort kommt er nur unter seinem
+Wort vor. In der letzten Saga ist er der Drahtzieher und betritt erst im Finale
+die Bühne.
 
 Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
 spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.

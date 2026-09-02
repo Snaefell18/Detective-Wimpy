@@ -30,11 +30,32 @@ export type ArcTeil = {
 /** Wie der Arc endet. Gebaut ist bisher nur der Abschlusstext. */
 export type ArcFinaleArt = "text" | "gerichtsverhandlung";
 
+/**
+ * Der eine, der hinter dem ganzen Arc steht.
+ *
+ * Er wird gleich am Anfang festgelegt, damit alle Sagen auf ihn zulaufen -
+ * aufgedeckt wird er erst im Finale. In den Texten davor kommt er nur unter
+ * seinem Wort vor ("Der Schattenkanzler war weiterhin auf der Flucht."), nie
+ * unter seinem Namen; deshalb steht das Wort hier und nicht im Fließtext.
+ */
+export type ArcCulprit = {
+  /** Charakter-Id. Leer heißt: steht noch nicht fest. */
+  charakterId: string;
+  /** Wie ihn die Texte nennen, solange er unerkannt ist. */
+  wort: string;
+};
+
 export type Arc = {
   id: string;
   name: string;
   /** Beschreibung in der Auswahlliste. */
   klappentext: string;
+  /**
+   * Worauf der Arc hinausläuft - für die Erzeugung der Sagen. Steht nie im
+   * Spiel, nur im Admin-Menü und in den Vorgaben ans Modell.
+   */
+  ziel: string;
+  culprit: ArcCulprit;
   /**
    * Eigener Titelsong: Pfad in /public/audio. Leer heißt: der übliche
    * Titelsong des Spiels.
@@ -75,6 +96,8 @@ export function leererArc(): Arc {
     id: "",
     name: "",
     klappentext: "",
+    ziel: "",
+    culprit: { charakterId: "", wort: "" },
     themeSong: "",
     sagenAnzahl: 3,
     teile: [LEERER_ARC_TEIL(1), LEERER_ARC_TEIL(2), LEERER_ARC_TEIL(3)],
@@ -117,3 +140,49 @@ export const sagaVon = (arc: Arc, teil: number, sagen: Saga[]): Saga | null => {
   const id = arc.teile[teil]?.sagaId;
   return id ? (sagen.find((s) => s.id === id) ?? null) : null;
 };
+
+/**
+ * Das Überthema für die Saga einer Station.
+ *
+ * Es hält die Reihe zusammen, ohne dass man alles doppelt eintippen muss:
+ * Klappentext des Arcs, wohin es läuft, der Text dieser Station - und die
+ * Ansage zum Culprit. Die ist der eigentliche Trick: In allen Stationen außer
+ * der letzten darf er nur unter seinem Wort vorkommen, im Finale fällt die
+ * Maske.
+ */
+export function sagaAuftrag(arc: Arc, index: number): string {
+  const letzte = index >= arc.teile.length - 1;
+  const wort = arc.culprit.wort.trim();
+
+  const stuecke = [
+    arc.klappentext.trim(),
+    arc.ziel.trim() && `Worauf alles hinausläuft: ${arc.ziel.trim()}`,
+    arc.teile[index]?.erzaehler.text.trim(),
+    wort &&
+      (letzte
+        ? `In dieser letzten Saga fällt die Maske: ${wort} steht am Ende selbst da.`
+        : `Hinter allem steht ${wort}. In dieser Saga bleibt er ungesehen - er wird nur so genannt, nie enttarnt, und die Spuren führen bloß bis zu seinem Schatten.`),
+  ];
+
+  return stuecke.filter(Boolean).join("\n\n") || arc.name;
+}
+
+/**
+ * Wer in der Saga einer Station mitspielen darf.
+ *
+ * Vor der letzten Station bleibt der Culprit draußen - sonst könnte man ihn
+ * dort schon stellen, und das Finale wäre entwertet. Nur wenn ohne ihn zu
+ * wenige Verdächtige übrig blieben, bleibt er drin: ein spielbarer Fall geht
+ * vor der Inszenierung.
+ */
+export function besetzungFuerTeil(
+  arc: Arc,
+  index: number,
+  verdaechtigenIds: string[],
+): string[] {
+  const letzte = index >= arc.teile.length - 1;
+  if (letzte || !arc.culprit.charakterId) return [];
+
+  const ohne = verdaechtigenIds.filter((id) => id !== arc.culprit.charakterId);
+  return ohne.length >= 3 && ohne.length < verdaechtigenIds.length ? ohne : [];
+}

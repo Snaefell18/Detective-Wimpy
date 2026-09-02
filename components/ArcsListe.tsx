@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bild } from "./Bild";
 import { fertigeTeile, spielbar, type Arc } from "@/lib/arcTypen";
-import { ladeArcs, ladeSagas } from "@/lib/db";
+import { istZugriffVerweigert, ladeArcs, ladeSagas } from "@/lib/db";
 import type { Saga } from "@/lib/sagaTypen";
 
 /**
@@ -36,8 +36,12 @@ export function ArcsListe({
           setFehler("Keine Verbindung zur Datenbank - Arcs sind gerade nicht abrufbar.");
         }
       })
-      .catch(() => {
-        setFehler("Die Arcs konnten nicht geladen werden.");
+      .catch((grund) => {
+        setFehler(
+          istZugriffVerweigert(grund)
+            ? "Arcs sind in dieser Datenbank noch nicht freigeschaltet - die Firestore-Regeln aus dem Projekt müssen einmal neu veröffentlicht werden."
+            : "Die Arcs konnten nicht geladen werden.",
+        );
         setArcs([]);
       });
   }, []);

@@ -23,6 +23,7 @@ import type { Character, Item, Kampagne, Location } from "./types";
  *   items/{id}       - Gegenstände und Spuren
  *   faelle/{id}      - vorgenerierte Fälle ("Kampagnen")
  *   sagen/{id}       - Sagas: mehrere Fälle mit gemeinsamem Überthema
+ *   arcs/{id}        - Arcs: mehrere Sagas unter einem Bogen
  *
  * Die Lösung eines Falls steht nie im Klartext in der Datenbank - sie steckt
  * verschlüsselt im Feld "siegel" (siehe lib/seal.ts).
@@ -39,6 +40,15 @@ const sauber = <T extends object>(daten: T): T =>
  * unterscheiden.
  */
 export type Abfrage<T> = { daten: T[]; ausCache: boolean };
+
+/**
+ * Firestore antwortet mit "permission-denied", wenn eine Sammlung in den
+ * Regeln gar nicht vorkommt. Das sieht aus wie ein Fehler, ist aber meistens
+ * nur eine noch nicht veröffentlichte Regeldatei - und dafür braucht es einen
+ * anderen Hinweis als für "kaputt".
+ */
+export const istZugriffVerweigert = (fehler: unknown): boolean =>
+  (fehler as { code?: string })?.code === "permission-denied";
 
 async function alle<T>(sammlung: string): Promise<Abfrage<T>> {
   const schnappschuss = await getDocs(collection(getDb(), sammlung));

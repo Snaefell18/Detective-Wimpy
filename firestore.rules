@@ -77,6 +77,7 @@ service cloud.firestore {
       allow create, update: if angemeldet()
         && textLimit('name', 120)
         && textLimit('klappentext', 2000)
+        && textLimit('ziel', 2000)
         && textLimit('themeSong', 200);
       allow delete: if angemeldet();
     }

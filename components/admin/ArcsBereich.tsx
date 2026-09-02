@@ -3,15 +3,25 @@
 import { useEffect, useState } from "react";
 import { useAdmin } from "@/lib/adminStore";
 import {
+  besetzungFuerTeil,
   fertigeTeile,
   leererArc,
   mitAnzahl,
   naechsteLuecke,
+  sagaAuftrag,
   spielbar,
   type Arc,
+  type ArcCulprit,
   type ArcFinaleArt,
 } from "@/lib/arcTypen";
-import { ladeArcs, ladeSagas, loescheArc, speichereArc, speichereSaga } from "@/lib/db";
+import {
+  istZugriffVerweigert,
+  ladeArcs,
+  ladeSagas,
+  loescheArc,
+  speichereArc,
+  speichereSaga,
+} from "@/lib/db";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
 import {
   STANDARD_SAGA_VORGABEN,
@@ -27,6 +37,16 @@ const mitSaga = (arc: Arc, index: number, sagaId: string): Arc => ({
   ...arc,
   teile: arc.teile.map((t, i) => (i === index ? { ...t, sagaId } : t)),
 });
+
+/**
+ * Die Sammlung "arcs" ist neu. Wer seine Firestore-Regeln noch nicht neu
+ * veröffentlicht hat, bekommt beim Lesen ein "permission-denied" - das sieht
+ * aus wie ein Fehler, ist aber nur eine fehlende Zeile in der Regeldatei.
+ */
+const REGEL_HINWEIS = (fehler: unknown): string =>
+  istZugriffVerweigert(fehler)
+    ? "Die Datenbank lässt die Sammlung „arcs“ noch nicht zu. Bitte firestore.rules aus dem Projekt in der Firebase-Konsole neu veröffentlichen - danach erscheinen die Arcs."
+    : "Die Arcs konnten nicht geladen werden.";
 
 const ANZAHLEN = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -61,19 +81,28 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
 
-  const laden = () =>
-    Promise.all([ladeArcs(), ladeSagas()])
-      .then(([a, s]) => {
-        setArcs(a.daten);
-        setSagas(s.daten);
-        if (a.ausCache && a.daten.length === 0) {
-          onFehler("Keine Verbindung zur Datenbank - gespeicherte Arcs fehlen hier.");
-        }
-      })
-      .catch(() => {
-        setArcs([]);
-        onFehler("Die Arcs konnten nicht geladen werden.");
-      });
+  const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
+
+  // Beide Sammlungen einzeln laden: Fehlt eine, soll die andere trotzdem da
+  // sein - sonst stünde man vor einer leeren Seite, obwohl nur eine Kleinigkeit
+  // klemmt.
+  const laden = async () => {
+    try {
+      const { daten, ausCache } = await ladeArcs();
+      setArcs(daten);
+      if (ausCache && daten.length === 0) {
+        onFehler("Keine Verbindung zur Datenbank - gespeicherte Arcs fehlen hier.");
+      }
+    } catch (fehler) {
+      setArcs([]);
+      onFehler(REGEL_HINWEIS(fehler));
+    }
+    try {
+      setSagas((await ladeSagas()).daten);
+    } catch {
+      // Ohne die Sagenliste lässt sich nur nichts zuordnen - der Rest geht.
+    }
+  };
 
   useEffect(() => {
     void laden();
@@ -103,8 +132,12 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       await laden();
       setOffen(arc.id);
       onMeldung(`Arc „${arc.name}“ angelegt - jetzt die erste Saga erzeugen.`);
-    } catch {
-      onFehler("Der Arc konnte nicht gespeichert werden.");
+    } catch (fehler) {
+      onFehler(
+        istZugriffVerweigert(fehler)
+          ? REGEL_HINWEIS(fehler)
+          : "Der Arc konnte nicht gespeichert werden.",
+      );
     }
   };
 
@@ -121,12 +154,19 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
     setLaeuft(true);
     onFehler(null);
     try {
+      const letzte = index >= arc.teile.length - 1;
+      const verdaechtige = stammdaten.charaktere
+        .filter((c) => !c.istDetektiv)
+        .map((c) => c.id);
       const vorgaben: SagaVorgaben = {
         ...STANDARD_SAGA_VORGABEN,
         name: `${arc.name} - ${teil.name}`,
-        thema:
-          [arc.klappentext.trim(), teil.erzaehler.text.trim()].filter(Boolean).join("\n\n") ||
-          arc.name,
+        thema: sagaAuftrag(arc, index),
+        // Vorher bleibt der Culprit draußen; in der letzten Saga ist er der
+        // Drahtzieher und tritt - wie beim Twist - erst im Finale auf.
+        charaktere: besetzungFuerTeil(arc, index, verdaechtige),
+        drahtzieherId: letzte ? arc.culprit.charakterId : "",
+        twist: letzte && Boolean(arc.culprit.charakterId),
       };
       const saga = await erzeugeSaga(
         {
@@ -164,37 +204,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
         Stück entstehen - eine Saga genügt, damit gespielt werden kann.
       </p>
 
-      <label className="feld">
-        <span className="leise">Name</span>
-        <input
-          value={entwurf.name}
-          onChange={(e) => setzen({ name: e.target.value })}
-          placeholder="Die Schatten über Kopenhagen"
-          maxLength={120}
-        />
-      </label>
-
-      <label className="feld">
-        <span className="leise">Klappentext · steht in der Auswahlliste</span>
-        <textarea
-          rows={3}
-          value={entwurf.klappentext}
-          onChange={(e) => setzen({ klappentext: e.target.value })}
-          maxLength={2000}
-        />
-      </label>
-
-      <label className="feld">
-        <span className="leise">
-          Titelsong in /public/audio (leer = der übliche Titelsong)
-        </span>
-        <input
-          value={entwurf.themeSong}
-          onChange={(e) => setzen({ themeSong: e.target.value })}
-          placeholder="/audio/arc-theme.mp3"
-          maxLength={200}
-        />
-      </label>
+      <ArcFelder arc={entwurf} verdaechtige={verdaechtige} onAendern={setzen} />
 
       <h3 className="unter-abschnitt">
         Wie viele Sagen <span className="leise">· später änderbar</span>
@@ -245,25 +255,11 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
 
           {offen === arc.id && (
             <div className="saga-inhalt">
-              <label className="feld">
-                <span className="leise">Klappentext</span>
-                <textarea
-                  rows={3}
-                  value={arc.klappentext}
-                  onChange={(e) => void sichern({ ...arc, klappentext: e.target.value })}
-                  maxLength={2000}
-                />
-              </label>
-
-              <label className="feld">
-                <span className="leise">Titelsong in /public/audio</span>
-                <input
-                  value={arc.themeSong}
-                  onChange={(e) => void sichern({ ...arc, themeSong: e.target.value })}
-                  placeholder="/audio/arc-theme.mp3"
-                  maxLength={200}
-                />
-              </label>
+              <ArcFelder
+                arc={arc}
+                verdaechtige={verdaechtige}
+                onAendern={(teil) => void sichern({ ...arc, ...teil })}
+              />
 
               <h4 className="unter-abschnitt">
                 Sagen im Arc <span className="leise">· 1 bis 10</span>
@@ -419,6 +415,120 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
           )}
         </div>
       ))}
+    </>
+  );
+}
+
+/**
+ * Die Angaben, die für den ganzen Arc gelten - beim Anlegen und später beim
+ * Bearbeiten dieselben. Alles davon lässt sich jederzeit ändern; nur die Sagen,
+ * die schon erzeugt wurden, wissen natürlich nichts von späteren Änderungen.
+ */
+function ArcFelder({
+  arc,
+  verdaechtige,
+  onAendern,
+}: {
+  arc: Arc;
+  verdaechtige: { id: string; name: string }[];
+  onAendern: (teil: Partial<Arc>) => void;
+}) {
+  const setzeCulprit = (teil: Partial<ArcCulprit>) =>
+    onAendern({ culprit: { ...arc.culprit, ...teil } });
+  const gewaehlt = verdaechtige.find((c) => c.id === arc.culprit.charakterId);
+
+  return (
+    <>
+      <label className="feld">
+        <span className="leise">Name</span>
+        <input
+          value={arc.name}
+          onChange={(e) => onAendern({ name: e.target.value })}
+          placeholder="Die Schatten über Kopenhagen"
+          maxLength={120}
+        />
+      </label>
+
+      <label className="feld">
+        <span className="leise">Klappentext · steht in der Auswahlliste</span>
+        <textarea
+          rows={3}
+          value={arc.klappentext}
+          onChange={(e) => onAendern({ klappentext: e.target.value })}
+          maxLength={2000}
+        />
+      </label>
+
+      <label className="feld">
+        <span className="leise">
+          Worauf es hinausläuft · nur fürs Erzeugen, steht nie im Spiel
+        </span>
+        <textarea
+          rows={3}
+          value={arc.ziel}
+          onChange={(e) => onAendern({ ziel: e.target.value })}
+          placeholder="Am Ende stellt sich heraus, dass die halbe Stadt erpresst wurde - und die Spur führt in den Hafen."
+          maxLength={2000}
+        />
+      </label>
+
+      <h3 className="unter-abschnitt">
+        Der Culprit hinter allem{" "}
+        <span className="leise">· wird erst in der letzten Saga enttarnt</span>
+      </h3>
+      <div className="wahl-reihe">
+        <button
+          className="wahl-chip"
+          data-aktiv={!arc.culprit.charakterId}
+          onClick={() => setzeCulprit({ charakterId: "" })}
+        >
+          <strong>Offen</strong>
+          <span className="leise klein">entscheidet sich später</span>
+        </button>
+        {verdaechtige.map((c) => (
+          <button
+            key={c.id}
+            className="wahl-chip"
+            data-aktiv={arc.culprit.charakterId === c.id}
+            onClick={() => setzeCulprit({ charakterId: c.id })}
+          >
+            <strong>{c.name}</strong>
+          </button>
+        ))}
+      </div>
+
+      <label className="feld">
+        <span className="leise">
+          Wort für ihn in den Texten · „Der Schattenkanzler war weiterhin auf der
+          Flucht.“
+        </span>
+        <input
+          value={arc.culprit.wort}
+          onChange={(e) => setzeCulprit({ wort: e.target.value })}
+          placeholder="Der Schattenkanzler"
+          maxLength={120}
+        />
+      </label>
+
+      {gewaehlt && (
+        <p className="leise klein">
+          Bis zur letzten Saga bleibt {gewaehlt.name} aus der Besetzung heraus und
+          kommt nur als „{arc.culprit.wort.trim() || "…"}“ vor. In der letzten Saga
+          ist er der Drahtzieher und betritt erst im Finale die Bühne.
+        </p>
+      )}
+
+      <label className="feld">
+        <span className="leise">
+          Titelsong in /public/audio (leer = der übliche Titelsong)
+        </span>
+        <input
+          value={arc.themeSong}
+          onChange={(e) => onAendern({ themeSong: e.target.value })}
+          placeholder="/audio/arc-theme.mp3"
+          maxLength={200}
+        />
+      </label>
     </>
   );
 }

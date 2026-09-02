@@ -4,6 +4,8 @@
  */
 import {
   LEERER_ARC_TEIL,
+  besetzungFuerTeil,
+  sagaAuftrag,
   fertigeTeile,
   leererArc,
   mitAnzahl,
@@ -80,6 +82,47 @@ console.log("\n4. Die Saga zu einer Station");
   pruefe("leere Station: null", sagaVon(arc, 1, sagen) === null);
   pruefe("Station außerhalb: null", sagaVon(arc, 9, sagen) === null);
   pruefe("Saga fehlt in der Datenbank: null", sagaVon(arc, 0, []) === null);
+}
+
+console.log("\n5. Der Culprit hinter allem");
+{
+  const arc = {
+    ...leererArc(),
+    name: "Die Schatten",
+    klappentext: "Eine Stadt schweigt.",
+    ziel: "Am Ende führt alles in den Hafen.",
+    culprit: { charakterId: "boss", wort: "Der Schattenkanzler" },
+  };
+  arc.teile[0].erzaehler.text = "Es beginnt im Regen.";
+
+  const frueh = sagaAuftrag(arc, 0);
+  pruefe("Klappentext steckt drin", frueh.includes("Eine Stadt schweigt."));
+  pruefe("das Ziel steckt drin", frueh.includes("in den Hafen"));
+  pruefe("der Stationstext steckt drin", frueh.includes("Es beginnt im Regen."));
+  pruefe("das Wort wird genannt", frueh.includes("Der Schattenkanzler"));
+  pruefe("vorher wird er nicht enttarnt", frueh.includes("ungesehen"));
+
+  const spaet = sagaAuftrag(arc, 2);
+  pruefe("in der letzten Saga fällt die Maske", spaet.includes("fällt die Maske"));
+  pruefe("und nicht mehr „ungesehen“", !spaet.includes("ungesehen"));
+
+  const ohne = sagaAuftrag({ ...arc, culprit: { charakterId: "", wort: "" } }, 0);
+  pruefe("ohne Culprit keine Ansage", !ohne.includes("Hinter allem steht"));
+  pruefe("leerer Arc fällt auf den Namen zurück", sagaAuftrag({ ...leererArc(), name: "X" }, 0) === "X");
+
+  const alleIds = ["boss", "mikkeli", "nala", "fanny"];
+  const frueheBesetzung = besetzungFuerTeil(arc, 0, alleIds);
+  pruefe("vorher ist der Culprit draußen", !frueheBesetzung.includes("boss"), frueheBesetzung.join(","));
+  pruefe("die anderen bleiben", frueheBesetzung.length === 3);
+  pruefe("in der letzten Saga: freie Besetzung", besetzungFuerTeil(arc, 2, alleIds).length === 0);
+  pruefe(
+    "zu wenige Verdächtige: lieber spielbar als inszeniert",
+    besetzungFuerTeil(arc, 0, ["boss", "nala", "fanny"]).length === 0,
+  );
+  pruefe(
+    "ohne gesetzten Culprit bleibt alles offen",
+    besetzungFuerTeil({ ...arc, culprit: { charakterId: "", wort: "X" } }, 0, alleIds).length === 0,
+  );
 }
 
 console.log(
