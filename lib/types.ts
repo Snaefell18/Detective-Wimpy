@@ -104,6 +104,13 @@ export type Einstellungen = {
   ortsAnzahl: number;
   /** Intro mit Titelmusik vor jeder Runde. */
   intro: boolean;
+  /**
+   * Der Ton beim Auftritt eines neuen Tiers - leer heißt: keiner.
+   * Entweder ein Pfad in /public/audio oder "stimme:<id>" aus der Datenbank
+   * (hochgeladen oder vom Sprecher). Solange er läuft, bleibt die Figur im
+   * Dunkeln; enthüllt wird sie erst am Ende.
+   */
+  neuzugangTon: string;
 };
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
@@ -113,6 +120,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   stadt: "zufall",
   ortsAnzahl: 5,
   intro: true,
+  neuzugangTon: "",
 };
 
 /** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */

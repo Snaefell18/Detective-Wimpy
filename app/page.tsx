@@ -281,6 +281,7 @@ export default function Home() {
       <main className="app">
         <NeuerSpieler
           tiere={neuling.tiere}
+          ton={admin.einstellungen.neuzugangTon}
           onFertig={() => {
             const finale = neuling.finale;
             setNeuling(null);

@@ -43,6 +43,35 @@ export async function tonQuelle(audio: string): Promise<string> {
   return stimme.audio;
 }
 
+/** Firestore-Dokumente dürfen 1 MB groß sein - base64 bläht auf 4/3 auf. */
+const MAX_BYTES = 700_000;
+
+/**
+ * Eine eigene Tondatei in die Datenbank legen - für kurze Effekte, die auf
+ * jedem Gerät gleich klingen sollen, ohne dass man sie ins Projekt legt.
+ */
+export async function dateiAlsStimme(datei: File): Promise<string> {
+  if (datei.size > MAX_BYTES) {
+    throw new Error(
+      `Die Datei ist mit ${Math.round(datei.size / 1000)} KB zu groß - höchstens ${
+        MAX_BYTES / 1000
+      } KB. Ein kurzer Effekt reicht völlig.`,
+    );
+  }
+
+  const daten = await new Promise<string>((fertig, schiefgelaufen) => {
+    const leser = new FileReader();
+    leser.onload = () => fertig(String(leser.result));
+    leser.onerror = () => schiefgelaufen(new Error("Die Datei ließ sich nicht lesen."));
+    leser.readAsDataURL(datei);
+  });
+
+  const id = crypto.randomUUID();
+  await speichereStimme({ id, audio: daten, text: datei.name, erstelltAm: Date.now() });
+  gemerkt.set(id, daten);
+  return `${PRAEFIX}${id}`;
+}
+
 /**
  * Einen Text sprechen lassen und die Aufnahme speichern - nur im Admin-Menü.
  * Zurück kommt der Wert fürs Feld "audio".

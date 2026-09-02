@@ -159,7 +159,15 @@ weiter; das Feld nimmt beides.
 
 Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im
 Finale der Drahtzieher -, läuft davor eine kurze Ansage: „Ein neuer Spieler
-betritt das Feld!“, darunter Bild und Name. Wer neu ist, wird nicht geplant,
+betritt das Feld!“, darunter Bild und Name.
+
+Unter **Spiel → Auftritt eines neuen Tiers** lässt sich ein Ton hinterlegen:
+eine eigene Datei (wandert in die Datenbank, damit sie auf jedem Gerät gleich
+klingt), ein Pfad in `public/audio` oder ein Satz vom Sprecher. Ist einer
+gesetzt, bleibt die Figur als Schatten stehen, solange er läuft - enthüllt
+wird sie erst am Ende. Ohne Ton genügt eine kurze Spannungspause.
+
+Wer neu ist, wird nicht geplant,
 sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des
 vorherigen nicht, ist neu. Das stimmt auch bei von Hand nachbearbeiteten
 Sagas.

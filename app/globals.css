@@ -3069,3 +3069,65 @@ a.zurueck {
   margin: 2px 0 0;
   text-transform: none;
 }
+
+/* Solange der Effekt läuft, ist die Figur nur ein Schatten - sie atmet, mehr
+   nicht. Erst die Enthüllung bringt sie ans Licht. */
+.neuzugang-portraet .bild,
+.neuzugang-portraet .bild-platzhalter {
+  transition:
+    filter 420ms ease-out,
+    transform 420ms ease-out;
+}
+
+.neuzugang[data-enthuellt="false"] .neuzugang-portraet .bild,
+.neuzugang[data-enthuellt="false"] .neuzugang-portraet .bild-platzhalter {
+  filter: brightness(0) contrast(2);
+  transform: scale(0.94);
+  animation: neuzugang-atmen 1.6s ease-in-out infinite;
+}
+
+.neuzugang[data-enthuellt="true"] .neuzugang-portraet .bild {
+  animation: neuzugang-auftritt 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes neuzugang-atmen {
+  0%, 100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes neuzugang-auftritt {
+  from {
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Das Fragezeichen pocht mit - da ist jemand, aber wer? */
+.neuzugang-raetsel {
+  animation: pochen 1.1s ease-in-out infinite;
+}
+
+/* Ein Lichtblitz genau im Moment der Enthüllung. */
+.neuzugang-blitz {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(60% 40% at 50% 45%, #fff 0%, transparent 70%);
+  animation: neuzugang-blitz 480ms ease-out both;
+}
+
+@keyframes neuzugang-blitz {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}

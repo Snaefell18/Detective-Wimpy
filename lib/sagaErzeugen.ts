@@ -87,6 +87,8 @@ export async function erzeugeSaga(
     stadt: eingaben.vorgaben.stadt,
     ortsAnzahl: eingaben.vorgaben.ortsAnzahl,
     intro: true,
+    // Der Auftrittston hängt am Gerät, nicht am Fall.
+    neuzugangTon: "",
   };
 
   const fallFuer = (kapitel: number, was: string) =>
