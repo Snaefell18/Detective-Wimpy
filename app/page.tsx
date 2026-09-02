@@ -314,7 +314,9 @@ export default function Home() {
       <main className="app">
         <NeuerSpieler
           tiere={neuling.tiere}
-          ton={admin.einstellungen.neuzugangTon}
+          // Die Saga darf einen eigenen Ton mitbringen; sonst gilt der aus
+          // dem Admin-Menü.
+          ton={saga.stand?.saga.vorgaben.neuzugangTon || admin.einstellungen.neuzugangTon}
           onFertig={() => {
             const finale = neuling.finale;
             setNeuling(null);

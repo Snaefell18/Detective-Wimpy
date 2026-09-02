@@ -2,7 +2,12 @@
  * Der Twist: Der Drahtzieher darf in keinem Kapitel auftauchen - und im
  * Finale muss er da sein. Ohne Twist ändert sich nichts.
  */
-import { besetzungFuerKapitel, kapitelTaeterFuer, neuInKapitel } from "../lib/sagaTypen.ts";
+import {
+  besetzungFuerKapitel,
+  besetzungFuerSaga,
+  kapitelTaeterFuer,
+  neuInKapitel,
+} from "../lib/sagaTypen.ts";
 import { repariereFall } from "../lib/fallReparieren.ts";
 
 const alle = [
@@ -136,7 +141,39 @@ console.log("\n9. Der Twist sticht die Auftrittswahl");
   pruefe("trotz „von Anfang an“ nicht dabei", !k1.some((c) => c.id === "boss"), ids(k1));
 }
 
-console.log("\n10. Täter je Kapitel");
+console.log("\n10. Der Drahtzieher ist immer in der Besetzung");
+{
+  const ids = (liste) => liste.map((c) => c.id).join(",");
+  // Genau der Fall aus dem Spiel: Drahtzieher gewählt, aber nicht angehakt.
+  const ohneIhn = besetzungFuerSaga(alle, {
+    charaktere: ["mikkeli", "nala", "fanny"],
+    drahtzieherId: "boss",
+  });
+  pruefe("er rückt nach", ohneIhn.some((c) => c.id === "boss"), ids(ohneIhn));
+  pruefe("die gewählten bleiben", ["mikkeli", "nala", "fanny"].every((id) => ohneIhn.some((c) => c.id === id)));
+  pruefe("Wimpy ist dabei", ohneIhn.some((c) => c.istDetektiv));
+
+  const mitIhm = besetzungFuerSaga(alle, {
+    charaktere: ["boss", "nala"],
+    drahtzieherId: "boss",
+  });
+  pruefe("zu wenige Verdächtige: alle spielen mit", mitIhm.length === alle.length, ids(mitIhm));
+
+  const ohneWahl = besetzungFuerSaga(alle, { charaktere: [], drahtzieherId: "boss" });
+  pruefe("keine Wahl: alle spielen mit", ohneWahl.length === alle.length);
+
+  const ohneDrahtzieher = besetzungFuerSaga(alle, {
+    charaktere: ["mikkeli", "nala", "fanny"],
+    drahtzieherId: "",
+  });
+  pruefe(
+    "ohne gesetzten Drahtzieher bleibt die Auswahl",
+    !ohneDrahtzieher.some((c) => c.id === "boss"),
+    ids(ohneDrahtzieher),
+  );
+}
+
+console.log("\n11. Täter je Kapitel");
 {
   const moeglich = [{ id: "mikkeli" }, { id: "nala" }, { id: "fanny" }];
   const nimm = (wunsch, vorschlag, nummer = 1) =>

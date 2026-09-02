@@ -19,6 +19,7 @@ import type { CaseFile, PublicCase } from "@/lib/types";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { FallEditor } from "./FallEditor";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
+import { TonFeld } from "./TonFeld";
 import type { BereichProps } from "./typen";
 
 
@@ -94,6 +95,19 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
     } finally {
       setLaeuft(false);
       setSchritt(null);
+    }
+  };
+
+  /**
+   * Irgendetwas an einer gespeicherten Saga ändern - Text, Name, Anriss, Ton.
+   * Die Anzeige geht sofort mit, gespeichert wird im Hintergrund.
+   */
+  const sagaAendern = async (kopie: Saga) => {
+    setSagas((alt) => (alt ?? []).map((s) => (s.id === kopie.id ? kopie : s)));
+    try {
+      await speichereSaga(kopie);
+    } catch {
+      onFehler("Die Änderung konnte nicht gespeichert werden.");
     }
   };
 
@@ -535,11 +549,31 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
           {offen === saga.id && (
             <div className="saga-inhalt">
+              <p className="leise klein">
+                Hier stehen alle Texte, die der Spieler zu sehen bekommt - so,
+                wie sie im Spiel erscheinen. Name, Überthema, Klappentext und
+                die Vorspann-Schlagworte liegen im Bogen, die Fälle selbst in
+                ihren Akten.
+              </p>
+
               <div className="knopf-reihe">
                 <button className="knopf klein" onClick={() => void bogenOeffnen(saga)}>
                   Bogen bearbeiten
                 </button>
               </div>
+
+              <h4 className="unter-abschnitt">
+                Auftritt eines neuen Tiers{" "}
+                <span className="leise">· Ton dieser Saga</span>
+              </h4>
+              <TonFeld
+                wert={saga.vorgaben.neuzugangTon ?? ""}
+                onAendern={(neuzugangTon) => {
+                  const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                  kopie.vorgaben = { ...kopie.vorgaben, neuzugangTon };
+                  void sagaAendern(kopie);
+                }}
+              />
 
               <ErzaehlerFeld
                 titel="Auftakt"
@@ -549,9 +583,43 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
               {saga.kapitel.map((k, i) => (
                 <div key={k.nummer}>
+                  <h4 className="unter-abschnitt">
+                    Kapitel {k.nummer}{" "}
+                    <span className="leise">
+                      · {k.fall ? k.fall.titel : "Kein Fall hinterlegt"}
+                    </span>
+                  </h4>
+
+                  <label className="feld">
+                    <span className="leise">
+                      Kapitelname · steht auf der Titelkarte und im Vorspann
+                    </span>
+                    <input
+                      value={k.name}
+                      onChange={(e) => {
+                        const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                        kopie.kapitel[i].name = e.target.value;
+                        void sagaAendern(kopie);
+                      }}
+                      maxLength={120}
+                    />
+                  </label>
+
+                  <label className="feld">
+                    <span className="leise">Anriss · kurze Zeile für die Übersicht</span>
+                    <textarea
+                      rows={2}
+                      value={k.teaser}
+                      onChange={(e) => {
+                        const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                        kopie.kapitel[i].teaser = e.target.value;
+                        void sagaAendern(kopie);
+                      }}
+                      maxLength={400}
+                    />
+                  </label>
+
                   <ErzaehlerFeld
-                    titel={`Kapitel ${k.nummer}: ${k.name}`}
-                    hinweis={k.fall ? k.fall.titel : "Kein Fall hinterlegt"}
                     teil={k.erzaehler}
                     onAendern={(t) => void erzaehlerAendern(saga, i, t)}
                   />

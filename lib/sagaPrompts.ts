@@ -45,6 +45,7 @@ export function buildKernPrompt(
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
 Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
+NIRGENDS VOR DEM FINALE BENENNEN: In Titel, Überthema, Klappentext und Auftakt darf ${drahtzieher.name} nicht als der Verantwortliche dastehen - kein "dahinter steckt", kein "zieht die Fäden", kein "hinter allem". Andeuten ist ausdrücklich erwünscht: eine Handschrift, ein Geruch, ein Satz, der zweimal fällt. Nur der Schluss gehört dem Spieler.
 ${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}
 
 ${vorgaben.thema ? `ÜBERTHEMA (unbedingt aufgreifen): ${vorgaben.thema}\n` : ""}
@@ -121,7 +122,7 @@ export function buildKapitelPrompt(args: {
 
 ÜBERTHEMA: ${thema}
 DIE WAHRHEIT HINTER ALLEM (streng geheim, kommt erst im Finale heraus): ${wahrheit}
-DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel auf keinen Fall der Täter sein${
+DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel auf keinen Fall der Täter sein und in keinem Text dieses Kapitels als der Kopf hinter allem benannt werden (andeuten ja, benennen nein)${
     twist
       ? " und ist hier gar nicht anwesend."
       : " und wirkt höchstens beiläufig harmlos."

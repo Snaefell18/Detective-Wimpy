@@ -266,6 +266,7 @@ export const SagaVorgabenSchema = z.object({
   reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]),
   absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]),
   ton: z.enum(["kindgerecht", "spannend", "albern"]),
+  neuzugangTon: z.string().max(200).default(""),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
 });

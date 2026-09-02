@@ -67,6 +67,57 @@ export const titelOhneNamen = (titel: string, namen: string[]): string =>
   nenntNamen(titel, namen).length === 0 ? titel : "";
 
 /**
+ * Wendungen, mit denen ein Text jemanden als den Kopf hinter allem ausweist.
+ *
+ * Sie allein sind harmlos - erst zusammen mit einem Namen wird daraus die
+ * Auflösung, und die gehört ins Finale. "Jemand zieht die Fäden" darf also
+ * stehen bleiben, "Mikkeli zieht die Fäden" nicht.
+ */
+const ENTTARNUNG = [
+  /hinter allem/i,
+  /dahinter\s?steck/i,
+  /steckt dahinter/i,
+  /drahtzieher/i,
+  /strippenzieher/i,
+  /hintermann/i,
+  /zieht die fäden/i,
+  /fäden (in der hand|zusammen)/i,
+  /auftraggeber/i,
+  /der kopf (der|hinter|des)/i,
+  /alles (gesteuert|geplant|eingefädelt)/i,
+  /war es die ganze zeit/i,
+  /die ganze zeit über/i,
+];
+
+/**
+ * Der Text ohne die Sätze, die diesen Namen als den Verantwortlichen
+ * ausweisen.
+ *
+ * Anteasern ist erwünscht - das ist die halbe Saga. Aber das Modell schreibt
+ * gern "Und dahinter steckte Mikkeli", und dann ist die Reihe vorbei, bevor
+ * sie begonnen hat. Gestrichen wird nur, wo Name und Enttarnung im selben
+ * Satz stehen; alles andere bleibt, auch der Name für sich.
+ */
+export function ohneEnttarnung(text: string, name: string): string {
+  if (!text || !name.trim()) return text;
+
+  return text
+    .split("\n")
+    .map((zeile) =>
+      (zeile.match(/[^.!?…]+[.!?…]*\s*/gu) ?? [zeile])
+        .filter(
+          (satz) =>
+            nenntNamen(satz, [name]).length === 0 ||
+            !ENTTARNUNG.some((muster) => muster.test(satz)),
+        )
+        .join("")
+        .trim(),
+    )
+    .filter((zeile) => zeile.length > 0)
+    .join("\n");
+}
+
+/**
  * Wer zu diesem Zeitpunkt noch nicht aufgetreten ist.
  *
  * `kapitel` ist die Nummer des Kapitels, das gleich kommt; 0 steht für alles

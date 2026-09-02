@@ -3,6 +3,7 @@
 import { alsStaedte } from "@/lib/csv";
 import { auftrittVon, type SagaVorgaben } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
+import { TonFeld } from "./TonFeld";
 
 /**
  * Alle Vorgaben einer Saga an einem Ort.
@@ -451,6 +452,20 @@ export function SagaVorgabenFelder({
           </button>
         ))}
       </div>
+
+      <h3 className="unter-abschnitt">
+        Auftritt eines neuen Tiers{" "}
+        <span className="leise">· der Ton, wenn jemand dazustößt</span>
+      </h3>
+      <p className="leise klein">
+        Gilt nur für diese Saga. Ohne Auswahl gilt, was im Admin-Menü unter
+        „Spiel“ steht. Solange der Ton läuft, bleibt die Figur im Dunkeln -
+        enthüllt wird sie erst am Ende.
+      </p>
+      <TonFeld
+        wert={vorgaben.neuzugangTon}
+        onAendern={(neuzugangTon) => setzen({ neuzugangTon })}
+      />
 
       <h3 className="unter-abschnitt">Beschuldigungen je Fall</h3>
       <div className="wahl-reihe">

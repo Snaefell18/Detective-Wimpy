@@ -5,6 +5,7 @@
  */
 import {
   nenntNamen,
+  ohneEnttarnung,
   nochNichtDa,
   ohneNamen,
   spaeteNamen,
@@ -64,7 +65,41 @@ pruefe(
 pruefe("sauberer Titel bleibt", titelOhneNamen("Die Spur im Regen", ["Nala"]) === "Die Spur im Regen");
 pruefe("verräterischer Titel wird leer", titelOhneNamen("Nalas Rache", ["Nala"]) === "");
 
-console.log("\n4. Wer ist wann noch nicht da");
+console.log("\n4. Der Drahtzieher wird nicht enttarnt");
+{
+  const weg = (t) => ohneEnttarnung(t, "Mikkeli");
+  pruefe(
+    "„dahinter steckt“ mit Namen fliegt",
+    weg("Der Hafen schwieg. Dahinter steckte Mikkeli. Der Regen blieb.") ===
+      "Der Hafen schwieg. Der Regen blieb.",
+  );
+  pruefe("„hinter allem“ mit Namen fliegt", weg("Mikkeli stand hinter allem.") === "");
+  pruefe(
+    "„zieht die Fäden“ mit Namen fliegt",
+    weg("Man munkelt, Mikkeli zieht die Fäden.") === "",
+  );
+  pruefe("Drahtzieher mit Namen fliegt", weg("Der Drahtzieher heißt Mikkeli.") === "");
+  pruefe(
+    "der Name allein bleibt stehen",
+    weg("Mikkeli schenkte Kaffee nach.") === "Mikkeli schenkte Kaffee nach.",
+  );
+  pruefe(
+    "die Andeutung ohne Namen bleibt",
+    weg("Jemand zieht die Fäden.") === "Jemand zieht die Fäden.",
+  );
+  pruefe(
+    "ein anderer Name bleibt unangetastet",
+    weg("Dahinter steckt Nala.") === "Dahinter steckt Nala.",
+  );
+  pruefe("ohne Namen passiert nichts", ohneEnttarnung("Dahinter steckt wer.", "") === "Dahinter steckt wer.");
+  pruefe(
+    "zeilenweise: nur die verräterische Zeile fliegt",
+    ohneEnttarnung("Es regnete.\nMikkeli war der Kopf der Bande.\nEnde.", "Mikkeli") ===
+      "Es regnete.\nEnde.",
+  );
+}
+
+console.log("\n5. Wer ist wann noch nicht da");
 {
   const namen = (kapitel, vorgaben, drahtzieherId = "boss") =>
     nochNichtDa({ besetzung: alle, drahtzieherId, vorgaben, kapitel })
@@ -90,7 +125,7 @@ console.log("\n4. Wer ist wann noch nicht da");
   pruefe("der Detektiv zählt nie mit", !namen(0, v({ twist: true })).includes("Wimpy"));
 }
 
-console.log("\n5. Was der Browser wissen darf");
+console.log("\n6. Was der Browser wissen darf");
 {
   // Ohne Drahtzieher-Id: Der Twist bleibt Sache des Servers, Nachzügler
   // erkennt auch der Vorspann.

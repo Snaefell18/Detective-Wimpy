@@ -171,11 +171,18 @@ Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im
 Finale der Drahtzieher -, läuft davor eine kurze Ansage: „Ein neuer Spieler
 betritt das Feld!“, darunter Bild und Name.
 
-Unter **Spiel → Auftritt eines neuen Tiers** lässt sich ein Ton hinterlegen:
+Ein Ton dazu lässt sich an zwei Stellen hinterlegen: im Saga-Editor für genau
+diese Saga, und unter **Spiel → Auftritt eines neuen Tiers** für alles andere.
+Die Saga hat Vorrang. In beiden Fällen zur Wahl:
 eine eigene Datei (wandert in die Datenbank, damit sie auf jedem Gerät gleich
 klingt), ein Pfad in `public/audio` oder ein Satz vom Sprecher. Ist einer
 gesetzt, bleibt die Figur als Schatten stehen, solange er läuft - enthüllt
 wird sie erst am Ende. Ohne Ton genügt eine kurze Spannungspause.
+
+Der Drahtzieher wird davor nie beim Namen genannt: Der Server streicht Sätze,
+die ihn als den Kopf hinter allem ausweisen („dahinter steckt …“, „zieht die
+Fäden“), aus Überthema, Klappentext, Auftakt und allen Kapiteltexten.
+Andeutungen bleiben - sie sind die halbe Saga.
 
 Wer neu ist, wird nicht geplant,
 sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des

@@ -18,12 +18,14 @@ import { FinaleSchema, KernSchema, makeKapitelSchema } from "@/lib/sagaSchemas";
 import {
   STANDARD_SAGA_VORGABEN,
   besetzungFuerKapitel,
+  besetzungFuerSaga,
   kapitelTaeterFuer,
   neuInKapitel,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import {
   nochNichtDa,
+  ohneEnttarnung,
   ohneNamen,
   titelOhneNamen,
   worteOhneNamen,
@@ -150,12 +152,9 @@ async function kernSchritt(body: Record<string, unknown>) {
     ...(SagaVorgabenSchema.safeParse(body?.vorgaben).data ?? {}),
   };
 
-  const gefiltert =
-    vorgaben.charaktere.length >= 2
-      ? besetzung.filter((c) => c.istDetektiv || vorgaben.charaktere.includes(c.id))
-      : besetzung;
-  const spielendeBesetzung =
-    gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
+  // Der Drahtzieher ist immer dabei, auch wenn man ihn oben nicht angehakt
+  // hat - sonst würfelt der Server unten jemand anderen aus.
+  const spielendeBesetzung = besetzungFuerSaga(besetzung, vorgaben);
 
   const verdaechtige = spielendeBesetzung.filter((c) => !c.istDetektiv);
   if (verdaechtige.length < 3) {
@@ -211,23 +210,31 @@ async function kernSchritt(body: Record<string, unknown>) {
   const kuerze = (text: string, laenge: number) =>
     text.length > laenge ? `${text.slice(0, laenge - 1).trimEnd()}…` : text;
 
+  /**
+   * Vor dem Finale darf niemand lesen, wer hinter allem steckt. Erst die
+   * Namen der noch nicht Aufgetretenen streichen, dann die Sätze, die den
+   * Drahtzieher als den Verantwortlichen ausweisen.
+   */
+  const sauber = (text: string) =>
+    ohneEnttarnung(ohneNamen(text, zuFrueh), drahtzieher.name);
+
   const bogen: Bogen = {
     id: crypto.randomUUID(),
     name: kuerze(
       vorgaben.name.trim() ||
-        titelOhneNamen(antwort.daten.name, zuFrueh) ||
+        titelOhneNamen(antwort.daten.name, [...zuFrueh, drahtzieher.name]) ||
         "Die Spur im Schatten",
       120,
     ),
-    thema: kuerze(ohneNamen(antwort.daten.thema, zuFrueh), 2000),
-    klappentext: kuerze(ohneNamen(antwort.daten.klappentext, zuFrueh), 2000),
+    thema: kuerze(sauber(antwort.daten.thema), 2000),
+    klappentext: kuerze(sauber(antwort.daten.klappentext), 2000),
     vorgaben,
     besetzung: spielendeBesetzung,
     drahtzieherId: drahtzieher.id,
     drahtzieherName: drahtzieher.name,
     wahrheit: antwort.daten.wahrheit,
     drahtzieherMotiv: antwort.daten.drahtzieherMotiv,
-    auftaktText: ohneNamen(antwort.daten.auftaktText, zuFrueh),
+    auftaktText: sauber(antwort.daten.auftaktText),
     schlagworte: worteOhneNamen(antwort.daten.schlagworte, zuFrueh).slice(0, 6),
     kapitel: [],
     finale: { frage: "", auftrag: "", erzaehlerText: "", epilogText: "", stadt: "zufall" },
@@ -326,11 +333,20 @@ async function kapitelSchritt(
     nummer,
   });
 
+  // Auch hier gilt: anteasern ja, benennen nein. Der Drahtzieher steht erst
+  // im Finale fest - vorher fliegt jeder Satz, der ihn als den Kopf hinter
+  // allem ausweist.
+  const sauber = (text: string) =>
+    ohneEnttarnung(ohneNamen(text, zuFrueh), bogen.drahtzieherName);
+
   const kapitel = {
     nummer,
-    name: (titelOhneNamen(d.name ?? "", zuFrueh) || `Kapitel ${nummer}`).slice(0, 120),
-    teaser: ohneNamen(d.teaser ?? "", zuFrueh),
-    erzaehlerText: ohneNamen(d.erzaehlerText ?? "", zuFrueh),
+    name: (
+      titelOhneNamen(d.name ?? "", [...zuFrueh, bogen.drahtzieherName]) ||
+      `Kapitel ${nummer}`
+    ).slice(0, 120),
+    teaser: sauber(d.teaser ?? ""),
+    erzaehlerText: sauber(d.erzaehlerText ?? ""),
     auftrag: d.auftrag ?? "",
     enthuellung: d.enthuellung ?? "",
     taeterId,

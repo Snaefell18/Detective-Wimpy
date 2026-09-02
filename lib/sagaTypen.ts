@@ -76,6 +76,11 @@ export type SagaVorgaben = {
   reifegrad: Reifegrad;
   absurditaet: Absurditaet;
   ton: Einstellungen["ton"];
+  /**
+   * Ton beim Auftritt eines neuen Tiers - nur für diese Saga. Leer heißt:
+   * das, was im Admin-Menü unter "Spiel" eingestellt ist.
+   */
+  neuzugangTon: string;
   /** Schauplätze je Fall. */
   ortsAnzahl: number;
   /** Beschuldigungen je Fall. */
@@ -100,6 +105,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   reifegrad: "kindgerecht",
   absurditaet: "verspielt",
   ton: "kindgerecht",
+  neuzugangTon: "",
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
@@ -171,6 +177,37 @@ export type SagaLauf = {
    */
   finaleGeschafft?: boolean;
 };
+
+/**
+ * Wer in einer Saga überhaupt mitspielt.
+ *
+ * Wählt man einzelne Tiere aus, spielen nur die - mit einer Ausnahme, die
+ * nicht verhandelbar ist: Der Drahtzieher gehört immer dazu. Er ist die
+ * Lösung der ganzen Saga; wäre er nicht in der Besetzung, würfelte der Server
+ * jemand anderen aus, und am Ende stünde ein Tier da, das man nie gewählt
+ * hat. (Genau das ist passiert, bevor diese Funktion existierte.)
+ *
+ * Dass er in den Kapiteln nicht auftaucht, ist davon unberührt - das regelt
+ * der Twist, nicht die Besetzung.
+ *
+ * Bleiben am Ende weniger als drei Verdächtige übrig, spielt die ganze
+ * Besetzung: Ein Fall braucht Auswahl.
+ */
+export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }>(
+  besetzung: T[],
+  vorgaben: Pick<SagaVorgaben, "charaktere" | "drahtzieherId">,
+): T[] {
+  const gewaehlt = vorgaben.charaktere ?? [];
+  if (gewaehlt.length < 2) return besetzung;
+
+  const gefiltert = besetzung.filter(
+    (c) =>
+      c.istDetektiv ||
+      gewaehlt.includes(c.id) ||
+      (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId),
+  );
+  return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
+}
 
 /** Ab welchem Kapitel ein Tier mitspielt. Finale = kapitelAnzahl + 1. */
 export function auftrittVon(args: {
