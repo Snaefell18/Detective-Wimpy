@@ -3049,3 +3049,23 @@ a.zurueck {
 .arc-station-finale .arc-station-text {
   padding: 4px 0;
 }
+
+/* --- "Ein neuer Spieler betritt das Feld!" -------------------------- */
+
+/* Eine kurze Ansage, kein zweites Intro: eine Zeile, ein Bild, ein Name. */
+.neuzugang-szene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.neuzugang-szene .intro-oberzeile {
+  margin-bottom: 6px;
+}
+
+.neuzugang-zeile {
+  margin: 2px 0 0;
+  text-transform: none;
+}

@@ -155,6 +155,15 @@ lassen“**. Wichtig ist, wie das läuft:
 Eine selbst aufgenommene Datei in `public/audio` funktioniert unverändert
 weiter; das Feld nimmt beides.
 
+### Neue Gesichter
+
+Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im
+Finale der Drahtzieher -, läuft davor eine kurze Ansage: „Ein neuer Spieler
+betritt das Feld!“, darunter Bild und Name. Wer neu ist, wird nicht geplant,
+sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des
+vorherigen nicht, ist neu. Das stimmt auch bei von Hand nachbearbeiteten
+Sagas.
+
 ## Modelle und Kosten
 
 Standard ist **Claude Sonnet 5** (2 $ / 10 $ je Million Token) - stark genug für

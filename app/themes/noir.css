@@ -2295,3 +2295,26 @@
 [data-theme="noir"] .arc-station-finale .arc-station-text strong {
   color: var(--akzent);
 }
+
+/* --- Neuzugang ------------------------------------------------------ */
+
+[data-theme="noir"] .neuzugang-szene .intro-oberzeile {
+  color: var(--akzent);
+}
+
+/* Der Name steht wie ein Titel da - aber eine Nummer kleiner als im Intro. */
+[data-theme="noir"] .neuzugang-szene .intro-logo {
+  font-size: 46px;
+  line-height: 0.9;
+}
+
+[data-theme="noir"] .neuzugang-zeile {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+[data-theme="noir"] .neuzugang .intro-portraet {
+  filter: saturate(0.15) contrast(1.1) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.8));
+}

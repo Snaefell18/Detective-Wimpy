@@ -1,5 +1,6 @@
 import type {
   Absurditaet,
+  Character,
   Einstellungen,
   PublicCase,
   Reifegrad,
@@ -268,4 +269,36 @@ export function kapitelTaeterFuer<T extends { id: string }>(args: {
     moeglich.find((c) => c.id === vorschlag)?.id ??
     moeglich[(nummer - 1) % moeglich.length].id
   );
+}
+
+/**
+ * Wer in diesem Kapitel zum ersten Mal mitspielt.
+ *
+ * Gefragt wird nicht die Planung, sondern die fertigen Fälle: Wer in der
+ * Besetzung dieses Falls steht und in der des vorherigen nicht, ist neu. Das
+ * stimmt auch dann noch, wenn jemand von Hand nachgetragen wurde - und es
+ * verrät nichts, denn beide Besetzungen liegen ohnehin offen.
+ *
+ * `kapitel` ist der Index in kapitel[]; -1 steht für das Finale. Im ersten
+ * Kapitel ist niemand "neu" - dort fängt schließlich alles an.
+ */
+export function neueGesichter(saga: Saga, kapitel: number): Character[] {
+  const besetzung = (fall: PublicCase | null | undefined) =>
+    (fall?.besetzung ?? []).filter((c) => !c.istDetektiv);
+
+  const jetzt =
+    kapitel < 0 ? besetzung(saga.finale.fall) : besetzung(saga.kapitel[kapitel]?.fall);
+  const vorher =
+    kapitel < 0
+      ? besetzung(saga.kapitel[saga.kapitel.length - 1]?.fall)
+      : kapitel === 0
+        ? jetzt
+        : besetzung(saga.kapitel[kapitel - 1]?.fall);
+
+  // Fehlt einer der beiden Fälle, lässt sich nichts vergleichen - dann lieber
+  // nichts ankündigen als etwas Falsches.
+  if (jetzt.length === 0 || vorher.length === 0) return [];
+
+  const bekannt = new Set(vorher.map((c) => c.id));
+  return jetzt.filter((c) => !bekannt.has(c.id));
 }

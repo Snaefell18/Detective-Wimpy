@@ -15,6 +15,7 @@ import { SagaVorspann } from "@/components/SagaVorspann";
 import { Prolog } from "@/components/Prolog";
 import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
+import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
@@ -23,7 +24,8 @@ import { useAdmin } from "@/lib/adminStore";
 import type { Arc } from "@/lib/arcTypen";
 import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
-import type { Saga } from "@/lib/sagaTypen";
+import { neueGesichter, type Saga } from "@/lib/sagaTypen";
+import type { Character } from "@/lib/types";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useGame } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
@@ -45,6 +47,8 @@ export default function Home() {
    * weiter.
    */
   const [arcRuht, setArcRuht] = useState(false);
+  /** Wer gleich zum ersten Mal mitspielt - wird vor dem Kapitel angekündigt. */
+  const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
 
@@ -116,8 +120,13 @@ export default function Home() {
     }
   };
 
-  /** Den Fall des aktuellen Kapitels (oder das Finale) beginnen. */
-  const sagaFallStarten = (finale: boolean) => {
+  /**
+   * Den Fall des aktuellen Kapitels (oder das Finale) beginnen.
+   *
+   * Stößt hier jemand zum ersten Mal dazu, kommt erst die Ansage - danach
+   * ruft sie diese Funktion noch einmal auf, dann mit `angekuendigt`.
+   */
+  const sagaFallStarten = (finale: boolean, angekuendigt = false) => {
     void tonFreigeben();
     if (!saga.stand) return;
     const quelle = finale
@@ -126,6 +135,14 @@ export default function Home() {
     if (!quelle?.fall || !quelle.siegel) {
       saga.setzePhase(finale ? "epilog" : "erzaehler");
       return;
+    }
+
+    if (!angekuendigt) {
+      const neue = neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel);
+      if (neue.length > 0) {
+        setNeuling({ tiere: neue, finale });
+        return;
+      }
     }
     spiel.fertigenFallStarten(
       quelle.fall,
@@ -254,6 +271,22 @@ export default function Home() {
             </p>
           </div>
         )}
+      </main>
+    );
+  }
+
+  // "Ein neuer Spieler betritt das Feld!" - direkt vor dem Kapitel.
+  if (neuling && phase === "aus") {
+    return (
+      <main className="app">
+        <NeuerSpieler
+          tiere={neuling.tiere}
+          onFertig={() => {
+            const finale = neuling.finale;
+            setNeuling(null);
+            sagaFallStarten(finale, true);
+          }}
+        />
       </main>
     );
   }
