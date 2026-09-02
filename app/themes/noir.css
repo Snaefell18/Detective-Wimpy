@@ -2319,6 +2319,12 @@
   filter: saturate(0.15) contrast(1.1) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.8));
 }
 
+/* Im Noir ist der Schleier der Grund selbst - die Figur tritt aus dem
+   Hintergrund hervor, nicht aus einem blauen Nebel. */
+[data-theme="noir"] .neuzugang-schleier {
+  background: var(--grund);
+}
+
 /* --- Fund-Moment ---------------------------------------------------- */
 
 /* Im Noir ist der Fund eine Akte, keine Karteikarte: harte Kanten, ein

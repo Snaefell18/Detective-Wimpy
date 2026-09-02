@@ -9,23 +9,22 @@ import type { Character } from "@/lib/types";
  * "Ein neuer Spieler betritt das Feld!"
  *
  * Die Ansage, bevor ein Kapitel beginnt, in dem jemand zum ersten Mal dabei
- * ist. Sie läuft in zwei Schlägen:
+ * ist. Die Figur kommt nicht auf einen Schlag, sondern schält sich über die
+ * ganze Länge des Tons aus dem Dunkel: Am Anfang ein Schatten, am Ende steht
+ * sie da. Ohne Ton dauert dasselbe eine kurze, feste Zeit.
  *
- * 1. Spannung: die Zeile, darunter nur ein Schatten. Dazu - wenn eingestellt -
- *    ein Effekt oder der Sprecher.
- * 2. Enthüllung: Erst wenn der Ton zu Ende ist, kommt die Figur ans Licht.
- *    Genau daher kommt die Wirkung; ein Bild, das schon während des Tons
- *    dasteht, nimmt ihm alles.
- *
- * Ohne Ton bleibt der erste Schlag kurz - stehen bleibt er nie.
+ * Deshalb hängt der Fortschritt am Abspielkopf und nicht an einem Wecker -
+ * ein Lied, das zehn Sekunden läuft, enthüllt zehn Sekunden lang.
  */
 
-/** Spannungspause, wenn kein Ton eingestellt ist. */
-const OHNE_TON = 1400;
-/** Wie lange die enthüllte Figur stehen bleibt. */
-const NACH_ENTHUELLUNG = 2800;
+/** Wie lange die Enthüllung dauert, wenn kein Ton eingestellt ist. */
+const OHNE_TON = 2400;
+/** Wie lange die fertige Figur stehen bleibt, bevor es weitergeht. */
+const NACH_ENTHUELLUNG = 2200;
 /** Notbremse: Ein Ton, der nicht endet, darf das Spiel nicht anhalten. */
-const HOECHSTENS = 12_000;
+const HOECHSTENS = 20_000;
+/** Ab hier steht der Name statt des Fragezeichens. */
+const NAME_AB = 0.82;
 
 export function NeuerSpieler({
   tiere,
@@ -38,85 +37,127 @@ export function NeuerSpieler({
   onFertig: () => void;
 }) {
   const [nr, setNr] = useState(0);
-  const [enthuellt, setEnthuellt] = useState(false);
+  const [fortschritt, setFortschritt] = useState(0);
   const tier = tiere[nr];
+  const enthuellt = fortschritt >= 1;
 
   // Die Rückmeldung liegt in einem Ref: Sonst würde jeder Renderdurchgang der
-  // Elternseite den Wecker neu stellen, und die Ansage bliebe stehen.
+  // Elternseite die Wecker neu stellen, und die Ansage bliebe stehen.
   const fertigRef = useRef(onFertig);
   fertigRef.current = onFertig;
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /**
+   * Kurze Sperre nach dem Aufdecken. Ein Fingertipp kann auf dem Handy als
+   * mehrere Ereignisse ankommen; ohne sie hätte derselbe Tipp erst enthüllt
+   * und gleich darauf weitergeschaltet - und man sähe das Bild nie.
+   */
+  const sperreBis = useRef(0);
 
-  /** Erst enthüllen, dann weiter - ein Tippen macht immer den nächsten Schritt. */
-  const weiter = () => {
-    if (!enthuellt) {
-      audioRef.current?.pause();
-      setEnthuellt(true);
-      return;
-    }
-    if (nr + 1 < tiere.length) setNr(nr + 1);
-    else fertigRef.current();
+  const weiterschalten = () => {
+    if (nr + 1 < tiere.length) {
+      setNr(nr + 1);
+      setFortschritt(0);
+    } else fertigRef.current();
   };
 
-  // Erster Schlag: der Ton läuft, die Figur bleibt im Dunkeln.
+  /** Ein Tipp deckt erst ganz auf - und erst der nächste geht weiter. */
+  const antippen = () => {
+    if (performance.now() < sperreBis.current) return;
+    if (!enthuellt) {
+      audioRef.current?.pause();
+      sperreBis.current = performance.now() + 600;
+      setFortschritt(1);
+      return;
+    }
+    weiterschalten();
+  };
+
+  // Die Enthüllung: Sie läuft mit dem Ton mit, sonst über eine feste Zeit.
   useEffect(() => {
     let aktiv = true;
-    let wecker = 0;
-    setEnthuellt(false);
+    let bild = 0;
+    let umschalter = 0;
+    setFortschritt(0);
 
-    const enthuellen = () => {
-      if (aktiv) setEnthuellt(true);
+    /**
+     * Die Ersatzuhr für alles, was ohne Ton läuft. Sie wird neu gestellt,
+     * sobald feststeht, dass kein Ton kommt - sonst stünde man die volle
+     * Notbremsenzeit im Dunkeln, nur weil der Browser nicht abspielen wollte.
+     */
+    const uhr = { start: performance.now(), dauer: ton ? HOECHSTENS : OHNE_TON };
+    const stelleUhr = (dauer: number) => {
+      if (!aktiv || uhr.dauer === dauer) return;
+      uhr.start = performance.now();
+      uhr.dauer = dauer;
     };
 
-    if (!ton) {
-      wecker = window.setTimeout(enthuellen, OHNE_TON);
-      return () => {
-        aktiv = false;
-        window.clearTimeout(wecker);
-      };
+    const takt = () => {
+      if (!aktiv) return;
+      const audio = audioRef.current;
+      const laeuft =
+        audio && Number.isFinite(audio.duration) && audio.duration > 0.5 && !audio.paused;
+
+      setFortschritt((alt) => {
+        // Ein Tipp hat schon aufgedeckt - dabei bleibt es.
+        if (alt >= 1) return 1;
+        const jetzt = laeuft
+          ? Math.min(1, audio.currentTime / audio.duration)
+          : Math.min(1, (performance.now() - uhr.start) / uhr.dauer);
+        // Nur vorwärts: Ein kurzer Aussetzer soll die Figur nicht zurück ins
+        // Dunkel schieben.
+        return Math.max(alt, jetzt);
+      });
+
+      bild = requestAnimationFrame(takt);
+    };
+
+    if (ton) {
+      void tonQuelle(ton).then((quelle) => {
+        if (!aktiv) return;
+        if (!quelle) {
+          stelleUhr(OHNE_TON);
+          return;
+        }
+
+        const audio = new Audio(quelle);
+        audioRef.current = audio;
+        audio.addEventListener("ended", () => {
+          if (aktiv) setFortschritt(1);
+        });
+        void audio.play().catch(() => {
+          // Verweigert der Browser den Ton, läuft die Enthüllung trotzdem -
+          // dann eben über die kurze feste Zeit.
+          audioRef.current = null;
+          stelleUhr(OHNE_TON);
+        });
+      });
+
+      // Und falls gar nichts passiert - kein Fehler, aber auch kein Ton:
+      // Nach einem Augenblick zählt ebenfalls die Uhr.
+      umschalter = window.setTimeout(() => {
+        const audio = audioRef.current;
+        if (!audio || audio.paused || !Number.isFinite(audio.duration)) stelleUhr(OHNE_TON);
+      }, 1200);
     }
 
-    void tonQuelle(ton).then((quelle) => {
-      if (!aktiv) return;
-      if (!quelle) {
-        wecker = window.setTimeout(enthuellen, OHNE_TON);
-        return;
-      }
-
-      const audio = new Audio(quelle);
-      audioRef.current = audio;
-      audio.addEventListener("ended", enthuellen);
-      // Kennt der Browser die Länge, hängt die Notbremse daran; sonst greift
-      // sie nach der Höchstzeit.
-      audio.addEventListener("loadedmetadata", () => {
-        if (!aktiv || !Number.isFinite(audio.duration)) return;
-        window.clearTimeout(wecker);
-        wecker = window.setTimeout(enthuellen, audio.duration * 1000 + 400);
-      });
-      wecker = window.setTimeout(enthuellen, HOECHSTENS);
-
-      void audio.play().catch(() => {
-        // Verweigert der Browser den Ton, wird trotzdem enthüllt - nur eben
-        // nach der kurzen Pause statt nach dem Effekt.
-        window.clearTimeout(wecker);
-        wecker = window.setTimeout(enthuellen, OHNE_TON);
-      });
-    });
-
+    bild = requestAnimationFrame(takt);
     return () => {
       aktiv = false;
-      window.clearTimeout(wecker);
+      cancelAnimationFrame(bild);
+      window.clearTimeout(umschalter);
       audioRef.current?.pause();
       audioRef.current = null;
     };
   }, [nr, ton]);
 
-  // Zweiter Schlag: Nach der Enthüllung geht es von allein weiter.
+  // Steht die Figur ganz im Licht, bleibt sie kurz - dann geht es weiter.
   useEffect(() => {
     if (!enthuellt) return;
     const id = window.setTimeout(() => {
-      if (nr + 1 < tiere.length) setNr(nr + 1);
-      else fertigRef.current();
+      if (nr + 1 < tiere.length) {
+        setNr(nr + 1);
+        setFortschritt(0);
+      } else fertigRef.current();
     }, NACH_ENTHUELLUNG);
     return () => window.clearTimeout(id);
   }, [enthuellt, nr, tiere.length]);
@@ -128,8 +169,13 @@ export function NeuerSpieler({
   if (!tier) return null;
 
   return (
-    <div className="intro neuzugang" data-enthuellt={enthuellt} onPointerDown={weiter}>
-      {/* Ein Lichtblitz im Moment der Enthüllung. */}
+    <div
+      className="intro neuzugang"
+      data-enthuellt={enthuellt}
+      style={{ ["--enthuellung" as string]: fortschritt.toFixed(3) }}
+      onPointerDown={antippen}
+    >
+      {/* Ein Lichtblitz im Moment, in dem sie ganz da ist. */}
       {enthuellt && <div className="neuzugang-blitz" key={`blitz-${nr}`} />}
 
       <div className="intro-buehne">
@@ -142,9 +188,13 @@ export function NeuerSpieler({
 
           <div className="intro-portraet neuzugang-portraet">
             <Bild src={tier.bild} alt={tier.name} platzhalter={tier.name} groesse="260px" sofort />
+            {/* Der Schleier liegt über der Figur und weicht mit dem Ton. Er
+                deckt zuverlässig ab - anders als ein Filter auf dem Bild, den
+                die Themes für Intro-Porträts überschreiben. */}
+            <span className="neuzugang-schleier" aria-hidden="true" />
           </div>
 
-          {enthuellt ? (
+          {fortschritt >= NAME_AB ? (
             <>
               <h1 className="intro-logo slam">{tier.name}</h1>
               <p className="leise neuzugang-zeile">
@@ -161,6 +211,10 @@ export function NeuerSpieler({
       </div>
 
       <div className="intro-leiste">
+        {/* Der Balken zeigt, wie weit die Enthüllung ist. */}
+        <div className="intro-fortschritt">
+          <span style={{ width: `${fortschritt * 100}%` }} />
+        </div>
         <div className="intro-knoepfe">
           {tiere.length > 1 && (
             <span className="intro-nummer">
@@ -170,9 +224,9 @@ export function NeuerSpieler({
           <button
             className="intro-skip"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={weiter}
+            onClick={antippen}
           >
-            {enthuellt ? "Weiter ›" : "Zeigen ›"}
+            {enthuellt ? "Weiter ›" : "Sofort zeigen ›"}
           </button>
         </div>
       </div>

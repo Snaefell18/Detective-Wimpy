@@ -3070,41 +3070,54 @@ a.zurueck {
   text-transform: none;
 }
 
-/* Solange der Effekt läuft, ist die Figur nur ein Schatten - sie atmet, mehr
-   nicht. Erst die Enthüllung bringt sie ans Licht. */
+/* Die Figur schält sich über die Länge des Tons aus dem Dunkel: --enthuellung
+   läuft von 0 bis 1. Gemacht wird das mit einem Schleier über dem Porträt,
+   nicht mit einem Filter auf dem Bild - die Themes setzen für Intro-Porträts
+   eigene Filter, und die würden gewinnen. */
+.neuzugang {
+  --enthuellung: 0;
+}
+
+.neuzugang-schleier {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--nacht, #05091c);
+  opacity: calc(1 - var(--enthuellung));
+  backdrop-filter: blur(calc((1 - var(--enthuellung)) * 6px));
+  -webkit-backdrop-filter: blur(calc((1 - var(--enthuellung)) * 6px));
+}
+
 .neuzugang-portraet .bild,
 .neuzugang-portraet .bild-platzhalter {
-  transition:
-    filter 420ms ease-out,
-    transform 420ms ease-out;
+  transform: scale(calc(0.94 + var(--enthuellung) * 0.06));
 }
 
-.neuzugang[data-enthuellt="false"] .neuzugang-portraet .bild,
-.neuzugang[data-enthuellt="false"] .neuzugang-portraet .bild-platzhalter {
-  filter: brightness(0) contrast(2);
-  transform: scale(0.94);
-  animation: neuzugang-atmen 1.6s ease-in-out infinite;
+/* Solange sie im Dunkeln steht, atmet sie leicht - da ist jemand. */
+.neuzugang[data-enthuellt="false"] .neuzugang-portraet {
+  animation: neuzugang-atmen 2.4s ease-in-out infinite;
 }
 
-.neuzugang[data-enthuellt="true"] .neuzugang-portraet .bild {
-  animation: neuzugang-auftritt 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+.neuzugang[data-enthuellt="true"] .neuzugang-schleier {
+  opacity: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: opacity 320ms ease-out;
+}
+
+.neuzugang[data-enthuellt="true"] .neuzugang-portraet .bild,
+.neuzugang[data-enthuellt="true"] .neuzugang-portraet .bild-platzhalter {
+  transform: scale(1);
+  transition: transform 320ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
 @keyframes neuzugang-atmen {
   0%, 100% {
-    opacity: 0.72;
+    opacity: 0.82;
   }
   50% {
     opacity: 1;
-  }
-}
-
-@keyframes neuzugang-auftritt {
-  from {
-    transform: scale(0.94) translateY(8px);
-  }
-  to {
-    transform: scale(1) translateY(0);
   }
 }
 

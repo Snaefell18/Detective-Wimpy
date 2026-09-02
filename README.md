@@ -188,8 +188,10 @@ diese Saga, und unter **Spiel → Auftritt eines neuen Tiers** für alles andere
 Die Saga hat Vorrang. In beiden Fällen zur Wahl:
 eine eigene Datei (wandert in die Datenbank, damit sie auf jedem Gerät gleich
 klingt), ein Pfad in `public/audio` oder ein Satz vom Sprecher. Ist einer
-gesetzt, bleibt die Figur als Schatten stehen, solange er läuft - enthüllt
-wird sie erst am Ende. Ohne Ton genügt eine kurze Spannungspause.
+gesetzt, schält sich die Figur über die ganze Länge des Tons aus dem Dunkel:
+Am Anfang ein Schatten, am Ende steht sie da, und der Name kommt zum Schluss.
+Ohne Ton dauert dasselbe knapp zweieinhalb Sekunden. „Sofort zeigen“ deckt
+auf, geht aber nicht weiter - erst der nächste Tipp.
 
 Der Drahtzieher wird davor nie beim Namen genannt: Der Server streicht Sätze,
 die ihn als den Kopf hinter allem ausweisen („dahinter steckt …“, „zieht die
