@@ -35,6 +35,15 @@ const sauber = <T extends object>(daten: T): T =>
   JSON.parse(JSON.stringify(daten));
 
 /**
+ * Die Sicherheitsregeln begrenzen die Länge einiger Felder. Wird eine Grenze
+ * gerissen, lehnt Firestore das Schreiben ab - und zwar mit
+ * "Missing or insufficient permissions", was nach einem Rechteproblem
+ * aussieht, aber keines ist. Deshalb wird hier gekürzt, bevor es dazu kommt.
+ */
+const kuerze = (text: unknown, laenge: number): string =>
+  typeof text === "string" && text.length > laenge ? text.slice(0, laenge) : String(text ?? "");
+
+/**
  * Firestore liefert ohne Verbindung stillschweigend leere Ergebnisse aus dem
  * lokalen Zwischenspeicher. Deshalb wird immer mitgegeben, ob die Antwort aus
  * dem Cache kam - so lässt sich "noch nichts angelegt" von "keine Verbindung"
@@ -128,7 +137,15 @@ export const ladeSagas = () => alle<Saga>("sagen");
 
 export async function speichereSaga(saga: Saga): Promise<void> {
   await anmelden();
-  await setDoc(doc(getDb(), "sagen", saga.id), sauber(saga));
+  await setDoc(
+    doc(getDb(), "sagen", saga.id),
+    sauber({
+      ...saga,
+      name: kuerze(saga.name, 120),
+      thema: kuerze(saga.thema, 2000),
+      klappentext: kuerze(saga.klappentext, 2000),
+    }),
+  );
 }
 
 export const loescheSaga = (id: string) => loesche("sagen", id);
@@ -139,7 +156,16 @@ export const ladeArcs = () => alle<Arc>("arcs");
 
 export async function speichereArc(arc: Arc): Promise<void> {
   await anmelden();
-  await setDoc(doc(getDb(), "arcs", arc.id), sauber(arc));
+  await setDoc(
+    doc(getDb(), "arcs", arc.id),
+    sauber({
+      ...arc,
+      name: kuerze(arc.name, 120),
+      klappentext: kuerze(arc.klappentext, 2000),
+      ziel: kuerze(arc.ziel, 2000),
+      themeSong: kuerze(arc.themeSong, 200),
+    }),
+  );
 }
 
 export const loescheArc = (id: string) => loesche("arcs", id);

@@ -62,10 +62,16 @@ die Datenbank und lassen sich dort bearbeiten.
 | `arcs`       | Arcs: mehrere Sagas unter einem Bogen               |
 | `stimmen`    | gesprochene Erzählertexte (siehe unten)             |
 
-Die Sammlungen `sagen` und `arcs` kamen später dazu. Wer seine Regeln vor
-diesen Zeilen veröffentlicht hat, bekommt beim Öffnen der Arcs ein
-„permission-denied“ - dann einmal `firestore.rules` aus dem Projekt in der
-Firebase-Konsole neu veröffentlichen.
+Die Sammlungen `sagen`, `arcs` und `stimmen` kamen später dazu. Wer seine
+Regeln vor diesen Zeilen veröffentlicht hat, bekommt beim Lesen oder Schreiben
+ein „Missing or insufficient permissions“ - dann einmal `firestore.rules` aus
+dem Projekt in der Firebase-Konsole neu veröffentlichen.
+
+Die Regeln begrenzen außerdem die Länge einiger Felder (Name 120, Überthema
+und Klappentext je 2000 Zeichen). Wird eine Grenze gerissen, lehnt Firestore
+das Schreiben ebenfalls mit „Missing or insufficient permissions“ ab, obwohl
+es kein Rechteproblem ist. Deshalb kürzen Server und App diese Felder selbst,
+bevor sie gespeichert werden.
 
 Die Lösung eines Falls steht **nicht** im Klartext in der Datenbank: Täter,
 Motiv und gelogene Alibis stecken im Feld `siegel` - AES-256-verschlüsselt mit
@@ -105,8 +111,12 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    unter welchem Wort er in den Texten vorkommt („Der Schattenkanzler war
    weiterhin auf der Flucht.“). Alles davon lässt sich später ändern.
 2. Zu jeder Station gehören ein Erzählertext (optional mit Tondatei) und eine
-   Saga. Die Saga lässt sich direkt hier erzeugen oder aus den vorhandenen
-   auswählen.
+   Saga. „Saga für diesen Teil vorbereiten“ öffnet dieselben Einstellungen wie
+   im Saga-Bereich - Kapitelzahl, Städte, Täter je Kapitel, Reifegrad, Ton,
+   Schwierigkeit. Was der Arc vorgibt (Überthema samt Culprit-Ansage, die
+   Besetzung ohne den Culprit, im letzten Teil der Drahtzieher samt Twist), ist
+   dort vorbelegt und markiert - ändern lässt es sich trotzdem. Alternativ
+   ordnet man eine bereits vorhandene Saga zu.
 3. Im Spiel öffnet **Arcs** zuerst die Übersicht: alle Sagen untereinander,
    mit Haken an dem, was durch ist. Starten lässt sich immer nur die nächste
    offene - die Reihenfolge ist die Geschichte. Wer mittendrin pausiert,

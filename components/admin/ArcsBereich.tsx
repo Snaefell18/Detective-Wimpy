@@ -31,7 +31,33 @@ import {
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen } from "@/lib/namenSchutz";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
+import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
 import type { BereichProps } from "./typen";
+
+/**
+ * Die Vorgaben, mit denen die Saga einer Station startet.
+ *
+ * Was der Arc bestimmt, steht hier fest: das Überthema samt Culprit-Ansage,
+ * die Besetzung (der Culprit bleibt bis zur letzten Station draußen) und im
+ * letzten Teil der Drahtzieher samt Twist. Alles andere - Kapitelzahl,
+ * Städte, Reifegrad, Ton, Schwierigkeit - wählt man danach im Formular wie
+ * bei einer einzelnen Saga.
+ */
+export function vorgabenFuerTeil(
+  arc: Arc,
+  index: number,
+  verdaechtigenIds: string[],
+): SagaVorgaben {
+  const letzte = index >= arc.teile.length - 1;
+  return {
+    ...STANDARD_SAGA_VORGABEN,
+    name: `${arc.name} - ${arc.teile[index]?.name ?? `Teil ${index + 1}`}`,
+    thema: sagaAuftrag(arc, index),
+    charaktere: besetzungFuerTeil(arc, index, verdaechtigenIds),
+    drahtzieherId: letzte ? arc.culprit.charakterId : "",
+    twist: letzte && Boolean(arc.culprit.charakterId),
+  };
+}
 
 /** Einer Station ihre Saga zuweisen - oder sie wieder freimachen. */
 const mitSaga = (arc: Arc, index: number, sagaId: string): Arc => ({
@@ -81,6 +107,10 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const [offen, setOffen] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
+  /** Geöffnetes Saga-Formular: welcher Arc, welche Station, welche Vorgaben. */
+  const [entwurfSaga, setEntwurfSaga] = useState<
+    { arc: Arc; index: number; vorgaben: SagaVorgaben } | null
+  >(null);
 
   const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
 
@@ -115,8 +145,12 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
     try {
       await speichereArc(arc);
       if (meldung) onMeldung(meldung);
-    } catch {
-      onFehler("Die Änderung konnte nicht gespeichert werden.");
+    } catch (fehler) {
+      onFehler(
+        istZugriffVerweigert(fehler)
+          ? REGEL_HINWEIS(fehler)
+          : "Die Änderung konnte nicht gespeichert werden.",
+      );
     }
   };
 
@@ -150,25 +184,11 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
    * Station, sonst der Klappentext des Arcs: So bleibt die Reihe zusammen,
    * ohne dass man alles doppelt eintippen muss.
    */
-  const sagaErzeugen = async (arc: Arc, index: number) => {
+  const sagaErzeugen = async (arc: Arc, index: number, vorgaben: SagaVorgaben) => {
     const teil = arc.teile[index];
     setLaeuft(true);
     onFehler(null);
     try {
-      const letzte = index >= arc.teile.length - 1;
-      const verdaechtige = stammdaten.charaktere
-        .filter((c) => !c.istDetektiv)
-        .map((c) => c.id);
-      const vorgaben: SagaVorgaben = {
-        ...STANDARD_SAGA_VORGABEN,
-        name: `${arc.name} - ${teil.name}`,
-        thema: sagaAuftrag(arc, index),
-        // Vorher bleibt der Culprit draußen; in der letzten Saga ist er der
-        // Drahtzieher und tritt - wie beim Twist - erst im Finale auf.
-        charaktere: besetzungFuerTeil(arc, index, verdaechtige),
-        drahtzieherId: letzte ? arc.culprit.charakterId : "",
-        twist: letzte && Boolean(arc.culprit.charakterId),
-      };
       const saga = await erzeugeSaga(
         {
           charaktere: stammdaten.charaktere,
@@ -181,10 +201,15 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       await speichereSaga(saga);
       await speichereArc(mitSaga(arc, index, saga.id));
       await laden();
+      setEntwurfSaga(null);
       onMeldung(`Saga „${saga.name}“ steht jetzt in ${teil.name}.`);
     } catch (fehler) {
       onFehler(
-        fehler instanceof Error ? fehler.message : "Die Saga konnte nicht erzeugt werden.",
+        istZugriffVerweigert(fehler)
+          ? "Die Datenbank hat das Speichern abgelehnt. Meist fehlt die Sammlung „arcs“ in den veröffentlichten Firestore-Regeln - dann einmal firestore.rules aus dem Projekt neu veröffentlichen."
+          : fehler instanceof Error
+            ? fehler.message
+            : "Die Saga konnte nicht erzeugt werden.",
       );
     } finally {
       setLaeuft(false);
@@ -195,6 +220,79 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   /* --- Entwurf ------------------------------------------------------- */
 
   const setzen = (teil: Partial<Arc>) => setEntwurf((alt) => ({ ...alt, ...teil }));
+
+  /* --- Eine Saga für eine Station vorbereiten ------------------------ */
+
+  if (entwurfSaga) {
+    const { arc, index, vorgaben } = entwurfSaga;
+    const teil = arc.teile[index];
+    const letzte = index >= arc.teile.length - 1;
+    const culprit = verdaechtige.find((c) => c.id === arc.culprit.charakterId);
+
+    return (
+      <>
+        <h2 className="abschnitt">
+          {arc.name} · {teil?.name ?? `Teil ${index + 1}`}
+        </h2>
+        <p className="leise">
+          Dieselben Einstellungen wie bei einer einzelnen Saga - nur, dass der
+          Arc schon einiges vorgibt. Was von ihm kommt, ist unten markiert und
+          lässt sich trotzdem ändern.
+        </p>
+
+        {culprit && (
+          <p className="hinweis">
+            {letzte
+              ? `Letzte Station: ${culprit.name} ist hier der Drahtzieher und tritt erst im Finale auf.`
+              : `${culprit.name} bleibt in dieser Saga außen vor - er kommt nur als „${
+                  arc.culprit.wort.trim() || "Wort für ihn"
+                }“ vor und wird erst in der letzten Station enttarnt.`}
+          </p>
+        )}
+
+        <SagaVorgabenFelder
+          vorgaben={vorgaben}
+          onAendern={(teilVorgaben) =>
+            setEntwurfSaga((alt) =>
+              alt ? { ...alt, vorgaben: { ...alt.vorgaben, ...teilVorgaben } } : alt,
+            )
+          }
+          vomArc={{
+            thema: "aus dem Arc",
+            charaktere: culprit && !letzte ? "ohne den Culprit" : undefined,
+            drahtzieherId: letzte && culprit ? "der Culprit des Arcs" : undefined,
+            twist: letzte && culprit ? "der Culprit tritt erst im Finale auf" : undefined,
+          }}
+        />
+
+        <div className="knopf-reihe" style={{ marginTop: 16 }}>
+          <button
+            className="knopf aktion"
+            disabled={laeuft || !admin}
+            onClick={() => void sagaErzeugen(arc, index, vorgaben)}
+          >
+            {laeuft ? "Die Saga entsteht …" : "Saga erzeugen und speichern"}
+          </button>
+          <button
+            className="knopf klein"
+            disabled={laeuft}
+            onClick={() => setEntwurfSaga(null)}
+          >
+            Zurück
+          </button>
+        </div>
+
+        {laeuft && (
+          <p className="leise klein" style={{ marginTop: 8 }}>
+            {schritt ?? "Es geht gleich los …"}
+            <br />
+            Das dauert je nach Länge mehrere Minuten. Bitte den Bildschirm
+            anlassen - sperrt sich das Handy, bricht die Verbindung ab.
+          </p>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -343,9 +441,19 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                       <button
                         className="knopf klein"
                         disabled={laeuft || !admin}
-                        onClick={() => void sagaErzeugen(arc, i)}
+                        onClick={() =>
+                          setEntwurfSaga({
+                            arc,
+                            index: i,
+                            vorgaben: vorgabenFuerTeil(
+                              arc,
+                              i,
+                              verdaechtige.map((c) => c.id),
+                            ),
+                          })
+                        }
                       >
-                        Saga für diesen Teil erzeugen
+                        Saga für diesen Teil vorbereiten
                       </button>
                     )}
                   </div>

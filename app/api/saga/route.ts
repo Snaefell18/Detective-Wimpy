@@ -204,14 +204,23 @@ async function kernSchritt(body: Record<string, unknown>) {
     kapitel: 0,
   }).map((c) => c.name);
 
+  // Die Sicherheitsregeln der Datenbank begrenzen Name, Überthema und
+  // Klappentext. Ein Modell, dem man ein langes Überthema vorgibt - wie es
+  // ein Arc tut -, antwortet gern ebenso lang; ungekürzt lehnt Firestore das
+  // Speichern später ab, und zwar mit einer Meldung über fehlende Rechte.
+  const kuerze = (text: string, laenge: number) =>
+    text.length > laenge ? `${text.slice(0, laenge - 1).trimEnd()}…` : text;
+
   const bogen: Bogen = {
     id: crypto.randomUUID(),
-    name:
+    name: kuerze(
       vorgaben.name.trim() ||
-      titelOhneNamen(antwort.daten.name, zuFrueh) ||
-      "Die Spur im Schatten",
-    thema: ohneNamen(antwort.daten.thema, zuFrueh),
-    klappentext: ohneNamen(antwort.daten.klappentext, zuFrueh),
+        titelOhneNamen(antwort.daten.name, zuFrueh) ||
+        "Die Spur im Schatten",
+      120,
+    ),
+    thema: kuerze(ohneNamen(antwort.daten.thema, zuFrueh), 2000),
+    klappentext: kuerze(ohneNamen(antwort.daten.klappentext, zuFrueh), 2000),
     vorgaben,
     besetzung: spielendeBesetzung,
     drahtzieherId: drahtzieher.id,
@@ -319,7 +328,7 @@ async function kapitelSchritt(
 
   const kapitel = {
     nummer,
-    name: titelOhneNamen(d.name ?? "", zuFrueh) || `Kapitel ${nummer}`,
+    name: (titelOhneNamen(d.name ?? "", zuFrueh) || `Kapitel ${nummer}`).slice(0, 120),
     teaser: ohneNamen(d.teaser ?? "", zuFrueh),
     erzaehlerText: ohneNamen(d.erzaehlerText ?? "", zuFrueh),
     auftrag: d.auftrag ?? "",
