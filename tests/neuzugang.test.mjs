@@ -2,7 +2,12 @@
  * "Ein neuer Spieler betritt das Feld!" - angekündigt wird nur, wer im Fall
  * dieses Kapitels steht und im vorherigen nicht.
  */
-import { neueGesichter } from "../lib/sagaTypen.ts";
+import {
+  OHNE_AUFTRITT_TON,
+  STANDARD_AUFTRITT_TON,
+  neueGesichter,
+  tonFuerAuftritt,
+} from "../lib/sagaTypen.ts";
 
 const c = (id, istDetektiv = false) => ({ id, name: id, istDetektiv });
 const wimpy = c("wimpy", true);
@@ -59,6 +64,61 @@ console.log("\n5. Fehlende Fälle: lieber nichts sagen");
   const ohneFinale = saga([fall("nala")], null);
   pruefe("kein Finalfall: keine Ansage", neueGesichter(ohneFinale, -1).length === 0);
   pruefe("Kapitel außerhalb: keine Ansage", neueGesichter(ohneFinale, 9).length === 0);
+}
+
+console.log("\n6. Welcher Ton zum Auftritt gehört");
+{
+  const vorgaben = (teil) => ({ neuzugangTon: "", neuzugangToene: {}, ...teil });
+
+  pruefe(
+    "nichts gesetzt: der Standard",
+    tonFuerAuftritt("nala", vorgaben({}), "") === STANDARD_AUFTRITT_TON,
+  );
+  pruefe(
+    "Einstellung aus dem Admin-Menü",
+    tonFuerAuftritt("nala", vorgaben({}), "/audio/a.mp3") === "/audio/a.mp3",
+  );
+  pruefe(
+    "die Saga sticht die Einstellung",
+    tonFuerAuftritt("nala", vorgaben({ neuzugangTon: "/audio/saga.mp3" }), "/audio/a.mp3") ===
+      "/audio/saga.mp3",
+  );
+  pruefe(
+    "das Tier sticht die Saga",
+    tonFuerAuftritt(
+      "nala",
+      vorgaben({ neuzugangTon: "/audio/saga.mp3", neuzugangToene: { nala: "/audio/nala.mp3" } }),
+      "/audio/a.mp3",
+    ) === "/audio/nala.mp3",
+  );
+  pruefe(
+    "ein anderes Tier bleibt bei der Saga",
+    tonFuerAuftritt(
+      "fanny",
+      vorgaben({ neuzugangTon: "/audio/saga.mp3", neuzugangToene: { nala: "/audio/nala.mp3" } }),
+      "",
+    ) === "/audio/saga.mp3",
+  );
+  pruefe(
+    "„Ohne Ton“ beim Tier ist still",
+    tonFuerAuftritt(
+      "nala",
+      vorgaben({ neuzugangTon: "/audio/saga.mp3", neuzugangToene: { nala: OHNE_AUFTRITT_TON } }),
+      "",
+    ) === "",
+  );
+  pruefe(
+    "„Ohne Ton“ in der Saga ist still",
+    tonFuerAuftritt("nala", vorgaben({ neuzugangTon: OHNE_AUFTRITT_TON }), "/audio/a.mp3") === "",
+  );
+  pruefe(
+    "ohne Saga zählt die Einstellung",
+    tonFuerAuftritt("nala", undefined, "/audio/a.mp3") === "/audio/a.mp3",
+  );
+  pruefe(
+    "ohne alles bleibt der Standard",
+    tonFuerAuftritt("nala", undefined, "") === STANDARD_AUFTRITT_TON,
+  );
 }
 
 console.log(

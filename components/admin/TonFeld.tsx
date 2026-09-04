@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { OHNE_AUFTRITT_TON, STANDARD_AUFTRITT_TON } from "@/lib/sagaTypen";
 import { dateiAlsStimme, istStimme, spracheErzeugen, tonQuelle } from "@/lib/stimme";
 
 /**
@@ -26,9 +27,12 @@ export function TonFeld({
   const [fehler, setFehler] = useState<string | null>(null);
   const dateiRef = useRef<HTMLInputElement>(null);
 
+  const still = wert === OHNE_AUFTRITT_TON;
+  const gespielt = still ? "" : wert || STANDARD_AUFTRITT_TON;
+
   const probieren = () => {
-    if (!wert) return;
-    void tonQuelle(wert).then((quelle) => {
+    if (!gespielt) return;
+    void tonQuelle(gespielt).then((quelle) => {
       if (quelle) void new Audio(quelle).play().catch(() => {});
     });
   };
@@ -62,23 +66,30 @@ export function TonFeld({
   return (
     <>
       <p className="leise klein">
-        {!wert
-          ? "Zurzeit ohne Ton - nur eine kurze Spannungspause."
-          : istStimme(wert)
-            ? "Ton hinterlegt · liegt in der Datenbank"
-            : `Ton hinterlegt · ${wert}`}
+        {still
+          ? "Ohne Ton - nur eine kurze Spannungspause."
+          : !wert
+            ? `Nichts gewählt · es läuft ${STANDARD_AUFTRITT_TON}`
+            : istStimme(wert)
+              ? "Ton hinterlegt · liegt in der Datenbank"
+              : `Ton hinterlegt · ${wert}`}
       </p>
 
       <div className="knopf-reihe">
+        {gespielt && (
+          <button className="knopf klein" onClick={probieren}>
+            ▶ Anhören
+          </button>
+        )}
         {wert && (
-          <>
-            <button className="knopf klein" onClick={probieren}>
-              ▶ Anhören
-            </button>
-            <button className="knopf klein" onClick={() => onAendern("")}>
-              Ohne Ton
-            </button>
-          </>
+          <button className="knopf klein" onClick={() => onAendern("")}>
+            Zurücksetzen
+          </button>
+        )}
+        {!still && (
+          <button className="knopf klein" onClick={() => onAendern(OHNE_AUFTRITT_TON)}>
+            Ohne Ton
+          </button>
         )}
         <button
           className="knopf klein"
@@ -99,7 +110,7 @@ export function TonFeld({
       <label className="feld">
         <span className="leise">Oder ein Pfad in /public/audio</span>
         <input
-          value={istStimme(wert) ? "" : wert}
+          value={istStimme(wert) || still ? "" : wert}
           onChange={(ereignis) => onAendern(ereignis.target.value)}
           placeholder="/audio/newplayer.mp3"
           maxLength={200}

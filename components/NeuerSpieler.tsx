@@ -32,13 +32,18 @@ export function NeuerSpieler({
   onFertig,
 }: {
   tiere: Character[];
-  /** Pfad oder "stimme:<id>" - leer heißt: ohne Ton. */
-  ton?: string;
+  /**
+   * Der Ton je Tier - schon aufgelöst: Was hier steht, wird gespielt. Leer
+   * heißt: ohne Ton, dann läuft die Enthüllung über die kurze feste Zeit.
+   */
+  ton?: string | ((charakterId: string) => string);
   onFertig: () => void;
 }) {
   const [nr, setNr] = useState(0);
   const [fortschritt, setFortschritt] = useState(0);
   const tier = tiere[nr];
+  // Jedes Tier darf sein eigenes Stück mitbringen.
+  const stueck = (typeof ton === "function" ? (tier ? ton(tier.id) : "") : ton) || "";
   const enthuellt = fortschritt >= 1;
 
   // Die Rückmeldung liegt in einem Ref: Sonst würde jeder Renderdurchgang der
@@ -84,7 +89,7 @@ export function NeuerSpieler({
      * sobald feststeht, dass kein Ton kommt - sonst stünde man die volle
      * Notbremsenzeit im Dunkeln, nur weil der Browser nicht abspielen wollte.
      */
-    const uhr = { start: performance.now(), dauer: ton ? HOECHSTENS : OHNE_TON };
+    const uhr = { start: performance.now(), dauer: stueck ? HOECHSTENS : OHNE_TON };
     const stelleUhr = (dauer: number) => {
       if (!aktiv || uhr.dauer === dauer) return;
       uhr.start = performance.now();
@@ -111,8 +116,8 @@ export function NeuerSpieler({
       bild = requestAnimationFrame(takt);
     };
 
-    if (ton) {
-      void tonQuelle(ton).then((quelle) => {
+    if (stueck) {
+      void tonQuelle(stueck).then((quelle) => {
         if (!aktiv) return;
         if (!quelle) {
           stelleUhr(OHNE_TON);
@@ -148,7 +153,7 @@ export function NeuerSpieler({
       audioRef.current?.pause();
       audioRef.current = null;
     };
-  }, [nr, ton]);
+  }, [nr, stueck]);
 
   // Steht die Figur ganz im Licht, bleibt sie kurz - dann geht es weiter.
   useEffect(() => {

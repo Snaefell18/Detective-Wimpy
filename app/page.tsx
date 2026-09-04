@@ -26,7 +26,7 @@ import { useAdmin } from "@/lib/adminStore";
 import type { Arc } from "@/lib/arcTypen";
 import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
-import { neueGesichter, type Saga } from "@/lib/sagaTypen";
+import { neueGesichter, tonFuerAuftritt, type Saga } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useGame } from "@/lib/useGame";
@@ -314,9 +314,14 @@ export default function Home() {
       <main className="app">
         <NeuerSpieler
           tiere={neuling.tiere}
-          // Die Saga darf einen eigenen Ton mitbringen; sonst gilt der aus
-          // dem Admin-Menü.
-          ton={saga.stand?.saga.vorgaben.neuzugangTon || admin.einstellungen.neuzugangTon}
+          // Erst das Tier, dann die Saga, dann das Admin-Menü.
+          ton={(charakterId) =>
+            tonFuerAuftritt(
+              charakterId,
+              saga.stand?.saga.vorgaben,
+              admin.einstellungen.neuzugangTon,
+            )
+          }
           onFertig={() => {
             const finale = neuling.finale;
             setNeuling(null);

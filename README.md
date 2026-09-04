@@ -183,9 +183,12 @@ Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im
 Finale der Drahtzieher -, läuft davor eine kurze Ansage: „Ein neuer Spieler
 betritt das Feld!“, darunter Bild und Name.
 
-Ein Ton dazu lässt sich an zwei Stellen hinterlegen: im Saga-Editor für genau
-diese Saga, und unter **Spiel → Auftritt eines neuen Tiers** für alles andere.
-Die Saga hat Vorrang. In beiden Fällen zur Wahl:
+Ein Ton dazu lässt sich auf drei Ebenen hinterlegen, und die feinere gewinnt:
+**je Tier** im Saga-Editor (für alle, die laut „Auftritte“ später dazustoßen),
+**je Saga** ebendort, und unter **Spiel → Auftritt eines neuen Tiers** für
+alles Übrige. Steht nirgends etwas, läuft `public/audio/newplayer.mp3`. Wer
+wirklich Stille will, wählt „Ohne Ton“ - das ist etwas anderes als „nichts
+eingetragen“. In jedem Fall zur Wahl:
 eine eigene Datei (wandert in die Datenbank, damit sie auf jedem Gerät gleich
 klingt), ein Pfad in `public/audio` oder ein Satz vom Sprecher. Ist einer
 gesetzt, schält sich die Figur über die ganze Länge des Tons aus dem Dunkel:

@@ -81,6 +81,13 @@ export type SagaVorgaben = {
    * das, was im Admin-Menü unter "Spiel" eingestellt ist.
    */
   neuzugangTon: string;
+  /**
+   * Ein eigener Ton je Tier: Charakter-Id -> Pfad oder "stimme:<id>".
+   * Kein Eintrag heißt: der Ton der Saga, sonst der aus dem Admin-Menü. So
+   * bekommt der Drahtzieher seinen großen Auftritt und ein Nachzügler seinen
+   * eigenen, ohne dass man für jeden etwas eintragen muss.
+   */
+  neuzugangToene: Record<string, string>;
   /** Schauplätze je Fall. */
   ortsAnzahl: number;
   /** Beschuldigungen je Fall. */
@@ -106,6 +113,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   absurditaet: "verspielt",
   ton: "kindgerecht",
   neuzugangTon: "",
+  neuzugangToene: {},
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
@@ -216,6 +224,36 @@ export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }
       (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId),
   );
   return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
+}
+
+/**
+ * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes
+ * steht. Es liegt im Projekt, funktioniert also ohne jede Einstellung.
+ */
+export const STANDARD_AUFTRITT_TON = "/audio/newplayer.mp3";
+
+/** Ausdrücklich still - sonst käme an dieser Stelle der Standard. */
+export const OHNE_AUFTRITT_TON = "aus";
+
+/**
+ * Der Ton für den Auftritt genau dieses Tiers.
+ *
+ * Erst das Tier selbst, dann die Saga, dann die Einstellung im Admin-Menü,
+ * zuletzt der Standard. Leer heißt an jeder Stelle "wie eine Ebene darüber";
+ * wer wirklich Stille will, wählt "Ohne Ton" - das ist ein eigener Wert und
+ * nicht dasselbe wie "nichts eingetragen".
+ */
+export function tonFuerAuftritt(
+  charakterId: string,
+  vorgaben: Pick<SagaVorgaben, "neuzugangTon" | "neuzugangToene"> | undefined,
+  allgemein: string,
+): string {
+  const gewaehlt =
+    vorgaben?.neuzugangToene?.[charakterId] ||
+    vorgaben?.neuzugangTon ||
+    allgemein ||
+    STANDARD_AUFTRITT_TON;
+  return gewaehlt === OHNE_AUFTRITT_TON ? "" : gewaehlt;
 }
 
 /** Ab welchem Kapitel ein Tier mitspielt. Finale = kapitelAnzahl + 1. */

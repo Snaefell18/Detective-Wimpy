@@ -59,6 +59,15 @@ export function SagaVorgabenFelder({
       ? verdaechtige.filter((c) => vorgaben.charaktere.includes(c.id))
       : verdaechtige;
   const kapitelNummern = Array.from({ length: vorgaben.kapitelAnzahl }, (_, i) => i);
+  /** Wer nicht von Anfang an dabei ist - nur die bekommen einen Auftritt. */
+  const spaeteMitspieler = mitspieler.filter(
+    (c) =>
+      auftrittVon({
+        charakterId: c.id,
+        vorgaben,
+        drahtzieherId: vorgaben.drahtzieherId,
+      }) > 1,
+  );
 
   const setzen = (teil: Partial<SagaVorgaben>) => onAendern(teil);
 
@@ -458,14 +467,64 @@ export function SagaVorgabenFelder({
         <span className="leise">· der Ton, wenn jemand dazustößt</span>
       </h3>
       <p className="leise klein">
-        Gilt nur für diese Saga. Ohne Auswahl gilt, was im Admin-Menü unter
-        „Spiel“ steht. Solange der Ton läuft, bleibt die Figur im Dunkeln -
-        enthüllt wird sie erst am Ende.
+        Gilt für diese ganze Saga. Ohne Auswahl gilt, was im Admin-Menü unter
+        „Spiel“ steht - und wenn dort auch nichts steht, newplayer.mp3. Solange der Ton läuft, bleibt die Figur im Dunkeln -
+        enthüllt wird sie erst am Ende, und zwar über die ganze Länge des
+        Stücks.
       </p>
       <TonFeld
         wert={vorgaben.neuzugangTon}
         onAendern={(neuzugangTon) => setzen({ neuzugangTon })}
       />
+
+      <h4 className="unter-abschnitt">
+        Eigener Ton je Tier{" "}
+        <span className="leise">· für alle, die später dazustoßen</span>
+      </h4>
+      {spaeteMitspieler.length === 0 ? (
+        <p className="leise klein">
+          Zurzeit steigt niemand später ein. Wer soll das sein? Oben unter
+          „Auftritte“ ein Kapitel wählen - dann steht das Tier hier.
+        </p>
+      ) : (
+        <>
+          <p className="leise klein">
+            Ohne eigene Wahl klingt es wie oben. Für den Drahtzieher lohnt sich
+            ein anderes Stück - sein Auftritt ist der letzte der Saga.
+          </p>
+          {spaeteMitspieler.map((c) => (
+            <div key={c.id} className="erzaehler-feld">
+              <h4 className="unter-abschnitt">
+                {c.name}
+                <span className="leise">
+                  {" "}
+                  ·{" "}
+                  {auftrittVon({
+                    charakterId: c.id,
+                    vorgaben,
+                    drahtzieherId: vorgaben.drahtzieherId,
+                  }) > vorgaben.kapitelAnzahl
+                    ? "erst im Finale"
+                    : `ab Kapitel ${auftrittVon({
+                        charakterId: c.id,
+                        vorgaben,
+                        drahtzieherId: vorgaben.drahtzieherId,
+                      })}`}
+                </span>
+              </h4>
+              <TonFeld
+                wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
+                satzVorschlag={`${c.name} betritt das Feld!`}
+                onAendern={(wert) =>
+                  setzen({
+                    neuzugangToene: { ...(vorgaben.neuzugangToene ?? {}), [c.id]: wert },
+                  })
+                }
+              />
+            </div>
+          ))}
+        </>
+      )}
 
       <h3 className="unter-abschnitt">Beschuldigungen je Fall</h3>
       <div className="wahl-reihe">
