@@ -26,7 +26,12 @@ import { useAdmin } from "@/lib/adminStore";
 import type { Arc } from "@/lib/arcTypen";
 import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
-import { neueGesichter, tonFuerAuftritt, type Saga } from "@/lib/sagaTypen";
+import {
+  artFuerAuftritt,
+  neueGesichter,
+  tonFuerAuftritt,
+  type Saga,
+} from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useGame } from "@/lib/useGame";
@@ -314,6 +319,7 @@ export default function Home() {
       <main className="app">
         <NeuerSpieler
           tiere={neuling.tiere}
+          art={(charakterId) => artFuerAuftritt(charakterId, saga.stand?.saga.vorgaben)}
           // Erst das Tier, dann die Saga, dann das Admin-Menü.
           ton={(charakterId) =>
             tonFuerAuftritt(

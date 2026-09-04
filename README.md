@@ -183,6 +183,16 @@ Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im
 Finale der Drahtzieher -, läuft davor eine kurze Ansage: „Ein neuer Spieler
 betritt das Feld!“, darunter Bild und Name.
 
+Wie der Auftritt aussieht, wählt man im Saga-Editor **je Tier**:
+
+- **Enthüllung** - ruhig, aus dem Dunkel (Standard).
+- **Gewitter** - Regen, zuckende Blitze, die Figur als Silhouette davor. Für
+  Tiere, bei denen einem mulmig werden soll.
+- **Jackpot** - Strahlenkranz, Konfetti, Geldregen, Leuchtreklame.
+
+Alles reines CSS, keine zusätzlichen Dateien, und alles hält sich an
+`prefers-reduced-motion`.
+
 Ein Ton dazu lässt sich auf drei Ebenen hinterlegen, und die feinere gewinnt:
 **je Tier** im Saga-Editor (für alle, die laut „Auftritte“ später dazustoßen),
 **je Saga** ebendort, und unter **Spiel → Auftritt eines neuen Tiers** für

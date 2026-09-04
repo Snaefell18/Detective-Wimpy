@@ -1,7 +1,12 @@
 "use client";
 
 import { alsStaedte } from "@/lib/csv";
-import { auftrittVon, type SagaVorgaben } from "@/lib/sagaTypen";
+import {
+  AUFTRITTS_ARTEN,
+  artFuerAuftritt,
+  auftrittVon,
+  type SagaVorgaben,
+} from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
 import { TonFeld } from "./TonFeld";
 
@@ -478,7 +483,7 @@ export function SagaVorgabenFelder({
       />
 
       <h4 className="unter-abschnitt">
-        Eigener Ton je Tier{" "}
+        Auftritt je Tier{" "}
         <span className="leise">· für alle, die später dazustoßen</span>
       </h4>
       {spaeteMitspieler.length === 0 ? (
@@ -512,6 +517,28 @@ export function SagaVorgabenFelder({
                       })}`}
                 </span>
               </h4>
+              <span className="leise klein">Auftritt</span>
+              <div className="wahl-reihe">
+                {AUFTRITTS_ARTEN.map((a) => (
+                  <button
+                    key={a.id}
+                    className="wahl-chip"
+                    data-aktiv={artFuerAuftritt(c.id, vorgaben) === a.id}
+                    onClick={() =>
+                      setzen({
+                        neuzugangArten: {
+                          ...(vorgaben.neuzugangArten ?? {}),
+                          [c.id]: a.id,
+                        },
+                      })
+                    }
+                  >
+                    <strong>{a.label}</strong>
+                    <span className="leise klein">{a.hinweis}</span>
+                  </button>
+                ))}
+              </div>
+
               <TonFeld
                 wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
                 satzVorschlag={`${c.name} betritt das Feld!`}

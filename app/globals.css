@@ -3521,3 +3521,240 @@ a.zurueck {
 .kapitel-karte-text h1 {
   margin: 0;
 }
+
+/* --- Auftritt: Gewitter --------------------------------------------- */
+
+/* Die Kulisse liegt hinter der Bühne. Der Blitz hellt den Himmel auf, nicht
+   die Figur - so zeichnet sie sich als Silhouette dagegen ab, und der
+   Schleier über ihr macht genau das mit. */
+.neuzugang[data-art="gewitter"] {
+  background: linear-gradient(180deg, #060a16 0%, #02040c 100%);
+}
+
+.neuzugang[data-art="gewitter"] .intro-buehne,
+.neuzugang[data-art="jackpot"] .intro-buehne {
+  position: relative;
+  z-index: 2;
+}
+
+.gewitter-blitz {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 20%, #dfe8ff 0%, #6f86c4 45%, transparent 75%);
+  opacity: 0;
+  animation: gewitter 4.5s linear infinite;
+}
+
+/* Unregelmäßig, wie ein echtes Gewitter: zwei kurze Schläge, dann Ruhe. */
+@keyframes gewitter {
+  0%, 6%, 100% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.85;
+  }
+  3% {
+    opacity: 0.1;
+  }
+  4% {
+    opacity: 0.7;
+  }
+  5% {
+    opacity: 0.05;
+  }
+  38% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.6;
+  }
+  41.5% {
+    opacity: 0.08;
+  }
+  43% {
+    opacity: 0.45;
+  }
+  45% {
+    opacity: 0;
+  }
+}
+
+/* Im Gewitter bleibt die Figur härter im Schatten - sie soll drohen, nicht
+   posieren. */
+.neuzugang[data-art="gewitter"] .neuzugang-schleier {
+  background: #01030a;
+}
+
+.neuzugang[data-art="gewitter"] .intro-oberzeile {
+  color: #9fb2e0;
+  text-shadow: 0 0 18px rgba(120, 150, 220, 0.5);
+}
+
+.neuzugang[data-art="gewitter"] .neuzugang-raetsel {
+  animation: gewitter-zucken 5s steps(1) infinite;
+}
+
+@keyframes gewitter-zucken {
+  0%, 39%, 41%, 100% {
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 0.2;
+  }
+}
+
+/* --- Auftritt: Jackpot ---------------------------------------------- */
+
+.neuzugang[data-art="jackpot"] {
+  background: radial-gradient(80% 60% at 50% 45%, #2a0f5e 0%, #12042c 55%, #05010f 100%);
+}
+
+/* Ein Strahlenkranz, der sich dreht - der Klassiker, und er wirkt. */
+.jackpot-strahlen {
+  position: absolute;
+  inset: -30%;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 214, 64, 0.95) 0deg 7deg,
+    rgba(255, 92, 240, 0.75) 7deg 14deg,
+    transparent 14deg 22deg
+  );
+  opacity: 0.65;
+  animation: jackpot-drehen 12s linear infinite;
+}
+
+@keyframes jackpot-drehen {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Damit Zeile und Figur lesbar bleiben, liegt über den Strahlen ein weicher
+   Schatten - der Rand darf toben, die Mitte muss man lesen können. */
+.neuzugang[data-art="jackpot"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(58% 42% at 50% 42%, rgba(5, 1, 15, 0.92) 0%, transparent 100%);
+}
+
+/* Geldregen und Konfetti fallen über allem - und schlucken nichts. */
+.jackpot-schauer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.jackpot-schauer span {
+  position: absolute;
+  top: -12%;
+  font-size: 30px;
+  animation: jackpot-fallen 4s linear infinite;
+}
+
+@keyframes jackpot-fallen {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(115vh) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* Die Figur steht im Scheinwerfer und pulst mit. */
+.neuzugang[data-art="jackpot"] .neuzugang-portraet {
+  filter: drop-shadow(0 0 26px rgba(255, 214, 64, 0.7));
+  animation: jackpot-pulsen 0.9s ease-in-out infinite;
+}
+
+@keyframes jackpot-pulsen {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.neuzugang[data-art="jackpot"] .neuzugang-schleier {
+  background: #1a0640;
+}
+
+/* Beim Jackpot leuchtet das Fragezeichen mit, statt zu verblassen. */
+.neuzugang[data-art="jackpot"] .neuzugang-raetsel {
+  color: #ffe27a;
+  text-shadow: 0 0 24px rgba(255, 200, 60, 0.8);
+}
+
+/* Die Zeile bekommt ihr eigenes Schild - über tanzenden Strahlen liest man
+   sonst nichts. */
+.neuzugang[data-art="jackpot"] .intro-oberzeile {
+  color: #ffe27a;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(5, 1, 15, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 214, 64, 0.35);
+  text-shadow:
+    0 0 20px rgba(255, 200, 60, 0.7),
+    0 2px 10px rgba(0, 0, 0, 0.9);
+  animation: jackpot-flackern 0.7s steps(2) infinite;
+}
+
+@keyframes jackpot-flackern {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+
+/* Der Name als Leuchtreklame - das Fragezeichen bleibt ausgenommen, sonst
+   verschluckt der Farbverlauf die Form. */
+.neuzugang[data-art="jackpot"] .intro-logo:not(.neuzugang-raetsel) {
+  background: linear-gradient(92deg, #ffd640, #ff5cf0, #4fe3ff, #ffd640);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: jackpot-schieben 2.4s linear infinite;
+}
+
+@keyframes jackpot-schieben {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+/* Wer Bewegung nicht verträgt, bekommt die Stimmung ohne das Flackern. */
+@media (prefers-reduced-motion: reduce) {
+  .gewitter-blitz,
+  .jackpot-strahlen,
+  .jackpot-schauer span,
+  .neuzugang[data-art="jackpot"] .neuzugang-portraet,
+  .neuzugang[data-art="jackpot"] .intro-oberzeile,
+  .neuzugang[data-art="jackpot"] .intro-logo:not(.neuzugang-raetsel),
+  .neuzugang[data-art="gewitter"] .neuzugang-raetsel {
+    animation: none;
+  }
+
+  .gewitter-blitz {
+    opacity: 0.18;
+  }
+}

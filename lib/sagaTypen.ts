@@ -82,6 +82,11 @@ export type SagaVorgaben = {
    */
   neuzugangTon: string;
   /**
+   * Wie der Auftritt aussieht, je Tier: Charakter-Id -> Art. Kein Eintrag
+   * heißt "klassisch".
+   */
+  neuzugangArten: Record<string, AuftrittsArt>;
+  /**
    * Ein eigener Ton je Tier: Charakter-Id -> Pfad oder "stimme:<id>".
    * Kein Eintrag heißt: der Ton der Saga, sonst der aus dem Admin-Menü. So
    * bekommt der Drahtzieher seinen großen Auftritt und ein Nachzügler seinen
@@ -114,6 +119,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   ton: "kindgerecht",
   neuzugangTon: "",
   neuzugangToene: {},
+  neuzugangArten: {},
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
@@ -225,6 +231,29 @@ export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }
   );
   return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
 }
+
+/**
+ * Wie ein neues Tier die Bühne betritt.
+ *
+ * "klassisch" ist die ruhige Enthüllung: Die Figur schält sich über die Länge
+ * des Tons aus dem Dunkel. "gewitter" ist dasselbe im Unwetter - Regen,
+ * Blitze, die Figur als Silhouette davor; für Tiere, bei denen einem mulmig
+ * werden soll. "jackpot" ist das Gegenteil: Strahlenkranz, Konfetti,
+ * Geldregen, alles blinkt.
+ */
+export type AuftrittsArt = "klassisch" | "gewitter" | "jackpot";
+
+export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
+  { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
+  { id: "gewitter", label: "Gewitter", hinweis: "Regen, Blitze, Silhouette" },
+  { id: "jackpot", label: "Jackpot", hinweis: "Konfetti, Geld, alles blinkt" },
+];
+
+/** Welche Art zum Auftritt dieses Tiers gehört. */
+export const artFuerAuftritt = (
+  charakterId: string,
+  vorgaben: Pick<SagaVorgaben, "neuzugangArten"> | undefined,
+): AuftrittsArt => vorgaben?.neuzugangArten?.[charakterId] ?? "klassisch";
 
 /**
  * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes

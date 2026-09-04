@@ -2319,6 +2319,16 @@
   filter: saturate(0.15) contrast(1.1) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.8));
 }
 
+/* Der Jackpot ist die Ausnahme vom Noir: Hier darf es knallen. */
+[data-theme="noir"] .neuzugang[data-art="jackpot"] .intro-portraet {
+  filter: saturate(1.2) contrast(1.05) drop-shadow(0 0 26px rgba(255, 214, 64, 0.7));
+}
+
+/* Im Gewitter bleibt alles grau - bis auf den Himmel. */
+[data-theme="noir"] .neuzugang[data-art="gewitter"] .intro-portraet {
+  filter: saturate(0) contrast(1.2) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.9));
+}
+
 /* Im Noir ist der Schleier der Grund selbst - die Figur tritt aus dem
    Hintergrund hervor, nicht aus einem blauen Nebel. */
 [data-theme="noir"] .neuzugang-schleier {

@@ -268,6 +268,9 @@ export const SagaVorgabenSchema = z.object({
   ton: z.enum(["kindgerecht", "spannend", "albern"]),
   neuzugangTon: z.string().max(200).default(""),
   neuzugangToene: z.record(z.string().max(40), z.string().max(200)).default({}),
+  neuzugangArten: z
+    .record(z.string().max(40), z.enum(["klassisch", "gewitter", "jackpot"]))
+    .default({}),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
 });

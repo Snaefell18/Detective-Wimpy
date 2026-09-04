@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bild } from "./Bild";
+import { Wetter } from "./Wetter";
 import { tonQuelle } from "@/lib/stimme";
+import type { AuftrittsArt } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
 
 /**
@@ -26,9 +28,25 @@ const HOECHSTENS = 20_000;
 /** Ab hier steht der Name statt des Fragezeichens. */
 const NAME_AB = 0.82;
 
+/**
+ * Der Geld- und Konfettiregen des Jackpot-Auftritts.
+ *
+ * Feste Werte statt Zufall: So sieht der Auftritt jedes Mal gleich aus, und
+ * React muss die Schicht bei keinem Renderdurchgang neu würfeln.
+ */
+const SCHAUER = [
+  "💰", "🎉", "💸", "✨", "🪙", "🎊", "💵", "⭐", "💎", "🎉",
+  "💰", "✨", "💸", "🪙", "🎊", "💵", "⭐", "💰", "✨", "💎",
+].map((zeichen, i) => ({
+  zeichen,
+  links: (i * 37 + 11) % 96,
+  zeit: ((i * 13) % 40) / 10,
+}));
+
 export function NeuerSpieler({
   tiere,
   ton = "",
+  art = "klassisch",
   onFertig,
 }: {
   tiere: Character[];
@@ -37,6 +55,8 @@ export function NeuerSpieler({
    * heißt: ohne Ton, dann läuft die Enthüllung über die kurze feste Zeit.
    */
   ton?: string | ((charakterId: string) => string);
+  /** Wie der Auftritt aussieht - je Tier verschieden. */
+  art?: AuftrittsArt | ((charakterId: string) => AuftrittsArt);
   onFertig: () => void;
 }) {
   const [nr, setNr] = useState(0);
@@ -44,6 +64,8 @@ export function NeuerSpieler({
   const tier = tiere[nr];
   // Jedes Tier darf sein eigenes Stück mitbringen.
   const stueck = (typeof ton === "function" ? (tier ? ton(tier.id) : "") : ton) || "";
+  const auftritt: AuftrittsArt =
+    (typeof art === "function" ? (tier ? art(tier.id) : "klassisch") : art) || "klassisch";
   const enthuellt = fortschritt >= 1;
 
   // Die Rückmeldung liegt in einem Ref: Sonst würde jeder Renderdurchgang der
@@ -177,9 +199,32 @@ export function NeuerSpieler({
     <div
       className="intro neuzugang"
       data-enthuellt={enthuellt}
+      data-art={auftritt}
       style={{ ["--enthuellung" as string]: fortschritt.toFixed(3) }}
       onPointerDown={antippen}
     >
+      {/* Die Kulisse liegt hinter der Bühne: Im Gewitter zeichnet sich die
+          verhüllte Figur als Silhouette gegen den aufblitzenden Himmel ab. */}
+      {auftritt === "gewitter" && (
+        <>
+          <Wetter lage="regen" />
+          <div className="gewitter-blitz" />
+        </>
+      )}
+
+      {auftritt === "jackpot" && (
+        <>
+          <div className="jackpot-strahlen" />
+          <div className="jackpot-schauer" aria-hidden="true">
+            {SCHAUER.map((s, i) => (
+              <span key={i} style={{ left: `${s.links}%`, animationDelay: `${s.zeit}s` }}>
+                {s.zeichen}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Ein Lichtblitz im Moment, in dem sie ganz da ist. */}
       {enthuellt && <div className="neuzugang-blitz" key={`blitz-${nr}`} />}
 
