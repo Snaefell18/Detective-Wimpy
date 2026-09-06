@@ -21,6 +21,23 @@ DER TWIST - DAS WICHTIGSTE AN DIESER SAGA
 - Andere Tiere dürfen von ihm erzählen, ohne ihn zu kennen: "der mit dem Hut", "der immer nachts kommt", "der, den keiner je gesehen hat".
 - Nenne seinen Namen in keinem Kapiteltext. Erst im Finale steht er da.`;
 
+/**
+ * Die Spur der Besessenheit - dieselben Regeln für Kapitel, Fälle und Finale.
+ *
+ * Der Sinn ist die Dosis: In jedem Kapitel genau ein Detail, das nicht ins
+ * Bild passt und das niemand erklären kann. Zusammengenommen ergibt sich ein
+ * Muster, einzeln bleibt jedes für sich harmlos. Erklärt wird nichts, benannt
+ * schon gar nichts - sonst wäre die Verwandlung vor dem Finale entwertet.
+ */
+function besessenheitsRegeln(wirtName: string, daemonName: string): string {
+  return `
+ETWAS ÜBLES GEHT VOR (streng geheim)
+- ${wirtName} ist besessen, weiß es aber nicht. ${daemonName} ist die Gestalt darin und kommt vor dem Finale nirgends vor - weder als Person noch beim Namen.
+- Bau genau EIN kleines Zeichen ein, das nicht ins Bild passt und mit ${wirtName} zu tun hat: eine Stunde, die er nicht erinnert; Erde unter den Krallen, obwohl er zu Hause war; ein Kratzer zu hoch an der Wand; Kälte in einem warmen Raum; ein Satz in einer Sprache, die er nicht spricht; eine Spiegelung, die einen Herzschlag zu spät folgt.
+- Niemand erklärt es, niemand nennt Dämon, Fluch oder Magie. Ein Tier wundert sich höchstens kurz und redet weiter.
+- Es darf den Fall nicht lösen und nicht in die Irre führen: Der Täter dieses Kapitels bleibt der, der es ist.`;
+}
+
 /** Schritt 1: Worum es in der ganzen Saga geht. */
 export function buildKernPrompt(
   besetzung: Character[],
@@ -55,9 +72,10 @@ ${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
       ? `
 BESESSENHEIT - DAS GEHEIMNIS DIESER SAGA
 - ${drahtzieher.name} ist keine Figur, der man begegnet: Es ist die Dämonengestalt, die in ${wirt.name} steckt. In allen Kapiteln sieht der Spieler nur ${wirt.name} - freundlich, harmlos, mittendrin.
-- ${wirt.name} weiß selbst nichts davon. Was durch ihn geschieht, geschieht nachts, in Lücken, in Blackouts: fehlende Stunden, Erinnerungen, die nicht passen, Spuren, die zu ihm führen, obwohl er zur Tatzeit anderswo war.
-- Die Spuren zeigen auf etwas Uraltes, nicht auf ein Tier: eine Kratzspur zu hoch, ein Geruch nach kaltem Rauch, ein Schatten mit zu vielen Armen, ein Satz in einer Sprache, die niemand kennt.
+- ${wirt.name} weiß selbst nichts davon. Was durch ihn geschieht, geschieht nachts, in Lücken, in Blackouts.
+- Die Wahrheit muss diese Doppelnatur tragen: Sie erklärt am Ende, warum die Spuren zu etwas Uraltem führen und nicht zu einem Tier.
 - Nenne weder "${drahtzieher.name}" noch das Wort Dämon vor dem Finale. Erst dort bricht es heraus.
+${besessenheitsRegeln(wirt.name, drahtzieher.name)}
 `
       : ""
   }
@@ -106,6 +124,8 @@ export function buildKapitelPrompt(args: {
   wunschTaeter: string;
   /** Tiere, die erst nach diesem Kapitel dazustoßen. */
   nochNichtDaTiere?: string[];
+  /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
+  besessenheit?: { wirt: string; daemon: string };
 }): string {
   const {
     nummer,
@@ -122,6 +142,7 @@ export function buildKapitelPrompt(args: {
     neueTiere,
     wunschTaeter,
     nochNichtDaTiere = [],
+    besessenheit,
   } = args;
 
   const vorher = bisher.length
@@ -140,7 +161,9 @@ DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel 
     twist
       ? " und ist hier gar nicht anwesend."
       : " und wirkt höchstens beiläufig harmlos."
-  }${twist ? `\n${TWIST_REGELN}` : ""}${vorher}
+  }${twist ? `\n${TWIST_REGELN}` : ""}${
+    besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
+  }${vorher}
 
 ${
     wunschTaeter
@@ -186,10 +209,13 @@ export function buildFinalePrompt(args: {
   motiv: string;
   bisher: { name: string; enthuellung: string }[];
   twist: boolean;
+  /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
+  besessenheit?: { wirt: string; daemon: string };
   /** Tiere, die erst im Finale dazustoßen. */
   neueTiere: string[];
 }): string {
-  const { thema, wahrheit, drahtzieherName, motiv, bisher, twist, neueTiere } = args;
+  const { thema, wahrheit, drahtzieherName, motiv, bisher, twist, neueTiere, besessenheit } =
+    args;
 
   return `Entwirf das Finale der Saga.
 
@@ -209,6 +235,14 @@ Anforderungen:
       ? `
 - WICHTIG: In den Kapiteln ist ${drahtzieherName} nie aufgetreten - der Spieler kennt ihn nur als Schatten, als Handschrift, als Gerücht. Der Erzählertext vor dem Finale muss genau das erzählen: dass jetzt jemand die Bühne betritt, den man die ganze Zeit nur an seinen Spuren erkannt hat. Beschreibe seinen Auftritt, ohne den Namen zu nennen - der Spieler soll ihn in der Besetzung wiedererkennen.
 - Der Auftrag des Finalfalls sagt ausdrücklich, dass der Gesuchte zum ersten Mal greifbar ist.`
+      : ""
+  }
+${
+    besessenheit
+      ? `
+- BESESSENHEIT: ${besessenheit.daemon} ist die Gestalt, die die ganze Zeit in ${besessenheit.wirt} steckte. Der Erzählertext vor dem Finale erzählt, dass mit ${besessenheit.wirt} etwas nicht stimmt - er zittert, er weicht aus, er wirkt wie zwei Wesen in einem -, nennt aber weder Dämon noch ${besessenheit.daemon}.
+- Im Finalfall ist ${besessenheit.wirt} nicht mehr dabei: An seiner Stelle steht ${besessenheit.daemon}. Der Auftrag darf das voraussetzen.
+- Der Epilog erklärt endlich alles: seit wann, warum ausgerechnet ${besessenheit.wirt}, und was aus ihm wird.`
       : ""
   }
 - Der Epilog kommt nach dem gelösten Fall und darf alles aussprechen.${
@@ -236,6 +270,8 @@ export function buildSagaBriefing(args: {
   vorherigeEnthuellungen: string[];
   istFinale: boolean;
   twist: boolean;
+  /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
+  besessenheit?: { wirt: string; daemon: string };
 }): string {
   const {
     thema,
@@ -248,6 +284,7 @@ export function buildSagaBriefing(args: {
     vorherigeEnthuellungen,
     istFinale,
     twist,
+    besessenheit,
   } = args;
 
   const bisher = vorherigeEnthuellungen.length
@@ -270,7 +307,11 @@ Zusätzlich:
         ? `\n- ${drahtzieherName} kommt hier zum ersten Mal überhaupt vor. Bau seinen Auftritt in die Tatbeschreibung ein: Er war die ganze Zeit da, nur nie zu sehen.`
         : ""
     }
-- Die Tatbeschreibung darf ruhig groß klingen - es ist der Schlusspunkt.`;
+- Die Tatbeschreibung darf ruhig groß klingen - es ist der Schlusspunkt.${
+      besessenheit
+        ? `\n- ${besessenheit.daemon} ist die Gestalt, die bis eben in ${besessenheit.wirt} steckte. ${besessenheit.wirt} gehört nicht mehr zur Besetzung. Die Tatbeschreibung greift auf, was in den Kapiteln unerklärlich blieb - die fehlenden Stunden, die Kälte, die Spuren, die zu niemandem passten -, und löst es auf.`
+        : ""
+    }`;
   }
 
   return `DIESER FALL IST KAPITEL ${kapitelNummer} VON ${kapitelAnzahl} EINER SAGA.
@@ -286,6 +327,8 @@ Zusätzlich:
 - Der Fall ist für sich abgeschlossen und lösbar, ohne die anderen Kapitel zu kennen.
 - Genau die oben genannte Enthüllung muss sich aus dem Fall ergeben - als Randnotiz, gefundener Gegenstand oder Bemerkung eines Tieres. Nicht mehr.
 - Der Drahtzieher wird höchstens beiläufig gestreift und wirkt dabei harmlos.${
+    besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
+  }${
     twist
       ? `\n- ${drahtzieherName} ist in diesem Fall NICHT anwesend und gehört nicht zur Besetzung. Was auf ihn deutet, taucht als Gegenstand, Geruch, Handschrift oder Aussage Dritter auf - nie als Person und nie unter seinem Namen.`
       : ""

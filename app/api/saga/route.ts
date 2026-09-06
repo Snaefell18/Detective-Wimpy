@@ -138,6 +138,23 @@ function orteAus(roh: unknown): Location[] {
   return geprueft.success && geprueft.data.length ? (geprueft.data as Location[]) : LOCATIONS;
 }
 
+/**
+ * Wirt und Dämonengestalt mit Namen - so, wie die Prompts sie brauchen.
+ * Ohne eingerichtete Besessenheit kommt undefined, und alles bleibt wie
+ * bisher.
+ */
+function besessenheitVon(
+  besetzung: Character[],
+  vorgaben: SagaVorgaben,
+): { wirt: string; daemon: string } | undefined {
+  const b = besessen(vorgaben);
+  if (!b) return undefined;
+  const name = (id: string) => besetzung.find((c) => c.id === id)?.name;
+  const wirt = name(b.wirtId);
+  const daemon = name(b.daemonId);
+  return wirt && daemon ? { wirt, daemon } : undefined;
+}
+
 /* --- Schritt 1: der Kern -------------------------------------------- */
 
 async function kernSchritt(body: Record<string, unknown>) {
@@ -316,6 +333,7 @@ async function kapitelSchritt(
         wunsch: bogen.vorgaben.kapitelWuensche[nummer - 1] ?? "",
         stadt: stadtName(stadt, staedte),
         twist: bogen.vorgaben.twist === true,
+        besessenheit: besessenheitVon(bogen.besetzung, bogen.vorgaben),
         neueTiere: neue.map((c) => c.name),
         wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
         nochNichtDaTiere: zuFrueh,
@@ -392,6 +410,7 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         motiv: bogen.drahtzieherMotiv,
         bisher: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
         twist: bogen.vorgaben.twist === true,
+        besessenheit: besessenheitVon(bogen.besetzung, bogen.vorgaben),
         neueTiere: neuInKapitel({
           besetzung: bogen.besetzung,
           drahtzieherId: bogen.drahtzieherId,

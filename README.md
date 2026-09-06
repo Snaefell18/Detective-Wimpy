@@ -188,6 +188,11 @@ Was daraus folgt, macht die App von selbst:
 
 - In allen Kapiteln begegnet man nur dem Wirt. Die Dämonenform kommt nirgends
   vor und wird auch in keinem Text genannt.
+- **In jedem Kapitel und in jedem Fall steht genau ein kleines Zeichen**, das
+  nicht ins Bild passt und mit dem Wirt zu tun hat: eine Stunde, die er nicht
+  erinnert, Erde unter den Krallen, ein Kratzer zu hoch an der Wand, Kälte in
+  einem warmen Raum. Niemand erklärt es, niemand nennt Dämon oder Fluch -
+  einzeln bleibt jedes harmlos, zusammen ergibt sich ein Muster.
 - Der Dämon ist der Drahtzieher der ganzen Saga; die Spuren führen zu etwas
   Uraltem, nicht zu einem Tier.
 - **Direkt vor dem Finale** läuft die Verwandlung: Der Wirt flackert, reißt

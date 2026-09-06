@@ -27,7 +27,7 @@ import {
 } from "@/lib/schemas";
 import type { Bogen } from "@/lib/sagaBogen";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
-import { besetzungFuerKapitel } from "@/lib/sagaTypen";
+import { besessen, besetzungFuerKapitel } from "@/lib/sagaTypen";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
@@ -181,6 +181,16 @@ const weltVon = (entwurf: Entwurf) =>
     entwurf.absurditaet,
   );
 
+/** Wirt und Dämonengestalt mit Namen - undefined, wenn es keine gibt. */
+function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undefined {
+  const b = besessen(bogen.vorgaben);
+  if (!b) return undefined;
+  const name = (id: string) => bogen.besetzung.find((c) => c.id === id)?.name;
+  const wirt = name(b.wirtId);
+  const daemon = name(b.daemonId);
+  return wirt && daemon ? { wirt, daemon } : undefined;
+}
+
 /** Baut aus dem Bogen den Text, den die Fallerzeugung braucht. */
 function briefingVon(bogen: Bogen, kapitelNr: number): string {
   const istFinale = kapitelNr === 0;
@@ -198,6 +208,7 @@ function briefingVon(bogen: Bogen, kapitelNr: number): string {
     kapitelAnzahl: bogen.kapitel.length,
     auftrag: istFinale ? bogen.finale.auftrag : (kapitel?.auftrag ?? ""),
     twist: bogen.vorgaben.twist === true,
+    besessenheit: besessenheitVon(bogen),
     enthuellung: kapitel?.enthuellung ?? "",
     vorherigeEnthuellungen: vorher,
     istFinale,
