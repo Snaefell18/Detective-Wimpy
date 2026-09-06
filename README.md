@@ -189,6 +189,10 @@ Wie der Auftritt aussieht, wählt man im Saga-Editor **je Tier**:
 - **Gewitter** - Regen, zuckende Blitze, die Figur als Silhouette davor. Für
   Tiere, bei denen einem mulmig werden soll.
 - **Jackpot** - Strahlenkranz, Konfetti, Geldregen, Leuchtreklame.
+- **Welle** - Wasser, Lichtspiel, aufsteigende Blasen, rollende Brandung.
+- **Dschungel** - Blätterdach, schwingende Ranken, segelnde Blätter.
+- **Erzfeind** - Glut, Herzschlag, ein Ring, der sich zusammenzieht, und ein
+  Bildschirm, der leise wankt.
 
 Alles reines CSS, keine zusätzlichen Dateien, und alles hält sich an
 `prefers-reduced-motion`.
@@ -210,6 +214,13 @@ Der Drahtzieher wird davor nie beim Namen genannt: Der Server streicht Sätze,
 die ihn als den Kopf hinter allem ausweisen („dahinter steckt …“, „zieht die
 Fäden“), aus Überthema, Klappentext, Auftakt und allen Kapiteltexten.
 Andeutungen bleiben - sie sind die halbe Saga.
+
+Wer wann mitspielt, steht im Saga-Editor unter **Auftritte**: ab welchem
+Kapitel jemand dabei ist - und in der Zeile darunter, in welchen Kapiteln er
+**pausiert**. So kann ein Tier die Saga zwischendurch verlassen und später
+wieder auftauchen; die Ansage heißt dann „Zurück auf dem Feld!“. Bliebe ein
+Kapitel dadurch ohne genug Verdächtige, rückt jemand nach - ein spielbarer
+Fall geht vor.
 
 Wer neu ist, wird nicht geplant,
 sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des

@@ -262,6 +262,9 @@ export const SagaVorgabenSchema = z.object({
   drahtzieherId: z.string().max(40),
   twist: z.boolean().default(false),
   neuzugaenge: z.record(z.string().max(40), z.number()).default({}),
+  abwesenheiten: z
+    .record(z.string().max(40), z.array(z.number()).max(12))
+    .default({}),
   schwierigkeit: z.enum(["leicht", "mittel", "knifflig"]),
   reifegrad: z.enum(["kindgerecht", "jugendlich", "erwachsen"]),
   absurditaet: z.enum(["bodenstaendig", "verspielt", "absurd"]),
@@ -269,7 +272,10 @@ export const SagaVorgabenSchema = z.object({
   neuzugangTon: z.string().max(200).default(""),
   neuzugangToene: z.record(z.string().max(40), z.string().max(200)).default({}),
   neuzugangArten: z
-    .record(z.string().max(40), z.enum(["klassisch", "gewitter", "jackpot"]))
+    .record(
+      z.string().max(40),
+      z.enum(["klassisch", "gewitter", "jackpot", "welle", "dschungel", "erzfeind"]),
+    )
     .default({}),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),

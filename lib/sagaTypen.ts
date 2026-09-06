@@ -72,6 +72,14 @@ export type SagaVorgaben = {
    * bleibt bis zum Ende.
    */
   neuzugaenge: Record<string, number>;
+  /**
+   * Kapitel, in denen ein Tier NICHT dabei ist: Charakter-Id -> Nummern.
+   *
+   * Damit kann jemand die Saga zwischendurch verlassen und später wieder
+   * auftauchen - verreist, im Krankenhaus, untergetaucht. Gezählt wird wie
+   * überall: 1 ist das erste Kapitel, kapitelAnzahl + 1 das Finale.
+   */
+  abwesenheiten: Record<string, number[]>;
   schwierigkeit: Vorgaben["schwierigkeit"];
   reifegrad: Reifegrad;
   absurditaet: Absurditaet;
@@ -113,6 +121,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   drahtzieherId: "",
   twist: false,
   neuzugaenge: {},
+  abwesenheiten: {},
   schwierigkeit: "mittel",
   reifegrad: "kindgerecht",
   absurditaet: "verspielt",
@@ -241,12 +250,21 @@ export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }
  * werden soll. "jackpot" ist das Gegenteil: Strahlenkranz, Konfetti,
  * Geldregen, alles blinkt.
  */
-export type AuftrittsArt = "klassisch" | "gewitter" | "jackpot";
+export type AuftrittsArt =
+  | "klassisch"
+  | "gewitter"
+  | "jackpot"
+  | "welle"
+  | "dschungel"
+  | "erzfeind";
 
 export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
   { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
   { id: "gewitter", label: "Gewitter", hinweis: "Regen, Blitze, Silhouette" },
   { id: "jackpot", label: "Jackpot", hinweis: "Konfetti, Geld, alles blinkt" },
+  { id: "welle", label: "Welle", hinweis: "Wasser, Blasen, Lichtspiel" },
+  { id: "dschungel", label: "Dschungel", hinweis: "Blätter, Ranken, Nebel" },
+  { id: "erzfeind", label: "Erzfeind", hinweis: "Glut, Puls, alles wankt" },
 ];
 
 /** Welche Art zum Auftritt dieses Tiers gehört. */
@@ -314,15 +332,25 @@ export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolea
   besetzung: T[];
   drahtzieherId: string;
   kapitel: number;
-  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  vorgaben: Pick<
+    SagaVorgaben,
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten"
+  >;
 }): T[] {
   const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
-  if (kapitel === 0) return besetzung;
+  const nummer = kapitel === 0 ? vorgaben.kapitelAnzahl + 1 : kapitel;
 
   const auftritt = (c: T) =>
     auftrittVon({ charakterId: c.id, vorgaben, drahtzieherId });
+  /** Wer gerade weg ist - verreist, untergetaucht, im Krankenhaus. */
+  const weg = (c: T) =>
+    !c.istDetektiv && (vorgaben.abwesenheiten?.[c.id] ?? []).includes(nummer);
 
-  const dabei = besetzung.filter((c) => c.istDetektiv || auftritt(c) <= kapitel);
+  if (kapitel === 0) return besetzung.filter((c) => !weg(c));
+
+  const dabei = besetzung.filter(
+    (c) => c.istDetektiv || (auftritt(c) <= kapitel && !weg(c)),
+  );
   const fehlen = 2 - dabei.filter((c) => !c.istDetektiv).length;
   if (fehlen <= 0) return dabei;
 
@@ -331,8 +359,11 @@ export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolea
   // vorkommt, ist die halbe Saga.
   const zurueckgestellt = (c: T) =>
     vorgaben.twist && c.id === drahtzieherId ? 1 : 0;
+  // Wer als abwesend markiert ist, rückt zuletzt nach - lieber ein Fall mit
+  // jemandem, der eigentlich weg sein sollte, als ein Fall ohne Verdächtige.
   const nachruecker = besetzung
     .filter((c) => !c.istDetektiv && !dabei.includes(c))
+    .sort((a, b) => Number(weg(a)) - Number(weg(b)))
     .sort(
       (a, b) => zurueckgestellt(a) - zurueckgestellt(b) || auftritt(a) - auftritt(b),
     )
@@ -342,12 +373,28 @@ export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolea
   return besetzung.filter((c) => dabei.includes(c) || nachruecker.includes(c));
 }
 
+/**
+ * War dieses Tier in einem früheren Kapitel schon einmal dabei?
+ *
+ * Damit lässt sich eine Rückkehr von einem echten Neuzugang unterscheiden -
+ * "ist zurück" statt "betritt das Feld".
+ */
+export function warFrueherDa(saga: Saga, kapitel: number, charakterId: string): boolean {
+  const bis = kapitel < 0 ? saga.kapitel.length : kapitel;
+  return saga.kapitel
+    .slice(0, bis)
+    .some((k) => (k.fall?.besetzung ?? []).some((c) => c.id === charakterId));
+}
+
 /** Wer in diesem Kapitel zum ersten Mal auftaucht. */
 export function neuInKapitel<T extends { id: string; istDetektiv: boolean }>(args: {
   besetzung: T[];
   drahtzieherId: string;
   kapitel: number;
-  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  vorgaben: Pick<
+    SagaVorgaben,
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten"
+  >;
 }): T[] {
   const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
   const jetzt = besetzungFuerKapitel(args);

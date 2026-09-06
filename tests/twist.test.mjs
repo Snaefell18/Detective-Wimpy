@@ -19,7 +19,7 @@ const alle = [
 ];
 
 /** Kurzform für die Vorgaben, die diese Funktionen brauchen. */
-const v = (teil) => ({ twist: false, neuzugaenge: {}, kapitelAnzahl: 3, ...teil });
+const v = (teil) => ({ twist: false, neuzugaenge: {}, abwesenheiten: {}, kapitelAnzahl: 3, ...teil });
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -141,7 +141,33 @@ console.log("\n9. Der Twist sticht die Auftrittswahl");
   pruefe("trotz „von Anfang an“ nicht dabei", !k1.some((c) => c.id === "boss"), ids(k1));
 }
 
-console.log("\n10. Der Drahtzieher ist immer in der Besetzung");
+console.log("\n10. Abwesenheit: zwischendurch weg, später wieder da");
+{
+  const b = (kapitel, teil) =>
+    ids(besetzungFuerKapitel({ besetzung: alle, drahtzieherId: "boss", kapitel, vorgaben: v(teil) }));
+
+  const weg = { abwesenheiten: { nala: [2] } };
+  pruefe("Kapitel 1: alle da", b(1, weg).includes("nala"));
+  pruefe("Kapitel 2: Nala fehlt", !b(2, weg).includes("nala"), b(2, weg));
+  pruefe("Kapitel 3: Nala ist zurück", b(3, weg).includes("nala"));
+  pruefe("die anderen bleiben unberührt", b(2, weg).includes("mikkeli") && b(2, weg).includes("fanny"));
+
+  // Das Finale wird als kapitelAnzahl + 1 gezählt.
+  pruefe("Finale ohne Abwesende", b(0, { abwesenheiten: { nala: [4] } }).includes("nala") === false);
+  pruefe("Finale sonst vollständig", b(0, weg).includes("nala"));
+
+  // Spielbarkeit geht vor: Bleiben zu wenige übrig, rückt jemand nach.
+  const fastLeer = { abwesenheiten: { nala: [2], mikkeli: [2], fanny: [2] } };
+  const rest = besetzungFuerKapitel({
+    besetzung: alle,
+    drahtzieherId: "boss",
+    kapitel: 2,
+    vorgaben: v(fastLeer),
+  }).filter((c) => !c.istDetektiv);
+  pruefe("nie unter zwei Verdächtigen", rest.length >= 2, ids(rest));
+}
+
+console.log("\n11. Der Drahtzieher ist immer in der Besetzung");
 {
   const ids = (liste) => liste.map((c) => c.id).join(",");
   // Genau der Fall aus dem Spiel: Drahtzieher gewählt, aber nicht angehakt.
@@ -173,7 +199,7 @@ console.log("\n10. Der Drahtzieher ist immer in der Besetzung");
   );
 }
 
-console.log("\n11. Täter je Kapitel");
+console.log("\n12. Täter je Kapitel");
 {
   const moeglich = [{ id: "mikkeli" }, { id: "nala" }, { id: "fanny" }];
   const nimm = (wunsch, vorschlag, nummer = 1) =>

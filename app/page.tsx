@@ -30,6 +30,7 @@ import {
   artFuerAuftritt,
   neueGesichter,
   tonFuerAuftritt,
+  warFrueherDa,
   type Saga,
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
@@ -320,6 +321,16 @@ export default function Home() {
         <NeuerSpieler
           tiere={neuling.tiere}
           art={(charakterId) => artFuerAuftritt(charakterId, saga.stand?.saga.vorgaben)}
+          zurueck={(charakterId) =>
+            Boolean(
+              saga.stand &&
+                warFrueherDa(
+                  saga.stand.saga,
+                  neuling.finale ? -1 : saga.stand.lauf.kapitel,
+                  charakterId,
+                ),
+            )
+          }
           // Erst das Tier, dann die Saga, dann das Admin-Menü.
           ton={(charakterId) =>
             tonFuerAuftritt(

@@ -359,10 +359,15 @@ export function SagaVorgabenFelder({
       </h3>
       <p className="leise klein">
         Standard ist „Von Anfang an“. Wer später einsteigt, taucht in dem
-        Kapitel zum ersten Mal auf und bleibt dann bis zum Ende dabei; der
-        Erzählertext davor erklärt seine Ankunft. „Erst im Finale“ heißt: In
-        keinem Kapitel zu sehen. Das darf auch der Drahtzieher sein - mit der
-        Twist-Wahl oben steht er ohnehin schon auf „Erst im Finale“.
+        Kapitel zum ersten Mal auf; der Erzählertext davor erklärt seine
+        Ankunft. „Erst im Finale“ heißt: In keinem Kapitel zu sehen. Das darf
+        auch der Drahtzieher sein - mit der Twist-Wahl oben steht er ohnehin
+        schon auf „Erst im Finale“.
+        <br />
+        In der Zeile darunter lässt sich jedes einzelne Kapitel abwählen: Dann
+        ist das Tier zwischendurch weg und taucht später wieder auf. Bliebe ein
+        Kapitel dadurch ohne genug Verdächtige, rückt jemand nach - ein
+        spielbarer Fall geht vor.
       </p>
       {mitspieler.map((c) => {
         const finale = vorgaben.kapitelAnzahl + 1;
@@ -390,6 +395,37 @@ export function SagaVorgabenFelder({
                   {ab === 1 ? "Von Anfang an" : ab === finale ? "Erst im Finale" : `Ab Kapitel ${ab}`}
                 </button>
               ))}
+            </div>
+
+            {/* Wer da ist, muss nicht bleiben: Hier lässt sich jedes Kapitel
+                einzeln abwählen - verreist, untergetaucht, wieder da. */}
+            <div className="marken-reihe">
+              <span className="leise klein">Pausiert in</span>
+              {Array.from({ length: finale }, (_, i) => i + 1)
+                .filter((nr) => nr >= jetzt)
+                .map((nr) => {
+                  const pause = (vorgaben.abwesenheiten?.[c.id] ?? []).includes(nr);
+                  return (
+                    <button
+                      key={nr}
+                      className="marke-knopf"
+                      data-aktiv={pause}
+                      onClick={() => {
+                        const bisher = vorgaben.abwesenheiten?.[c.id] ?? [];
+                        setzen({
+                          abwesenheiten: {
+                            ...(vorgaben.abwesenheiten ?? {}),
+                            [c.id]: pause
+                              ? bisher.filter((x) => x !== nr)
+                              : [...bisher, nr].sort((a, b) => a - b),
+                          },
+                        });
+                      }}
+                    >
+                      {nr > vorgaben.kapitelAnzahl ? "Finale" : nr}
+                    </button>
+                  );
+                })}
             </div>
           </div>
         );

@@ -29,24 +29,41 @@ const HOECHSTENS = 20_000;
 const NAME_AB = 0.82;
 
 /**
- * Der Geld- und Konfettiregen des Jackpot-Auftritts.
+ * Was durch die Luft fliegt - je nach Bühne Geld, Blasen, Blätter oder Glut.
  *
  * Feste Werte statt Zufall: So sieht der Auftritt jedes Mal gleich aus, und
  * React muss die Schicht bei keinem Renderdurchgang neu würfeln.
  */
-const SCHAUER = [
-  "💰", "🎉", "💸", "✨", "🪙", "🎊", "💵", "⭐", "💎", "🎉",
-  "💰", "✨", "💸", "🪙", "🎊", "💵", "⭐", "💰", "✨", "💎",
-].map((zeichen, i) => ({
-  zeichen,
-  links: (i * 37 + 11) % 96,
-  zeit: ((i * 13) % 40) / 10,
-}));
+const GELD = ["💰", "🎉", "💸", "✨", "🪙", "🎊", "💵", "⭐", "💎", "🎉", "💰", "✨"];
+const BLASEN = ["○", "◦", "•", "○", "◦", "◌", "○", "•", "◦", "○", "◌", "•"];
+const BLAETTER = ["🍃", "🌿", "🍀", "🦋", "🍃", "🌱", "🌿", "🍃", "🦋", "🌿", "🍃", "🌱"];
+const GLUT = ["●", "•", "◆", "▪", "●", "•", "▴", "◆", "•", "●", "▪", "•"];
+
+/** Eine Schicht fliegender Zeichen - die Bahnen stehen fest. */
+function Schauer({ zeichen, klasse }: { zeichen: string[]; klasse: string }) {
+  return (
+    <div className={klasse} aria-hidden="true">
+      {zeichen.map((z, i) => (
+        <span
+          key={i}
+          style={{
+            left: `${(i * 37 + 11) % 96}%`,
+            animationDelay: `${((i * 13) % 40) / 10}s`,
+            animationDuration: `${3.2 + ((i * 7) % 5) * 0.6}s`,
+          }}
+        >
+          {z}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function NeuerSpieler({
   tiere,
   ton = "",
   art = "klassisch",
+  zurueck,
   onFertig,
 }: {
   tiere: Character[];
@@ -57,6 +74,8 @@ export function NeuerSpieler({
   ton?: string | ((charakterId: string) => string);
   /** Wie der Auftritt aussieht - je Tier verschieden. */
   art?: AuftrittsArt | ((charakterId: string) => AuftrittsArt);
+  /** War das Tier früher schon dabei? Dann kehrt es zurück, statt neu zu sein. */
+  zurueck?: (charakterId: string) => boolean;
   onFertig: () => void;
 }) {
   const [nr, setNr] = useState(0);
@@ -66,6 +85,7 @@ export function NeuerSpieler({
   const stueck = (typeof ton === "function" ? (tier ? ton(tier.id) : "") : ton) || "";
   const auftritt: AuftrittsArt =
     (typeof art === "function" ? (tier ? art(tier.id) : "klassisch") : art) || "klassisch";
+  const kehrtZurueck = Boolean(tier && zurueck?.(tier.id));
   const enthuellt = fortschritt >= 1;
 
   // Die Rückmeldung liegt in einem Ref: Sonst würde jeder Renderdurchgang der
@@ -215,13 +235,40 @@ export function NeuerSpieler({
       {auftritt === "jackpot" && (
         <>
           <div className="jackpot-strahlen" />
-          <div className="jackpot-schauer" aria-hidden="true">
-            {SCHAUER.map((s, i) => (
-              <span key={i} style={{ left: `${s.links}%`, animationDelay: `${s.zeit}s` }}>
-                {s.zeichen}
-              </span>
-            ))}
+          <Schauer zeichen={GELD} klasse="jackpot-schauer" />
+        </>
+      )}
+
+      {auftritt === "welle" && (
+        <>
+          <div className="welle-licht" />
+          <Schauer zeichen={BLASEN} klasse="welle-blasen" />
+          <div className="welle-brandung">
+            <span />
+            <span />
+            <span />
           </div>
+        </>
+      )}
+
+      {auftritt === "dschungel" && (
+        <>
+          <div className="dschungel-licht" />
+          <Schauer zeichen={BLAETTER} klasse="dschungel-blaetter" />
+          <div className="dschungel-ranken">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+        </>
+      )}
+
+      {auftritt === "erzfeind" && (
+        <>
+          <div className="erzfeind-puls" />
+          <Schauer zeichen={GLUT} klasse="erzfeind-glut" />
+          <div className="erzfeind-ring" />
         </>
       )}
 
@@ -231,9 +278,11 @@ export function NeuerSpieler({
       <div className="intro-buehne">
         <div className="szene-block neuzugang-szene" key={tier.id}>
           <p className="intro-oberzeile einfliegen">
-            {tiere.length > 1 && nr === 0
-              ? "Neue Spieler betreten das Feld!"
-              : "Ein neuer Spieler betritt das Feld!"}
+            {kehrtZurueck
+              ? "Zurück auf dem Feld!"
+              : tiere.length > 1 && nr === 0
+                ? "Neue Spieler betreten das Feld!"
+                : "Ein neuer Spieler betritt das Feld!"}
           </p>
 
           <div className="intro-portraet neuzugang-portraet">

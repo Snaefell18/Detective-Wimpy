@@ -3527,7 +3527,9 @@ a.zurueck {
 /* Die Kulisse liegt hinter der Bühne. Der Blitz hellt den Himmel auf, nicht
    die Figur - so zeichnet sie sich als Silhouette dagegen ab, und der
    Schleier über ihr macht genau das mit. */
-.neuzugang[data-art="gewitter"] {
+/* Der Selektor ist absichtlich spezifischer als der Grundton des Themes -
+   sonst gewänne der und die Bühne bliebe schwarz. */
+.intro.neuzugang[data-art="gewitter"] {
   background: linear-gradient(180deg, #060a16 0%, #02040c 100%);
 }
 
@@ -3607,7 +3609,9 @@ a.zurueck {
 
 /* --- Auftritt: Jackpot ---------------------------------------------- */
 
-.neuzugang[data-art="jackpot"] {
+/* Der Selektor ist absichtlich spezifischer als der Grundton des Themes -
+   sonst gewänne der und die Bühne bliebe schwarz. */
+.intro.neuzugang[data-art="jackpot"] {
   background: radial-gradient(80% 60% at 50% 45%, #2a0f5e 0%, #12042c 55%, #05010f 100%);
 }
 
@@ -3645,7 +3649,10 @@ a.zurueck {
 }
 
 /* Geldregen und Konfetti fallen über allem - und schlucken nichts. */
-.jackpot-schauer {
+.jackpot-schauer,
+.welle-blasen,
+.dschungel-blaetter,
+.erzfeind-glut {
   position: absolute;
   inset: 0;
   z-index: 6;
@@ -3653,7 +3660,10 @@ a.zurueck {
   overflow: hidden;
 }
 
-.jackpot-schauer span {
+.jackpot-schauer span,
+.welle-blasen span,
+.dschungel-blaetter span,
+.erzfeind-glut span {
   position: absolute;
   top: -12%;
   font-size: 30px;
@@ -3756,5 +3766,381 @@ a.zurueck {
 
   .gewitter-blitz {
     opacity: 0.18;
+  }
+}
+
+/* --- Auftritt: Welle ------------------------------------------------ */
+
+/* Der Selektor ist absichtlich spezifischer als der Grundton des Themes -
+   sonst gewänne der und die Bühne bliebe schwarz. */
+.intro.neuzugang[data-art="welle"] {
+  background: linear-gradient(180deg, #04263f 0%, #021a2e 45%, #010c18 100%);
+}
+
+.neuzugang[data-art="welle"] .intro-buehne,
+.neuzugang[data-art="dschungel"] .intro-buehne,
+.neuzugang[data-art="erzfeind"] .intro-buehne {
+  position: relative;
+  z-index: 2;
+}
+
+/* Lichtspiel wie unter Wasser: zwei weiche Netze, die gegeneinander wandern. */
+.welle-licht {
+  position: absolute;
+  inset: -20%;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 22% at 30% 20%, rgba(120, 220, 255, 0.22) 0%, transparent 70%),
+    radial-gradient(30% 18% at 70% 40%, rgba(90, 190, 255, 0.18) 0%, transparent 70%),
+    radial-gradient(50% 26% at 50% 75%, rgba(60, 160, 220, 0.16) 0%, transparent 70%);
+  animation: welle-schweben 9s ease-in-out infinite alternate;
+}
+
+@keyframes welle-schweben {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+
+/* Blasen steigen auf statt zu fallen. */
+.welle-blasen span {
+  top: auto;
+  bottom: -10%;
+  font-size: 22px;
+  color: rgba(190, 235, 255, 0.75);
+  animation-name: welle-steigen;
+}
+
+@keyframes welle-steigen {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-118vh) translateX(18px) scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* Drei Wellenkämme am unteren Rand, jeder etwas langsamer. */
+.welle-brandung {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 34%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Die alte Kinotechnik: ein riesiger, fast runder Klecks dreht sich langsam -
+   sein Rand wandert als Welle durchs Bild. Rund muss er sein, sonst kanten
+   die Ecken durch. */
+.welle-brandung span {
+  position: absolute;
+  left: 50%;
+  bottom: -170%;
+  width: 260%;
+  aspect-ratio: 1;
+  margin-left: -130%;
+  border-radius: 43%;
+  background: rgba(28, 120, 180, 0.3);
+  animation: welle-rollen 9s linear infinite;
+}
+
+.welle-brandung span:nth-child(2) {
+  bottom: -178%;
+  border-radius: 46%;
+  background: rgba(18, 90, 145, 0.34);
+  animation-duration: 14s;
+  animation-direction: reverse;
+}
+
+.welle-brandung span:nth-child(3) {
+  bottom: -186%;
+  border-radius: 41%;
+  background: rgba(10, 62, 108, 0.42);
+  animation-duration: 19s;
+}
+
+@keyframes welle-rollen {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.neuzugang[data-art="welle"] .neuzugang-schleier {
+  background: #01121f;
+}
+
+.neuzugang[data-art="welle"] .intro-oberzeile {
+  color: #9fe4ff;
+  text-shadow: 0 0 18px rgba(80, 200, 255, 0.55);
+}
+
+/* --- Auftritt: Dschungel -------------------------------------------- */
+
+/* Der Selektor ist absichtlich spezifischer als der Grundton des Themes -
+   sonst gewänne der und die Bühne bliebe schwarz. */
+.intro.neuzugang[data-art="dschungel"] {
+  background: radial-gradient(70% 50% at 50% 30%, #123d1d 0%, #08240f 55%, #030f06 100%);
+}
+
+/* Sonne durch das Blätterdach: schräge Streifen, die leise wandern. */
+.dschungel-licht {
+  position: absolute;
+  inset: -20%;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    108deg,
+    rgba(210, 255, 170, 0.07) 0 10px,
+    transparent 10px 84px
+  );
+  filter: blur(2px);
+  animation: dschungel-wandern 14s ease-in-out infinite alternate;
+}
+
+@keyframes dschungel-wandern {
+  from {
+    transform: translateX(-4%);
+  }
+  to {
+    transform: translateX(4%);
+  }
+}
+
+/* Ranken hängen von oben herein und schwingen. */
+.dschungel-ranken {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 46%;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dschungel-ranken span {
+  position: absolute;
+  top: -8%;
+  width: 6px;
+  height: 100%;
+  border-radius: 0 0 60% 60%;
+  background: linear-gradient(180deg, #2f7a33 0%, #1c4d22 70%, transparent 100%);
+  transform-origin: top center;
+  animation: dschungel-schwingen 6s ease-in-out infinite alternate;
+}
+
+.dschungel-ranken span:nth-child(1) {
+  left: 12%;
+  height: 74%;
+}
+.dschungel-ranken span:nth-child(2) {
+  left: 34%;
+  height: 96%;
+  animation-duration: 7.5s;
+}
+.dschungel-ranken span:nth-child(3) {
+  right: 26%;
+  height: 68%;
+  animation-duration: 5.5s;
+}
+.dschungel-ranken span:nth-child(4) {
+  right: 8%;
+  height: 88%;
+  animation-duration: 8.5s;
+}
+
+@keyframes dschungel-schwingen {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+/* Blätter segeln, statt zu stürzen. */
+.dschungel-blaetter span {
+  font-size: 26px;
+  animation-name: dschungel-segeln;
+}
+
+@keyframes dschungel-segeln {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(55vh) translateX(38px) rotate(160deg);
+  }
+  100% {
+    transform: translateY(118vh) translateX(-24px) rotate(340deg);
+    opacity: 0;
+  }
+}
+
+.neuzugang[data-art="dschungel"] .neuzugang-schleier {
+  background: #04170a;
+}
+
+.neuzugang[data-art="dschungel"] .intro-oberzeile {
+  color: #b6f59a;
+  text-shadow: 0 0 18px rgba(120, 240, 130, 0.5);
+}
+
+/* --- Auftritt: Erzfeind --------------------------------------------- */
+
+/* Der Selektor ist absichtlich spezifischer als der Grundton des Themes -
+   sonst gewänne der und die Bühne bliebe schwarz. */
+.intro.neuzugang[data-art="erzfeind"] {
+  background: radial-gradient(60% 45% at 50% 55%, #3a0508 0%, #17010a 55%, #060004 100%);
+  animation: erzfeind-wanken 5s ease-in-out infinite;
+}
+
+/* Der ganze Bildschirm atmet - kaum sichtbar, aber man spürt es. */
+@keyframes erzfeind-wanken {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  50% {
+    transform: translate3d(1px, -2px, 0);
+  }
+  75% {
+    transform: translate3d(2px, 1px, 0);
+  }
+}
+
+/* Ein Herzschlag aus Glut hinter der Figur. */
+.erzfeind-puls {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(45% 32% at 50% 42%, rgba(255, 60, 40, 0.55) 0%, transparent 72%);
+  animation: erzfeind-schlagen 1.7s ease-in-out infinite;
+}
+
+@keyframes erzfeind-schlagen {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  12% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+  24% {
+    opacity: 0.45;
+    transform: scale(1.01);
+  }
+  36% {
+    opacity: 0.8;
+    transform: scale(1.04);
+  }
+}
+
+/* Ein Ring, der sich um die Figur zusammenzieht. */
+.erzfeind-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 78vw;
+  height: 78vw;
+  max-width: 420px;
+  max-height: 420px;
+  margin: -39vw 0 0 -39vw;
+  z-index: 1;
+  pointer-events: none;
+  border: 2px solid rgba(255, 70, 50, 0.5);
+  border-radius: 50%;
+  animation: erzfeind-ziehen 3.4s ease-out infinite;
+}
+
+@keyframes erzfeind-ziehen {
+  0% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(0.72);
+    opacity: 0;
+  }
+}
+
+/* Funken steigen auf. */
+.erzfeind-glut span {
+  top: auto;
+  bottom: -8%;
+  font-size: 14px;
+  color: #ff6a3c;
+  text-shadow: 0 0 12px rgba(255, 90, 40, 0.9);
+  animation-name: erzfeind-steigen;
+}
+
+@keyframes erzfeind-steigen {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-112vh) translateX(-26px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.neuzugang[data-art="erzfeind"] .neuzugang-schleier {
+  background: #0a0002;
+}
+
+.neuzugang[data-art="erzfeind"] .intro-oberzeile {
+  color: #ff8a6a;
+  letter-spacing: 0.3em;
+  text-shadow: 0 0 22px rgba(255, 60, 30, 0.8);
+}
+
+.neuzugang[data-art="erzfeind"] .neuzugang-raetsel {
+  color: #ff5a3c;
+  text-shadow: 0 0 26px rgba(255, 60, 30, 0.9);
+}
+
+.neuzugang[data-art="erzfeind"] .intro-logo:not(.neuzugang-raetsel) {
+  color: #ffd9cd;
+  text-shadow:
+    0 0 26px rgba(255, 60, 30, 0.8),
+    0 0 60px rgba(255, 30, 10, 0.5);
+}
+
+/* Auch die neuen Bühnen halten still, wenn Bewegung stört. */
+@media (prefers-reduced-motion: reduce) {
+  .welle-licht,
+  .welle-brandung span,
+  .welle-blasen span,
+  .dschungel-licht,
+  .dschungel-ranken span,
+  .dschungel-blaetter span,
+  .erzfeind-puls,
+  .erzfeind-ring,
+  .erzfeind-glut span,
+  .neuzugang[data-art="erzfeind"] {
+    animation: none;
   }
 }

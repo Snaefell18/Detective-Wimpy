@@ -4,6 +4,7 @@
  */
 import {
   OHNE_AUFTRITT_TON,
+  warFrueherDa,
   STANDARD_AUFTRITT_TON,
   neueGesichter,
   tonFuerAuftritt,
@@ -119,6 +120,20 @@ console.log("\n6. Welcher Ton zum Auftritt gehört");
     "ohne alles bleibt der Standard",
     tonFuerAuftritt("nala", undefined, "") === STANDARD_AUFTRITT_TON,
   );
+}
+
+console.log("\n7. Rückkehr statt Neuzugang");
+{
+  // Nala ist in Kapitel 1 dabei, in Kapitel 2 weg, in Kapitel 3 wieder da.
+  const s = saga(
+    [fall("nala", "mikkeli"), fall("mikkeli", "fanny"), fall("nala", "mikkeli", "fanny")],
+    fall("nala", "mikkeli", "fanny"),
+  );
+  pruefe("Kapitel 3 kündigt Nala an", ids(neueGesichter(s, 2)).includes("nala"));
+  pruefe("und sie war früher schon da", warFrueherDa(s, 2, "nala"));
+  pruefe("Fanny dagegen kam neu dazu", !warFrueherDa(s, 1, "fanny"));
+  pruefe("im ersten Kapitel war noch niemand da", !warFrueherDa(s, 0, "nala"));
+  pruefe("fürs Finale zählen alle Kapitel", warFrueherDa(s, -1, "fanny"));
 }
 
 console.log(
