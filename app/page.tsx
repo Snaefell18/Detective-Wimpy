@@ -17,6 +17,7 @@ import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { ReaktionScreen } from "@/components/ReaktionScreen";
+import { Verwandlung } from "@/components/Verwandlung";
 import { VerdachtsMeldung, type Verdachtsmeldung } from "@/components/VerdachtsMeldung";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
@@ -28,6 +29,7 @@ import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
+  besessen,
   neueGesichter,
   tonFuerAuftritt,
   warFrueherDa,
@@ -59,6 +61,8 @@ export default function Home() {
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
   /** Die Reaktion des Beschuldigten - steht zwischen Beschuldigung und Urteil. */
   const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
+  /** Die Verwandlung vor dem Finale - läuft, sobald sie gesetzt ist. */
+  const [verwandlung, setVerwandlung] = useState(false);
   const [verdachtsMeldung, setVerdachtsMeldung] = useState<Verdachtsmeldung | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
@@ -177,7 +181,18 @@ export default function Home() {
     }
 
     if (!angekuendigt) {
-      const neue = neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel);
+      // Vor dem Finale bricht der Dämon aus seinem Wirt - das ist der eine
+      // Auftritt, der keine Ansage bekommt, sondern eine Verwandlung.
+      const besessenheit = besessen(saga.stand.saga.vorgaben);
+      if (finale && besessenheit) {
+        setVerwandlung(true);
+        return;
+      }
+
+      const neue = neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel).filter(
+        // Die Dämonenform kündigt sich nie als "neuer Spieler" an.
+        (c) => c.id !== besessenheit?.daemonId,
+      );
       if (neue.length > 0) {
         setNeuling({ tiere: neue, finale });
         return;
@@ -310,6 +325,29 @@ export default function Home() {
             </p>
           </div>
         )}
+      </main>
+    );
+  }
+
+  // Die Verwandlung vor dem Finale: aus dem Wirt bricht der Dämon.
+  if (verwandlung && saga.stand && phase === "aus") {
+    const besessenheit = besessen(saga.stand.saga.vorgaben);
+    const besetzung = saga.stand.saga.finale.fall?.besetzung ?? [];
+    const ausKapiteln = saga.stand.saga.kapitel.flatMap((k) => k.fall?.besetzung ?? []);
+    const finde = (id: string) =>
+      besetzung.find((c) => c.id === id) ?? ausKapiteln.find((c) => c.id === id);
+
+    return (
+      <main className="app">
+        <Verwandlung
+          wirt={finde(besessenheit?.wirtId ?? "")}
+          daemon={finde(besessenheit?.daemonId ?? "")}
+          ton={besessenheit?.ton ?? ""}
+          onFertig={() => {
+            setVerwandlung(false);
+            sagaFallStarten(true, true);
+          }}
+        />
       </main>
     );
   }

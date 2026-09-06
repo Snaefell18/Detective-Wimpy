@@ -2461,3 +2461,19 @@
   height: 1px;
   background: var(--linie-akzent);
 }
+
+/* --- Verwandlung ---------------------------------------------------- */
+
+/* Auch im Noir bricht hier die Farbe durch - das ist der Bruch der Saga. */
+[data-theme="noir"] .intro.verwandlung {
+  background: #04000a;
+}
+
+[data-theme="noir"] .verwandlung-wirt .bild {
+  filter: saturate(0) contrast(1.2) brightness(0.85);
+}
+
+[data-theme="noir"] .verwandlung-name {
+  font-family: var(--f-display);
+  letter-spacing: 0.02em;
+}

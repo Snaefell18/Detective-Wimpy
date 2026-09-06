@@ -18,6 +18,7 @@ import { FinaleSchema, KernSchema, makeKapitelSchema } from "@/lib/sagaSchemas";
 import {
   STANDARD_SAGA_VORGABEN,
   besetzungFuerKapitel,
+  besessen,
   besetzungFuerSaga,
   kapitelTaeterFuer,
   neuInKapitel,
@@ -164,7 +165,12 @@ async function kernSchritt(body: Record<string, unknown>) {
     );
   }
 
+  // Gibt es eine Besessenheit, ist die Dämonenform der Schuldige der ganzen
+  // Saga - sie steckte hinter allem, auch wenn man bis zum Finale nur ihren
+  // Wirt zu sehen bekommt.
+  const daemon = besessen(vorgaben)?.daemonId ?? "";
   const drahtzieher =
+    verdaechtige.find((c) => c.id === daemon) ??
     verdaechtige.find((c) => c.id === vorgaben.drahtzieherId) ??
     verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 

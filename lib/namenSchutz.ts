@@ -126,7 +126,10 @@ export function ohneEnttarnung(text: string, name: string): string {
 export function nochNichtDa<T extends { id: string; name: string; istDetektiv: boolean }>(args: {
   besetzung: T[];
   drahtzieherId: string;
-  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  vorgaben: Pick<
+    SagaVorgaben,
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "besessenheit"
+  >;
   kapitel: number;
 }): T[] {
   const { besetzung, drahtzieherId, vorgaben, kapitel } = args;
@@ -143,7 +146,10 @@ export function nochNichtDa<T extends { id: string; name: string; istDetektiv: b
 /** Dieselbe Frage, aber nur mit dem, was der Browser wissen darf. */
 export function spaeteNamen<T extends { id: string; name: string; istDetektiv: boolean }>(args: {
   besetzung: T[];
-  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  vorgaben: Pick<
+    SagaVorgaben,
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "besessenheit"
+  >;
   kapitel: number;
 }): string[] {
   // Ohne Drahtzieher-Id: Wer der ist, erfährt der Browser nicht - der Twist

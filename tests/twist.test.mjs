@@ -3,6 +3,7 @@
  * Finale muss er da sein. Ohne Twist ändert sich nichts.
  */
 import {
+  besessen,
   besetzungFuerKapitel,
   besetzungFuerSaga,
   kapitelTaeterFuer,
@@ -19,7 +20,14 @@ const alle = [
 ];
 
 /** Kurzform für die Vorgaben, die diese Funktionen brauchen. */
-const v = (teil) => ({ twist: false, neuzugaenge: {}, abwesenheiten: {}, kapitelAnzahl: 3, ...teil });
+const v = (teil) => ({
+  twist: false,
+  neuzugaenge: {},
+  abwesenheiten: {},
+  besessenheit: { wirtId: "", daemonId: "", ton: "" },
+  kapitelAnzahl: 3,
+  ...teil,
+});
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -199,7 +207,41 @@ console.log("\n11. Der Drahtzieher ist immer in der Besetzung");
   );
 }
 
-console.log("\n12. Täter je Kapitel");
+console.log("\n12. Besessenheit: der Dämon im Wirt");
+{
+  const alleMitDaemon = [...alle, { id: "schatten", name: "Schattenfürst", istDetektiv: false }];
+  const bes = { besessenheit: { wirtId: "nala", daemonId: "schatten", ton: "" } };
+  const b = (kapitel) =>
+    ids(
+      besetzungFuerKapitel({
+        besetzung: alleMitDaemon,
+        drahtzieherId: "schatten",
+        kapitel,
+        vorgaben: v(bes),
+      }),
+    );
+
+  pruefe("gültig, wenn beide gesetzt sind", Boolean(besessen(v(bes))));
+  pruefe("unvollständig zählt nicht", !besessen(v({ besessenheit: { wirtId: "nala", daemonId: "", ton: "" } })));
+  pruefe("dasselbe Tier zählt nicht", !besessen(v({ besessenheit: { wirtId: "nala", daemonId: "nala", ton: "" } })));
+
+  for (const kapitel of [1, 2, 3]) {
+    pruefe(`Kapitel ${kapitel}: der Wirt ist da`, b(kapitel).includes("nala"), b(kapitel));
+    pruefe(`Kapitel ${kapitel}: der Dämon nicht`, !b(kapitel).includes("schatten"));
+  }
+  pruefe("Finale: der Dämon steht da", b(0).includes("schatten"), b(0));
+  pruefe("Finale: der Wirt ist weg", !b(0).includes("nala"));
+
+  const gewaehlt = besetzungFuerSaga(alleMitDaemon, {
+    charaktere: ["mikkeli", "fanny", "boss"],
+    drahtzieherId: "schatten",
+    besessenheit: bes.besessenheit,
+  });
+  pruefe("Wirt und Dämon gehören immer zur Besetzung",
+    ids(gewaehlt).includes("nala") && ids(gewaehlt).includes("schatten"), ids(gewaehlt));
+}
+
+console.log("\n13. Täter je Kapitel");
 {
   const moeglich = [{ id: "mikkeli" }, { id: "nala" }, { id: "fanny" }];
   const nimm = (wunsch, vorschlag, nummer = 1) =>

@@ -5,6 +5,7 @@ import {
   AUFTRITTS_ARTEN,
   artFuerAuftritt,
   auftrittVon,
+  besessen,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
@@ -75,6 +76,17 @@ export function SagaVorgabenFelder({
   );
 
   const setzen = (teil: Partial<SagaVorgaben>) => onAendern(teil);
+
+  const setzeBesessenheit = (teil: Partial<SagaVorgaben["besessenheit"]>) =>
+    onAendern({
+      besessenheit: {
+        ...(vorgaben.besessenheit ?? { wirtId: "", daemonId: "", ton: "" }),
+        ...teil,
+      },
+    });
+
+  const namenVon = (id: string) =>
+    stammdaten.charaktere.find((c) => c.id === id)?.name ?? id;
 
   const umschalten = (feld: "charaktere" | "items", id: string) =>
     onAendern({
@@ -502,6 +514,81 @@ export function SagaVorgabenFelder({
           </button>
         ))}
       </div>
+
+      <h3 className="unter-abschnitt">
+        Besessenheit{" "}
+        <span className="leise">· ein Tier war die ganze Zeit ein Dämon</span>
+      </h3>
+      <p className="leise klein">
+        Wähle das Tier, das besessen war, und die Gestalt, die in ihm steckt.
+        Die Dämonenform legst du wie jedes andere Tier unter „Tiere“ an - mit
+        Bild und allem. In den Kapiteln begegnet man nur dem Wirt; direkt vor
+        dem Finale bricht der Dämon aus ihm heraus, der Wirt verschwindet, und
+        der Dämon ist der Schuldige der ganzen Saga.
+      </p>
+
+      <span className="leise klein">Besessen war</span>
+      <div className="marken-reihe">
+        <button
+          className="marke-knopf"
+          data-aktiv={!vorgaben.besessenheit?.wirtId}
+          onClick={() => setzeBesessenheit({ wirtId: "" })}
+        >
+          Niemand
+        </button>
+        {verdaechtige
+          .filter((c) => c.id !== vorgaben.besessenheit?.daemonId)
+          .map((c) => (
+            <button
+              key={c.id}
+              className="marke-knopf"
+              data-aktiv={vorgaben.besessenheit?.wirtId === c.id}
+              onClick={() => setzeBesessenheit({ wirtId: c.id })}
+            >
+              {c.name}
+            </button>
+          ))}
+      </div>
+
+      {vorgaben.besessenheit?.wirtId && (
+        <>
+          <span className="leise klein">Seine Dämonenform</span>
+          <div className="marken-reihe">
+            {verdaechtige
+              .filter((c) => c.id !== vorgaben.besessenheit?.wirtId)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  className="marke-knopf"
+                  data-aktiv={vorgaben.besessenheit?.daemonId === c.id}
+                  onClick={() => setzeBesessenheit({ daemonId: c.id })}
+                >
+                  {c.name}
+                </button>
+              ))}
+          </div>
+
+          {besessen(vorgaben) ? (
+            <>
+              <p className="hinweis">
+                {namenVon(vorgaben.besessenheit.daemonId)} steckt in{" "}
+                {namenVon(vorgaben.besessenheit.wirtId)} und ist der Drahtzieher
+                dieser Saga - die Wahl oben wird dafür übergangen.
+              </p>
+              <span className="leise klein">Ton zur Verwandlung</span>
+              <TonFeld
+                wert={vorgaben.besessenheit.ton}
+                satzVorschlag="Es war die ganze Zeit hier!"
+                onAendern={(ton) => setzeBesessenheit({ ton })}
+              />
+            </>
+          ) : (
+            <p className="leise klein">
+              Jetzt noch die Dämonenform wählen - ohne sie passiert nichts.
+            </p>
+          )}
+        </>
+      )}
 
       <h3 className="unter-abschnitt">
         Auftritt eines neuen Tiers{" "}

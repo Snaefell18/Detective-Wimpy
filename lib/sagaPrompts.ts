@@ -1,6 +1,6 @@
 import { characterBrief } from "./characters";
 import { nochNichtDa } from "./namenSchutz";
-import type { SagaVorgaben } from "./sagaTypen";
+import { besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
 
 /**
@@ -40,13 +40,27 @@ export function buildKernPrompt(
     kapitel: 0,
   }).map((c) => c.name);
 
+  const wirt = besessen(vorgaben)
+    ? besetzung.find((c) => c.id === vorgaben.besessenheit.wirtId)
+    : undefined;
+
   return `Entwirf den Kern einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale. Die einzelnen Kapitel kommen später - hier geht es nur um den großen Bogen.
 
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
 Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
 NIRGENDS VOR DEM FINALE BENENNEN: In Titel, Überthema, Klappentext und Auftakt darf ${drahtzieher.name} nicht als der Verantwortliche dastehen - kein "dahinter steckt", kein "zieht die Fäden", kein "hinter allem". Andeuten ist ausdrücklich erwünscht: eine Handschrift, ein Geruch, ein Satz, der zweimal fällt. Nur der Schluss gehört dem Spieler.
-${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}
+${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
+    wirt
+      ? `
+BESESSENHEIT - DAS GEHEIMNIS DIESER SAGA
+- ${drahtzieher.name} ist keine Figur, der man begegnet: Es ist die Dämonengestalt, die in ${wirt.name} steckt. In allen Kapiteln sieht der Spieler nur ${wirt.name} - freundlich, harmlos, mittendrin.
+- ${wirt.name} weiß selbst nichts davon. Was durch ihn geschieht, geschieht nachts, in Lücken, in Blackouts: fehlende Stunden, Erinnerungen, die nicht passen, Spuren, die zu ihm führen, obwohl er zur Tatzeit anderswo war.
+- Die Spuren zeigen auf etwas Uraltes, nicht auf ein Tier: eine Kratzspur zu hoch, ein Geruch nach kaltem Rauch, ein Schatten mit zu vielen Armen, ein Satz in einer Sprache, die niemand kennt.
+- Nenne weder "${drahtzieher.name}" noch das Wort Dämon vor dem Finale. Erst dort bricht es heraus.
+`
+      : ""
+  }
 
 ${vorgaben.thema ? `ÜBERTHEMA (unbedingt aufgreifen): ${vorgaben.thema}\n` : ""}
 DIE TIERE

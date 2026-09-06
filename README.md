@@ -177,6 +177,25 @@ lassen“**. Wichtig ist, wie das läuft:
 Eine selbst aufgenommene Datei in `public/audio` funktioniert unverändert
 weiter; das Feld nimmt beides.
 
+### Besessenheit
+
+Ein Tier der Saga kann die ganze Zeit von einem Dämon besessen gewesen sein.
+Im Saga-Editor wählt man unter **Besessenheit** den Wirt und seine
+Dämonenform - die legt man wie jedes andere Tier unter „Tiere“ an, mit Bild
+und Werten - und dazu einen Ton.
+
+Was daraus folgt, macht die App von selbst:
+
+- In allen Kapiteln begegnet man nur dem Wirt. Die Dämonenform kommt nirgends
+  vor und wird auch in keinem Text genannt.
+- Der Dämon ist der Drahtzieher der ganzen Saga; die Spuren führen zu etwas
+  Uraltem, nicht zu einem Tier.
+- **Direkt vor dem Finale** läuft die Verwandlung: Der Wirt flackert, reißt
+  auf, alles wird schwarz - und aus dem Dunkel schlägt die neue Gestalt
+  heraus. Der Name fällt erst ganz am Ende. Sie dauert genau so lange wie das
+  gewählte Stück.
+- Im Finale steht dann der Dämon auf der Bühne, der Wirt ist verschwunden.
+
 ### Neue Gesichter
 
 Stößt in einem Kapitel jemand zum ersten Mal dazu - ein Nachzügler oder im

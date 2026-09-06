@@ -260,6 +260,13 @@ export const SagaVorgabenSchema = z.object({
   charaktere: z.array(z.string().max(40)).max(24),
   items: z.array(z.string().max(40)).max(24),
   drahtzieherId: z.string().max(40),
+  besessenheit: z
+    .object({
+      wirtId: z.string().max(40),
+      daemonId: z.string().max(40),
+      ton: z.string().max(200),
+    })
+    .default({ wirtId: "", daemonId: "", ton: "" }),
   twist: z.boolean().default(false),
   neuzugaenge: z.record(z.string().max(40), z.number()).default({}),
   abwesenheiten: z

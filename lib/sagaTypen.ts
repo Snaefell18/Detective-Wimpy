@@ -20,6 +20,30 @@ import type {
  * funktionieren unverändert weiter.
  */
 
+/**
+ * Wer besessen war und was aus ihm herausbricht.
+ *
+ * Beide Ids leer heißt: keine Besessenheit in dieser Saga. Sonst gilt: Der
+ * Wirt spielt in allen Kapiteln mit, der Dämon in keinem - er betritt die
+ * Bühne erst in der Verwandlung vor dem Finale, und dort ist der Wirt weg.
+ */
+export type Besessenheit = {
+  /** Das Tier, das besessen war - man begegnet ihm die ganze Saga über. */
+  wirtId: string;
+  /** Seine Dämonenform: ein eigenes Tier, das erst im Finale auftritt. */
+  daemonId: string;
+  /** Der Ton zur Verwandlung. Leer = eine kurze feste Zeit. */
+  ton: string;
+};
+
+/** Ist die Besessenheit vollständig eingerichtet? */
+export const besessen = (
+  vorgaben: Pick<SagaVorgaben, "besessenheit"> | undefined,
+): Besessenheit | null => {
+  const b = vorgaben?.besessenheit;
+  return b?.wirtId && b?.daemonId && b.wirtId !== b.daemonId ? b : null;
+};
+
 /** Ein gesprochener Zwischenteil: Text und - sobald hinterlegt - eine Datei. */
 export type Erzaehlerteil = {
   text: string;
@@ -58,6 +82,15 @@ export type SagaVorgaben = {
   items: string[];
   /** Wer hinter allem steckt - leer heißt: zufällig. */
   drahtzieherId: string;
+  /**
+   * Besessenheit: Ein Tier der Saga war die ganze Zeit von einem Dämon
+   * besessen. Direkt vor dem Finale bricht der Dämon hervor, der Wirt
+   * verschwindet - und der Dämon ist der Schuldige der ganzen Saga.
+   *
+   * Die Dämonenform ist ein ganz normales Tier mit Bild und Werten; man legt
+   * sie unter "Tiere" an und wählt sie hier aus.
+   */
+  besessenheit: Besessenheit;
   /**
    * Twist: Der Drahtzieher tritt in den Kapiteln überhaupt nicht auf - man
    * begegnet ihm nie, spricht nie mit ihm. Die Spuren führen trotzdem zu
@@ -119,6 +152,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   charaktere: [],
   items: [],
   drahtzieherId: "",
+  besessenheit: { wirtId: "", daemonId: "", ton: "" },
   twist: false,
   neuzugaenge: {},
   abwesenheiten: {},
@@ -227,7 +261,7 @@ export type SagaLauf = {
  */
 export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }>(
   besetzung: T[],
-  vorgaben: Pick<SagaVorgaben, "charaktere" | "drahtzieherId">,
+  vorgaben: Pick<SagaVorgaben, "charaktere" | "drahtzieherId" | "besessenheit">,
 ): T[] {
   const gewaehlt = vorgaben.charaktere ?? [];
   if (gewaehlt.length < 2) return besetzung;
@@ -236,7 +270,11 @@ export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }
     (c) =>
       c.istDetektiv ||
       gewaehlt.includes(c.id) ||
-      (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId),
+      (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId) ||
+      // Wirt und Dämonenform gehören immer dazu - ohne sie gibt es die
+      // Verwandlung nicht, und der Schuldige fehlte ganz.
+      c.id === vorgaben.besessenheit?.wirtId ||
+      c.id === vorgaben.besessenheit?.daemonId,
   );
   return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
 }
@@ -306,11 +344,17 @@ export function tonFuerAuftritt(
 /** Ab welchem Kapitel ein Tier mitspielt. Finale = kapitelAnzahl + 1. */
 export function auftrittVon(args: {
   charakterId: string;
-  vorgaben: Pick<SagaVorgaben, "twist" | "neuzugaenge" | "kapitelAnzahl">;
+  vorgaben: Pick<
+    SagaVorgaben,
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "besessenheit"
+  >;
   drahtzieherId: string;
 }): number {
   const { charakterId, vorgaben, drahtzieherId } = args;
   const finale = vorgaben.kapitelAnzahl + 1;
+
+  // Die Dämonenform gibt es vor dem Finale nicht - da ist nur ihr Wirt.
+  if (besessen(vorgaben)?.daemonId === charakterId) return finale;
 
   // Der Twist ist die stärkere Ansage: Der Drahtzieher kommt erst zum Schluss.
   if (vorgaben.twist && charakterId === drahtzieherId) return finale;
@@ -334,7 +378,7 @@ export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolea
   kapitel: number;
   vorgaben: Pick<
     SagaVorgaben,
-    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten"
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten" | "besessenheit"
   >;
 }): T[] {
   const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
@@ -342,9 +386,16 @@ export function besetzungFuerKapitel<T extends { id: string; istDetektiv: boolea
 
   const auftritt = (c: T) =>
     auftrittVon({ charakterId: c.id, vorgaben, drahtzieherId });
-  /** Wer gerade weg ist - verreist, untergetaucht, im Krankenhaus. */
+  const besessenheit = besessen(vorgaben);
+
+  /**
+   * Wer gerade weg ist - verreist, untergetaucht, im Krankenhaus. Und im
+   * Finale auch der Wirt: An seiner Stelle steht dann der Dämon.
+   */
   const weg = (c: T) =>
-    !c.istDetektiv && (vorgaben.abwesenheiten?.[c.id] ?? []).includes(nummer);
+    !c.istDetektiv &&
+    ((vorgaben.abwesenheiten?.[c.id] ?? []).includes(nummer) ||
+      (besessenheit?.wirtId === c.id && nummer > vorgaben.kapitelAnzahl));
 
   if (kapitel === 0) return besetzung.filter((c) => !weg(c));
 
@@ -393,7 +444,7 @@ export function neuInKapitel<T extends { id: string; istDetektiv: boolean }>(arg
   kapitel: number;
   vorgaben: Pick<
     SagaVorgaben,
-    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten"
+    "twist" | "neuzugaenge" | "kapitelAnzahl" | "abwesenheiten" | "besessenheit"
   >;
 }): T[] {
   const { besetzung, drahtzieherId, kapitel, vorgaben } = args;
