@@ -8,6 +8,7 @@ import type { Bogen } from "@/lib/sagaBogen";
 import { alsStaedte } from "@/lib/csv";
 import { ladeSagas, loescheSaga, speichereSaga } from "@/lib/db";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
+import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import {
   STANDARD_SAGA_VORGABEN,
   videoFuerKapitel,
@@ -45,6 +46,15 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const [abbruch, setAbbruch] = useState<{ text: string; schritt: string | null } | null>(
     null,
   );
+  /**
+   * Eine fertig erzeugte Saga, die noch nicht in der Datenbank liegt.
+   *
+   * Das Speichern ist der letzte Schritt und der einzige, bei dem alles schon
+   * bezahlt ist. Geht er daneben - keine Verbindung, abgelehnte Regeln -,
+   * bleibt die Saga hier liegen und lässt sich noch einmal speichern, ohne
+   * einen einzigen Aufruf zu wiederholen.
+   */
+  const [gerettet, setGerettet] = useState<Saga | null>(null);
   const [offen, setOffen] = useState<string | null>(null);
   /** Geöffneter Kapitelfall: welche Saga, welches Kapitel (-1 = Finale). */
   const [akte, setAkte] = useState<
@@ -77,7 +87,18 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const setzen = (teil: Partial<SagaVorgaben>) =>
     setVorgaben((alt) => ({ ...alt, ...teil }));
 
+  /**
+   * Was jetzt schon dagegen spricht - kostenlos gerechnet, bevor irgendetwas
+   * bezahlt wird. Solange hier etwas steht, bleibt der Knopf gesperrt.
+   */
+  const probleme = pruefeVorgaben({
+    vorgaben,
+    charaktere: stammdaten.charaktere,
+    orte: stammdaten.orte,
+  });
+
   const erzeugen = async () => {
+    if (probleme.length) return;
     setLaeuft(true);
     setAbbruch(null);
     onFehler(null);
@@ -91,7 +112,12 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         },
         setSchritt,
       );
+      // Ab hier ist alles bezahlt - die Saga wird festgehalten, bevor das
+      // Speichern versucht wird.
+      setGerettet(saga);
+      setSchritt("Wird gespeichert …");
       await speichereSaga(saga);
+      setGerettet(null);
       await laden();
       onMeldung(`Saga „${saga.name}“ gespeichert - ${saga.kapitel.length} Kapitel und Finale.`);
     } catch (fehler) {
@@ -106,6 +132,23 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
     } finally {
       setLaeuft(false);
       setSchritt(null);
+    }
+  };
+
+  /** Eine fertig erzeugte Saga noch einmal speichern - ohne neuen Aufruf. */
+  const nochmalSpeichern = async () => {
+    if (!gerettet) return;
+    try {
+      await speichereSaga(gerettet);
+      setGerettet(null);
+      setAbbruch(null);
+      await laden();
+      onMeldung(`Saga „${gerettet.name}“ ist jetzt gespeichert.`);
+    } catch (fehler) {
+      const text =
+        fehler instanceof Error ? fehler.message : "Das Speichern ging wieder schief.";
+      setAbbruch({ text, schritt: "Beim Speichern" });
+      onFehler(text);
     }
   };
 
@@ -513,11 +556,26 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
       <SagaVorgabenFelder vorgaben={vorgaben} onAendern={setzen} />
 
+      {probleme.length > 0 && (
+        <div className="pruefung">
+          <strong>So kann die Saga nicht entstehen</strong>
+          <ul>
+            {probleme.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+          <p className="leise klein">
+            Geprüft wird vorher, damit kein angefangener Lauf bezahlt und dann
+            weggeworfen wird.
+          </p>
+        </div>
+      )}
+
       <button
         className="knopf aktion"
         style={{ marginTop: 16 }}
         onClick={() => void erzeugen()}
-        disabled={laeuft || !admin}
+        disabled={laeuft || !admin || probleme.length > 0}
       >
         {laeuft ? "Die Saga entsteht …" : "Saga erzeugen und speichern"}
       </button>
@@ -526,10 +584,22 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         <div className="abbruch">
           <strong>Abgebrochen{abbruch.schritt ? ` bei: ${abbruch.schritt}` : ""}</strong>
           <p>{abbruch.text}</p>
-          <p className="leise klein">
-            Nichts ist verloren gegangen - noch einmal auf „Saga erzeugen“ tippen
-            fängt von vorn an.
-          </p>
+          {gerettet ? (
+            <>
+              <p>
+                Die Saga „{gerettet.name}“ ist fertig erzeugt - nur das Speichern
+                ging schief. Sie liegt hier und kostet keinen neuen Aufruf.
+              </p>
+              <button className="knopf klein" onClick={() => void nochmalSpeichern()}>
+                Nochmal speichern
+              </button>
+            </>
+          ) : (
+            <p className="leise klein">
+              Es ist nichts gespeichert worden - noch einmal auf „Saga erzeugen“
+              tippen fängt von vorn an.
+            </p>
+          )}
         </div>
       )}
 

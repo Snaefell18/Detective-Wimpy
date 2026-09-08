@@ -33,6 +33,7 @@ import {
 } from "@/lib/sagaFinale";
 import {
   STANDARD_SAGA_VORGABEN,
+  auftrittVon,
   besetzungFuerKapitel,
   besessen,
   besetzungFuerSaga,
@@ -47,6 +48,7 @@ import {
   titelOhneNamen,
   worteOhneNamen,
 } from "@/lib/namenSchutz";
+import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
 import { haftTage } from "@/lib/schrankhaft";
 import { seal, unseal } from "@/lib/seal";
@@ -239,13 +241,13 @@ async function kernSchritt(body: Record<string, unknown>) {
   }
 
   const staedte = alsStaedte(orte).filter((s) => s.orte.length >= vorgaben.ortsAnzahl);
-  if (staedte.length === 0) {
-    return NextResponse.json(
-      {
-        fehler: `Keine Stadt hat ${vorgaben.ortsAnzahl} Schauplätze. Bitte im Admin-Menü die Ortsliste oder die Anzahl anpassen.`,
-      },
-      { status: 400 },
-    );
+
+  // Alles, was später scheitern würde, scheitert hier - vor dem ersten
+  // Modellaufruf. Ein Lauf, der erst im letzten Schritt auffliegt, ist
+  // bezahlt und trotzdem verloren.
+  const probleme = pruefeVorgaben({ vorgaben, charaktere: besetzung, orte });
+  if (probleme.length) {
+    return NextResponse.json({ fehler: probleme.join(" ") }, { status: 400 });
   }
 
   const response = await getAnthropic().messages.create(
@@ -458,6 +460,11 @@ function kapitelRegeln(bogen: Bogen): string {
     art,
     taeterName: bogen.drahtzieherName,
     detektivName: bogen.besetzung.find((c) => c.istDetektiv)?.name ?? "Wimpy",
+    abKapitel: auftrittVon({
+      charakterId: bogen.drahtzieherId,
+      vorgaben: bogen.vorgaben,
+      drahtzieherId: bogen.drahtzieherId,
+    }),
   });
 }
 
@@ -568,8 +575,12 @@ async function verhandlungsSchritt(
         motiv: bogen.drahtzieherMotiv,
         kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
       }),
+      // Der längste Aufruf der ganzen Erzeugung: acht Beweisstücke mit
+      // Reaktionen, dazu drei Urteilstexte. Mit 5000 Token kam die Antwort
+      // gelegentlich abgeschnitten zurück - und das ausgerechnet an der
+      // teuersten Stelle, nach allen Kapiteln.
       zodOutputFormat(VerhandlungSchema),
-      5000,
+      9000,
     ),
     budget(45),
   );

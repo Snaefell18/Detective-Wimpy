@@ -3,6 +3,7 @@
 import { postJson } from "./api";
 import { erzeugeFall } from "./fallErzeugen";
 import { mitVerhandlung, type Verhandlung } from "./sagaFinale";
+import { mitWiederholung } from "./wiederholen";
 import {
   LEERER_ERZAEHLER,
   videoFuerKapitel,
@@ -50,20 +51,14 @@ export type SagaEingaben = {
 };
 
 /**
- * Sagt dazu, woran es lag.
+ * Ein Schritt der Erzeugung - mit Stellenangabe und einem zweiten Versuch.
  *
- * Ein nackter Fehlertext aus dem dritten Kapitel sieht aus wie ein Fehler des
- * ganzen Vorgangs; mit der Stelle davor weiß man sofort, wo man weitersuchen
- * muss.
+ * Der zweite Versuch ist hier bares Geld: Eine Saga besteht aus zwanzig und
+ * mehr Aufrufen hintereinander, und ohne ihn kostete ein einzelner Aussetzer
+ * alles, was schon gebaut war.
  */
-async function bei<T>(was: string, arbeit: Promise<T>): Promise<T> {
-  try {
-    return await arbeit;
-  } catch (fehler) {
-    const text = fehler instanceof Error ? fehler.message : String(fehler);
-    throw new Error(`${was}: ${text}`);
-  }
-}
+const bei = <T>(was: string, arbeit: () => Promise<T>, onErneut?: () => void) =>
+  mitWiederholung(was, arbeit, 1, onErneut);
 
 export async function erzeugeSaga(
   eingaben: SagaEingaben,
@@ -75,11 +70,13 @@ export async function erzeugeSaga(
   onSchritt?.("Das Überthema entsteht …");
   const kern = await bei(
     "Beim Überthema",
-    postJson<KernAntwort>("/api/saga", {
-      charaktere: eingaben.charaktere,
-      orte: eingaben.orte,
-      vorgaben: eingaben.vorgaben,
-    }),
+    () =>
+      postJson<KernAntwort>("/api/saga", {
+        charaktere: eingaben.charaktere,
+        orte: eingaben.orte,
+        vorgaben: eingaben.vorgaben,
+      }),
+    () => onSchritt?.("Das Überthema entsteht … (noch einmal)"),
   );
 
   // 2. Die Kapitel - eines nach dem anderen, jedes kennt die vorherigen.
@@ -89,12 +86,14 @@ export async function erzeugeSaga(
     onSchritt?.(`Kapitel ${nummer} von ${anzahl} wird ersonnen …`);
     const antwort = await bei(
       `Bei Kapitel ${nummer} von ${anzahl}`,
-      postJson<KapitelAntwort>("/api/saga", {
-        schritt: "kapitel",
-        bogenSiegel: siegel,
-        orte: eingaben.orte,
-        nummer,
-      }),
+      () =>
+        postJson<KapitelAntwort>("/api/saga", {
+          schritt: "kapitel",
+          bogenSiegel: siegel,
+          orte: eingaben.orte,
+          nummer,
+        }),
+      () => onSchritt?.(`Kapitel ${nummer} von ${anzahl} … (noch einmal)`),
     );
     siegel = antwort.bogenSiegel;
     entwuerfe.push(antwort.kapitel);
@@ -104,11 +103,13 @@ export async function erzeugeSaga(
   onSchritt?.("Das Finale wird geschmiedet …");
   const finaleBogen = await bei(
     "Beim Finale",
-    postJson<FinaleAntwort>("/api/saga", {
-      schritt: "finale",
-      bogenSiegel: siegel,
-      orte: eingaben.orte,
-    }),
+    () =>
+      postJson<FinaleAntwort>("/api/saga", {
+        schritt: "finale",
+        bogenSiegel: siegel,
+        orte: eingaben.orte,
+      }),
+    () => onSchritt?.("Das Finale wird geschmiedet … (noch einmal)"),
   );
   siegel = finaleBogen.bogenSiegel;
 
@@ -126,8 +127,7 @@ export async function erzeugeSaga(
   };
 
   const fallFuer = (kapitel: number, was: string) =>
-    bei(
-      was,
+    bei(was, () =>
       erzeugeFall(
         {
           charaktere: eingaben.charaktere,

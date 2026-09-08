@@ -31,6 +31,7 @@ import {
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
+import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
 import type { BereichProps } from "./typen";
 
@@ -212,6 +213,17 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
    */
   const sagaErzeugen = async (arc: Arc, index: number, vorgaben: SagaVorgaben) => {
     const teil = arc.teile[index];
+    // Dieselbe kostenlose Vorprüfung wie bei einer einzelnen Saga.
+    const probleme = pruefeVorgaben({
+      vorgaben,
+      charaktere: stammdaten.charaktere,
+      orte: stammdaten.orte,
+    });
+    if (probleme.length) {
+      setAbbruch({ text: probleme.join(" "), schritt: null });
+      onFehler(probleme.join(" "));
+      return;
+    }
     setLaeuft(true);
     setAbbruch(null);
     onFehler(null);

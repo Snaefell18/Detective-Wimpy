@@ -59,13 +59,23 @@ export function finaleArtRegeln(args: {
   daemonName?: string;
   /** Im Kern ist die Ansage länger als in einem einzelnen Kapitel. */
   ausfuehrlich?: boolean;
+  /**
+   * Ab welchem Kapitel der Drahtzieher überhaupt auftritt. 1 heißt "von
+   * Anfang an"; alles darüber ändert das Katz-und-Maus-Spiel: Vorher gibt es
+   * ihn nur als Gerücht.
+   */
+  abKapitel?: number;
 }): string {
-  const { art, taeterName, detektivName, daemonName, ausfuehrlich } = args;
+  const { art, taeterName, detektivName, daemonName, ausfuehrlich, abKapitel = 1 } = args;
 
   if (art === "gericht") {
     return `
 DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
-- Man weiß früh, wer es war: ${taeterName} tritt in jedem Kapitel auf, ist freundlich, hilfsbereit, immer zur Stelle - und spielt mit ${detektivName}.
+- Man weiß früh, wer es war: ${taeterName} ${
+      abKapitel > 1
+        ? `taucht erst ab Kapitel ${abKapitel} auf - davor ist er nur ein Name, den jemand fallen lässt. Ab dann aber ist er ständig da,`
+        : "tritt in jedem Kapitel auf,"
+    } ist freundlich, hilfsbereit, immer zur Stelle - und spielt mit ${detektivName}.
 - Er weiß, dass ${detektivName} es weiß. Er sagt es nie, aber jede Begegnung hat einen doppelten Boden: eine Bemerkung zu viel, ein Wissen, das er nicht haben dürfte, ein freundlicher Rat, der eine Warnung ist.
 - Was fehlt, ist nicht der Verdacht, sondern der Beweis. Jedes Kapitel lässt genau EIN hartes, benennbares Stück zurück, das später vor Gericht etwas wert ist: ein Zettel, eine Uhrzeit, ein Abdruck, eine Quittung, eine Zeugin, ein Geruch an der falschen Stelle.
 - ${taeterName} ist in den Kapiteln trotzdem nie der Täter des jeweiligen Falls. Er steht daneben, hilft mit, und geht als Erster wieder.${

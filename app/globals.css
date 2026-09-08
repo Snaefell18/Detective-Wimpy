@@ -5775,3 +5775,25 @@ a.zurueck {
   margin: 0 0 4px;
   line-height: 1.5;
 }
+
+/* Was vor dem Erzeugen dagegen spricht - lieber hier als nach zwanzig
+   bezahlten Aufrufen. */
+.pruefung {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 196, 104, 0.45);
+  background: rgba(255, 196, 104, 0.09);
+}
+
+.pruefung strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #ffc468;
+}
+
+.pruefung ul {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  line-height: 1.5;
+}
