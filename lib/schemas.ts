@@ -255,6 +255,25 @@ export const SagaVorgabenSchema = z.object({
   kapitelWuensche: z.array(z.string().max(400)).max(8),
   kapitelTaeter: z.array(z.string().max(40)).max(8).default([]),
   kapitelStaedte: z.array(z.string().max(60)).max(9).default([]),
+  kapitelVideos: z.array(z.string().max(200)).max(9).default([]),
+  kapitelWetter: z
+    .array(
+      z.enum([
+        "",
+        "aus",
+        "zufall",
+        "sonne",
+        "wolken",
+        "regen",
+        "gewitter",
+        "schnee",
+        "schneesturm",
+        "nebel",
+        "nacht",
+      ]),
+    )
+    .max(9)
+    .default([]),
   stadt: z.string().max(60),
   staedteWechseln: z.boolean(),
   charaktere: z.array(z.string().max(40)).max(24),

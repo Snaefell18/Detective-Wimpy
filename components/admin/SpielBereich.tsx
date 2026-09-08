@@ -7,16 +7,18 @@ import { useAdmin } from "@/lib/adminStore";
 import { useStammdaten } from "@/lib/stammdaten";
 import { SPEICHER_KEY } from "@/lib/useGame";
 import { TonFeld } from "./TonFeld";
-import { STANDARD_EINSTELLUNGEN, type Einstellungen, type Wetterlage } from "@/lib/types";
+import {
+  STANDARD_EINSTELLUNGEN,
+  WETTERLAGEN,
+  type Einstellungen,
+  type Wetterlage,
+} from "@/lib/types";
 import type { BereichProps } from "./typen";
 
 const WETTER: { id: Wetterlage; label: string; hinweis: string }[] = [
   { id: "aus", label: "Klar", hinweis: "wie bisher" },
   { id: "zufall", label: "Zufall", hinweis: "je Fall eine Lage" },
-  { id: "regen", label: "Regen", hinweis: "Tropfen und nasse Nacht" },
-  { id: "nebel", label: "Nebel", hinweis: "Schwaden über allem" },
-  { id: "schnee", label: "Schnee", hinweis: "leise Flocken" },
-  { id: "nacht", label: "Nacht", hinweis: "spät und blau" },
+  ...WETTERLAGEN,
 ];
 
 const TOENE: { id: Einstellungen["ton"]; label: string; hinweis: string }[] = [

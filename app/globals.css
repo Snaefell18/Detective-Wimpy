@@ -3329,7 +3329,11 @@ a.zurueck {
     radial-gradient(2.5px 2.5px at 30px 40px, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(2px 2px at 120px 90px, rgba(255, 255, 255, 0.8), transparent),
     radial-gradient(3px 3px at 200px 30px, rgba(255, 255, 255, 0.75), transparent),
-    radial-gradient(2px 2px at 260px 140px, rgba(255, 255, 255, 0.85), transparent);
+    radial-gradient(2px 2px at 260px 140px, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(2.2px 2.2px at 70px 170px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.8px 1.8px at 165px 230px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2.8px 2.8px at 255px 250px, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(2px 2px at 15px 265px, rgba(255, 255, 255, 0.75), transparent);
   background-size: 300px 300px;
   animation: schnee-fallen 9s linear infinite;
 }
@@ -4550,84 +4554,241 @@ a.zurueck {
 
 /* =================================================================
    Gerichtssaal - das Finale als Verhandlung
-   ================================================================= */
+   =================================================================
+
+   Der Saal ist der einzige Ort im Spiel ohne Schauplatzbild: Alles hier -
+   Täfelung, Lichtkegel, Staub im Strahl - ist gemalt mit Farbverläufen.
+   Deshalb kostet er keine Ladezeit und sieht auf jedem Gerät gleich aus. */
 
 .saal {
   position: relative;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 24px);
+  overflow: hidden;
+  background: #07060a;
+  --gold: #e8bf72;
+  --glut: #ffd479;
 }
+
+.saal-inhalt {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow-y: auto;
+  padding: calc(var(--safe-top) + 18px) 18px calc(var(--safe-bottom) + 28px);
+}
+
+/* --- Die Kulisse ----------------------------------------------------- */
+
+.saal-kulisse {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Dunkle Holztäfelung: senkrechte Bahnen, oben ein Sims, unten Schatten. */
+.saal-taefelung {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, transparent 22%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, transparent 34%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(58, 38, 24, 0.55) 0 26px,
+      rgba(34, 22, 14, 0.55) 26px 28px,
+      rgba(46, 30, 19, 0.55) 28px 54px
+    ),
+    radial-gradient(120% 80% at 50% 0%, #241608 0%, #0b0709 62%, #06050a 100%);
+  opacity: 0.9;
+}
+
+/* Der Kegel über der Anklagebank - er atmet, ganz langsam. */
+.saal-licht {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(52% 34% at 24% 12%, rgba(255, 226, 168, 0.28) 0%, transparent 68%),
+    conic-gradient(
+      from 172deg at 24% -6%,
+      transparent 0deg,
+      rgba(255, 226, 170, 0.16) 8deg,
+      transparent 26deg
+    );
+  animation: saal-atmen 11s ease-in-out infinite alternate;
+}
+
+@keyframes saal-atmen {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Staub, der im Strahl steht - dieselbe Technik wie beim Wetter. */
+.saal-flimmern {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    radial-gradient(1.6px 1.6px at 60px 70px, rgba(255, 236, 200, 0.7), transparent),
+    radial-gradient(1.2px 1.2px at 180px 30px, rgba(255, 228, 180, 0.5), transparent),
+    radial-gradient(2px 2px at 240px 150px, rgba(255, 240, 210, 0.55), transparent),
+    radial-gradient(1.4px 1.4px at 110px 210px, rgba(255, 232, 190, 0.45), transparent);
+  background-size: 300px 300px;
+  opacity: 0.5;
+  animation: saal-staub 34s linear infinite;
+}
+
+@keyframes saal-staub {
+  to {
+    background-position: 70px -300px;
+  }
+}
+
+/* --- Kopf: Anklagebank und Vorsitz ----------------------------------- */
 
 .saal-kopf {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.saal-bank,
-.saal-vorsitz {
+.saal-bank {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .saal-vorsitz {
+  display: flex;
   flex-direction: column;
-  gap: 4px;
-  text-align: right;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  text-align: center;
 }
 
 .saal-bank h2 {
-  margin: 0;
-  font-size: 20px;
+  margin: 2px 0 0;
+  font-size: 21px;
+  letter-spacing: 0.5px;
 }
 
-/* Die Bilder brauchen einen Rahmen mit Maß - sie füllen ihn aus. */
 .saal-portraet {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   flex: none;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px rgba(232, 191, 114, 0.35);
 }
 
 .saal-portraet.gross {
-  width: 74px;
-  height: 74px;
+  width: 84px;
+  height: 84px;
+  box-shadow:
+    0 0 0 1px rgba(232, 191, 114, 0.55),
+    0 0 42px rgba(255, 212, 121, 0.28);
 }
 
+/* Wer auf der Bank sitzt, steht im Licht - und der Ring pulst mit. */
+.saal-portraet[data-spot="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 212, 121, 0.5);
+  animation: saal-puls 3.4s ease-in-out infinite;
+}
+
+@keyframes saal-puls {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+}
+
+/* --- Frage und Anklage ----------------------------------------------- */
+
 .saal-frage {
-  margin: 16px 0 6px;
-  font-size: 25px;
-  line-height: 1.15;
+  margin: 20px 0 2px;
+  font-size: 28px;
+  line-height: 1.08;
+  letter-spacing: 0.4px;
+  text-shadow: 0 2px 24px rgba(255, 200, 120, 0.16);
 }
 
 .saal-anklage {
-  margin: 0 0 14px;
+  position: relative;
+  margin: 14px 0 18px;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid rgba(232, 191, 114, 0.55);
   color: var(--text);
-  opacity: 0.86;
+  opacity: 0.9;
   font-style: italic;
-  line-height: 1.5;
+  line-height: 1.55;
 }
+
+/* --- Beweislast und Geduld ------------------------------------------- */
 
 .saal-waage {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 236, 200, 0.09), rgba(255, 236, 200, 0.03));
+  border: 1px solid rgba(232, 191, 114, 0.22);
+}
+
+.saal-marke {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  opacity: 0.62;
+  margin-bottom: 6px;
+}
+
+.saal-geduld {
+  text-align: right;
+}
+
+/* Jedes tragende Stück füllt einen Balken - drei volle, und es ist vorbei. */
+.saal-meter {
+  display: flex;
+  gap: 5px;
+}
+
+.saal-meter i {
+  width: 30px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.13);
+  transition: background 260ms ease, box-shadow 260ms ease;
+}
+
+.saal-meter i[data-voll="true"] {
+  background: linear-gradient(90deg, var(--gold), var(--glut));
+  box-shadow: 0 0 14px rgba(255, 212, 121, 0.55);
 }
 
 .saal-fehlgriffe {
-  display: flex;
-  gap: 6px;
+  display: inline-flex;
+  gap: 7px;
 }
 
 /* Jeder Fehlgriff löscht ein Licht. */
@@ -4635,44 +4796,111 @@ a.zurueck {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #ffd479;
+  background: var(--glut);
+  box-shadow: 0 0 10px rgba(255, 212, 121, 0.6);
+  transition: background 300ms ease, box-shadow 300ms ease;
 }
 
 .saal-fehlgriffe i[data-weg="true"] {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
 }
+
+/* --- Die Beweisstücke ------------------------------------------------ */
 
 .saal-beweise {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 6px;
 }
 
+/* Jedes Stück liegt wie eine Akte auf dem Tisch: abgeknickte Ecke, Nummer
+   am Rand, und beim Öffnen legt sich Gold darum. */
 .saal-beweis {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: 13px 15px;
+  border-radius: 14px;
   text-align: left;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
+  background: linear-gradient(180deg, rgba(255, 246, 230, 0.08), rgba(255, 246, 230, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  transition: border-color 200ms ease, background 200ms ease, transform 160ms ease;
+}
+
+.saal-beweis::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-width: 0 16px 16px 0;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.saal-beweis:active {
+  transform: scale(0.995);
 }
 
 .saal-beweis[data-offen="true"] {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 212, 121, 0.55);
+  background: linear-gradient(180deg, rgba(255, 226, 168, 0.14), rgba(255, 226, 168, 0.04));
+  border-color: rgba(232, 191, 114, 0.6);
+  box-shadow: 0 0 30px rgba(255, 200, 120, 0.14);
+}
+
+.saal-beweis-kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+
+.saal-nummer {
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  color: var(--gold);
+  opacity: 0.75;
+  flex: none;
+}
+
+.saal-beweis-namen strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.saal-herkunft {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  opacity: 0.55;
 }
 
 .saal-beweis-text {
-  margin: 6px 0 10px;
-  line-height: 1.5;
+  margin: 11px 0 12px;
+  line-height: 1.55;
   color: var(--text);
-  opacity: 0.9;
+  opacity: 0.92;
+  animation: einblenden 220ms ease both;
 }
 
-/* --- Reaktion und Urteil -------------------------------------------- */
+/* Der Knopf sieht aus wie ein Stempel, der gleich fällt. */
+.saal-vorlegen {
+  align-self: flex-start;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #1a1206;
+  background: linear-gradient(180deg, var(--glut), var(--gold));
+  box-shadow: 0 6px 22px rgba(255, 200, 120, 0.3);
+}
+
+/* --- Reaktion und Urteil --------------------------------------------- */
 
 .saal.reaktion,
 .saal.urteil {
@@ -4680,7 +4908,17 @@ a.zurueck {
   inset: 0;
   overflow: hidden;
   padding: 0;
-  background: #04070f;
+  background: #040307;
+}
+
+/* Das Porträt liegt darunter, der Schleier nimmt ihm die Schärfe. */
+.saal-schleier {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(70% 45% at 50% 22%, transparent 0%, rgba(4, 3, 7, 0.55) 78%),
+    linear-gradient(180deg, rgba(4, 3, 7, 0.2) 0%, rgba(4, 3, 7, 0.92) 72%);
 }
 
 .saal-urteil-inhalt {
@@ -4690,24 +4928,448 @@ a.zurueck {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-align: center;
-  padding: 0 24px calc(var(--safe-bottom) + 34px);
+  padding: 0 24px calc(var(--safe-bottom) + 36px);
   animation: auftauchen 900ms ease-out both;
+}
+
+.saal-urteil-wort {
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+.saal.urteil[data-geschafft="true"] .saal-urteil-wort {
+  color: var(--glut);
+  text-shadow: 0 0 40px rgba(255, 212, 121, 0.45);
+}
+
+.saal.urteil[data-geschafft="false"] .saal-urteil-wort {
+  color: #8ea3bd;
+}
+
+/* Ein dünner Goldstrich unter dem Urteil - er fährt auf. */
+.saal-strich {
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: strich-auf 900ms 200ms ease-out both;
+}
+
+@keyframes strich-auf {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 
 .saal-spruch {
   margin: 0;
   max-width: 34ch;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--text);
 }
 
+/* Der Stempel fällt schräg ins Bild und bleibt schief liegen. */
+.saal-stempel {
+  align-self: center;
+  padding: 6px 18px;
+  margin-bottom: 8px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  font-size: 15px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  opacity: 0.9;
+  animation: stempel-fallen 460ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.saal-stempel[data-traegt="true"] {
+  color: var(--glut);
+  box-shadow: 0 0 26px rgba(255, 212, 121, 0.25);
+}
+
+.saal-stempel[data-traegt="false"] {
+  color: #7e97b6;
+}
+
+@keyframes stempel-fallen {
+  from {
+    transform: rotate(-14deg) scale(2.4);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-7deg) scale(1);
+    opacity: 0.9;
+  }
+}
+
 /* Ein Treffer glüht warm, ein Fehlgriff bleibt kalt. */
+.saal.reaktion .reaktion-inhalt {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px calc(var(--safe-bottom) + 36px);
+}
+
 .saal.reaktion[data-traegt="true"] .reaktion-inhalt h1 {
-  color: #ffd479;
+  color: var(--glut);
 }
 
 .saal.reaktion[data-traegt="false"] .reaktion-inhalt h1 {
   color: #7e97b6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saal-licht,
+  .saal-flimmern,
+  .saal-portraet[data-spot="true"]::after,
+  .saal-stempel,
+  .saal-strich {
+    animation: none;
+  }
+}
+
+/* --- Wetter: Sonne, Wolken, Gewitter, Schneesturm -------------------- */
+
+/* Sonne: kein greller Filter über dem Bild, sondern Licht, das durchs Bild
+   fällt - ein Fächer, der langsam wandert, warmer Dunst am oberen Rand und
+   Staub, der darin steht. */
+.wetter[data-lage="sonne"] {
+  background:
+    radial-gradient(64% 42% at 78% 6%, rgba(255, 214, 130, 0.5) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 196, 104, 0.24) 0%, transparent 46%),
+    linear-gradient(0deg, rgba(255, 158, 74, 0.18) 0%, transparent 42%);
+}
+
+.wetter-strahlen {
+  position: absolute;
+  inset: -60% -40%;
+  transform-origin: 78% 12%;
+  background: repeating-conic-gradient(
+    from 190deg at 78% 12%,
+    rgba(255, 216, 140, 0.34) 0deg 3deg,
+    transparent 3deg 11deg
+  );
+  mask-image: radial-gradient(60% 60% at 78% 12%, #000 0%, transparent 78%);
+  animation: sonne-faecher 32s linear infinite;
+}
+
+@keyframes sonne-faecher {
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+/* Das kurze Aufblühen, wenn Licht auf die Linse trifft. */
+.wetter-glanz {
+  position: absolute;
+  top: -12%;
+  right: 4%;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 206, 0.85) 0%,
+    rgba(255, 206, 122, 0.45) 34%,
+    transparent 64%
+  );
+  filter: blur(6px);
+  animation: sonne-atmen 9s ease-in-out infinite alternate;
+}
+
+@keyframes sonne-atmen {
+  from {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+
+/* Staub im Gegenlicht - dieselbe Technik wie beim Schnee, nur träger und
+   warm getönt. */
+.wetter-staub {
+  position: absolute;
+  inset: -20% -10%;
+  background-image:
+    radial-gradient(1.6px 1.6px at 40px 60px, rgba(255, 240, 205, 0.9), transparent),
+    radial-gradient(1.2px 1.2px at 150px 20px, rgba(255, 236, 190, 0.7), transparent),
+    radial-gradient(2px 2px at 230px 120px, rgba(255, 246, 220, 0.8), transparent),
+    radial-gradient(1.4px 1.4px at 90px 190px, rgba(255, 232, 180, 0.6), transparent);
+  background-size: 280px 280px;
+  opacity: 0.6;
+  animation: staub-schweben 26s linear infinite;
+}
+
+.wetter-staub[data-tiefe="2"] {
+  opacity: 0.32;
+  transform: scale(1.8);
+  animation-duration: 40s;
+  animation-direction: reverse;
+}
+
+@keyframes staub-schweben {
+  to {
+    background-position: 60px -280px;
+  }
+}
+
+/* Wolken: drei weiche Bänder, jedes größer, blasser und langsamer als das
+   davor. Darunter liegt ein flacher Grauschleier, damit das Bild kühler
+   wird, ohne matschig zu werden. */
+.wetter[data-lage="wolken"] {
+  background:
+    linear-gradient(180deg, rgba(24, 34, 54, 0.5) 0%, rgba(18, 26, 44, 0.2) 62%),
+    radial-gradient(120% 60% at 50% 0%, rgba(196, 212, 238, 0.16) 0%, transparent 70%);
+}
+
+.wetter-wolke {
+  position: absolute;
+  top: -14%;
+  left: -60%;
+  width: 220%;
+  height: 78%;
+  /* Vier Ballen unterschiedlicher Größe - zusammen ergeben sie eine Bank,
+     die von links nach rechts durchs Bild zieht. Bewegt wird sie über
+     transform: Ein Farbverlauf ohne background-size ließe sich über
+     background-position nämlich gar nicht verschieben. */
+  background:
+    radial-gradient(20% 42% at 12% 62%, rgba(236, 243, 255, 0.62) 0%, transparent 68%),
+    radial-gradient(15% 34% at 26% 46%, rgba(226, 236, 252, 0.55) 0%, transparent 70%),
+    radial-gradient(24% 46% at 44% 66%, rgba(240, 246, 255, 0.5) 0%, transparent 68%),
+    radial-gradient(18% 36% at 66% 50%, rgba(224, 234, 250, 0.45) 0%, transparent 70%),
+    radial-gradient(22% 40% at 86% 64%, rgba(238, 244, 255, 0.4) 0%, transparent 68%);
+  filter: blur(9px);
+  opacity: 0.55;
+  animation: wolken-ziehen 48s linear infinite;
+}
+
+.wetter-wolke[data-tiefe="2"] {
+  top: -26%;
+  height: 66%;
+  opacity: 0.32;
+  filter: blur(16px);
+  animation-duration: 82s;
+  animation-direction: reverse;
+}
+
+.wetter-wolke[data-tiefe="3"] {
+  top: 6%;
+  height: 92%;
+  opacity: 0.18;
+  filter: blur(26px);
+  animation-duration: 124s;
+}
+
+@keyframes wolken-ziehen {
+  from {
+    transform: translateX(-14%);
+  }
+  to {
+    transform: translateX(14%);
+  }
+}
+
+/* Gewitter: der Regen von oben, nur härter und schräger - dazu zwei Blitze
+   in ungleichem Takt. Weil beide Zeiten teilerfremd sind, wiederholt sich
+   das Muster praktisch nie. */
+.wetter[data-lage="gewitter"] {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(28, 44, 92, 0.4) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(4, 9, 24, 0.62) 0%, rgba(2, 6, 18, 0.7) 100%);
+}
+
+.wetter[data-lage="gewitter"] .wetter-schicht {
+  background-image: repeating-linear-gradient(
+    104deg,
+    transparent 0 26px,
+    rgba(206, 224, 255, 0.55) 26px 27px,
+    transparent 27px 54px
+  );
+  background-size: 300px 300px;
+  opacity: 0.34;
+  animation: regen-fallen 0.4s linear infinite;
+}
+
+.wetter[data-lage="gewitter"] .wetter-schicht[data-tiefe="2"] {
+  opacity: 0.2;
+  animation-duration: 0.62s;
+  transform: scale(1.35) translateX(5%);
+}
+
+.wetter[data-lage="gewitter"] .wetter-schicht[data-tiefe="3"] {
+  opacity: 0.12;
+  animation-duration: 1s;
+  transform: scale(1.8) translateX(-7%);
+}
+
+/* Der Guss selbst: eine ziehende Wand aus Wasser, die dem Bild Wucht gibt. */
+.wetter-guss {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(150, 180, 235, 0.14) 40%,
+    transparent 70%
+  );
+  animation: guss-ziehen 5.5s ease-in-out infinite alternate;
+}
+
+@keyframes guss-ziehen {
+  from {
+    transform: translateX(-8%);
+  }
+  to {
+    transform: translateX(8%);
+  }
+}
+
+.wetter-blitz {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(60% 40% at 68% 6%, rgba(255, 255, 255, 0.95) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(206, 228, 255, 0.7) 0%, transparent 55%);
+  animation: blitz-schlag 7.3s steps(1, end) infinite;
+}
+
+/* Der zweite Schlag kommt aus der anderen Ecke und in einem anderen Takt. */
+.wetter-blitz[data-schlag="2"] {
+  background:
+    radial-gradient(50% 36% at 22% 10%, rgba(255, 255, 255, 0.8) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(224, 236, 255, 0.55) 0%, transparent 48%);
+  animation-duration: 11.9s;
+  animation-delay: 3.4s;
+}
+
+/* Zweimal zucken, dann lange nichts - so schlägt ein Blitz wirklich ein. */
+@keyframes blitz-schlag {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  1.2% {
+    opacity: 1;
+  }
+  2.4% {
+    opacity: 0.15;
+  }
+  3.4% {
+    opacity: 0.85;
+  }
+  6% {
+    opacity: 0;
+  }
+}
+
+/* Schneesturm: dieselben Flocken, aber quer, schnell und dicht - dazu Böen,
+   die kurz alles schlucken. */
+.wetter[data-lage="schneesturm"] {
+  background:
+    radial-gradient(100% 60% at 50% 0%, rgba(214, 228, 250, 0.16) 0%, transparent 66%),
+    linear-gradient(180deg, rgba(86, 106, 142, 0.3) 0%, rgba(48, 64, 92, 0.36) 100%);
+}
+
+.wetter[data-lage="schneesturm"] .wetter-schicht {
+  background-image:
+    repeating-linear-gradient(
+      /* Streifen liegen quer zur Richtung: 336deg ergibt flache Striche,
+         die genau so schräg stehen wie die Flocken fliegen. */
+      336deg,
+      transparent 0 22px,
+      rgba(255, 255, 255, 0.42) 22px 23px,
+      transparent 23px 58px
+    ),
+    radial-gradient(2.6px 2.6px at 30px 40px, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(2px 2px at 120px 90px, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(3.4px 3.4px at 200px 30px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 260px 140px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2.2px 2.2px at 80px 200px, rgba(255, 255, 255, 0.8), transparent);
+  background-size: 300px 300px;
+  animation: sturm-fegen 1.6s linear infinite;
+}
+
+.wetter[data-lage="schneesturm"] .wetter-schicht[data-tiefe="2"] {
+  opacity: 0.75;
+  transform: scale(1.7);
+  animation-duration: 2.6s;
+}
+
+.wetter[data-lage="schneesturm"] .wetter-schicht[data-tiefe="3"] {
+  opacity: 0.5;
+  transform: scale(2.6);
+  animation-duration: 4.2s;
+}
+
+/* Quer statt senkrecht: Der Versatz nach links ist größer als der nach
+   unten - das ist der ganze Unterschied zwischen Flocken und Sturm. */
+@keyframes sturm-fegen {
+  to {
+    background-position: -420px 190px;
+  }
+}
+
+.wetter-boe {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(
+    96deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.26) 45%,
+    transparent 72%
+  );
+  filter: blur(8px);
+  opacity: 0;
+  animation: boe-fegen 6.5s ease-in-out infinite;
+}
+
+.wetter-boe[data-tiefe="2"] {
+  animation-duration: 9.5s;
+  animation-delay: 2.8s;
+}
+
+@keyframes boe-fegen {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-40%);
+  }
+  45% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(40%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wetter-strahlen,
+  .wetter-glanz,
+  .wetter-staub,
+  .wetter-wolke,
+  .wetter-blitz,
+  .wetter-guss,
+  .wetter-boe {
+    animation: none;
+  }
+
+  /* Ohne Bewegung bliebe der Blitz unsichtbar - dann eben als Dauerlicht. */
+  .wetter-blitz {
+    opacity: 0.12;
+  }
 }

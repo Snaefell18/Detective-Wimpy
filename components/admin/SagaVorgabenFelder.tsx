@@ -9,6 +9,7 @@ import {
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
+import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
@@ -155,6 +156,13 @@ export function SagaVorgabenFelder({
     onAendern({ kapitelVideos: liste });
   };
 
+  /** Wetter je Kapitel; der letzte Eintrag gehört zum Finale. */
+  const wetterSetzen = (i: number, lage: Wetterlage | "") => {
+    const liste = [...(vorgaben.kapitelWetter ?? [])];
+    liste[i] = lage;
+    onAendern({ kapitelWetter: liste });
+  };
+
   /** Steht dieses Feld schon durch den Arc fest? */
   const arcHinweis = (feld: keyof SagaVorgaben) =>
     vomArc?.[feld] ? <span className="leise klein"> · {vomArc[feld]}</span> : null;
@@ -272,6 +280,42 @@ export function SagaVorgabenFelder({
                   : "Video vor dem Kapitel (leer = kein Video)"
               }
             />
+
+            <span className="leise klein">Wetter</span>
+            <div className="marken-reihe">
+              <button
+                className="marke-knopf"
+                data-aktiv={!vorgaben.kapitelWetter?.[i]}
+                onClick={() => wetterSetzen(i, "")}
+              >
+                Wie eingestellt
+              </button>
+              <button
+                className="marke-knopf"
+                data-aktiv={vorgaben.kapitelWetter?.[i] === "aus"}
+                onClick={() => wetterSetzen(i, "aus")}
+              >
+                Klar
+              </button>
+              <button
+                className="marke-knopf"
+                data-aktiv={vorgaben.kapitelWetter?.[i] === "zufall"}
+                onClick={() => wetterSetzen(i, "zufall")}
+              >
+                Zufall
+              </button>
+              {WETTERLAGEN.map((lage) => (
+                <button
+                  key={lage.id}
+                  className="marke-knopf"
+                  data-aktiv={vorgaben.kapitelWetter?.[i] === lage.id}
+                  onClick={() => wetterSetzen(i, lage.id)}
+                  title={lage.hinweis}
+                >
+                  {lage.label}
+                </button>
+              ))}
+            </div>
 
             <span className="leise klein">Stadt</span>
             <div className="marken-reihe">

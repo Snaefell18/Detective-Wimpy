@@ -115,8 +115,35 @@ export type Einstellungen = {
   wetter: Wetterlage;
 };
 
-/** Was über dem Ortsbild liegt - reines CSS, keine zusätzlichen Dateien. */
-export type Wetterlage = "aus" | "zufall" | "regen" | "nebel" | "schnee" | "nacht";
+/**
+ * Was über dem Ortsbild liegt - reines CSS, keine zusätzlichen Dateien.
+ *
+ * "aus" heißt klar, "zufall" würfelt einmal je Fall. Alles andere ist eine
+ * feste Lage, die den ganzen Fall über hängen bleibt.
+ */
+export type Wetterlage =
+  | "aus"
+  | "zufall"
+  | "sonne"
+  | "wolken"
+  | "regen"
+  | "gewitter"
+  | "schnee"
+  | "schneesturm"
+  | "nebel"
+  | "nacht";
+
+/** Alle wählbaren Lagen mit ihren Namen - für Admin-Menü und Saga-Editor. */
+export const WETTERLAGEN: { id: Wetterlage; label: string; hinweis: string }[] = [
+  { id: "sonne", label: "Sonne", hinweis: "Strahlen, Staub, Hitze" },
+  { id: "wolken", label: "Wolken", hinweis: "Ziehen und Schatten" },
+  { id: "regen", label: "Regen", hinweis: "Tropfen und nasse Nacht" },
+  { id: "gewitter", label: "Gewitter", hinweis: "Guss, Blitz, Donnerlicht" },
+  { id: "schnee", label: "Schnee", hinweis: "leise Flocken" },
+  { id: "schneesturm", label: "Schneesturm", hinweis: "quer, weiß, böig" },
+  { id: "nebel", label: "Nebel", hinweis: "Schwaden über allem" },
+  { id: "nacht", label: "Nacht", hinweis: "spät und blau" },
+];
 
 export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   beschuldigungen: 2,

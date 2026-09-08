@@ -115,11 +115,13 @@ export function Gerichtssaal({
           platzhalter={richter?.name}
           variante="portraet"
         />
+        <div className="saal-schleier" />
         <div className="saal-urteil-inhalt">
           <span className="intro-oberzeile">{richter?.name ?? "Der Vorsitz"} spricht</span>
-          <h1 className="intro-logo slam">
+          <h1 className="intro-logo slam saal-urteil-wort">
             {urteil.geschafft ? worte.gewonnen : worte.verloren}
           </h1>
+          <span className="saal-strich" />
           <p className="saal-spruch">{urteil.text}</p>
           <button
             className="knopf gross pochen"
@@ -147,7 +149,11 @@ export function Gerichtssaal({
           platzhalter={gesicht?.name}
           variante="portraet"
         />
+        <div className="saal-schleier" />
         <div className="reaktion-inhalt" data-zeigen="true">
+          <span className="saal-stempel" data-traegt={antwort.traegt}>
+            {antwort.traegt ? "Trägt" : "Haltlos"}
+          </span>
           <span className="intro-oberzeile">{antwort.stueck.name}</span>
           <h1 className="intro-stadt slam">
             {antwort.traegt ? "Das sitzt." : "Das trägt nicht."}
@@ -167,9 +173,19 @@ export function Gerichtssaal({
 
   return (
     <div className="saal">
+      {/* Die Kulisse: ein Lichtkegel über der Anklagebank, dahinter die
+          Täfelung des Saals, davor Staub, der im Strahl steht. Reines CSS -
+          kein Bild, keine Ladezeit. */}
+      <div className="saal-kulisse" aria-hidden="true">
+        <div className="saal-taefelung" />
+        <div className="saal-licht" />
+        <div className="saal-flimmern" />
+      </div>
+
+      <div className="saal-inhalt">
       <header className="saal-kopf">
         <div className="saal-bank">
-          <div className="saal-portraet gross">
+          <div className="saal-portraet gross" data-spot="true">
             <Bild
               src={angeklagter?.bild}
               alt={angeklagter?.name ?? ""}
@@ -201,14 +217,22 @@ export function Gerichtssaal({
       {verhandlung.anklage && <p className="saal-anklage">„{verhandlung.anklage}“</p>}
 
       <div className="saal-waage">
-        <span>
-          Tragend: <strong>{stand.getroffen}</strong> / {verhandlung.noetig}
-        </span>
-        <span className="saal-fehlgriffe">
-          {Array.from({ length: verhandlung.fehlgriffe + 1 }, (_, i) => (
-            <i key={i} data-weg={i < stand.daneben} />
-          ))}
-        </span>
+        <div className="saal-last">
+          <span className="saal-marke">Beweislast</span>
+          <div className="saal-meter">
+            {Array.from({ length: verhandlung.noetig }, (_, i) => (
+              <i key={i} data-voll={i < stand.getroffen} />
+            ))}
+          </div>
+        </div>
+        <div className="saal-geduld">
+          <span className="saal-marke">Geduld des Gerichts</span>
+          <span className="saal-fehlgriffe">
+            {Array.from({ length: verhandlung.fehlgriffe + 1 }, (_, i) => (
+              <i key={i} data-weg={i < stand.daneben} />
+            ))}
+          </span>
+        </div>
       </div>
 
       <h3 className="unter-abschnitt">{worte.regal}</h3>
@@ -220,19 +244,26 @@ export function Gerichtssaal({
             data-offen={offen?.id === stueck.id}
             onClick={() => setOffen(offen?.id === stueck.id ? null : stueck)}
           >
-            <strong>{stueck.name}</strong>
-            {stueck.herkunft && <span className="leise klein">{stueck.herkunft}</span>}
+            <span className="saal-beweis-kopf">
+              <span className="saal-nummer">
+                {String(verhandlung.beweise.indexOf(stueck) + 1).padStart(2, "0")}
+              </span>
+              <span className="saal-beweis-namen">
+                <strong>{stueck.name}</strong>
+                {stueck.herkunft && <span className="saal-herkunft">{stueck.herkunft}</span>}
+              </span>
+            </span>
             {offen?.id === stueck.id && (
               <>
                 <p className="saal-beweis-text">{stueck.text}</p>
                 <span
-                  className="knopf klein"
+                  className="saal-vorlegen"
                   onClick={(ereignis) => {
                     ereignis.stopPropagation();
                     void vorlegen(stueck);
                   }}
                 >
-                  {laeuft ? "…" : `${worte.vorlegen} ›`}
+                  {laeuft ? "Der Saal sieht hin …" : `${worte.vorlegen} ›`}
                 </span>
               </>
             )}
@@ -249,6 +280,7 @@ export function Gerichtssaal({
       </div>
 
       {fehler && <p className="fehler">{fehler}</p>}
+      </div>
     </div>
   );
 }

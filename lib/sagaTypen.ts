@@ -6,6 +6,7 @@ import type {
   PublicCase,
   Reifegrad,
   Vorgaben,
+  Wetterlage,
 } from "./types";
 
 /**
@@ -93,6 +94,15 @@ export type SagaVorgaben = {
    * danach lässt er sich dort einzeln ändern.
    */
   kapitelVideos: string[];
+  /**
+   * Wetter je Kapitel: eine Lage, "zufall" oder leer für die Einstellung im
+   * Admin-Menü. Das Finale steht an letzter Stelle.
+   *
+   * Es hängt am Kapitel, nicht am Fall: Wer ein Kapitel spielt, hat die
+   * ganze Zeit dasselbe Wetter über sich - es wechselt nicht beim
+   * Ortswechsel und nicht beim Weiterspielen.
+   */
+  kapitelWetter: (Wetterlage | "")[];
   /** Stadt-Id oder "zufall". */
   stadt: string;
   /** true: Jedes Kapitel darf in einer anderen Stadt spielen. */
@@ -175,6 +185,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelTaeter: [],
   kapitelStaedte: [],
   kapitelVideos: [],
+  kapitelWetter: [],
   stadt: "zufall",
   staedteWechseln: true,
   charaktere: [],
@@ -204,6 +215,16 @@ export const videoFuerKapitel = (
   vorgaben: Pick<SagaVorgaben, "kapitelVideos"> | undefined,
   index: number,
 ): string => (vorgaben?.kapitelVideos?.[index] ?? "").trim();
+
+/**
+ * Das Wetter über Kapitel `index` (0-basiert; das Finale steht an letzter
+ * Stelle). Leer heißt: das, was im Admin-Menü eingestellt ist.
+ */
+export const wetterFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelWetter"> | undefined,
+  index: number,
+  allgemein: Wetterlage,
+): Wetterlage => vorgaben?.kapitelWetter?.[index] || allgemein;
 
 /** Ein Kapitel der Saga: ein Erzählerteil und danach ein Fall. */
 export type SagaKapitel = {

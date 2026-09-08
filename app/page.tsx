@@ -37,6 +37,7 @@ import {
   sagaMitVerhandlung,
   tonFuerAuftritt,
   warFrueherDa,
+  wetterFuerKapitel,
   type Saga,
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
@@ -142,6 +143,25 @@ export default function Home() {
   const sagaFallLaeuft = Boolean(
     saga.stand && stand.fall && stand.fall.id === saga.stand.lauf.fallId,
   );
+
+  /**
+   * Das Wetter über dem laufenden Kapitel.
+   *
+   * Es hängt am Kapitel, nicht am Ort: Wer durch die Schauplätze läuft, hat
+   * dieselbe Lage über sich, bis das Kapitel vorbei ist. Außerhalb einer Saga
+   * bleibt es bei der Einstellung im Admin-Menü.
+   */
+  const sagaWetter =
+    sagaFallLaeuft && saga.stand
+      ? wetterFuerKapitel(
+          saga.stand.saga.vorgaben,
+          // Das Finale steht hinter den Kapiteln.
+          saga.stand.lauf.phase === "finale"
+            ? saga.stand.saga.vorgaben.kapitelAnzahl
+            : saga.stand.lauf.kapitel,
+          admin.einstellungen.wetter,
+        )
+      : undefined;
 
   const sagaStarten = (gewaehlt: Saga, vonVorn: boolean) => {
     void tonFreigeben();
@@ -735,6 +755,7 @@ export default function Home() {
             }}
             onUmsehen={spiel.umsehen}
             suchtGerade={laedt === "suche"}
+            wetter={sagaWetter}
           />
         )}
 

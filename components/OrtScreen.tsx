@@ -6,7 +6,7 @@ import { FundMoment } from "./FundMoment";
 import { Wetter, lageFuer } from "./Wetter";
 import { useAdmin } from "@/lib/adminStore";
 import { findeOrt } from "@/lib/locations";
-import type { Character, PublicCase } from "@/lib/types";
+import type { Character, PublicCase, Wetterlage } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
 
 export function OrtScreen({
@@ -16,6 +16,7 @@ export function OrtScreen({
   onCharakter,
   onUmsehen,
   suchtGerade,
+  wetter,
 }: {
   fall: PublicCase;
   ortId: string;
@@ -23,6 +24,11 @@ export function OrtScreen({
   onCharakter: (id: string) => void;
   onUmsehen: () => Promise<Fund | null>;
   suchtGerade: boolean;
+  /**
+   * Wetter für genau diesen Fall - kommt aus dem Kapitel einer Saga. Ohne
+   * Angabe gilt, was im Admin-Menü steht.
+   */
+  wetter?: Wetterlage;
 }) {
   const [fundText, setFundText] = useState<string | null>(null);
   /** Der kurze Moment über dem Ort, wenn wirklich etwas gefunden wurde. */
@@ -45,7 +51,7 @@ export function OrtScreen({
     <div className="ort-ansicht">
       {/* Der Ort füllt den ganzen Bildschirm, alles andere schwebt darüber. */}
       <Szene src={ort?.bild} alt={ort?.name ?? ortId} platzhalter="" />
-      <Wetter lage={lageFuer(admin.einstellungen.wetter, fall.id)} />
+      <Wetter lage={lageFuer(wetter ?? admin.einstellungen.wetter, fall.id)} />
 
       <div className="ort-buehne">
         <div className="ort-titel">
