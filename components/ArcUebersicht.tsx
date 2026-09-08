@@ -52,6 +52,10 @@ export function ArcUebersicht({
   const dran = naechsterTeil(arc, lauf.geschafft);
   const finale = finaleOffen(arc, lauf.geschafft);
 
+  // Endet der Arc mit einem Video, heißt sein Schluss auch so.
+  const abspann = arc.finale.art === "video";
+  const schluss = abspann ? "Abspann" : "Finale";
+
   return (
     <div className="overlay einblenden arc-uebersicht">
       <header className="kopf">
@@ -62,7 +66,7 @@ export function ArcUebersicht({
           <h1>{arc.name}</h1>
           <p className="unterzeile">
             {lauf.geschafft.length} von {arc.teile.length} Sagen ·{" "}
-            {finale ? "Finale" : "Fortsetzung folgt"}
+            {finale ? schluss : "Fortsetzung folgt"}
           </p>
         </div>
       </header>
@@ -122,13 +126,17 @@ export function ArcUebersicht({
               <span className="arc-station-haken">{finale ? "▸" : "·"}</span>
             </div>
             <div className="arc-station-text">
-              <strong>Finale</strong>
+              <strong>{schluss}</strong>
               <span className="leise klein">
-                {finale ? "Alles läuft zusammen" : "Erst, wenn alle Sagen durch sind"}
+                {finale
+                  ? abspann
+                    ? "Zurücklehnen - der Rest ist Kino"
+                    : "Alles läuft zusammen"
+                  : "Erst, wenn alle Sagen durch sind"}
               </span>
               {finale && (
                 <button className="knopf klein aktion" onClick={onFinale}>
-                  Zum Finale
+                  {abspann ? "Abspann ansehen" : "Zum Finale"}
                 </button>
               )}
             </div>

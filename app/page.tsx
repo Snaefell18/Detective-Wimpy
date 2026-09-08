@@ -19,6 +19,7 @@ import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { ReaktionScreen } from "@/components/ReaktionScreen";
 import { Gerichtseinzug } from "@/components/Gerichtseinzug";
 import { Gerichtssaal } from "@/components/Gerichtssaal";
+import { VideoSzene } from "@/components/VideoSzene";
 import { Verwandlung } from "@/components/Verwandlung";
 import { VerdachtsMeldung, type Verdachtsmeldung } from "@/components/VerdachtsMeldung";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
@@ -26,7 +27,7 @@ import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
-import type { Arc } from "@/lib/arcTypen";
+import { arcAbspann, type Arc } from "@/lib/arcTypen";
 import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
@@ -495,6 +496,38 @@ export default function Home() {
     }
 
     if (lauf.phase === "finale") {
+      // Endet der Arc mit einem Abspann, läuft das Video bildschirmfüllend -
+      // und danach ist Schluss, ohne Erzählertext.
+      const abspann = arcAbspann(arcDaten);
+      if (abspann) {
+        return (
+          <main className="app">
+            <VideoSzene quelle={abspann} onFertig={arc.beenden} />
+          </main>
+        );
+      }
+
+      // Ein Abspann, der noch fehlt: Der Arc endet trotzdem sauber, und das
+      // Video lässt sich jederzeit nachtragen.
+      if (arcDaten.finale.art === "video") {
+        return (
+          <main className="app">
+            <ErzaehlerScreen
+              teil={{
+                ...arcDaten.finale.erzaehler,
+                text:
+                  arcDaten.finale.erzaehler.text.trim() ||
+                  "Der Abspann ist noch nicht gedreht.\nDu hast trotzdem alles gelöst.",
+              }}
+              titel={`${arcDaten.name} - Ende`}
+              weiterText="Zum Hauptmenü ›"
+              musik="jubel"
+              onWeiter={arc.beenden}
+            />
+          </main>
+        );
+      }
+
       return (
         <main className="app">
           <ErzaehlerScreen

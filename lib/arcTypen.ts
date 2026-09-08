@@ -27,8 +27,27 @@ export type ArcTeil = {
   sagaId: string;
 };
 
-/** Wie der Arc endet. Gebaut ist bisher nur der Abschlusstext. */
-export type ArcFinaleArt = "text" | "gerichtsverhandlung";
+/**
+ * Wie der Arc endet.
+ *
+ *   "text"                - ein Erzählertext wie zwischen den Sagen.
+ *   "video"               - ein Abspann: ein bildschirmfüllendes Video statt
+ *                           eines Finales. Es darf fehlen und später
+ *                           nachgereicht werden - bis dahin endet der Arc mit
+ *                           einer Karte, die das sagt.
+ *   "gerichtsverhandlung" - noch nicht gebaut, läuft vorerst als Text.
+ */
+export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung";
+
+/**
+ * Das Video zum Abschluss eines Arcs - sofern es schon hinterlegt ist.
+ *
+ * Es liegt im Erzählerteil des Finales, wie jedes andere Video im Spiel auch;
+ * damit lässt es sich mit demselben Feld nachreichen. Leer heißt: Der Abspann
+ * ist noch nicht gedreht.
+ */
+export const arcAbspann = (arc: Arc | undefined): string =>
+  arc?.finale.art === "video" ? (arc.finale.erzaehler.video ?? "").trim() : "";
 
 /**
  * Der eine, der hinter dem ganzen Arc steht.

@@ -4,6 +4,7 @@
  */
 import {
   LEERER_ARC_TEIL,
+  arcAbspann,
   besetzungFuerTeil,
   sagaAuftrag,
   fertigeTeile,
@@ -123,6 +124,19 @@ console.log("\n5. Der Culprit hinter allem");
     "ohne gesetzten Culprit bleibt alles offen",
     besetzungFuerTeil({ ...arc, culprit: { charakterId: "", wort: "X" } }, 0, alleIds).length === 0,
   );
+}
+
+
+console.log("\nAbspann statt Finale");
+{
+  const mit = (art, video) => ({
+    finale: { art, erzaehler: { text: "", audio: "", video } },
+  });
+  pruefe("ohne Videofinale kein Abspann", arcAbspann(mit("text", "/video/x.mp4")) === "");
+  pruefe("mit Videofinale und Datei", arcAbspann(mit("video", "/video/x.mp4")) === "/video/x.mp4");
+  pruefe("Videofinale ohne Datei bleibt leer", arcAbspann(mit("video", "")) === "");
+  pruefe("Leerzeichen zählen nicht", arcAbspann(mit("video", "  ")) === "");
+  pruefe("gar kein Arc", arcAbspann(undefined) === "");
 }
 
 console.log(

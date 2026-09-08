@@ -100,6 +100,7 @@ const ANZAHLEN = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const FINALE_ARTEN: { id: ArcFinaleArt; label: string; hinweis: string }[] = [
   { id: "text", label: "Abschlusstext", hinweis: "Erzähler, wie zwischen den Sagen" },
+  { id: "video", label: "Video", hinweis: "ein Abspann statt eines Finales" },
   {
     id: "gerichtsverhandlung",
     label: "Gerichtsverhandlung",
@@ -517,6 +518,16 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                   </button>
                 ))}
               </div>
+
+              {arc.finale.art === "video" && (
+                <p className="leise klein">
+                  Der Arc endet mit einem Video: Ist die letzte Saga geschafft,
+                  läuft es bildschirmfüllend, danach geht es ins Hauptmenü. Der
+                  Eintrag darf noch fehlen - bis dahin endet der Arc mit einer
+                  Karte, die sagt, dass der Abspann noch kommt. Nachtragen kannst
+                  du ihn jederzeit unten im Videofeld.
+                </p>
+              )}
 
               <ErzaehlerFeld
                 teil={arc.finale.erzaehler}
