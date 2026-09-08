@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { fehlerText } from "@/lib/antwort";
 import type { Bogen } from "@/lib/sagaBogen";
-import { haftTage } from "@/lib/schrankhaft";
 import { unseal } from "@/lib/seal";
 
 export const runtime = "nodejs";
@@ -18,13 +17,16 @@ export const maxDuration = 30;
  * Deshalb geht sie auch ohne Modellaufruf - der Saal antwortet sofort, und
  * wer die Datenbank durchsieht, findet dort keine Lösung.
  *
+ *   "anklagen" - ist das das richtige Tier? Und zeigt es dann sein wahres
+ *                Gesicht? Wen man anklagen muss, steht nirgends im Browser.
  *   "vorlegen" - ein Beweisstück auf den Tisch: trägt es, und was sagt der Saal?
- *   "urteil"   - Öhos Schlusswort, je nachdem, ob die Beweisführung stand.
+ *   "urteil"   - Öhös Schlusswort samt Auflage, je nach Ausgang.
  */
 type Body = {
   bogenSiegel?: string;
-  schritt?: "vorlegen" | "urteil";
+  schritt?: "anklagen" | "vorlegen" | "urteil";
   beweisId?: string;
+  charakterId?: string;
   geschafft?: boolean;
 };
 
@@ -53,11 +55,46 @@ export async function POST(request: Request) {
     if (body.schritt === "urteil") {
       return NextResponse.json({
         text: body.geschafft ? wahrheit.urteilSchuldig : wahrheit.urteilFrei,
-        // Wie viele Tage im Schrank - 0 heißt: niemand muss hinein.
-        tage: haftTage(
-          body.geschafft ? wahrheit.tageSchuldig : wahrheit.tageFrei,
-          0,
-        ),
+        // Öhö sperrt niemanden weg: Er verhängt eine Wiedergutmachung.
+        strafe: body.geschafft ? wahrheit.strafeSchuldig : wahrheit.strafeFrei,
+      });
+    }
+
+    /*
+     * Die Anklage.
+     *
+     * Der Vergleich passiert hier und nur hier - im Browser liegt nichts,
+     * woraus sich der Schuldige ablesen ließe. Erst mit der richtigen Anklage
+     * gibt der Server heraus, wer auf der Bank sitzt; bei "Gericht & Dämon"
+     * kommt dann auch die Gestalt heraus, die in ihm steckte.
+     */
+    if (body.schritt === "anklagen") {
+      const richtig = Boolean(
+        wahrheit.angeklagterId && body.charakterId === wahrheit.angeklagterId,
+      );
+      if (!richtig) {
+        return NextResponse.json({
+          richtig: false,
+          text: wahrheit.anklageFalsch ?? "Das Gericht sieht das anders.",
+        });
+      }
+
+      const figur = (id: string | undefined) =>
+        id ? (bogen.besetzung.find((c) => c.id === id) ?? null) : null;
+      const verwandlung = wahrheit.verwandlung;
+
+      return NextResponse.json({
+        richtig: true,
+        text: wahrheit.anklageRichtig ?? "Der Saal wird still.",
+        angeklagter: figur(wahrheit.angeklagterId),
+        verwandlung:
+          verwandlung && verwandlung.daemonId
+            ? {
+                wirt: figur(verwandlung.wirtId),
+                daemon: figur(verwandlung.daemonId),
+                ton: verwandlung.ton ?? "",
+              }
+            : null,
       });
     }
 

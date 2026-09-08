@@ -38,6 +38,8 @@ const GELD = ["💰", "🎉", "💸", "✨", "🪙", "🎊", "💵", "⭐", "�
 const BLASEN = ["○", "◦", "•", "○", "◦", "◌", "○", "•", "◦", "○", "◌", "•"];
 const BLAETTER = ["🍃", "🌿", "🍀", "🦋", "🍃", "🌱", "🌿", "🍃", "🦋", "🌿", "🍃", "🌱"];
 const GLUT = ["●", "•", "◆", "▪", "●", "•", "▴", "◆", "•", "●", "▪", "•"];
+const BLUETEN = ["🌸", "🌼", "🌺", "🌷", "🌸", "🌻", "💐", "🌸", "🌼", "🌷", "🌺", "🌸"];
+const KRISTALLE = ["❄", "✧", "❅", "•", "❄", "✦", "❆", "◇", "❄", "✧", "❅", "◆"];
 
 /** Eine Schicht fliegender Zeichen - die Bahnen stehen fest. */
 function Schauer({ zeichen, klasse }: { zeichen: string[]; klasse: string }) {
@@ -272,7 +274,28 @@ export function NeuerSpieler({
         </>
       )}
 
-      {/* Ein Lichtblitz im Moment, in dem sie ganz da ist. */}
+      {auftritt === "blumen" && (
+        <>
+          <div className="blumen-licht" />
+          <Schauer zeichen={BLUETEN} klasse="blumen-regen" />
+          <div className="blumen-wiese">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+        </>
+      )}
+
+      {auftritt === "eis" && (
+        <>
+          <div className="eis-licht" />
+          <Schauer zeichen={KRISTALLE} klasse="eis-kristalle" />
+          <div className="eis-frost" />
+        </>
+      )}
+
+      {/* Ein weiches Aufleuchten im Moment, in dem sie ganz da ist. */}
       {enthuellt && <div className="neuzugang-blitz" key={`blitz-${nr}`} />}
 
       <div className="intro-buehne">

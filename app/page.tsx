@@ -215,8 +215,11 @@ export default function Home() {
     if (!angekuendigt) {
       // Vor dem Finale bricht der Dämon aus seinem Wirt - das ist der eine
       // Auftritt, der keine Ansage bekommt, sondern eine Verwandlung.
+      //
+      // Nicht so beim Finale "Gericht & Dämon": Dort ist die Verwandlung der
+      // Lohn für die richtige Anklage und gehört in den Saal, nicht davor.
       const besessenheit = besessen(saga.stand.saga.vorgaben);
-      if (finale && besessenheit) {
+      if (finale && besessenheit && saal?.art !== "gericht-daemon") {
         setVerwandlung(true);
         return;
       }
@@ -224,9 +227,10 @@ export default function Home() {
       const neue = (
         saal
           ? // Vor dem Saal gibt es keinen Finalfall, mit dem sich vergleichen
-            // ließe: Neu ist, wer in keinem Kapitel dabei war - allen voran
-            // der Angeklagte, wenn er erst jetzt auftritt.
-            neuImSaal(saga.stand.saga, saal.angeklagterId)
+            // ließe: Neu ist, wer in keinem Kapitel dabei war. Wo der Spieler
+            // selbst anklagt, steht dort niemand - eine Ansage würde die
+            // Anklage vorwegnehmen.
+            neuImSaal(saga.stand.saga, saal.bankId ?? "")
           : neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel)
       ).filter(
         // Die Dämonenform kündigt sich nie als "neuer Spieler" an.

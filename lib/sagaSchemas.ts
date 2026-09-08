@@ -90,21 +90,37 @@ export const VerhandlungSchema = z.object({
     .describe(
       "Womit der Richter die Verhandlung eröffnet: zwei bis vier Sätze, gesprochen, ohne Anrede des Spielers",
     ),
-  urteilSchuldig: z
+  anklageRichtig: z
     .string()
     .describe(
-      "Das Urteil, wenn die Beweisführung trägt: drei bis fünf Sätze, und der letzte nennt die Tage Schrankhaft",
+      "Was der Richter sagt, wenn Wimpy den Richtigen anklagt: zwei bis drei Sätze. Der Saal wird still, die Verhandlung beginnt.",
     ),
-  tageSchuldig: z
-    .number()
+  anklageFalsch: z
+    .string()
     .describe(
-      "Tage Schrankhaft, die bei tragender Beweisführung verhängt werden. 0, wenn dann niemand in den Schrank muss (Freispruch).",
+      "Was der Richter sagt, wenn Wimpy den Falschen anklagt: zwei bis drei Sätze, freundlich, aber ohne Zweifel. Verrät nicht, wer es stattdessen war.",
     ),
-  tageFrei: z
-    .number()
+  urteilSchuldig: z
+    .string()
+    .describe("Das Urteil, wenn die Beweisführung trägt: drei bis fünf Sätze"),
+  strafeWort: z
+    .string()
     .describe(
-      "Tage Schrankhaft, die verhängt werden, wenn die Beweisführung scheitert. Meist 0 - außer der Falsche wird dann verurteilt.",
+      "Das Strafmaß in wenigen Worten, z.B. „Vier Tage Schrankhaft“ oder „Ein Sommer als Laternenwart“",
     ),
+  strafeAuflage: z
+    .string()
+    .describe(
+      "Die Wiedergutmachung in ein bis zwei Sätzen - sie hängt am Fall und macht die Sache aus der Welt",
+    ),
+  strafeFreiWort: z
+    .string()
+    .describe(
+      "Strafmaß, falls auch ein misslungenes Verfahren jemanden verurteilt (nur bei „kein Täter“). Sonst leer lassen.",
+    ),
+  strafeFreiAuflage: z
+    .string()
+    .describe("Die zugehörige Auflage. Sonst leer lassen."),
   urteilFrei: z
     .string()
     .describe(

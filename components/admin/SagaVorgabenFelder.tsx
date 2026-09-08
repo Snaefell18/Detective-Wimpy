@@ -696,6 +696,13 @@ export function SagaVorgabenFelder({
         Besessenheit{" "}
         <span className="leise">· ein Tier war die ganze Zeit ein Dämon</span>
       </h3>
+      {art === "gericht-daemon" && (
+        <p className="hinweis">
+          Für dieses Finale gehört die Besessenheit dazu: Das Tier, das du hier
+          wählst, sitzt später auf der Anklagebank - und zeigt erst dann, wer
+          wirklich in ihm steckt.
+        </p>
+      )}
       <p className="leise klein">
         Wähle das Tier, das besessen war, und die Gestalt, die in ihm steckt.
         Die Dämonenform legst du wie jedes andere Tier unter „Tiere“ an - mit

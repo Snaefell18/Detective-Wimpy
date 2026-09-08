@@ -278,12 +278,6 @@ export type AccuseResult = {
   richtig: boolean;
   aufloesung: string;
   reaktion: string;
-  /**
-   * Das Urteil: Tage Schrankhaft für den Überführten. 0 heißt, dass niemand
-   * in den Schrank muss - eine danebengegangene Beschuldigung etwa.
-   * Optional, weil ältere gespeicherte Ergebnisse das Feld nicht haben.
-   */
-  haftTage?: number;
 };
 
 /** Der Teil des Falls, den der Browser sehen darf (ohne Täter, Motiv, Alibis). */

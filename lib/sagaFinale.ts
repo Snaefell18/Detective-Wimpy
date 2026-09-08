@@ -1,3 +1,4 @@
+import type { Strafe } from "./urteil";
 import type { Character } from "./types";
 
 /**
@@ -18,8 +19,17 @@ import type { Character } from "./types";
  *   "wimpy"       - Der Detektiv selbst war es. Er war besessen, wusste nichts
  *                   davon, und muss am Ende die Beweise gegen sich selbst
  *                   vorlegen.
+ *   "gericht-daemon" - wie "gericht", aber der Angeklagte ist besessen. Das
+ *                   zeigt sich erst, wenn man ihn wirklich anklagt: Dann
+ *                   bricht die Gestalt aus ihm heraus und sitzt an seiner
+ *                   Stelle auf der Bank.
  */
-export type FinaleArt = "klassisch" | "gericht" | "ohne-taeter" | "wimpy";
+export type FinaleArt =
+  | "klassisch"
+  | "gericht"
+  | "gericht-daemon"
+  | "ohne-taeter"
+  | "wimpy";
 
 export const FINALE_ARTEN: {
   id: FinaleArt;
@@ -41,6 +51,12 @@ export const FINALE_ARTEN: {
     lang: "Der Drahtzieher tritt von Anfang an auf und spielt mit Wimpy. Jeder ahnt, wer es war; es fehlt der Beweis. Statt eines Finalfalls kommt die Verhandlung: Man legt die gesammelten Beweise vor, und Öhö spricht das Urteil.",
   },
   {
+    id: "gericht-daemon",
+    label: "Gericht & Dämon",
+    hinweis: "der Angeklagte zeigt sein wahres Gesicht",
+    lang: "Wie der Gerichtssaal - mit einem Geheimnis: Das Tier, das man anklagt, ist besessen. Bis dahin ist davon nichts zu sehen; erst wenn Wimpy es wirklich vor Gericht benennt, bricht die Gestalt aus ihm heraus und setzt sich an seiner Stelle auf die Anklagebank. Danach geht die Verhandlung gegen sie weiter.",
+  },
+  {
     id: "ohne-taeter",
     label: "Kein Täter",
     hinweis: "es gab nie einen Schuldigen",
@@ -56,7 +72,20 @@ export const FINALE_ARTEN: {
 
 /** Läuft diese Saga statt in einen Finalfall in eine Verhandlung? */
 export const mitVerhandlung = (art: FinaleArt | undefined): boolean =>
-  art === "gericht" || art === "ohne-taeter" || art === "wimpy";
+  art === "gericht" ||
+  art === "gericht-daemon" ||
+  art === "ohne-taeter" ||
+  art === "wimpy";
+
+/**
+ * Muss der Spieler vor der Verhandlung selbst benennen, wen er anklagt?
+ *
+ * Nur da, wo es überhaupt eine offene Frage ist: Bei "kein Täter" sitzt der
+ * Falsche längst auf der Bank, und bei "Wimpy selbst" hat sich der Detektiv
+ * gerade eben selbst enttarnt.
+ */
+export const mitAnklage = (art: FinaleArt | undefined): boolean =>
+  art === "gericht" || art === "gericht-daemon";
 
 /** Ein Beweisstück, wie es der Spieler sieht - ohne jeden Hinweis darauf, ob es trägt. */
 export type Beweisstueck = {
@@ -78,8 +107,14 @@ export type Beweisstueck = {
  */
 export type Verhandlung = {
   art: FinaleArt;
-  /** Wer auf der Anklagebank sitzt. Bei "wimpy" der Detektiv selbst. */
-  angeklagterId: string;
+  /**
+   * Wer auf der Anklagebank sitzt - aber nur, wo das ohnehin offenliegt: bei
+   * "kein Täter" der zu Unrecht Verdächtigte, bei "Wimpy selbst" der Detektiv.
+   *
+   * Wo der Spieler selbst anklagt, steht hier nichts: Der Schuldige liegt im
+   * Siegel, sonst könnte man ihn in der Datenbank nachschlagen.
+   */
+  bankId?: string;
   /** Wer die Verhandlung leitet - in aller Regel Öhö. */
   richterId: string;
   /** Womit Öhö eröffnet. */
@@ -90,6 +125,13 @@ export type Verhandlung = {
   noetig: number;
   /** Wie viele Fehlgriffe die Verhandlung verträgt. */
   fehlgriffe: number;
+  /**
+   * Wen man anklagen kann - alle Tiere, die in der Saga aufgetreten sind.
+   * Leer heißt: Es wird nicht angeklagt (siehe mitAnklage).
+   */
+  anklagbareIds?: string[];
+  /** Wie oft man danebengreifen darf, bevor die Verhandlung platzt. */
+  anklageVersuche?: number;
   /**
    * Angeklagter und Vorsitz mit Bild und Namen.
    *
@@ -109,20 +151,31 @@ export type BeweisWahrheit = {
   reaktion: string;
 };
 
-/** Der geheime Teil der Verhandlung. */
+/** Der geheime Teil der Verhandlung - liegt ausschließlich im Siegel. */
 export type VerhandlungWahrheit = {
   beweise: BeweisWahrheit[];
   /** Öhös Urteil, wenn genug getragen hat. */
   urteilSchuldig: string;
   /** Öhös Urteil, wenn die Verhandlung platzt. */
   urteilFrei: string;
+  /** Was Öhö verhängt - Wiedergutmachung statt Wegsperren. */
+  strafeSchuldig?: Strafe;
+  /** Nur da, wo auch ein misslungenes Verfahren jemanden verurteilt. */
+  strafeFrei?: Strafe;
   /**
-   * Das Strafmaß je Ausgang: Tage Schrankhaft. 0 heißt, dass niemand in den
-   * Schrank muss - beim Freispruch etwa, oder wenn der Angeklagte geht.
-   * Optional, weil Sagas aus früheren Tagen das Feld nicht haben.
+   * Wen der Spieler anklagen muss. Steht nur hier - im offenen Teil der Saga
+   * wäre es die Lösung.
    */
-  tageSchuldig?: number;
-  tageFrei?: number;
+  angeklagterId?: string;
+  /** Was Öhö sagt, wenn die Anklage sitzt. */
+  anklageRichtig?: string;
+  /** Was Öhö sagt, wenn sie danebengeht - freundlich, aber deutlich. */
+  anklageFalsch?: string;
+  /**
+   * Nur bei "Gericht & Dämon": Wer da wirklich in wem steckt. Ausgelöst wird
+   * die Verwandlung erst durch die richtige Anklage.
+   */
+  verwandlung?: { wirtId: string; daemonId: string; ton: string };
 };
 
 /**
@@ -159,9 +212,14 @@ export function angeklagterAus(args: {
   art: FinaleArt;
   besetzung: Character[];
   drahtzieherId: string;
+  /** Bei "Gericht & Dämon": das Tier, in dem die Gestalt steckt. */
+  wirtId?: string;
 }): string {
-  const { art, besetzung, drahtzieherId } = args;
+  const { art, besetzung, drahtzieherId, wirtId } = args;
   if (art === "wimpy") return besetzung.find((c) => c.istDetektiv)?.id ?? "";
+  // Angeklagt wird, wen man vor sich hat: bei einer Besessenheit der Wirt -
+  // die Gestalt darin kennt vorher niemand.
+  if (art === "gericht-daemon" && wirtId) return wirtId;
   return drahtzieherId;
 }
 

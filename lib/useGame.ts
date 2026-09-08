@@ -22,8 +22,6 @@ export type Ergebnis = {
   reaktion: string;
   taeterId: string;
   beschuldigtId: string;
-  /** Tage Schrankhaft. Fehlt bei Ergebnissen aus älteren Runden. */
-  haftTage?: number;
 };
 
 /**

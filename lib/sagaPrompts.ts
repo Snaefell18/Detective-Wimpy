@@ -1,7 +1,7 @@
 import { characterBrief } from "./characters";
 import type { FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
-import { HAFT_REGEL } from "./schrankhaft";
+import { URTEILS_REGEL } from "./urteil";
 import { besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
 
@@ -83,6 +83,31 @@ DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
         ? `
 - Der Klappentext darf das Katz-und-Maus-Spiel andeuten, ohne ${taeterName} zu benennen.
 - Die Wahrheit muss vor Gericht beweisbar sein: keine Ahnung, kein Gefühl, sondern Dinge, die man auf den Tisch legen kann.`
+        : ""
+    }`;
+  }
+
+  if (art === "gericht-daemon") {
+    return `
+DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
+- Man weiß früh, wen man vor sich hat: ${taeterName} ${
+      abKapitel > 1
+        ? `taucht erst ab Kapitel ${abKapitel} auf, ist ab dann aber ständig da,`
+        : "tritt in jedem Kapitel auf,"
+    } freundlich, hilfsbereit, immer zur Stelle - und spielt mit ${detektivName}.
+- Er weiß, dass ${detektivName} es weiß. Er sagt es nie, aber jede Begegnung hat einen doppelten Boden.
+- Was fehlt, ist nicht der Verdacht, sondern der Beweis. Jedes Kapitel lässt genau EIN hartes, benennbares Stück zurück: ein Zettel, eine Uhrzeit, ein Abdruck, eine Quittung, eine Zeugin.
+- ${taeterName} ist in den Kapiteln nie der Täter des jeweiligen Falls. Er steht daneben, hilft mit, und geht als Erster wieder.${
+      daemonName
+        ? `
+- WAS NIEMAND AHNT (streng geheim): In ${taeterName} steckt ${daemonName}. Davon ist vor der Verhandlung nichts zu sehen und nichts zu lesen - kein Dämon, kein Fluch, kein Wort davon. Erst wenn ${detektivName} ihn vor Gericht wirklich benennt, bricht es heraus.
+- Ein einziges kleines Zeichen pro Kapitel darf trotzdem nicht ins Bild passen: eine Stunde, die er nicht erinnert; Kälte in einem warmen Raum; eine Spiegelung, die zu spät folgt. Niemand erklärt es, niemand benennt es.`
+        : ""
+    }${
+      ausfuehrlich
+        ? `
+- Der Klappentext darf das Katz-und-Maus-Spiel andeuten, ohne ${taeterName} zu benennen.
+- Die Wahrheit muss vor Gericht beweisbar sein: Dinge, die man auf den Tisch legen kann.`
         : ""
     }`;
   }
@@ -376,7 +401,9 @@ export function buildVerhandlungPrompt(args: {
   const { art, thema, wahrheit, angeklagter, richter, detektivName, motiv, kapitel } = args;
 
   const ziel =
-    art === "ohne-taeter"
+    art === "gericht-daemon"
+      ? `${angeklagter} sitzt auf der Anklagebank - so, wie ihn alle kennen. Was in ihm steckt, kommt erst heraus, wenn ${detektivName} ihn wirklich benennt. Danach führt ${detektivName} den Beweis gegen das, was dann dasteht.`
+      : art === "ohne-taeter"
       ? `${angeklagter} sitzt auf der Anklagebank, obwohl er nichts getan hat. ${detektivName} muss belegen, dass hinter der ganzen Serie überhaupt kein Tier steckt - und was stattdessen. Am Ende steht ein Freispruch.`
       : art === "wimpy"
         ? `Auf der Anklagebank sitzt ${detektivName} selbst. Er hat es getan, ohne es zu wissen, und legt jetzt die Beweise gegen sich selbst vor. Der Saal begreift es langsamer als er.`
@@ -415,18 +442,24 @@ WEITERES
 - Der Epilog kommt nach dem Urteil und darf alles aussprechen.
 - Alles auf Deutsch.
 
-${HAFT_REGEL}
-- tageSchuldig: ${
-    art === "ohne-taeter"
-      ? "0 - bei tragender Beweisführung gibt es einen Freispruch, und niemand muss in den Schrank."
-      : `die Tage, die ${art === "wimpy" ? detektivName : angeklagter} bekommt. Sie passen zu einer ganzen Saga, nicht zu einem einzelnen Streich.`
+DIE ANKLAGE
+${
+    art === "gericht" || art === "gericht-daemon"
+      ? `- ${detektivName} muss zu Beginn selbst benennen, wen er anklagt. Trifft er es, wird der Saal still (anklageRichtig). Trifft er daneben, weist ${richter} die Anklage ab - freundlich, ohne Spott, und ohne zu verraten, wer es stattdessen war (anklageFalsch).`
+      : `- Hier klagt niemand jemanden an; die beiden Anklagetexte bleiben kurz und allgemein.`
   }
-- tageFrei: ${
+
+${URTEILS_REGEL}
+- strafeWort und strafeAuflage gehören zum Urteil bei tragender Beweisführung${
     art === "ohne-taeter"
-      ? `die Tage, die ${angeklagter} zu Unrecht bekommt, wenn die Beweisführung scheitert.`
-      : "0 - wer nicht überführt wird, geht nach Hause."
+      ? " - hier ein Freispruch, also beide leer lassen."
+      : "."
   }
-- Das Urteil, das jemanden in den Schrank schickt, nennt die Zahl im letzten Satz.`;
+- strafeFreiWort und strafeFreiAuflage ${
+    art === "ohne-taeter"
+      ? `nennen, was ${angeklagter} zu Unrecht auferlegt bekommt, wenn die Beweisführung scheitert.`
+      : "bleiben leer - wer nicht überführt wird, geht nach Hause."
+  }`;
 }
 
 /**

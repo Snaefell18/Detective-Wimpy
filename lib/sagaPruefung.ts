@@ -90,12 +90,21 @@ export function pruefeVorgaben(args: {
     }
   }
 
+  // "Gericht & Dämon" ist eine Besessenheit mit anderem Auftritt: ohne Wirt
+  // und Gestalt gibt es nichts zu enthüllen.
+  if (art === "gericht-daemon" && !besessen(vorgaben)) {
+    probleme.push(
+      "Für das Finale „Gericht & Dämon“ fehlt die Besessenheit: Wähle unten das Tier, das besessen ist, und seine Gestalt.",
+    );
+  }
+
   // Der Gerichtssaal braucht beide Bänke besetzt.
   if (mitVerhandlung(art)) {
     const angeklagterId = angeklagterAus({
       art,
       besetzung,
       drahtzieherId: vorgaben.drahtzieherId || verdaechtige[0]?.id || "",
+      wirtId: vorgaben.besessenheit?.wirtId,
     });
     if (!richterAus(besetzung, angeklagterId)) {
       probleme.push(
@@ -105,7 +114,7 @@ export function pruefeVorgaben(args: {
   }
 
   // Columbo und der unsichtbare Drahtzieher schließen einander aus.
-  if (art === "gericht" && vorgaben.twist) {
+  if ((art === "gericht" || art === "gericht-daemon") && vorgaben.twist) {
     probleme.push(
       "„Gerichtssaal“ und „Twist“ vertragen sich nicht: Im Gerichtsfinale tritt der Drahtzieher von Anfang an auf und spielt mit Wimpy, der Twist verlangt genau das Gegenteil.",
     );

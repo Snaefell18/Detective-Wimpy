@@ -130,6 +130,28 @@ pruefe(
   ),
 );
 
+console.log("\n2b. Gericht & Dämon");
+pruefe(
+  "mit Besessenheit in Ordnung",
+  probleme({
+    finaleArt: "gericht-daemon",
+    drahtzieherId: "boss",
+    besessenheit: { wirtId: "hut", daemonId: "boss", ton: "" },
+  }).length === 0,
+);
+pruefe(
+  "ohne Besessenheit fehlt der Kern",
+  probleme({ finaleArt: "gericht-daemon" }).some((p) => p.includes("fehlt die Besessenheit")),
+);
+pruefe(
+  "auch hier verträgt sich der Twist nicht",
+  probleme({
+    finaleArt: "gericht-daemon",
+    twist: true,
+    besessenheit: { wirtId: "hut", daemonId: "boss", ton: "" },
+  }).some((p) => p.includes("vertragen sich nicht")),
+);
+
 console.log("\n3. Wann sich ein zweiter Versuch lohnt");
 pruefe("abgeschnittene Antwort", lohntWiederholung(new Error("Die Antwort wurde abgeschnitten.")));
 pruefe("überlasteter Server", lohntWiederholung(new Error("overloaded_error")));

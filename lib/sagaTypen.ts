@@ -402,7 +402,9 @@ export type AuftrittsArt =
   | "jackpot"
   | "welle"
   | "dschungel"
-  | "erzfeind";
+  | "erzfeind"
+  | "blumen"
+  | "eis";
 
 export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
   { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
@@ -411,6 +413,8 @@ export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string
   { id: "welle", label: "Welle", hinweis: "Wasser, Blasen, Lichtspiel" },
   { id: "dschungel", label: "Dschungel", hinweis: "Blätter, Ranken, Nebel" },
   { id: "erzfeind", label: "Erzfeind", hinweis: "Glut, Puls, alles wankt" },
+  { id: "blumen", label: "Blumen", hinweis: "Blüten, Sonne, alles blüht auf" },
+  { id: "eis", label: "Eis", hinweis: "Frost, Kristalle, der Atem steht" },
 ];
 
 /** Welche Art zum Auftritt dieses Tiers gehört. */

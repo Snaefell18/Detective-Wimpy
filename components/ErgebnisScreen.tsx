@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Szene } from "./Bild";
 import { laeuft, spiele, stoppe } from "@/lib/introAudio";
-import { haftSatz } from "@/lib/schrankhaft";
 import type { Character } from "@/lib/types";
 import type { Ergebnis } from "@/lib/useGame";
 
@@ -72,16 +71,6 @@ export function ErgebnisScreen({
             >
               Musik anmachen
             </button>
-          )}
-
-          {ergebnis.richtig && (ergebnis.haftTage ?? 0) > 0 && (
-            <div className="urteilsspruch">
-              <span className="saal-marke">Das Urteil</span>
-              <strong>{haftSatz(ergebnis.haftTage ?? 0)}</strong>
-              <span className="leise klein">
-                Die Schranktür fällt zu. {taeter?.name} zählt ab jetzt Tage.
-              </span>
-            </div>
           )}
 
           <h2 className="abschnitt">Die Auflösung</h2>

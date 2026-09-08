@@ -2477,3 +2477,186 @@
   font-family: var(--f-display);
   letter-spacing: 0.02em;
 }
+
+/* =================================================================
+   Gerichtssaal im Noir
+   =================================================================
+
+   Derselbe Abend, andere Handschrift: schwarzer Grund, Haarlinien statt
+   Karten, Gold für alles, was zählt. Der Lichtkegel bleibt - er ist die
+   einzige Lichtquelle im Saal. */
+
+[data-theme="noir"] .saal {
+  background: var(--grund);
+}
+
+/* Der Scrollbereich trägt im Noir sonst seinen eigenen Grund - hier muss
+   die Kulisse durchscheinen. */
+[data-theme="noir"] .saal .scroll,
+[data-theme="noir"] .saal .kopf {
+  background: none;
+}
+
+[data-theme="noir"] .saal-taefelung {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, transparent 26%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.95) 0%, transparent 34%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(38, 34, 28, 0.85) 0 26px,
+      rgba(20, 18, 15, 0.85) 26px 28px,
+      rgba(29, 26, 21, 0.85) 28px 54px
+    ),
+    radial-gradient(130% 80% at 50% 0%, #16140f 0%, #080808 62%, #040404 100%);
+}
+
+[data-theme="noir"] .saal-licht {
+  background:
+    radial-gradient(54% 34% at 26% 10%, rgba(194, 145, 63, 0.2) 0%, transparent 70%),
+    conic-gradient(
+      from 172deg at 26% -8%,
+      transparent 0deg,
+      rgba(212, 173, 106, 0.12) 9deg,
+      transparent 27deg
+    );
+}
+
+[data-theme="noir"] .saal-flimmern {
+  background-image:
+    radial-gradient(1.6px 1.6px at 60px 70px, rgba(232, 214, 176, 0.5), transparent),
+    radial-gradient(1.2px 1.2px at 180px 30px, rgba(224, 202, 158, 0.4), transparent),
+    radial-gradient(2px 2px at 240px 150px, rgba(238, 224, 194, 0.45), transparent),
+    radial-gradient(1.4px 1.4px at 110px 210px, rgba(220, 200, 160, 0.35), transparent);
+}
+
+[data-theme="noir"] .saal-portraet {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border: 1px solid var(--linie);
+}
+
+/* Frage und Anklage: die Schrift des Hauses. */
+[data-theme="noir"] .saal-frage {
+  font-size: 34px;
+  line-height: 0.9;
+  text-shadow: var(--titel-schatten-klein);
+}
+
+[data-theme="noir"] .saal-anklage {
+  border-left: 2px solid var(--linie-akzent);
+  color: var(--text-2);
+}
+
+/* Waage, Versuche und Auflage sind Haarlinienfelder, keine Karten. */
+[data-theme="noir"] .saal-waage,
+[data-theme="noir"] .saal-versuche,
+[data-theme="noir"] .saal-auflage {
+  border-radius: 0;
+  background: none;
+  border: 1px solid var(--linie);
+  padding: 14px;
+}
+
+[data-theme="noir"] .saal-marke {
+  font-family: var(--f-text);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .saal-meter i[data-voll="true"] {
+  background: var(--akzent);
+  box-shadow: none;
+}
+
+[data-theme="noir"] .saal-meter i,
+[data-theme="noir"] .saal-lichter i {
+  border-radius: 0;
+}
+
+[data-theme="noir"] .saal-lichter i {
+  background: var(--akzent);
+  box-shadow: none;
+}
+
+[data-theme="noir"] .saal-lichter i[data-weg="true"] {
+  background: rgba(239, 233, 221, 0.14);
+}
+
+/* Die Beweisstücke: dieselbe Haarlinienzeile wie die Akten. */
+[data-theme="noir"] .saal-beweis {
+  border-radius: 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--linie);
+  padding: 16px 0 16px 16px;
+  margin-bottom: 0;
+}
+
+[data-theme="noir"] .saal-beweis::after {
+  display: none;
+}
+
+[data-theme="noir"] .saal-beweis[data-offen="true"] {
+  background: var(--hover-akzent);
+  border-top-color: var(--linie-akzent);
+}
+
+[data-theme="noir"] .saal-nummer,
+[data-theme="noir"] .saal-gewaehlt {
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .saal-verdaechtig[data-aktiv="true"] {
+  background: var(--hover-akzent);
+  border: none;
+  border-top: 1px solid var(--linie-akzent);
+}
+
+[data-theme="noir"] .saal-leiste {
+  background: linear-gradient(0deg, #050505 60%, transparent);
+}
+
+/* Siegel und Strich in Gold, eckig wie alles hier. */
+[data-theme="noir"] .saal-siegel {
+  border-radius: 0;
+  border-width: 1px;
+  font-family: var(--f-text);
+  letter-spacing: 0.28em;
+}
+
+[data-theme="noir"] .saal-siegel[data-traegt="true"],
+[data-theme="noir"] .saal-auflage-wort,
+[data-theme="noir"] .saal.urteil[data-geschafft="true"] .saal-urteil-wort {
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .saal-siegel[data-traegt="false"] {
+  color: var(--text-leise);
+}
+
+[data-theme="noir"] .saal-strich {
+  background: linear-gradient(90deg, transparent, var(--akzent), transparent);
+}
+
+[data-theme="noir"] .saal-urteil-wort {
+  text-shadow: var(--titel-schatten);
+}
+
+/* Reaktion und Urteil sind Vollbilder - im Noir auf Schwarz, nicht auf Blau. */
+[data-theme="noir"] .saal.reaktion,
+[data-theme="noir"] .saal.urteil {
+  background: var(--tief);
+}
+
+[data-theme="noir"] .saal-schleier {
+  background:
+    radial-gradient(70% 45% at 50% 24%, transparent 0%, rgba(4, 4, 4, 0.55) 78%),
+    linear-gradient(180deg, rgba(4, 4, 4, 0.25) 0%, rgba(4, 4, 4, 0.96) 74%);
+}
+
+[data-theme="noir"] .saal-portraet[data-bank="true"] {
+  margin-left: 8px;
+  box-shadow: none;
+}

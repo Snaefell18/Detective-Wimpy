@@ -7,6 +7,7 @@ import {
   FINALE_ARTEN,
   LEERER_VERHANDLUNGS_STAND,
   angeklagterAus,
+  mitAnklage,
   mitVerhandlung,
   noetigeBeweise,
   richterAus,
@@ -37,12 +38,25 @@ console.log("\n1. Klassisch bleibt klassisch");
 pruefe("Standardvorgaben laufen in den Finalfall", STANDARD_SAGA_VORGABEN.finaleArt === "klassisch");
 pruefe("und brauchen keine Verhandlung", mitVerhandlung("klassisch") === false);
 pruefe("alte Sagas ohne Feld ebenso", mitVerhandlung(undefined) === false);
-pruefe("es gibt vier Arten", FINALE_ARTEN.length === 4);
-for (const art of ["gericht", "ohne-taeter", "wimpy"]) {
+pruefe("es gibt fünf Arten", FINALE_ARTEN.length === 5);
+for (const art of ["gericht", "gericht-daemon", "ohne-taeter", "wimpy"]) {
   pruefe(`„${art}“ führt in den Saal`, mitVerhandlung(art) === true);
 }
 
 console.log("\n2. Wer wo sitzt");
+pruefe(
+  "bei „Gericht & Dämon“ der Wirt - die Gestalt darin kennt vorher niemand",
+  angeklagterAus({
+    art: "gericht-daemon",
+    besetzung,
+    drahtzieherId: "boss",
+    wirtId: "nala",
+  }) === "nala",
+);
+pruefe(
+  "und ohne Besessenheit fällt es auf den Drahtzieher zurück",
+  angeklagterAus({ art: "gericht-daemon", besetzung, drahtzieherId: "boss" }) === "boss",
+);
 pruefe(
   "beim Gerichtsfinale der Drahtzieher",
   angeklagterAus({ art: "gericht", besetzung, drahtzieherId: "nala" }) === "nala",
@@ -116,7 +130,14 @@ console.log("\n4. Wer im Saal angekündigt wird");
   pruefe("der Detektiv nie", neuImSaal(saga, "wimpy").length === 0);
 }
 
-console.log("\n5. Die Worte des Saals");
+console.log("\n5. Anklagen muss man nur, wo es eine offene Frage ist");
+pruefe("beim Gerichtsfinale", mitAnklage("gericht"));
+pruefe("und bei Gericht & Dämon", mitAnklage("gericht-daemon"));
+pruefe("nicht bei „kein Täter“", !mitAnklage("ohne-taeter"));
+pruefe("nicht bei „Wimpy selbst“", !mitAnklage("wimpy"));
+pruefe("und nicht im klassischen Finale", !mitAnklage("klassisch"));
+
+console.log("\n6. Die Worte des Saals");
 pruefe("„kein Täter“ endet mit Freispruch", saalTexte("ohne-taeter").gewonnen === "Freispruch");
 pruefe("sonst mit Schuldspruch", saalTexte("gericht").gewonnen === "Schuldig");
 pruefe("gegen sich selbst legt man anders vor", saalTexte("wimpy").vorlegen !== saalTexte("gericht").vorlegen);

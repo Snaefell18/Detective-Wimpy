@@ -24,6 +24,7 @@ import {
 } from "@/lib/sagaSchemas";
 import {
   angeklagterAus,
+  mitAnklage,
   mitVerhandlung,
   noetigeBeweise,
   richterAus,
@@ -31,6 +32,7 @@ import {
   type FinaleArt,
   type VerhandlungWahrheit,
 } from "@/lib/sagaFinale";
+import { strafeAus } from "@/lib/urteil";
 import {
   STANDARD_SAGA_VORGABEN,
   auftrittVon,
@@ -50,7 +52,6 @@ import {
 } from "@/lib/namenSchutz";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
-import { haftTage } from "@/lib/schrankhaft";
 import { seal, unseal } from "@/lib/seal";
 import type { Character, City, Location } from "@/lib/types";
 
@@ -542,10 +543,14 @@ async function verhandlungsSchritt(
   staedte: City[],
   art: FinaleArt,
 ) {
+  // Bei "Gericht & Dämon" klagt man den Wirt an - die Gestalt darin kennt
+  // vorher niemand.
+  const besessenheit = besessen(bogen.vorgaben);
   const angeklagterId = angeklagterAus({
     art,
     besetzung: bogen.besetzung,
     drahtzieherId: bogen.drahtzieherId,
+    wirtId: besessenheit?.wirtId,
   });
   const angeklagter = bogen.besetzung.find((c) => c.id === angeklagterId);
   const richter = richterAus(bogen.besetzung, angeklagterId);
@@ -619,10 +624,23 @@ async function verhandlungsSchritt(
     })),
     urteilSchuldig: kurz(d.urteilSchuldig, 1200),
     urteilFrei: kurz(d.urteilFrei, 1200),
-    // Jedes Urteil dieser Stadt endet in Tagen Schrankhaft. Beim Freispruch
-    // sind es null - dann bleibt die Schranktür zu.
-    tageSchuldig: haftTage(d.tageSchuldig, art === "ohne-taeter" ? 0 : 21),
-    tageFrei: haftTage(d.tageFrei, art === "ohne-taeter" ? 14 : 0),
+    // Öhö sperrt niemanden weg - er denkt sich etwas aus, das zur Tat passt.
+    strafeSchuldig: strafeAus(d.strafeWort, d.strafeAuflage),
+    strafeFrei: strafeAus(d.strafeFreiWort, d.strafeFreiAuflage),
+    // Wen man anklagen muss, steht ausschließlich hier.
+    angeklagterId,
+    anklageRichtig: kurz(d.anklageRichtig, 900),
+    anklageFalsch: kurz(d.anklageFalsch, 900),
+    // Bei "Gericht & Dämon" bricht die Gestalt erst bei der richtigen Anklage
+    // hervor - vorher weiß der Browser nicht einmal, dass es sie gibt.
+    verwandlung:
+      art === "gericht-daemon" && besessenheit
+        ? {
+            wirtId: besessenheit.wirtId,
+            daemonId: besessenheit.daemonId,
+            ton: besessenheit.ton ?? "",
+          }
+        : undefined,
   };
 
   const fertig: Bogen = {
@@ -647,7 +665,8 @@ async function verhandlungsSchritt(
     },
     verhandlung: {
       art,
-      angeklagterId,
+      // Wo der Spieler selbst anklagt, bleibt die Bank im Offenen leer.
+      bankId: mitAnklage(art) ? "" : angeklagterId,
       richterId: richter.id,
       anklage: kurz(d.anklage, 1200),
       beweise,
@@ -656,6 +675,21 @@ async function verhandlungsSchritt(
       // Angeklagter, Vorsitz und - beim Finale "Wimpy selbst" - die Gestalt,
       // die aus ihm herausbricht. Ohne sie hätte der Saal Gesichter, für die
       // es kein Bild gibt: Sie müssen in keinem Kapitel aufgetreten sein.
+      // Wen man anklagen kann: alle Tiere, die in der Saga aufgetreten sind.
+      // Die Dämonengestalt gehört ausdrücklich nicht dazu - sie kennt vor
+      // ihrem Auftritt niemand.
+      anklagbareIds: mitAnklage(art)
+        ? bogen.besetzung
+            .filter(
+              (c) =>
+                !c.istDetektiv &&
+                c.id !== richter.id &&
+                c.id !== besessenheit?.daemonId &&
+                (art !== "gericht-daemon" || c.id !== bogen.drahtzieherId),
+            )
+            .map((c) => c.id)
+        : [],
+      anklageVersuche: 2,
       personen: [angeklagter, richter, drahtzieherFigur].filter(
         (c, i, alle): c is Character =>
           Boolean(c) && alle.findIndex((x) => x?.id === c?.id) === i,

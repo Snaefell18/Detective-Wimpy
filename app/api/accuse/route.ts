@@ -5,7 +5,6 @@ import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
 import { AccuseSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
-import { haftTage } from "@/lib/schrankhaft";
 import { unseal } from "@/lib/seal";
 import type { AccuseResult, CaseFile } from "@/lib/types";
 
@@ -85,9 +84,6 @@ export async function POST(request: Request) {
       richtig,
       aufloesung: sauberText(aufloesung.aufloesung),
       reaktion: sauberText(aufloesung.reaktion),
-      // Verurteilt wird nur, wer wirklich überführt ist - wie viele Tage,
-      // schlägt das Modell vor, gültig macht es der Server.
-      haftTage: richtig ? haftTage(aufloesung.haftTage) : 0,
       taeterId: fall.taeterId,
     };
 
