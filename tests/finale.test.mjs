@@ -30,7 +30,7 @@ const c = (id, extra = {}) => ({
   ...extra,
 });
 const wimpy = c("wimpy", { istDetektiv: true });
-const oeho = c("oeho", { name: "Öho", alter: 70 });
+const oeho = c("oeho", { name: "Öhö", alter: 70 });
 const besetzung = [wimpy, oeho, c("nala"), c("mikkeli", { alter: 90 })];
 
 console.log("\n1. Klassisch bleibt klassisch");
@@ -55,7 +55,14 @@ pruefe(
   "bei „Wimpy selbst“ der Detektiv",
   angeklagterAus({ art: "wimpy", besetzung, drahtzieherId: "nala" }) === "wimpy",
 );
-pruefe("Öho führt den Vorsitz", richterAus(besetzung, "nala")?.id === "oeho");
+pruefe("Öhö führt den Vorsitz", richterAus(besetzung, "nala")?.id === "oeho");
+// Wie er geschrieben steht, weiß man vorher nie - gefunden wird er trotzdem.
+for (const schreibweise of ["Öhö", "Öho", "Oehoe", "öhö der Weise"]) {
+  pruefe(
+    `„${schreibweise}“ wird als Richter erkannt`,
+    richterAus([wimpy, c("x", { name: schreibweise }), c("nala")], "nala")?.id === "x",
+  );
+}
 pruefe(
   "sitzt Öho selbst auf der Bank, übernimmt das älteste Tier",
   richterAus(besetzung, "oeho")?.id === "mikkeli",

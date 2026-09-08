@@ -16,11 +16,17 @@ export function TonFeld({
   wert,
   onAendern,
   satzVorschlag = "Ein neuer Spieler betritt das Feld!",
+  standardTon = STANDARD_AUFTRITT_TON,
+  leerHinweis,
 }: {
   wert: string;
   onAendern: (wert: string) => void;
   /** Was der Sprecher vorschlagsweise sagen soll. */
   satzVorschlag?: string;
+  /** Was läuft, wenn nichts gewählt ist. Leer heißt: dann eben nichts. */
+  standardTon?: string;
+  /** Der Satz dazu - wo es keinen Standard gibt, steht hier, was stattdessen passiert. */
+  leerHinweis?: string;
 }) {
   const [satz, setSatz] = useState(satzVorschlag);
   const [laeuft, setLaeuft] = useState<string | null>(null);
@@ -28,7 +34,7 @@ export function TonFeld({
   const dateiRef = useRef<HTMLInputElement>(null);
 
   const still = wert === OHNE_AUFTRITT_TON;
-  const gespielt = still ? "" : wert || STANDARD_AUFTRITT_TON;
+  const gespielt = still ? "" : wert || standardTon;
 
   const probieren = () => {
     if (!gespielt) return;
@@ -69,7 +75,7 @@ export function TonFeld({
         {still
           ? "Ohne Ton - nur eine kurze Spannungspause."
           : !wert
-            ? `Nichts gewählt · es läuft ${STANDARD_AUFTRITT_TON}`
+            ? (leerHinweis ?? `Nichts gewählt · es läuft ${standardTon}`)
             : istStimme(wert)
               ? "Ton hinterlegt · liegt in der Datenbank"
               : `Ton hinterlegt · ${wert}`}

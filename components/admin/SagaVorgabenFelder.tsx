@@ -671,6 +671,24 @@ export function SagaVorgabenFelder({
         </>
       )}
 
+      {art !== "klassisch" && (
+        <>
+          <span className="leise klein">Song zum Einzug des Gerichts</span>
+          <p className="leise klein">
+            Vor der Verhandlung kündigt sich das Gericht an: Es klopft, die
+            Türen fliegen auf, und Öhö flattert herein, um Recht zu sprechen.
+            Die Ankündigung läuft genau so lange wie das gewählte Stück.
+          </p>
+          <TonFeld
+            wert={vorgaben.gerichtTon ?? ""}
+            satzVorschlag="Das Gericht! Erhebt euch!"
+            standardTon=""
+            leerHinweis="Nichts gewählt · kurze Ankündigung ohne Musik"
+            onAendern={(gerichtTon) => setzen({ gerichtTon })}
+          />
+        </>
+      )}
+
       {art !== "wimpy" && (
       <>
       <h3 className="unter-abschnitt">

@@ -38,7 +38,7 @@ export const FINALE_ARTEN: {
     id: "gericht",
     label: "Gerichtssaal",
     hinweis: "Columbo - man ahnt es früh",
-    lang: "Der Drahtzieher tritt von Anfang an auf und spielt mit Wimpy. Jeder ahnt, wer es war; es fehlt der Beweis. Statt eines Finalfalls kommt die Verhandlung: Man legt die gesammelten Beweise vor, und Öho spricht das Urteil.",
+    lang: "Der Drahtzieher tritt von Anfang an auf und spielt mit Wimpy. Jeder ahnt, wer es war; es fehlt der Beweis. Statt eines Finalfalls kommt die Verhandlung: Man legt die gesammelten Beweise vor, und Öhö spricht das Urteil.",
   },
   {
     id: "ohne-taeter",
@@ -80,9 +80,9 @@ export type Verhandlung = {
   art: FinaleArt;
   /** Wer auf der Anklagebank sitzt. Bei "wimpy" der Detektiv selbst. */
   angeklagterId: string;
-  /** Wer die Verhandlung leitet - in aller Regel Öho. */
+  /** Wer die Verhandlung leitet - in aller Regel Öhö. */
   richterId: string;
-  /** Womit Öho eröffnet. */
+  /** Womit Öhö eröffnet. */
   anklage: string;
   /** Alles, was Wimpy vorlegen kann - Tragendes und Fehlschlüsse gemischt. */
   beweise: Beweisstueck[];
@@ -112,22 +112,32 @@ export type BeweisWahrheit = {
 /** Der geheime Teil der Verhandlung. */
 export type VerhandlungWahrheit = {
   beweise: BeweisWahrheit[];
-  /** Öhos Urteil, wenn genug getragen hat. */
+  /** Öhös Urteil, wenn genug getragen hat. */
   urteilSchuldig: string;
-  /** Öhos Urteil, wenn die Verhandlung platzt. */
+  /** Öhös Urteil, wenn die Verhandlung platzt. */
   urteilFrei: string;
 };
 
 /**
  * Wer die Verhandlung leitet.
  *
- * Öho ist der Richter des Spiels - gefunden wird er über den Namen, damit
- * niemand eine Id von Hand eintragen muss. Gibt es ihn nicht, übernimmt das
+ * Öhö ist der Richter des Spiels - gefunden wird er über den Namen, damit
+ * niemand eine Id von Hand eintragen muss. Gesucht wird nachsichtig: „Öhö“,
+ * „Öhö“ und „Oehoe“ meinen denselben Vogel, und wie er im Datensatz
+ * geschrieben steht, weiß man vorher nie. Gibt es ihn nicht, übernimmt das
  * älteste Tier der Besetzung, das nicht auf der Anklagebank sitzt.
  */
+const alsSchluessel = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/ö/g, "o")
+    .replace(/oe/g, "o")
+    .replace(/[^a-z]/g, "");
+
 export function richterAus(besetzung: Character[], angeklagterId: string): Character | null {
   const frei = besetzung.filter((c) => c.id !== angeklagterId && !c.istDetektiv);
-  const oeho = frei.find((c) => c.name.trim().toLowerCase().startsWith("öho"));
+  const oeho = frei.find((c) => alsSchluessel(c.name).startsWith("oho"));
   if (oeho) return oeho;
   return [...frei].sort((a, b) => b.alter - a.alter)[0] ?? null;
 }

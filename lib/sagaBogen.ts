@@ -45,7 +45,7 @@ export type Bogen = {
     stadt: string;
     /**
      * Nur bei einer Verhandlung: welche Beweise tragen, was der Angeklagte
-     * darauf erwidert und wie Öho urteilt. Steht hier und nirgends sonst -
+     * darauf erwidert und wie Öhö urteilt. Steht hier und nirgends sonst -
      * der offene Teil der Saga kennt bloß die Stücke.
      */
     wahrheit?: VerhandlungWahrheit;

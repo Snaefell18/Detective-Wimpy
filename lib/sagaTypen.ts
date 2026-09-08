@@ -171,6 +171,12 @@ export type SagaVorgaben = {
    * fest, weil es schon den Kern und jedes Kapitel färbt.
    */
   finaleArt: FinaleArt;
+  /**
+   * Der Song zum Einzug des Gerichts - nur bei einem Verhandlungsfinale.
+   * Die Ankündigung läuft genau so lange wie das Stück; leer heißt: eine
+   * kurze feste Zeit.
+   */
+  gerichtTon: string;
   /** Schauplätze je Fall. */
   ortsAnzahl: number;
   /** Beschuldigungen je Fall. */
@@ -203,6 +209,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   neuzugangToene: {},
   neuzugangArten: {},
   finaleArt: "klassisch",
+  gerichtTon: "",
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };

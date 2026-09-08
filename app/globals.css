@@ -5373,3 +5373,325 @@ a.zurueck {
     opacity: 0.12;
   }
 }
+
+/* =================================================================
+   Einzug des Gerichts - die Ankündigung vor der Verhandlung
+   =================================================================
+
+   Der ganze Ablauf hängt an drei Werten, die die Komponente setzt:
+   --einzug (0…1 über das ganze Stück), --auf (wie weit die Türen offen
+   stehen) und --flug (wie nah der Vogel ist). Alles andere ist Malerei. */
+
+.einzug {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  overflow: hidden;
+  background: #030208;
+  --gold: #e8bf72;
+  --glut: #ffd479;
+}
+
+/* Der Saal hinter den Türen - man sieht ihn erst, wenn sie aufgehen. */
+.einzug-saal {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 45% at 50% 8%, rgba(255, 226, 168, 0.5) 0%, transparent 70%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(60, 40, 24, 0.7) 0 30px,
+      rgba(34, 22, 14, 0.7) 30px 32px
+    ),
+    radial-gradient(120% 80% at 50% 0%, #2a1a0a 0%, #0a0709 70%);
+  opacity: calc(0.15 + 0.85 * var(--auf, 0));
+}
+
+/* Der Lichtstrahl, der beim Aufgehen herausfällt. */
+.einzug-strahl {
+  position: absolute;
+  inset: -20% -10%;
+  background: conic-gradient(
+    from 168deg at 50% -12%,
+    transparent 0deg,
+    rgba(255, 232, 180, 0.34) 12deg,
+    transparent 30deg
+  );
+  opacity: var(--auf, 0);
+  filter: blur(2px);
+}
+
+/* --- Die Türen ------------------------------------------------------- */
+
+/* Zwei Flügel aus dunklem Holz mit Beschlag. Sie stehen zu, bis das
+   Klopfen vorbei ist, und fliegen dann auf. */
+.einzug-tuer {
+  position: absolute;
+  top: -2%;
+  bottom: -2%;
+  width: 51%;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 30%, rgba(0, 0, 0, 0.6)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(52, 33, 20, 1) 0 22px,
+      rgba(38, 24, 15, 1) 22px 24px
+    );
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+  transition: transform 90ms linear, filter 600ms ease;
+}
+
+/* Am Anfang ist es fast dunkel - man ahnt die Türen nur. */
+.einzug[data-schlag="stille"] .einzug-tuer {
+  filter: brightness(0.42);
+}
+
+.einzug-tuer[data-seite="links"] {
+  left: 0;
+  border-right: 2px solid rgba(232, 191, 114, 0.4);
+  transform: translateX(calc(var(--auf, 0) * -102%));
+}
+
+.einzug-tuer[data-seite="rechts"] {
+  right: 0;
+  border-left: 2px solid rgba(232, 191, 114, 0.4);
+  transform: translateX(calc(var(--auf, 0) * 102%));
+}
+
+/* Der Schlag des Hammers: ein weißer Blitz über allem, dreimal. */
+.einzug-schlag {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 60% at 50% 40%, rgba(255, 244, 214, 0.9), transparent 70%);
+  opacity: 0;
+}
+
+.einzug[data-schlag="klopfen"] .einzug-schlag {
+  animation: einzug-klopfen 1.9s steps(1, end) infinite;
+}
+
+@keyframes einzug-klopfen {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.85;
+  }
+  7% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.85;
+  }
+  27% {
+    opacity: 0;
+  }
+  42% {
+    opacity: 0.9;
+  }
+  49% {
+    opacity: 0;
+  }
+}
+
+/* --- Federn ---------------------------------------------------------- */
+
+.einzug-federn {
+  position: absolute;
+  inset: 0;
+  opacity: var(--auf, 0);
+}
+
+/* Jede Feder ist ein schiefes Blatt, das trudelnd nach unten geht. */
+.einzug-federn span {
+  position: absolute;
+  top: -12%;
+  width: 9px;
+  height: 22px;
+  border-radius: 60% 60% 60% 60% / 80% 80% 30% 30%;
+  background: linear-gradient(180deg, rgba(255, 248, 232, 0.9), rgba(232, 208, 168, 0.35));
+  animation-name: einzug-trudeln;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes einzug-trudeln {
+  from {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  to {
+    transform: translateY(115vh) rotate(520deg);
+    opacity: 0;
+  }
+}
+
+/* --- Der Vogel ------------------------------------------------------- */
+
+/* Er kommt von weit oben rechts: --flug schiebt ihn heran und macht ihn
+   größer, das Flattern liegt als eigene Bewegung darüber. */
+.einzug-flug {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: calc(var(--flug, 0) * 1.6);
+  transform: translate(
+      calc((1 - var(--flug, 0)) * 46vw),
+      calc((1 - var(--flug, 0)) * -52vh)
+    )
+    scale(calc(0.18 + 0.82 * var(--flug, 0)));
+}
+
+.einzug-vogel {
+  position: relative;
+  width: 208px;
+  height: 208px;
+  animation: einzug-flattern 0.42s ease-in-out infinite alternate;
+}
+
+/* Beim Landen hört das Flattern auf und er steht ruhig. */
+.einzug[data-schlag="recht"] .einzug-vogel {
+  animation: einzug-landen 700ms ease-out both;
+}
+
+@keyframes einzug-flattern {
+  from {
+    transform: translateY(-8px) rotate(-4deg);
+  }
+  to {
+    transform: translateY(8px) rotate(4deg);
+  }
+}
+
+@keyframes einzug-landen {
+  from {
+    transform: translateY(-14px) scale(1.06);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.einzug-portraet {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(232, 191, 114, 0.6),
+    0 0 70px rgba(255, 212, 121, 0.4);
+}
+
+/* Zwei Schwingen aus reinem CSS - sie schlagen gegenläufig. */
+/* Zwei Schwingen aus reinem CSS: der Verlauf gibt die Wölbung, die feinen
+   Streifen darüber die Federn. */
+.einzug-fluegel {
+  position: absolute;
+  top: 22%;
+  width: 104px;
+  height: 64px;
+  background:
+    repeating-linear-gradient(
+      86deg,
+      rgba(120, 92, 56, 0.28) 0 1px,
+      transparent 1px 11px
+    ),
+    linear-gradient(120deg, rgba(255, 246, 226, 0.96) 0%, rgba(198, 164, 112, 0.35) 78%);
+  box-shadow: 0 10px 44px rgba(255, 212, 121, 0.26);
+}
+
+.einzug-fluegel[data-seite="links"] {
+  left: -76px;
+  border-radius: 90% 12% 70% 24% / 90% 60% 40% 12%;
+  transform-origin: 100% 40%;
+  animation: fluegel-links 0.42s ease-in-out infinite alternate;
+}
+
+.einzug-fluegel[data-seite="rechts"] {
+  right: -76px;
+  border-radius: 12% 90% 24% 70% / 60% 90% 12% 40%;
+  transform-origin: 0% 40%;
+  animation: fluegel-rechts 0.42s ease-in-out infinite alternate;
+}
+
+@keyframes fluegel-links {
+  from {
+    transform: rotate(-26deg) scaleY(0.72);
+  }
+  to {
+    transform: rotate(16deg) scaleY(1.06);
+  }
+}
+
+@keyframes fluegel-rechts {
+  from {
+    transform: rotate(26deg) scaleY(0.72);
+  }
+  to {
+    transform: rotate(-16deg) scaleY(1.06);
+  }
+}
+
+/* --- Schrift --------------------------------------------------------- */
+
+.einzug-buehne {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px calc(var(--safe-bottom) + 92px);
+}
+
+.einzug-flüstern {
+  opacity: 0.4;
+  font-size: 18px;
+  letter-spacing: 12px;
+}
+
+.einzug-ruf {
+  color: var(--glut);
+  font-size: 21px;
+  letter-spacing: 5px;
+  text-shadow: 0 0 30px rgba(255, 212, 121, 0.5);
+  animation: auftauchen 500ms ease-out both;
+}
+
+.einzug-tafel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: auftauchen 700ms ease-out both;
+}
+
+.einzug-name {
+  margin: 0;
+  color: var(--glut);
+  letter-spacing: 2px;
+  text-shadow: 0 0 46px rgba(255, 212, 121, 0.5);
+}
+
+.einzug-zeile {
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+/* Ohne Bewegung bleibt die Ankündigung ein Bild - aber ein ganzes. */
+@media (prefers-reduced-motion: reduce) {
+  .einzug-vogel,
+  .einzug-fluegel,
+  .einzug-federn span,
+  .einzug-schlag {
+    animation: none;
+  }
+}

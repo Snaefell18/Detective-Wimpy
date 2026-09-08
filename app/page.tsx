@@ -17,6 +17,7 @@ import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { ReaktionScreen } from "@/components/ReaktionScreen";
+import { Gerichtseinzug } from "@/components/Gerichtseinzug";
 import { Gerichtssaal } from "@/components/Gerichtssaal";
 import { Verwandlung } from "@/components/Verwandlung";
 import { VerdachtsMeldung, type Verdachtsmeldung } from "@/components/VerdachtsMeldung";
@@ -68,6 +69,8 @@ export default function Home() {
   const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
   /** Die Verwandlung vor dem Finale - läuft, sobald sie gesetzt ist. */
   const [verwandlung, setVerwandlung] = useState(false);
+  /** Der Einzug des Gerichts - kommt zwischen Erzähler und Saal. */
+  const [einzug, setEinzug] = useState(false);
   const [verdachtsMeldung, setVerdachtsMeldung] = useState<Verdachtsmeldung | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
@@ -235,7 +238,8 @@ export default function Home() {
     }
 
     if (saal) {
-      saga.setzePhase("verhandlung", null);
+      // Erst das Gericht ankündigen - Öhö flattert herein -, dann der Saal.
+      setEinzug(true);
       return;
     }
 
@@ -388,6 +392,24 @@ export default function Home() {
           onFertig={() => {
             setVerwandlung(false);
             sagaFallStarten(true, true);
+          }}
+        />
+      </main>
+    );
+  }
+
+  // Der Einzug des Gerichts - die Ankündigung vor der Verhandlung.
+  if (einzug && saga.stand && phase === "aus") {
+    const saal = sagaMitVerhandlung(saga.stand.saga);
+    const richter = sagaBesetzung(saga.stand.saga).find((c) => c.id === saal?.richterId);
+    return (
+      <main className="app">
+        <Gerichtseinzug
+          richter={richter}
+          ton={saga.stand.saga.vorgaben.gerichtTon}
+          onFertig={() => {
+            setEinzug(false);
+            saga.setzePhase("verhandlung", null);
           }}
         />
       </main>
