@@ -1,4 +1,5 @@
 import { characterBrief } from "./characters";
+import type { FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
 import { besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
@@ -38,6 +39,78 @@ ETWAS ÜBLES GEHT VOR (streng geheim)
 - Es darf den Fall nicht lösen und nicht in die Irre führen: Der Täter dieses Kapitels bleibt der, der es ist.`;
 }
 
+
+/**
+ * Was die gewählte Finale-Art für die ganze Saga bedeutet.
+ *
+ * Der Block steht im Kern, in jedem Kapitel und in jedem Fallbriefing - denn
+ * ein Columbo-Finale will von Anfang an anders erzählt werden als ein Fall,
+ * dessen Schuldiger erst am Ende dasteht.
+ *
+ * `wimpy` ist der Detektiv, `taeter` die Figur, die im Bogen als Drahtzieher
+ * geführt wird - bei "ohne-taeter" ist das der zu Unrecht Verdächtigte.
+ */
+export function finaleArtRegeln(args: {
+  art: FinaleArt;
+  taeterName: string;
+  detektivName: string;
+  /** Nur bei "wimpy": das Wesen, das in ihm steckt. */
+  daemonName?: string;
+  /** Im Kern ist die Ansage länger als in einem einzelnen Kapitel. */
+  ausfuehrlich?: boolean;
+}): string {
+  const { art, taeterName, detektivName, daemonName, ausfuehrlich } = args;
+
+  if (art === "gericht") {
+    return `
+DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
+- Man weiß früh, wer es war: ${taeterName} tritt in jedem Kapitel auf, ist freundlich, hilfsbereit, immer zur Stelle - und spielt mit ${detektivName}.
+- Er weiß, dass ${detektivName} es weiß. Er sagt es nie, aber jede Begegnung hat einen doppelten Boden: eine Bemerkung zu viel, ein Wissen, das er nicht haben dürfte, ein freundlicher Rat, der eine Warnung ist.
+- Was fehlt, ist nicht der Verdacht, sondern der Beweis. Jedes Kapitel lässt genau EIN hartes, benennbares Stück zurück, das später vor Gericht etwas wert ist: ein Zettel, eine Uhrzeit, ein Abdruck, eine Quittung, eine Zeugin, ein Geruch an der falschen Stelle.
+- ${taeterName} ist in den Kapiteln trotzdem nie der Täter des jeweiligen Falls. Er steht daneben, hilft mit, und geht als Erster wieder.${
+      ausfuehrlich
+        ? `
+- Der Klappentext darf das Katz-und-Maus-Spiel andeuten, ohne ${taeterName} zu benennen.
+- Die Wahrheit muss vor Gericht beweisbar sein: keine Ahnung, kein Gefühl, sondern Dinge, die man auf den Tisch legen kann.`
+        : ""
+    }`;
+  }
+
+  if (art === "ohne-taeter") {
+    return `
+DIESE SAGA HAT KEINEN SCHULDIGEN (streng geheim)
+- Es gibt keinen Drahtzieher. Was wie eine Serie von Taten aussieht, ist etwas anderes: eine alte Maschine, eine Strömung, ein Fehler im Fahrplan, ein Tier, das nicht weiß, was es tut, eine Kette von Zufällen, die sich zu einem Muster fügt.
+- ${taeterName} ist der, den alle verdächtigen - und er ist unschuldig. Jedes Kapitel schiebt ihn tiefer hinein: falsche Zeit, falscher Ort, ein Alibi, das zerfällt, ein Gerücht, das haften bleibt.
+- Der Fall jedes Kapitels hat einen ganz normalen Täter. Nur die große Serie darüber hat keinen.
+- Bau in jedes Kapitel genau EIN Detail ein, das kein Tier verursacht haben kann: die Uhrzeit stimmt für niemanden, die Spur ist zu hoch, zu kalt, zu regelmäßig, sie wiederholt sich auf die Minute genau.
+- Sag nirgends, dass es keinen Täter gibt. Das ist der Schluss, den der Spieler selbst zieht.${
+      ausfuehrlich
+        ? `
+- Die Wahrheit im Bogen benennt die wirkliche Ursache klar und in einem Satz - sie muss am Ende belegbar sein.
+- Der Klappentext klingt wie eine ganz normale Jagd nach einem Schuldigen.`
+        : ""
+    }`;
+  }
+
+  if (art === "wimpy") {
+    return `
+DER DETEKTIV IST DER SCHULDIGE (streng geheim, das größte Geheimnis dieser Saga)
+- ${detektivName} war die ganze Zeit besessen${daemonName ? ` - von ${daemonName}` : ""}. Was er nachts tut, weiß er am Morgen nicht mehr. Er ermittelt gegen sich selbst, ohne es zu ahnen.
+- ${daemonName ? `${daemonName} tritt vor dem Finale nirgends auf und wird nie genannt.` : "Das Wesen in ihm tritt vor dem Finale nirgends auf."}
+- Bau in jedes Kapitel genau EIN Zeichen ein, das an ${detektivName} selbst hängt: eine Stunde, die er nicht erinnert; sein eigener Abdruck an einem Ort, an dem er nie war; Schlamm an seinen Schuhen nach einer Nacht im Bett; ein Zeuge, der ihn gesehen haben will, und der Zeuge irrt sich nicht.
+- Niemand spricht es aus. Die Tiere wundern sich, wechseln das Thema, schauen weg. ${detektivName} selbst erklärt es sich weg.
+- Der Täter des jeweiligen Kapitels bleibt trotzdem der, der er ist - die Zeichen lösen keinen einzigen Fall.${
+      ausfuehrlich
+        ? `
+- Die Wahrheit im Bogen sagt klar: ${detektivName} hat es getan, und was in ihm steckte.
+- Weder im Titel noch im Klappentext, Überthema oder Auftakt darf auch nur angedeutet werden, dass der Detektiv selbst gemeint ist. Der Vorspann gehört dem gewöhnlichen Verdacht.`
+        : ""
+    }`;
+  }
+
+  return "";
+}
+
 /** Schritt 1: Worum es in der ganzen Saga geht. */
 export function buildKernPrompt(
   besetzung: Character[],
@@ -61,13 +134,25 @@ export function buildKernPrompt(
     ? besetzung.find((c) => c.id === vorgaben.besessenheit.wirtId)
     : undefined;
 
+  const detektiv = besetzung.find((c) => c.istDetektiv);
+  // Worauf die Saga zuläuft, gehört schon in den ersten Aufruf: Ein
+  // Columbo-Bogen wird anders erfunden als einer, dessen Schuldiger sich
+  // versteckt.
+  const artRegeln = finaleArtRegeln({
+    art: vorgaben.finaleArt ?? "klassisch",
+    taeterName: drahtzieher.name,
+    detektivName: detektiv?.name ?? "Wimpy",
+    daemonName: drahtzieher.name,
+    ausfuehrlich: true,
+  });
+
   return `Entwirf den Kern einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale. Die einzelnen Kapitel kommen später - hier geht es nur um den großen Bogen.
 
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
 Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
 NIRGENDS VOR DEM FINALE BENENNEN: In Titel, Überthema, Klappentext und Auftakt darf ${drahtzieher.name} nicht als der Verantwortliche dastehen - kein "dahinter steckt", kein "zieht die Fäden", kein "hinter allem". Andeuten ist ausdrücklich erwünscht: eine Handschrift, ein Geruch, ein Satz, der zweimal fällt. Nur der Schluss gehört dem Spieler.
-${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
+${artRegeln ? `${artRegeln}\n` : ""}${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
     wirt
       ? `
 BESESSENHEIT - DAS GEHEIMNIS DIESER SAGA
@@ -126,6 +211,8 @@ export function buildKapitelPrompt(args: {
   nochNichtDaTiere?: string[];
   /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
   besessenheit?: { wirt: string; daemon: string };
+  /** Worauf die Saga zuläuft - schon hier, nicht erst im Finale. */
+  finaleRegeln?: string;
 }): string {
   const {
     nummer,
@@ -143,6 +230,7 @@ export function buildKapitelPrompt(args: {
     wunschTaeter,
     nochNichtDaTiere = [],
     besessenheit,
+    finaleRegeln = "",
   } = args;
 
   const vorher = bisher.length
@@ -161,7 +249,7 @@ DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel 
     twist
       ? " und ist hier gar nicht anwesend."
       : " und wirkt höchstens beiläufig harmlos."
-  }${twist ? `\n${TWIST_REGELN}` : ""}${
+  }${twist ? `\n${TWIST_REGELN}` : ""}${finaleRegeln}${
     besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
   }${vorher}
 
@@ -253,6 +341,70 @@ ${
 - Erzählertexte in kurzen Zeilen, keine Anrede. Alles auf Deutsch.`;
 }
 
+
+/**
+ * Schritt 3b: die Verhandlung statt eines Finalfalls.
+ *
+ * Sie muss aus dem bestehen, was der Spieler in den Kapiteln erlebt hat -
+ * deshalb bekommt das Modell hier jede Enthüllung noch einmal vorgelegt. Die
+ * Fehlschlüsse sind genauso wichtig wie die tragenden Stücke: Ohne sie wäre
+ * das Vorlegen keine Entscheidung, sondern Abarbeiten.
+ */
+export function buildVerhandlungPrompt(args: {
+  art: FinaleArt;
+  thema: string;
+  wahrheit: string;
+  /** Wer auf der Anklagebank sitzt. */
+  angeklagter: string;
+  /** Wer die Verhandlung leitet. */
+  richter: string;
+  detektivName: string;
+  motiv: string;
+  kapitel: { name: string; enthuellung: string }[];
+}): string {
+  const { art, thema, wahrheit, angeklagter, richter, detektivName, motiv, kapitel } = args;
+
+  const ziel =
+    art === "ohne-taeter"
+      ? `${angeklagter} sitzt auf der Anklagebank, obwohl er nichts getan hat. ${detektivName} muss belegen, dass hinter der ganzen Serie überhaupt kein Tier steckt - und was stattdessen. Am Ende steht ein Freispruch.`
+      : art === "wimpy"
+        ? `Auf der Anklagebank sitzt ${detektivName} selbst. Er hat es getan, ohne es zu wissen, und legt jetzt die Beweise gegen sich selbst vor. Der Saal begreift es langsamer als er.`
+        : `${angeklagter} sitzt auf der Anklagebank. Alle ahnen seit Langem, dass er es war; was fehlte, war der Beweis. Jetzt legt ${detektivName} vor, was er über die ganze Saga gesammelt hat.`;
+
+  return `Entwirf die Schlussverhandlung dieser Saga. Es gibt keinen Finalfall mehr - dieser Gerichtssaal IST das Finale.
+
+ÜBERTHEMA: ${thema}
+DIE WAHRHEIT: ${wahrheit}
+DAS MOTIV: ${motiv}
+DIE VERHANDLUNG: ${ziel}
+${richter} führt den Vorsitz und spricht das Urteil.
+
+WAS DIE KAPITEL PREISGEGEBEN HABEN
+${kapitel.map((k, i) => `- Kapitel ${i + 1} „${k.name}“: ${k.enthuellung}`).join("\n")}
+
+DIE BEWEISSTÜCKE - darauf kommt es an
+- Sechs bis acht Stück, jedes eindeutig aus einem der Kapitel oben. Schreib die Herkunft dazu ("Kapitel 2 - Die Nacht am Hafen").
+- Drei oder vier davon tragen (traegt = true): Sie sind hart, überprüfbar und hängen unmittelbar mit der Wahrheit zusammen.
+- Der Rest trägt nicht (traegt = false), sieht aber überzeugend aus: ein Gefühl statt eines Fundes, eine Aussage vom Hörensagen, ein Gegenstand ohne Verbindung, ein Widerspruch, der sich harmlos erklären lässt.
+- Von außen darf man den Stücken nicht ansehen, welche tragen. Name und Text klingen bei allen gleich sicher.
+- Die Reaktion ist der Kern des Abends: Trägt es, gerät ${art === "wimpy" ? "der Saal ins Wanken und " + detektivName + " erkennt ein Stück mehr von sich selbst" : angeklagter + " ins Rutschen - erst freundlich, dann dünner, dann still"}. Trägt es nicht, dreht ${art === "ohne-taeter" ? "die Anklage" : art === "wimpy" ? "der Saal" : angeklagter} es um und lässt ${detektivName} klein dastehen.
+
+WEITERES
+- Die Frage steht groß über dem Saal (z.B. "Reicht das, was du hast?").
+- Der Erzählertext davor führt in den Saal: kurze Zeilen, Atmosphäre, keine Anrede. Er verrät nicht, wie es ausgeht.
+- Die Eröffnung spricht ${richter} - streng, trocken, kein Wort zu viel.
+- Das Urteil bei Erfolg spricht ${richter} ebenfalls${
+    art === "ohne-taeter"
+      ? " - es endet mit einem Freispruch und benennt die wirkliche Ursache."
+      : art === "wimpy"
+        ? ` - es spricht ${detektivName} schuldig, und der Saal weiß nicht, wohin mit sich.`
+        : ` - es spricht ${angeklagter} schuldig.`
+  }
+- Das Urteil beim Scheitern lässt ${art === "ohne-taeter" ? "den Falschen verurteilt zurück" : art === "wimpy" ? "die Sache ungeklärt und " + detektivName + " mit seinem Wissen allein" : angeklagter + " gehen - freundlich, mit einem letzten Satz, der wehtut"}.
+- Der Epilog kommt nach dem Urteil und darf alles aussprechen.
+- Alles auf Deutsch.`;
+}
+
 /**
  * Was die Fallerzeugung über die Saga wissen muss.
  *
@@ -272,6 +424,8 @@ export function buildSagaBriefing(args: {
   twist: boolean;
   /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
   besessenheit?: { wirt: string; daemon: string };
+  /** Worauf die Saga zuläuft - damit auch die Spuren dazu passen. */
+  finaleRegeln?: string;
 }): string {
   const {
     thema,
@@ -285,6 +439,7 @@ export function buildSagaBriefing(args: {
     istFinale,
     twist,
     besessenheit,
+    finaleRegeln = "",
   } = args;
 
   const bisher = vorherigeEnthuellungen.length
@@ -326,7 +481,7 @@ WAS DIESES KAPITEL PREISGIBT: ${enthuellung}
 Zusätzlich:
 - Der Fall ist für sich abgeschlossen und lösbar, ohne die anderen Kapitel zu kennen.
 - Genau die oben genannte Enthüllung muss sich aus dem Fall ergeben - als Randnotiz, gefundener Gegenstand oder Bemerkung eines Tieres. Nicht mehr.
-- Der Drahtzieher wird höchstens beiläufig gestreift und wirkt dabei harmlos.${
+- Der Drahtzieher wird höchstens beiläufig gestreift und wirkt dabei harmlos.${finaleRegeln}${
     besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
   }${
     twist

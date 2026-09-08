@@ -17,6 +17,7 @@ import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { ReaktionScreen } from "@/components/ReaktionScreen";
+import { Gerichtssaal } from "@/components/Gerichtssaal";
 import { Verwandlung } from "@/components/Verwandlung";
 import { VerdachtsMeldung, type Verdachtsmeldung } from "@/components/VerdachtsMeldung";
 import { NotizbuchScreen } from "@/components/NotizbuchScreen";
@@ -31,6 +32,9 @@ import {
   artFuerAuftritt,
   besessen,
   neueGesichter,
+  neuImSaal,
+  sagaBesetzung,
+  sagaMitVerhandlung,
   tonFuerAuftritt,
   warFrueherDa,
   type Saga,
@@ -172,10 +176,14 @@ export default function Home() {
   const sagaFallStarten = (finale: boolean, angekuendigt = false) => {
     void tonFreigeben();
     if (!saga.stand) return;
+
+    // Läuft die Saga in einen Gerichtssaal, gibt es keinen Finalfall mehr -
+    // die Ansagen davor (Verwandlung, neue Gesichter) bleiben aber dieselben.
+    const saal = finale ? sagaMitVerhandlung(saga.stand.saga) : null;
     const quelle = finale
       ? saga.stand.saga.finale
       : saga.stand.saga.kapitel[saga.stand.lauf.kapitel];
-    if (!quelle?.fall || !quelle.siegel) {
+    if (!saal && (!quelle?.fall || !quelle.siegel)) {
       saga.setzePhase(finale ? "epilog" : "erzaehler");
       return;
     }
@@ -189,7 +197,14 @@ export default function Home() {
         return;
       }
 
-      const neue = neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel).filter(
+      const neue = (
+        saal
+          ? // Vor dem Saal gibt es keinen Finalfall, mit dem sich vergleichen
+            // ließe: Neu ist, wer in keinem Kapitel dabei war - allen voran
+            // der Angeklagte, wenn er erst jetzt auftritt.
+            neuImSaal(saga.stand.saga, saal.angeklagterId)
+          : neueGesichter(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel)
+      ).filter(
         // Die Dämonenform kündigt sich nie als "neuer Spieler" an.
         (c) => c.id !== besessenheit?.daemonId,
       );
@@ -198,12 +213,18 @@ export default function Home() {
         return;
       }
     }
+
+    if (saal) {
+      saga.setzePhase("verhandlung", null);
+      return;
+    }
+
     spiel.fertigenFallStarten(
-      quelle.fall,
-      quelle.siegel,
+      quelle!.fall!,
+      quelle!.siegel!,
       saga.stand.saga.vorgaben.beschuldigungen,
     );
-    saga.setzePhase(finale ? "finale" : "fall", quelle.fall.id);
+    saga.setzePhase(finale ? "finale" : "fall", quelle!.fall!.id);
   };
 
   /* --- Arcs: mehrere Sagen unter einem Bogen -------------------------- */
@@ -332,10 +353,11 @@ export default function Home() {
   // Die Verwandlung vor dem Finale: aus dem Wirt bricht der Dämon.
   if (verwandlung && saga.stand && phase === "aus") {
     const besessenheit = besessen(saga.stand.saga.vorgaben);
-    const besetzung = saga.stand.saga.finale.fall?.besetzung ?? [];
-    const ausKapiteln = saga.stand.saga.kapitel.flatMap((k) => k.fall?.besetzung ?? []);
-    const finde = (id: string) =>
-      besetzung.find((c) => c.id === id) ?? ausKapiteln.find((c) => c.id === id);
+    // Alle Tiere der Saga - auch die, die nur im Gerichtssaal stehen: Bei
+    // einer Verhandlung gibt es keinen Finalfall, aus dem sich die
+    // Dämonengestalt holen ließe.
+    const alle = sagaBesetzung(saga.stand.saga);
+    const finde = (id: string) => alle.find((c) => c.id === id);
 
     return (
       <main className="app">
@@ -519,11 +541,28 @@ export default function Home() {
               name: sagaDaten.name,
               bild: sagaDaten.finale.fall?.orte[0]?.bild,
             }}
-            weiterText="Ins Finale ›"
+            weiterText={sagaMitVerhandlung(sagaDaten) ? "In den Saal ›" : "Ins Finale ›"}
             onWeiter={() => sagaFallStarten(true)}
           />
         </main>
       );
+    }
+
+    if (lauf.phase === "verhandlung") {
+      const saal = sagaMitVerhandlung(sagaDaten);
+      if (saal) {
+        return (
+          <main className="app">
+            <Gerichtssaal
+              verhandlung={saal}
+              bogenSiegel={sagaDaten.bogenSiegel}
+              besetzung={sagaBesetzung(sagaDaten)}
+              frage={sagaDaten.finale.frage}
+              onFertig={(geschafft) => saga.setzePhase("epilog", null, geschafft)}
+            />
+          </main>
+        );
+      }
     }
 
     if (lauf.phase === "epilog") {

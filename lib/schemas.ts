@@ -284,6 +284,9 @@ export const SagaVorgabenSchema = z.object({
       z.enum(["klassisch", "gewitter", "jackpot", "welle", "dschungel", "erzfeind"]),
     )
     .default({}),
+  finaleArt: z
+    .enum(["klassisch", "gericht", "ohne-taeter", "wimpy"])
+    .default("klassisch"),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
 });

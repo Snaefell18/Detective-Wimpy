@@ -2,6 +2,7 @@
 
 import { postJson } from "./api";
 import { erzeugeFall } from "./fallErzeugen";
+import { mitVerhandlung, type Verhandlung } from "./sagaFinale";
 import {
   LEERER_ERZAEHLER,
   videoFuerKapitel,
@@ -37,6 +38,8 @@ type KapitelAntwort = {
 type FinaleAntwort = {
   bogenSiegel: string;
   finale: { frage: string; erzaehlerText: string; epilogText: string };
+  /** Nur bei einem Verhandlungsfinale - dann gibt es keinen Finalfall. */
+  verhandlung?: Verhandlung;
 };
 
 export type SagaEingaben = {
@@ -132,8 +135,13 @@ export async function erzeugeSaga(
     });
   }
 
-  onSchritt?.("Der Finalfall wird gebaut …");
-  const finale = await fallFuer(0, "Finalfall");
+  // Läuft die Saga in eine Verhandlung, gibt es keinen Finalfall mehr: Der
+  // Gerichtssaal ist das Finale.
+  const saalStattFall = mitVerhandlung(eingaben.vorgaben.finaleArt);
+  if (!saalStattFall) onSchritt?.("Der Finalfall wird gebaut …");
+  const finale = saalStattFall
+    ? { fall: null, siegel: null }
+    : await fallFuer(0, "Finalfall");
 
   return {
     id: kern.id,
@@ -157,6 +165,7 @@ export async function erzeugeSaga(
       epilog: { text: finaleBogen.finale.epilogText, audio: "" },
       fall: finale.fall,
       siegel: finale.siegel,
+      verhandlung: finaleBogen.verhandlung ?? null,
     },
     bogenSiegel: siegel,
     erstelltAm: Date.now(),

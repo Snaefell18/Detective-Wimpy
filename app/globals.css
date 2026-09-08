@@ -4547,3 +4547,167 @@ a.zurueck {
   border-radius: 14px;
   background: #000;
 }
+
+/* =================================================================
+   Gerichtssaal - das Finale als Verhandlung
+   ================================================================= */
+
+.saal {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 24px);
+}
+
+.saal-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saal-bank,
+.saal-vorsitz {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.saal-vorsitz {
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+
+.saal-bank h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+/* Die Bilder brauchen einen Rahmen mit Maß - sie füllen ihn aus. */
+.saal-portraet {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.saal-portraet.gross {
+  width: 74px;
+  height: 74px;
+}
+
+.saal-frage {
+  margin: 16px 0 6px;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.saal-anklage {
+  margin: 0 0 14px;
+  color: var(--text);
+  opacity: 0.86;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.saal-waage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.saal-fehlgriffe {
+  display: flex;
+  gap: 6px;
+}
+
+/* Jeder Fehlgriff löscht ein Licht. */
+.saal-fehlgriffe i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffd479;
+}
+
+.saal-fehlgriffe i[data-weg="true"] {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.saal-beweise {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saal-beweis {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+}
+
+.saal-beweis[data-offen="true"] {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 212, 121, 0.55);
+}
+
+.saal-beweis-text {
+  margin: 6px 0 10px;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+/* --- Reaktion und Urteil -------------------------------------------- */
+
+.saal.reaktion,
+.saal.urteil {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 0;
+  background: #04070f;
+}
+
+.saal-urteil-inhalt {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px calc(var(--safe-bottom) + 34px);
+  animation: auftauchen 900ms ease-out both;
+}
+
+.saal-spruch {
+  margin: 0;
+  max-width: 34ch;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* Ein Treffer glüht warm, ein Fehlgriff bleibt kalt. */
+.saal.reaktion[data-traegt="true"] .reaktion-inhalt h1 {
+  color: #ffd479;
+}
+
+.saal.reaktion[data-traegt="false"] .reaktion-inhalt h1 {
+  color: #7e97b6;
+}

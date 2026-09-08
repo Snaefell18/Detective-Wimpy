@@ -12,9 +12,25 @@ import {
   buildFinalePrompt,
   buildKapitelPrompt,
   buildKernPrompt,
+  buildVerhandlungPrompt,
+  finaleArtRegeln,
 } from "@/lib/sagaPrompts";
-import type { FinaleDraft, KapitelDraft, KernDraft } from "@/lib/sagaSchemas";
-import { FinaleSchema, KernSchema, makeKapitelSchema } from "@/lib/sagaSchemas";
+import type { FinaleDraft, KapitelDraft, KernDraft, VerhandlungDraft } from "@/lib/sagaSchemas";
+import {
+  FinaleSchema,
+  KernSchema,
+  VerhandlungSchema,
+  makeKapitelSchema,
+} from "@/lib/sagaSchemas";
+import {
+  angeklagterAus,
+  mitVerhandlung,
+  noetigeBeweise,
+  richterAus,
+  type Beweisstueck,
+  type FinaleArt,
+  type VerhandlungWahrheit,
+} from "@/lib/sagaFinale";
 import {
   STANDARD_SAGA_VORGABEN,
   besetzungFuerKapitel,
@@ -191,6 +207,19 @@ async function kernSchritt(body: Record<string, unknown>) {
     verdaechtige.find((c) => c.id === vorgaben.drahtzieherId) ??
     verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
+  // Beim Finale "Wimpy selbst" ist der Detektiv der Wirt: Die Dämonenform
+  // steckt die ganze Saga über in ihm. Damit gelten für die Kapitel dieselben
+  // Regeln wie bei jeder anderen Besessenheit - eine Zeile pro Kapitel, nie
+  // benannt -, und vor der Verhandlung läuft die Verwandlung.
+  const detektiv = spielendeBesetzung.find((c) => c.istDetektiv);
+  if (vorgaben.finaleArt === "wimpy" && detektiv) {
+    vorgaben.besessenheit = {
+      wirtId: detektiv.id,
+      daemonId: drahtzieher.id,
+      ton: vorgaben.besessenheit?.ton ?? "",
+    };
+  }
+
   const staedte = alsStaedte(orte).filter((s) => s.orte.length >= vorgaben.ortsAnzahl);
   if (staedte.length === 0) {
     return NextResponse.json(
@@ -334,6 +363,7 @@ async function kapitelSchritt(
         stadt: stadtName(stadt, staedte),
         twist: bogen.vorgaben.twist === true,
         besessenheit: besessenheitVon(bogen.besetzung, bogen.vorgaben),
+        finaleRegeln: kapitelRegeln(bogen),
         neueTiere: neue.map((c) => c.name),
         wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
         nochNichtDaTiere: zuFrueh,
@@ -397,9 +427,28 @@ async function kapitelSchritt(
   });
 }
 
+/**
+ * Die Regeln der gewählten Finale-Art für ein Kapitel.
+ *
+ * Bei "Wimpy selbst" bleibt es leer: Dort steht dieselbe Ansage schon in den
+ * Besessenheitsregeln, und zweimal dasselbe macht Prompts nicht besser.
+ */
+function kapitelRegeln(bogen: Bogen): string {
+  const art: FinaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
+  if (art === "klassisch" || art === "wimpy") return "";
+  return finaleArtRegeln({
+    art,
+    taeterName: bogen.drahtzieherName,
+    detektivName: bogen.besetzung.find((c) => c.istDetektiv)?.name ?? "Wimpy",
+  });
+}
+
 /* --- Schritt 3: das Finale ------------------------------------------ */
 
 async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
+  const art: FinaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
+  if (mitVerhandlung(art)) return await verhandlungsSchritt(bogen, orte, staedte, art);
+
   const response = await getAnthropic().messages.create(
     modellOptionen(
       welt(bogen.besetzung, orte, staedte, bogen.vorgaben),
@@ -448,6 +497,136 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
       frage: fertig.finale.frage,
       erzaehlerText: fertig.finale.erzaehlerText,
       epilogText: fertig.finale.epilogText,
+    },
+  });
+}
+
+/* --- Schritt 3b: die Verhandlung statt eines Finalfalls -------------- */
+
+/**
+ * Der Gerichtssaal.
+ *
+ * Was der Browser bekommt, sind die Beweisstücke ohne jede Wertung; ob eines
+ * trägt und was der Saal dazu sagt, wandert in den versiegelten Bogen. Geprüft
+ * wird später auf dem Server (siehe app/api/verhandlung/route.ts) - im offenen
+ * Teil der Datenbank steht die Lösung nirgends.
+ */
+async function verhandlungsSchritt(
+  bogen: Bogen,
+  orte: Location[],
+  staedte: City[],
+  art: FinaleArt,
+) {
+  const angeklagterId = angeklagterAus({
+    art,
+    besetzung: bogen.besetzung,
+    drahtzieherId: bogen.drahtzieherId,
+  });
+  const angeklagter = bogen.besetzung.find((c) => c.id === angeklagterId);
+  const richter = richterAus(bogen.besetzung, angeklagterId);
+  const detektiv = bogen.besetzung.find((c) => c.istDetektiv);
+  const drahtzieherFigur = bogen.besetzung.find((c) => c.id === bogen.drahtzieherId);
+
+  if (!angeklagter || !richter) {
+    return NextResponse.json(
+      {
+        fehler:
+          "Für die Verhandlung fehlen Angeklagter oder Vorsitz. Bitte mehr Tiere für die Saga auswählen.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const response = await getAnthropic().messages.create(
+    modellOptionen(
+      welt(bogen.besetzung, orte, staedte, bogen.vorgaben),
+      buildVerhandlungPrompt({
+        art,
+        thema: bogen.thema,
+        wahrheit: bogen.wahrheit,
+        angeklagter: angeklagter.name,
+        richter: richter.name,
+        detektivName: detektiv?.name ?? "Wimpy",
+        motiv: bogen.drahtzieherMotiv,
+        kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
+      }),
+      zodOutputFormat(VerhandlungSchema),
+      5000,
+    ),
+    budget(45),
+  );
+
+  const antwort = ergebnisAus<VerhandlungDraft>(response, "api/saga:verhandlung");
+  if ("fehler" in antwort) {
+    return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
+  }
+  const d = antwort.daten;
+
+  const roh = (d.beweise ?? []).slice(0, 10);
+  if (roh.length < 2) {
+    return NextResponse.json(
+      { fehler: "Die Verhandlung kam ohne Beweise zurück. Bitte noch einmal erzeugen." },
+      { status: 502 },
+    );
+  }
+  // Ohne ein einziges tragendes Stück wäre die Verhandlung nicht zu gewinnen -
+  // dann trägt eben das erste.
+  const traegtIrgendwas = roh.some((b) => b.traegt);
+
+  const kurz = (text: string, laenge: number) => (text ?? "").trim().slice(0, laenge);
+
+  const beweise: Beweisstueck[] = roh.map((b, i) => ({
+    id: `b${i + 1}`,
+    name: kurz(b.name, 120) || `Beweisstück ${i + 1}`,
+    herkunft: kurz(b.herkunft, 120),
+    text: kurz(b.text, 600),
+  }));
+
+  const wahrheit: VerhandlungWahrheit = {
+    beweise: roh.map((b, i) => ({
+      id: `b${i + 1}`,
+      traegt: traegtIrgendwas ? b.traegt === true : i === 0,
+      reaktion: kurz(b.reaktion, 900),
+    })),
+    urteilSchuldig: kurz(d.urteilSchuldig, 1200),
+    urteilFrei: kurz(d.urteilFrei, 1200),
+  };
+
+  const fertig: Bogen = {
+    ...bogen,
+    finale: {
+      frage: kurz(d.frage, 200) || "Reicht, was du hast?",
+      auftrag: "",
+      erzaehlerText: kurz(d.erzaehlerText, 2000),
+      epilogText: kurz(d.epilogText, 2000),
+      stadt: stadtFuer(bogen.vorgaben, 0, staedte),
+      wahrheit,
+    },
+  };
+
+  return NextResponse.json({
+    schritt: "finale",
+    bogenSiegel: seal(fertig),
+    finale: {
+      frage: fertig.finale.frage,
+      erzaehlerText: fertig.finale.erzaehlerText,
+      epilogText: fertig.finale.epilogText,
+    },
+    verhandlung: {
+      art,
+      angeklagterId,
+      richterId: richter.id,
+      anklage: kurz(d.anklage, 1200),
+      beweise,
+      noetig: noetigeBeweise(wahrheit.beweise.filter((b) => b.traegt).length),
+      fehlgriffe: 2,
+      // Angeklagter, Vorsitz und - beim Finale "Wimpy selbst" - die Gestalt,
+      // die aus ihm herausbricht. Ohne sie hätte der Saal Gesichter, für die
+      // es kein Bild gibt: Sie müssen in keinem Kapitel aufgetreten sein.
+      personen: [angeklagter, richter, drahtzieherFigur].filter(
+        (c, i, alle): c is Character =>
+          Boolean(c) && alle.findIndex((x) => x?.id === c?.id) === i,
+      ),
     },
   });
 }

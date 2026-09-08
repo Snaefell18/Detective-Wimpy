@@ -1,3 +1,4 @@
+import type { VerhandlungWahrheit } from "./sagaFinale";
 import type { SagaVorgaben } from "./sagaTypen";
 import type { Character } from "./types";
 
@@ -42,6 +43,12 @@ export type Bogen = {
     erzaehlerText: string;
     epilogText: string;
     stadt: string;
+    /**
+     * Nur bei einer Verhandlung: welche Beweise tragen, was der Angeklagte
+     * darauf erwidert und wie Öho urteilt. Steht hier und nirgends sonst -
+     * der offene Teil der Saga kennt bloß die Stücke.
+     */
+    wahrheit?: VerhandlungWahrheit;
   };
   erstelltAm: number;
 };

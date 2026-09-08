@@ -1,3 +1,4 @@
+import type { FinaleArt, Verhandlung } from "./sagaFinale";
 import type {
   Absurditaet,
   Character,
@@ -154,6 +155,12 @@ export type SagaVorgaben = {
    * eigenen, ohne dass man für jeden etwas eintragen muss.
    */
   neuzugangToene: Record<string, string>;
+  /**
+   * Worauf die ganze Saga zuläuft - klassischer Finalfall oder eine der
+   * Verhandlungen (siehe lib/sagaFinale.ts). Das steht vor der Erzeugung
+   * fest, weil es schon den Kern und jedes Kapitel färbt.
+   */
+  finaleArt: FinaleArt;
   /** Schauplätze je Fall. */
   ortsAnzahl: number;
   /** Beschuldigungen je Fall. */
@@ -184,6 +191,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   neuzugangTon: "",
   neuzugangToene: {},
   neuzugangArten: {},
+  finaleArt: "klassisch",
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
@@ -216,9 +224,49 @@ export type SagaFinale = {
   frage: string;
   /** Wird nach dem Sieg eingeblendet. */
   epilog: Erzaehlerteil;
+  /**
+   * Der Finalfall - nur beim klassischen Finale. Läuft die Saga auf eine
+   * Verhandlung zu, gibt es hier keinen Fall mehr, sondern den Saal.
+   */
   fall: PublicCase | null;
   siegel: string | null;
+  /**
+   * Der Gerichtssaal statt eines Finalfalls. Fehlt bei alten Sagas und beim
+   * klassischen Finale - dann bleibt alles wie bisher.
+   */
+  verhandlung?: Verhandlung | null;
 };
+
+/**
+ * Alle Tiere, die in dieser Saga vorkommen - aus allen Kapiteln, dem Finalfall
+ * und dem Gerichtssaal zusammengesucht, jedes nur einmal.
+ */
+export function sagaBesetzung(saga: Saga): Character[] {
+  const alle = [
+    ...saga.kapitel.flatMap((k) => k.fall?.besetzung ?? []),
+    ...(saga.finale.fall?.besetzung ?? []),
+    ...(saga.finale.verhandlung?.personen ?? []),
+  ];
+  const gesehen = new Set<string>();
+  return alle.filter((c) => !gesehen.has(c.id) && gesehen.add(c.id));
+}
+
+/**
+ * Wer für den Gerichtssaal angekündigt werden muss.
+ *
+ * Vor einer Verhandlung gibt es keinen Finalfall, mit dem sich die Besetzung
+ * vergleichen ließe. Also zählt schlicht: Wer in keinem Kapitel dabei war,
+ * betritt hier zum ersten Mal das Feld.
+ */
+export function neuImSaal(saga: Saga, charakterId: string): Character[] {
+  if (!charakterId || warFrueherDa(saga, -1, charakterId)) return [];
+  const person = sagaBesetzung(saga).find((c) => c.id === charakterId);
+  return person && !person.istDetektiv ? [person] : [];
+}
+
+/** Läuft diese Saga in eine Verhandlung? Auch alte Sagas beantworten das. */
+export const sagaMitVerhandlung = (saga: Saga | undefined): Verhandlung | null =>
+  saga?.finale?.verhandlung?.beweise?.length ? saga.finale.verhandlung : null;
 
 export type Saga = {
   id: string;
@@ -258,6 +306,8 @@ export type SagaLauf = {
     | "fall"
     | "finale-erzaehler"
     | "finale"
+    /** Der Gerichtssaal statt eines Finalfalls. */
+    | "verhandlung"
     | "epilog";
   /**
    * Id des Falls, der gerade zu dieser Saga läuft. Damit lässt sich ein

@@ -9,6 +9,7 @@ import {
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
+import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
 
@@ -85,6 +86,37 @@ export function SagaVorgabenFelder({
         ...teil,
       },
     });
+
+  const detektivId = stammdaten.charaktere.find((c) => c.istDetektiv)?.id ?? "";
+  const art: FinaleArt = vorgaben.finaleArt ?? "klassisch";
+
+  /**
+   * Die Art des Finales umstellen.
+   *
+   * "Wimpy selbst" ist zugleich eine Besessenheit - der Wirt ist der Detektiv.
+   * Deshalb wird sie hier gleich mit eingerichtet und beim Wechsel auf eine
+   * andere Art wieder abgeräumt; sonst bliebe eine halbe Besessenheit stehen,
+   * von der niemand mehr weiß, woher sie kommt.
+   */
+  const finaleArtSetzen = (neu: FinaleArt) => {
+    const ton = vorgaben.besessenheit?.ton ?? "";
+    if (neu === "wimpy") {
+      onAendern({
+        finaleArt: neu,
+        besessenheit: {
+          wirtId: detektivId,
+          daemonId: vorgaben.besessenheit?.daemonId ?? "",
+          ton,
+        },
+      });
+      return;
+    }
+    if (vorgaben.besessenheit?.wirtId === detektivId) {
+      onAendern({ finaleArt: neu, besessenheit: { wirtId: "", daemonId: "", ton } });
+      return;
+    }
+    onAendern({ finaleArt: neu });
+  };
 
   const namenVon = (id: string) =>
     stammdaten.charaktere.find((c) => c.id === id)?.name ?? id;
@@ -534,6 +566,70 @@ export function SagaVorgabenFelder({
       </div>
 
       <h3 className="unter-abschnitt">
+        Finale <span className="leise">· worauf die ganze Saga zuläuft</span>
+      </h3>
+      <p className="leise klein">
+        Das steht vor der Erzeugung fest und färbt alles: Schon das Überthema,
+        jedes Kapitel und jeder einzelne Fall werden anders gebaut. Nachträglich
+        umstellen lässt es sich nicht - die Texte wären dann für ein anderes
+        Ende geschrieben.
+      </p>
+      <div className="wahl-reihe umbrechend">
+        {FINALE_ARTEN.map((eintrag) => (
+          <button
+            key={eintrag.id}
+            className="wahl-chip"
+            data-aktiv={art === eintrag.id}
+            onClick={() => finaleArtSetzen(eintrag.id)}
+          >
+            <strong>{eintrag.label}</strong>
+            <span className="leise">{eintrag.hinweis}</span>
+          </button>
+        ))}
+      </div>
+      <p className="hinweis">{FINALE_ARTEN.find((e) => e.id === art)?.lang}</p>
+
+      {art === "wimpy" && (
+        <>
+          <span className="leise klein">Was in Wimpy steckte</span>
+          <div className="marken-reihe">
+            {verdaechtige.map((c) => (
+              <button
+                key={c.id}
+                className="marke-knopf"
+                data-aktiv={vorgaben.besessenheit?.daemonId === c.id}
+                onClick={() => setzeBesessenheit({ wirtId: detektivId, daemonId: c.id })}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+          {vorgaben.besessenheit?.daemonId ? (
+            <>
+              <p className="hinweis">
+                {namenVon(vorgaben.besessenheit.daemonId)} steckte die ganze Saga
+                über in Wimpy. Vor der Verhandlung bricht es aus ihm heraus - und
+                im Saal sitzt Wimpy selbst auf der Anklagebank.
+              </p>
+              <span className="leise klein">Ton zur Verwandlung</span>
+              <TonFeld
+                wert={vorgaben.besessenheit.ton}
+                satzVorschlag="Es war die ganze Zeit hier!"
+                onAendern={(ton) => setzeBesessenheit({ ton })}
+              />
+            </>
+          ) : (
+            <p className="leise klein">
+              Noch die Gestalt wählen, die in ihm steckte - ohne sie fehlt der
+              Verhandlung ihr Grund.
+            </p>
+          )}
+        </>
+      )}
+
+      {art !== "wimpy" && (
+      <>
+      <h3 className="unter-abschnitt">
         Besessenheit{" "}
         <span className="leise">· ein Tier war die ganze Zeit ein Dämon</span>
       </h3>
@@ -606,6 +702,9 @@ export function SagaVorgabenFelder({
             </p>
           )}
         </>
+      )}
+
+      </>
       )}
 
       <h3 className="unter-abschnitt">
