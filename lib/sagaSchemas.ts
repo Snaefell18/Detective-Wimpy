@@ -92,11 +92,23 @@ export const VerhandlungSchema = z.object({
     ),
   urteilSchuldig: z
     .string()
-    .describe("Das Urteil, wenn die Beweisführung trägt: drei bis fünf Sätze"),
+    .describe(
+      "Das Urteil, wenn die Beweisführung trägt: drei bis fünf Sätze, und der letzte nennt die Tage Schrankhaft",
+    ),
+  tageSchuldig: z
+    .number()
+    .describe(
+      "Tage Schrankhaft, die bei tragender Beweisführung verhängt werden. 0, wenn dann niemand in den Schrank muss (Freispruch).",
+    ),
+  tageFrei: z
+    .number()
+    .describe(
+      "Tage Schrankhaft, die verhängt werden, wenn die Beweisführung scheitert. Meist 0 - außer der Falsche wird dann verurteilt.",
+    ),
   urteilFrei: z
     .string()
     .describe(
-      "Was der Richter sagt, wenn die Beweisführung scheitert: drei bis fünf Sätze, bitter statt versöhnlich",
+      "Was der Richter sagt, wenn die Beweisführung scheitert: drei bis fünf Sätze, bitter statt versöhnlich. Wird dabei jemand verurteilt, nennt der letzte Satz die Tage Schrankhaft.",
     ),
   beweise: z
     .array(

@@ -116,6 +116,13 @@ export type VerhandlungWahrheit = {
   urteilSchuldig: string;
   /** Öhös Urteil, wenn die Verhandlung platzt. */
   urteilFrei: string;
+  /**
+   * Das Strafmaß je Ausgang: Tage Schrankhaft. 0 heißt, dass niemand in den
+   * Schrank muss - beim Freispruch etwa, oder wenn der Angeklagte geht.
+   * Optional, weil Sagas aus früheren Tagen das Feld nicht haben.
+   */
+  tageSchuldig?: number;
+  tageFrei?: number;
 };
 
 /**

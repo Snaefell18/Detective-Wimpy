@@ -133,6 +133,8 @@ export const AccuseSchema = z.object({
   richtig: z.boolean(),
   aufloesung: z.string(),
   reaktion: z.string(),
+  /** Tage Schrankhaft für den Überführten. 0, wenn niemand verurteilt wird. */
+  haftTage: z.number(),
 });
 
 /** Prüft die Charaktere, die der Client aus dem Admin-Menü mitschickt. */

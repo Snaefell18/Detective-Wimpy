@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fehlerText } from "@/lib/antwort";
 import type { Bogen } from "@/lib/sagaBogen";
+import { haftTage } from "@/lib/schrankhaft";
 import { unseal } from "@/lib/seal";
 
 export const runtime = "nodejs";
@@ -52,6 +53,11 @@ export async function POST(request: Request) {
     if (body.schritt === "urteil") {
       return NextResponse.json({
         text: body.geschafft ? wahrheit.urteilSchuldig : wahrheit.urteilFrei,
+        // Wie viele Tage im Schrank - 0 heißt: niemand muss hinein.
+        tage: haftTage(
+          body.geschafft ? wahrheit.tageSchuldig : wahrheit.tageFrei,
+          0,
+        ),
       });
     }
 

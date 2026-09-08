@@ -46,7 +46,9 @@ export function Gerichtssaal({
   const [stand, setStand] = useState(LEERER_VERHANDLUNGS_STAND);
   const [offen, setOffen] = useState<Beweisstueck | null>(null);
   const [antwort, setAntwort] = useState<(Antwort & { stueck: Beweisstueck }) | null>(null);
-  const [urteil, setUrteil] = useState<{ text: string; geschafft: boolean } | null>(null);
+  const [urteil, setUrteil] = useState<
+    { text: string; geschafft: boolean; tage: number } | null
+  >(null);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -87,12 +89,12 @@ export function Gerichtssaal({
   /** Öhos Schlusswort - es steht seit der Erzeugung fest. */
   const urteilHolen = async (geschafft: boolean) => {
     try {
-      const { text } = await postJson<{ text: string }>(
+      const { text, tage } = await postJson<{ text: string; tage?: number }>(
         "/api/verhandlung",
         { bogenSiegel, schritt: "urteil", geschafft },
         30,
       );
-      setUrteil({ text, geschafft });
+      setUrteil({ text, geschafft, tage: tage ?? 0 });
     } catch {
       // Ohne Netz endet die Verhandlung trotzdem - nur eben wortkarg.
       setUrteil({
@@ -100,6 +102,7 @@ export function Gerichtssaal({
           ? "Der Saal erhebt sich. Das Urteil steht."
           : "Der Vorsitz schließt die Akte. Mehr war heute nicht zu holen.",
         geschafft,
+        tage: 0,
       });
     }
   };
@@ -122,6 +125,16 @@ export function Gerichtssaal({
             {urteil.geschafft ? worte.gewonnen : worte.verloren}
           </h1>
           <span className="saal-strich" />
+          {/* Das Strafmaß dieser Stadt: Tage im Schrank. Null heißt, dass
+              niemand hinein muss - dann steht hier auch nichts. */}
+          {urteil.tage > 0 && (
+            <div className="saal-strafe">
+              <span className="saal-strafe-zahl">{urteil.tage}</span>
+              <span className="saal-strafe-wort">
+                {urteil.tage === 1 ? "Tag" : "Tage"} Schrankhaft
+              </span>
+            </div>
+          )}
           <p className="saal-spruch">{urteil.text}</p>
           <button
             className="knopf gross pochen"

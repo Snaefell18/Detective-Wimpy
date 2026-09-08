@@ -48,6 +48,7 @@ import {
   worteOhneNamen,
 } from "@/lib/namenSchutz";
 import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
+import { haftTage } from "@/lib/schrankhaft";
 import { seal, unseal } from "@/lib/seal";
 import type { Character, City, Location } from "@/lib/types";
 
@@ -590,6 +591,10 @@ async function verhandlungsSchritt(
     })),
     urteilSchuldig: kurz(d.urteilSchuldig, 1200),
     urteilFrei: kurz(d.urteilFrei, 1200),
+    // Jedes Urteil dieser Stadt endet in Tagen Schrankhaft. Beim Freispruch
+    // sind es null - dann bleibt die Schranktür zu.
+    tageSchuldig: haftTage(d.tageSchuldig, art === "ohne-taeter" ? 0 : 21),
+    tageFrei: haftTage(d.tageFrei, art === "ohne-taeter" ? 14 : 0),
   };
 
   const fertig: Bogen = {

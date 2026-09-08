@@ -1,6 +1,7 @@
 import { characterBrief } from "./characters";
 import type { FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
+import { HAFT_REGEL } from "./schrankhaft";
 import { besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
 
@@ -402,7 +403,20 @@ WEITERES
   }
 - Das Urteil beim Scheitern lässt ${art === "ohne-taeter" ? "den Falschen verurteilt zurück" : art === "wimpy" ? "die Sache ungeklärt und " + detektivName + " mit seinem Wissen allein" : angeklagter + " gehen - freundlich, mit einem letzten Satz, der wehtut"}.
 - Der Epilog kommt nach dem Urteil und darf alles aussprechen.
-- Alles auf Deutsch.`;
+- Alles auf Deutsch.
+
+${HAFT_REGEL}
+- tageSchuldig: ${
+    art === "ohne-taeter"
+      ? "0 - bei tragender Beweisführung gibt es einen Freispruch, und niemand muss in den Schrank."
+      : `die Tage, die ${art === "wimpy" ? detektivName : angeklagter} bekommt. Sie passen zu einer ganzen Saga, nicht zu einem einzelnen Streich.`
+  }
+- tageFrei: ${
+    art === "ohne-taeter"
+      ? `die Tage, die ${angeklagter} zu Unrecht bekommt, wenn die Beweisführung scheitert.`
+      : "0 - wer nicht überführt wird, geht nach Hause."
+  }
+- Das Urteil, das jemanden in den Schrank schickt, nennt die Zahl im letzten Satz.`;
 }
 
 /**

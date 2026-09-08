@@ -2,6 +2,7 @@ import { characterBrief } from "./characters";
 import { ITEMS } from "./items";
 import type { Item } from "./types";
 import { findeOrt } from "./locations";
+import { HAFT_REGEL } from "./schrankhaft";
 import type {
   Absurditaet,
   CaseFile,
@@ -411,5 +412,16 @@ Wimpys Begründung: ${begruendung || "(keine)"}
 Schreibe:
 - aufloesung: Wie Wimpy den Fall auflöst - was wirklich passiert ist, in 3-5 Sätzen, spannend erzählt. Greife dabei die gefundenen Spuren beim Namen auf und sage endlich, was sie bewiesen haben - darauf hat der Spieler die ganze Zeit hingearbeitet. Bei einer falschen Beschuldigung erklärst du, wie der echte Täter davonkommt bzw. entlarvt wird.
 - reaktion: Was der Beschuldigte in diesem Moment sagt, 1-2 Sätze wörtliche Rede, passend zu seinem Charakter.
-Setze richtig auf ${richtig}.`;
+- haftTage: Die Strafe in Tagen Schrankhaft.${
+    richtig
+      ? " Sie passt zur Tat und steht am Ende der Auflösung auch im Text."
+      : " Hier 0 - eine falsche Beschuldigung verurteilt niemanden, und im Text steht kein Strafmaß."
+  }
+Setze richtig auf ${richtig}.
+
+${HAFT_REGEL}${
+    richtig
+      ? "\n- Der letzte Satz der Auflösung ist das Urteil: Er nennt die Zahl der Tage und den Schrank."
+      : ""
+  }`;
 }
