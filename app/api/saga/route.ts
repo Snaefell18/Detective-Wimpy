@@ -182,9 +182,26 @@ async function kernSchritt(body: Record<string, unknown>) {
 
   const orte = orteAus(body?.orte);
 
+  // Stimmt an den Vorgaben etwas nicht, wird das gesagt statt stillschweigend
+  // auf Standardwerte zurückzufallen: Sonst entstünde eine Saga mit drei
+  // Kapiteln, während der Browser fünf erwartet - und der bricht dann mitten
+  // im Erzeugen mit "Unbekanntes Kapitel" ab.
+  const geprueft = SagaVorgabenSchema.safeParse(body?.vorgaben);
+  if (body?.vorgaben && !geprueft.success) {
+    const stelle = geprueft.error.issues[0];
+    return NextResponse.json(
+      {
+        fehler: `Die Vorgaben sind unvollständig: ${stelle?.path.join(".") || "unbekanntes Feld"} - ${
+          stelle?.message ?? "ungültiger Wert"
+        }. Bitte im Formular nachsehen und noch einmal versuchen.`,
+      },
+      { status: 400 },
+    );
+  }
+
   const vorgaben: SagaVorgaben = {
     ...STANDARD_SAGA_VORGABEN,
-    ...(SagaVorgabenSchema.safeParse(body?.vorgaben).data ?? {}),
+    ...(geprueft.data ?? {}),
   };
 
   // Der Drahtzieher ist immer dabei, auch wenn man ihn oben nicht angehakt

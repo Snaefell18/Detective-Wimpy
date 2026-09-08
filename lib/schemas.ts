@@ -250,17 +250,29 @@ export const CaseFileSchema = z.object({
 });
 
 /** Vorgaben für eine ganze Saga aus dem Admin-Menü. */
+/**
+ * Eine Liste je Kapitel, die Lücken verträgt.
+ *
+ * Im Admin-Menü füllt man diese Listen an der Stelle, an der man gerade ist:
+ * Wer nur für Kapitel 3 ein Video einträgt, erzeugt davor zwei Löcher. Über
+ * JSON werden daraus `null`-Einträge - und ohne diese Nachsicht scheiterte
+ * daran die Prüfung der GANZEN Vorgaben. Der Server fiel dann auf seine
+ * Standardwerte zurück, erzeugte drei Kapitel statt fünf, und der Browser
+ * brach beim vierten mit "Unbekanntes Kapitel" ab.
+ */
+const luecken = <T extends z.ZodTypeAny>(feld: T, leer: z.infer<T>) =>
+  z.array(feld.nullish().transform((wert) => wert ?? leer));
+
 export const SagaVorgabenSchema = z.object({
   name: z.string().max(120),
   thema: z.string().max(2000),
   kapitelAnzahl: z.number().min(2).max(8),
-  kapitelWuensche: z.array(z.string().max(400)).max(8),
-  kapitelTaeter: z.array(z.string().max(40)).max(8).default([]),
-  kapitelStaedte: z.array(z.string().max(60)).max(9).default([]),
-  kapitelVideos: z.array(z.string().max(200)).max(9).default([]),
-  kapitelWetter: z
-    .array(
-      z.enum([
+  kapitelWuensche: luecken(z.string().max(400), "").max(8),
+  kapitelTaeter: luecken(z.string().max(40), "").max(8).default([]),
+  kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
+  kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
+  kapitelWetter: luecken(
+    z.enum([
         "",
         "aus",
         "zufall",
@@ -270,10 +282,11 @@ export const SagaVorgabenSchema = z.object({
         "gewitter",
         "schnee",
         "schneesturm",
-        "nebel",
-        "nacht",
-      ]),
-    )
+      "nebel",
+      "nacht",
+    ]),
+    "",
+  )
     .max(9)
     .default([]),
   stadt: z.string().max(60),

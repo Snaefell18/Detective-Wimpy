@@ -41,6 +41,10 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const [vorgaben, setVorgaben] = useState<SagaVorgaben>(STANDARD_SAGA_VORGABEN);
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
+  /** Woran es zuletzt gescheitert ist - steht am Knopf, nicht nur oben. */
+  const [abbruch, setAbbruch] = useState<{ text: string; schritt: string | null } | null>(
+    null,
+  );
   const [offen, setOffen] = useState<string | null>(null);
   /** Geöffneter Kapitelfall: welche Saga, welches Kapitel (-1 = Finale). */
   const [akte, setAkte] = useState<
@@ -75,6 +79,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
   const erzeugen = async () => {
     setLaeuft(true);
+    setAbbruch(null);
     onFehler(null);
     try {
       const saga = await erzeugeSaga(
@@ -90,9 +95,14 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       await laden();
       onMeldung(`Saga „${saga.name}“ gespeichert - ${saga.kapitel.length} Kapitel und Finale.`);
     } catch (fehler) {
-      onFehler(
-        fehler instanceof Error ? fehler.message : "Die Saga konnte nicht erzeugt werden.",
-      );
+      // Zweimal, mit Absicht: Die Meldung oben sieht man nur, wenn man dort
+      // steht - und beim Erzeugen steht man ganz unten am Knopf. Vorher
+      // verschwand hier bloß die Fortschrittszeile, und es sah aus, als
+      // hätte das Spiel kommentarlos aufgegeben.
+      const text =
+        fehler instanceof Error ? fehler.message : "Die Saga konnte nicht erzeugt werden.";
+      setAbbruch({ text, schritt });
+      onFehler(text);
     } finally {
       setLaeuft(false);
       setSchritt(null);
@@ -511,6 +521,17 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       >
         {laeuft ? "Die Saga entsteht …" : "Saga erzeugen und speichern"}
       </button>
+
+      {abbruch && !laeuft && (
+        <div className="abbruch">
+          <strong>Abgebrochen{abbruch.schritt ? ` bei: ${abbruch.schritt}` : ""}</strong>
+          <p>{abbruch.text}</p>
+          <p className="leise klein">
+            Nichts ist verloren gegangen - noch einmal auf „Saga erzeugen“ tippen
+            fängt von vorn an.
+          </p>
+        </div>
+      )}
 
       {laeuft && (
         <p className="leise klein" style={{ marginTop: 8 }}>

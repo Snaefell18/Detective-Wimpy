@@ -129,39 +129,40 @@ export function SagaVorgabenFelder({
         : [...vorgaben[feld], id],
     });
 
-  /** Täter für Kapitel i (0-basiert) - leerer Wert heißt: freie Wahl. */
-  const kapitelTaeterSetzen = (i: number, id: string) => {
-    const liste = [...(vorgaben.kapitelTaeter ?? [])];
-    liste[i] = id;
-    onAendern({ kapitelTaeter: liste });
+  /**
+   * Ein Eintrag in einer Liste je Kapitel - ohne Löcher davor.
+   *
+   * `liste[3] = x` auf einer kurzen Liste hinterlässt sonst leere Plätze, und
+   * die werden auf dem Weg zum Server zu `null`. Daran scheiterte die Prüfung
+   * der ganzen Vorgaben.
+   */
+  const anStelle = <T,>(liste: T[] | undefined, i: number, wert: T, leer: T): T[] => {
+    const kopie = [...(liste ?? [])];
+    while (kopie.length <= i) kopie.push(leer);
+    kopie[i] = wert;
+    return kopie;
   };
 
-  const wunschSetzen = (i: number, text: string) => {
-    const wuensche = [...vorgaben.kapitelWuensche];
-    wuensche[i] = text;
-    onAendern({ kapitelWuensche: wuensche });
-  };
+  /** Täter für Kapitel i (0-basiert) - leerer Wert heißt: freie Wahl. */
+  const kapitelTaeterSetzen = (i: number, id: string) =>
+    onAendern({ kapitelTaeter: anStelle(vorgaben.kapitelTaeter, i, id, "") });
+
+  const wunschSetzen = (i: number, text: string) =>
+    onAendern({ kapitelWuensche: anStelle(vorgaben.kapitelWuensche, i, text, "") });
 
   /** Stadt je Kapitel; der letzte Eintrag gehört zum Finale. */
-  const stadtSetzen = (i: number, stadt: string) => {
-    const liste = [...vorgaben.kapitelStaedte];
-    liste[i] = stadt;
-    onAendern({ kapitelStaedte: liste });
-  };
+  const stadtSetzen = (i: number, stadt: string) =>
+    onAendern({ kapitelStaedte: anStelle(vorgaben.kapitelStaedte, i, stadt, "") });
 
   /** Video vor einem Kapitel; der letzte Eintrag gehört zum Finale. */
-  const videoSetzen = (i: number, pfad: string) => {
-    const liste = [...(vorgaben.kapitelVideos ?? [])];
-    liste[i] = pfad;
-    onAendern({ kapitelVideos: liste });
-  };
+  const videoSetzen = (i: number, pfad: string) =>
+    onAendern({ kapitelVideos: anStelle(vorgaben.kapitelVideos, i, pfad, "") });
 
   /** Wetter je Kapitel; der letzte Eintrag gehört zum Finale. */
-  const wetterSetzen = (i: number, lage: Wetterlage | "") => {
-    const liste = [...(vorgaben.kapitelWetter ?? [])];
-    liste[i] = lage;
-    onAendern({ kapitelWetter: liste });
-  };
+  const wetterSetzen = (i: number, lage: Wetterlage | "") =>
+    onAendern({
+      kapitelWetter: anStelle<Wetterlage | "">(vorgaben.kapitelWetter, i, lage, ""),
+    });
 
   /** Steht dieses Feld schon durch den Arc fest? */
   const arcHinweis = (feld: keyof SagaVorgaben) =>

@@ -5754,3 +5754,24 @@ a.zurueck {
   font-size: 21px;
   color: #ffd479;
 }
+
+/* Ein abgebrochener Lauf - dort, wo man gerade steht. Vorher verschwand
+   bloß die Fortschrittszeile, und es sah aus wie ein stiller Absturz. */
+.abbruch {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  background: rgba(255, 90, 90, 0.1);
+}
+
+.abbruch strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #ff9d9d;
+}
+
+.abbruch p {
+  margin: 0 0 4px;
+  line-height: 1.5;
+}

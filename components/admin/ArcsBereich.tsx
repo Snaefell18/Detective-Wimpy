@@ -129,6 +129,10 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const [offen, setOffen] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
+  /** Woran es zuletzt gescheitert ist - steht dort, wo man gerade steht. */
+  const [abbruch, setAbbruch] = useState<{ text: string; schritt: string | null } | null>(
+    null,
+  );
   /** Geöffnetes Saga-Formular: welcher Arc, welche Station, welche Vorgaben. */
   const [entwurfSaga, setEntwurfSaga] = useState<
     { arc: Arc; index: number; vorgaben: SagaVorgaben } | null
@@ -209,6 +213,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const sagaErzeugen = async (arc: Arc, index: number, vorgaben: SagaVorgaben) => {
     const teil = arc.teile[index];
     setLaeuft(true);
+    setAbbruch(null);
     onFehler(null);
     try {
       const saga = await erzeugeSaga(
@@ -228,13 +233,15 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       setEntwurfSaga(null);
       onMeldung(`Saga „${saga.name}“ steht jetzt in ${teil.name}.`);
     } catch (fehler) {
-      onFehler(
-        istZugriffVerweigert(fehler)
-          ? "Die Datenbank hat das Speichern abgelehnt. Meist fehlt die Sammlung „arcs“ in den veröffentlichten Firestore-Regeln - dann einmal firestore.rules aus dem Projekt neu veröffentlichen."
-          : fehler instanceof Error
-            ? fehler.message
-            : "Die Saga konnte nicht erzeugt werden.",
-      );
+      // Auch hier steht man beim Erzeugen ganz unten im Formular - die
+      // Meldung ganz oben sieht man dort nicht.
+      const text = istZugriffVerweigert(fehler)
+        ? "Die Datenbank hat das Speichern abgelehnt. Meist fehlt die Sammlung „arcs“ in den veröffentlichten Firestore-Regeln - dann einmal firestore.rules aus dem Projekt neu veröffentlichen."
+        : fehler instanceof Error
+          ? fehler.message
+          : "Die Saga konnte nicht erzeugt werden.";
+      setAbbruch({ text, schritt });
+      onFehler(text);
     } finally {
       setLaeuft(false);
       setSchritt(null);
@@ -305,6 +312,16 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
             Zurück
           </button>
         </div>
+
+        {abbruch && !laeuft && (
+          <div className="abbruch">
+            <strong>Abgebrochen{abbruch.schritt ? ` bei: ${abbruch.schritt}` : ""}</strong>
+            <p>{abbruch.text}</p>
+            <p className="leise klein">
+              Nichts ist verloren gegangen - noch einmal erzeugen fängt von vorn an.
+            </p>
+          </div>
+        )}
 
         {laeuft && (
           <p className="leise klein" style={{ marginTop: 8 }}>
