@@ -13,6 +13,8 @@ import {
 import { stammdatenAktualisieren, useStammdaten } from "@/lib/stammdaten";
 import { LEERE_BEZIEHUNGEN } from "@/lib/types";
 import type { Beziehungen, Character, Item, Location } from "@/lib/types";
+import { AUFTRITTS_ARTEN } from "@/lib/sagaTypen";
+import { SongFeld } from "./SongFeld";
 import type { BereichProps } from "./typen";
 
 type Art = "charaktere" | "orte" | "items";
@@ -505,6 +507,37 @@ function CharakterFormular({
           placeholder="z.B. Spricht in ganz kurzen Sätzen, nennt Wimpy immer „Chef“ und fängt jede Antwort mit einem Seufzer an."
           maxLength={800}
         />
+      </label>
+
+      <h4 className="unter-abschnitt">
+        Auftritt <span className="leise">· wenn dieses Tier später dazustößt</span>
+      </h4>
+      <p className="leise klein">
+        Das ist die Voreinstellung dieses Tieres: Sie gilt in jeder Saga, in der
+        es später auftaucht - und lässt sich dort trotzdem für den Einzelfall
+        anders einstellen.
+      </p>
+
+      <SongFeld
+        wert={entwurf.auftrittTon ?? ""}
+        beschriftung="Sein Song"
+        leerText="Ohne eigenen Song · nimmt den der Saga"
+        onAendern={(auftrittTon) => aendern({ auftrittTon })}
+      />
+
+      <label className="feld">
+        <span className="leise">Seine Animation</span>
+        <select
+          value={entwurf.auftrittArt ?? ""}
+          onChange={(e) => aendern({ auftrittArt: e.target.value })}
+        >
+          <option value="">Ohne eigene Art · nimmt die der Saga</option>
+          {AUFTRITTS_ARTEN.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label} · {a.hinweis}
+            </option>
+          ))}
+        </select>
       </label>
 
       <h4 className="unter-abschnitt">

@@ -417,11 +417,26 @@ export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string
   { id: "eis", label: "Eis", hinweis: "Frost, Kristalle, der Atem steht" },
 ];
 
-/** Welche Art zum Auftritt dieses Tiers gehört. */
+/** Ist das eine Art, die es wirklich gibt? */
+export const alsAuftrittsArt = (wert: string | undefined): AuftrittsArt | null =>
+  AUFTRITTS_ARTEN.some((a) => a.id === wert) ? (wert as AuftrittsArt) : null;
+
+/**
+ * Welche Art zum Auftritt dieses Tiers gehört.
+ *
+ * Erst die Saga - dort hat man das Tier bewusst für diese Geschichte
+ * eingestellt -, dann das Tier selbst, wie es im Admin-Menü hinterlegt ist,
+ * zuletzt die ruhige Enthüllung.
+ */
 export const artFuerAuftritt = (
   charakterId: string,
   vorgaben: Pick<SagaVorgaben, "neuzugangArten"> | undefined,
-): AuftrittsArt => vorgaben?.neuzugangArten?.[charakterId] ?? "klassisch";
+  /** Das Tier mit seiner Voreinstellung. */
+  tier?: { auftrittArt?: string },
+): AuftrittsArt =>
+  vorgaben?.neuzugangArten?.[charakterId] ??
+  alsAuftrittsArt(tier?.auftrittArt) ??
+  "klassisch";
 
 /**
  * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes
@@ -435,8 +450,9 @@ export const OHNE_AUFTRITT_TON = "aus";
 /**
  * Der Ton für den Auftritt genau dieses Tiers.
  *
- * Erst das Tier selbst, dann die Saga, dann die Einstellung im Admin-Menü,
- * zuletzt der Standard. Leer heißt an jeder Stelle "wie eine Ebene darüber";
+ * Erst die Einstellung für dieses Tier in dieser Saga, dann der Song, der am
+ * Tier selbst hinterlegt ist, dann die Saga, dann das Admin-Menü, zuletzt der
+ * Standard. Leer heißt an jeder Stelle "wie eine Ebene darüber";
  * wer wirklich Stille will, wählt "Ohne Ton" - das ist ein eigener Wert und
  * nicht dasselbe wie "nichts eingetragen".
  */
@@ -444,9 +460,12 @@ export function tonFuerAuftritt(
   charakterId: string,
   vorgaben: Pick<SagaVorgaben, "neuzugangTon" | "neuzugangToene"> | undefined,
   allgemein: string,
+  /** Das Tier mit seinem eigenen Song aus dem Admin-Menü. */
+  tier?: { auftrittTon?: string },
 ): string {
   const gewaehlt =
     vorgaben?.neuzugangToene?.[charakterId] ||
+    tier?.auftrittTon ||
     vorgaben?.neuzugangTon ||
     allgemein ||
     STANDARD_AUFTRITT_TON;

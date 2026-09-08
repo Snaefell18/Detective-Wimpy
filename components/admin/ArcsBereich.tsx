@@ -10,9 +10,11 @@ import {
   naechsteLuecke,
   sagaAuftrag,
   spielbar,
+  VORSPANN_ARTEN,
   type Arc,
   type ArcCulprit,
   type ArcFinaleArt,
+  type ArcVorspannArt,
 } from "@/lib/arcTypen";
 import {
   istZugriffVerweigert,
@@ -33,6 +35,7 @@ import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
+import { SongFeld } from "./SongFeld";
 import type { BereichProps } from "./typen";
 
 /**
@@ -731,16 +734,31 @@ function ArcFelder({
         </p>
       )}
 
+      <h4 className="unter-abschnitt">
+        Vorspann <span className="leise">· Titelsong und Jahreszeit</span>
+      </h4>
+
+      <SongFeld
+        wert={arc.themeSong}
+        beschriftung="Titelsong"
+        leerText="Der übliche Titelsong des Spiels"
+        onAendern={(themeSong) => onAendern({ themeSong })}
+      />
+
       <label className="feld">
         <span className="leise">
-          Titelsong in /public/audio (leer = der übliche Titelsong)
+          Art des Vorspanns · der Song bestimmt die Länge, die Art das Bild
         </span>
-        <input
-          value={arc.themeSong}
-          onChange={(e) => onAendern({ themeSong: e.target.value })}
-          placeholder="/audio/arc-theme.mp3"
-          maxLength={200}
-        />
+        <select
+          value={arc.vorspannArt ?? "klassisch"}
+          onChange={(e) => onAendern({ vorspannArt: e.target.value as ArcVorspannArt })}
+        >
+          {VORSPANN_ARTEN.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label} · {a.hinweis}
+            </option>
+          ))}
+        </select>
       </label>
     </>
   );

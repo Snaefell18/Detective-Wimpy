@@ -1,0 +1,38 @@
+/**
+ * Alle Musikdateien aus /public/audio - erzeugt von scripts/audio-liste.mjs.
+ * Nicht von Hand ändern: Beim nächsten Build wird die Datei überschrieben.
+ */
+export const AUDIO_DATEIEN: string[] = [
+  "/audio/bockbruder.mp3",
+  "/audio/evilquana.mp3",
+  "/audio/geckerl.mp3",
+  "/audio/greenvalleyintro.mp3",
+  "/audio/hutsong.mp3",
+  "/audio/intro.mp3",
+  "/audio/intro2.mp3",
+  "/audio/introdark.mp3",
+  "/audio/koch_1.mp3",
+  "/audio/koch_2.mp3",
+  "/audio/koch_3.mp3",
+  "/audio/koch_4.mp3",
+  "/audio/koch_5.mp3",
+  "/audio/koch_6.mp3",
+  "/audio/koch_7.mp3",
+  "/audio/koch_8.mp3",
+  "/audio/kopf_1.mp3",
+  "/audio/kopf_2.mp3",
+  "/audio/kopf_3.mp3",
+  "/audio/kopf_4.mp3",
+  "/audio/kopf_5.mp3",
+  "/audio/newplayer.mp3",
+  "/audio/pj_1.mp3",
+  "/audio/pj_2.mp3",
+  "/audio/pj_3.mp3",
+  "/audio/pj_4.mp3",
+  "/audio/pj_5.mp3",
+  "/audio/pj_6.mp3",
+  "/audio/richter.mp3",
+  "/audio/teufel.mp3",
+  "/audio/teufel2.mp3",
+  "/audio/winner.mp3",
+];

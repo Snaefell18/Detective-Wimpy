@@ -51,6 +51,15 @@ export type Character = {
   sprachstil?: string;
   /** Freundschaften und Feindschaften - optional, ältere Daten haben sie nicht. */
   beziehungen?: Beziehungen;
+  /**
+   * Der eigene Auftritt dieses Tieres: Song und Art der Animation, die
+   * gespielt werden, wenn es später zu einer Saga dazustößt.
+   *
+   * Das ist die Voreinstellung - in jeder Saga lässt sie sich überschreiben.
+   * Leer heißt: das, was die Saga oder das Admin-Menü vorgibt.
+   */
+  auftrittTon?: string;
+  auftrittArt?: string;
 };
 
 export type Location = {

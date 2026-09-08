@@ -64,6 +64,27 @@ export type ArcCulprit = {
   wort: string;
 };
 
+/**
+ * Wie der Vorspann eines Arcs aussieht.
+ *
+ * Der Titelsong bestimmt die Länge, die Art die Jahreszeit: Dieselben
+ * Bildtafeln stehen in einem anderen Licht, und darüber zieht etwas hinweg -
+ * Blüten, Laub, Schnee. Nichts davon ist ein Bild: alles Farbverläufe.
+ */
+export type ArcVorspannArt = "klassisch" | "blumen" | "herbst" | "schnee" | "fruehling";
+
+export const VORSPANN_ARTEN: {
+  id: ArcVorspannArt;
+  label: string;
+  hinweis: string;
+}[] = [
+  { id: "klassisch", label: "Wie bisher", hinweis: "Nacht, Nebel, harte Schnitte" },
+  { id: "blumen", label: "Blumenmeer", hinweis: "Blüten treiben, alles steht in Farbe" },
+  { id: "herbst", label: "Herbstlaub", hinweis: "Laub segelt, goldenes Spätlicht" },
+  { id: "schnee", label: "Schnee", hinweis: "Flocken, Stille, blaue Dämmerung" },
+  { id: "fruehling", label: "Frühlingsbeginn", hinweis: "Tauwetter, Knospen, erstes Grün" },
+];
+
 export type Arc = {
   id: string;
   name: string;
@@ -82,6 +103,8 @@ export type Arc = {
   themeSong: string;
   /** Wie viele Sagen der Arc am Ende haben soll (1-10). */
   sagenAnzahl: number;
+  /** Wie der Vorspann aussieht. Fehlt bei älteren Arcs - dann "klassisch". */
+  vorspannArt?: ArcVorspannArt;
   teile: ArcTeil[];
   finale: {
     art: ArcFinaleArt;
@@ -123,6 +146,7 @@ export function leererArc(): Arc {
     culprit: { charakterId: "", wort: "" },
     themeSong: "",
     sagenAnzahl: 3,
+    vorspannArt: "klassisch",
     teile: [LEERER_ARC_TEIL(1), LEERER_ARC_TEIL(2), LEERER_ARC_TEIL(3)],
     finale: { art: "text", erzaehler: { ...LEERER_ERZAEHLER } },
     erstelltAm: Date.now(),

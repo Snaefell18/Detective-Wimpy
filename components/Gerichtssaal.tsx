@@ -353,10 +353,6 @@ export function Gerichtssaal({
         <div className="scroll">
           <div className="inhalt">
             <h2 className="saal-frage">Wen klagst du an?</h2>
-            <p className="fliesstext">
-              {verhandlung.anklage ||
-                "Das Gericht hört zu. Nenne den Namen - und dann zeig, warum."}
-            </p>
 
             <div className="saal-versuche">
               <span className="saal-marke">Versuche</span>

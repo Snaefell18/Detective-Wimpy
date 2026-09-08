@@ -427,7 +427,13 @@ export default function Home() {
       <main className="app">
         <NeuerSpieler
           tiere={neuling.tiere}
-          art={(charakterId) => artFuerAuftritt(charakterId, saga.stand?.saga.vorgaben)}
+          art={(charakterId) =>
+            artFuerAuftritt(
+              charakterId,
+              saga.stand?.saga.vorgaben,
+              neuling.tiere.find((c) => c.id === charakterId),
+            )
+          }
           zurueck={(charakterId) =>
             Boolean(
               saga.stand &&
@@ -438,12 +444,13 @@ export default function Home() {
                 ),
             )
           }
-          // Erst das Tier, dann die Saga, dann das Admin-Menü.
+          // Erst die Saga, dann das Tier selbst, dann das Admin-Menü.
           ton={(charakterId) =>
             tonFuerAuftritt(
               charakterId,
               saga.stand?.saga.vorgaben,
               admin.einstellungen.neuzugangTon,
+              neuling.tiere.find((c) => c.id === charakterId),
             )
           }
           onFertig={() => {

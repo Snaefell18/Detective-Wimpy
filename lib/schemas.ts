@@ -156,6 +156,8 @@ export const CharacterSchema = z.object({
   istDetektiv: z.boolean(),
   beruf: z.string().max(200).optional(),
   sprachstil: z.string().max(800).optional(),
+  auftrittTon: z.string().max(200).optional(),
+  auftrittArt: z.string().max(40).optional(),
   beziehungen: z
     .object({
       besteFreunde: z.array(z.string().max(40)).max(24),

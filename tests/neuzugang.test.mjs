@@ -8,6 +8,7 @@ import {
   STANDARD_AUFTRITT_TON,
   neueGesichter,
   tonFuerAuftritt,
+  artFuerAuftritt,
 } from "../lib/sagaTypen.ts";
 
 const c = (id, istDetektiv = false) => ({ id, name: id, istDetektiv });
@@ -134,6 +135,32 @@ console.log("\n7. Rückkehr statt Neuzugang");
   pruefe("Fanny dagegen kam neu dazu", !warFrueherDa(s, 1, "fanny"));
   pruefe("im ersten Kapitel war noch niemand da", !warFrueherDa(s, 0, "nala"));
   pruefe("fürs Finale zählen alle Kapitel", warFrueherDa(s, -1, "fanny"));
+}
+
+
+console.log("\nDer eigene Auftritt eines Tiers");
+{
+  const tier = { auftrittTon: "/audio/hutsong.mp3", auftrittArt: "jackpot" };
+  pruefe(
+    "ohne Saga-Eintrag gilt der Song des Tiers",
+    tonFuerAuftritt("hut", {}, "", tier) === "/audio/hutsong.mp3",
+  );
+  pruefe(
+    "die Saga sticht ihn aber",
+    tonFuerAuftritt("hut", { neuzugangToene: { hut: "/audio/anders.mp3" } }, "", tier) ===
+      "/audio/anders.mp3",
+  );
+  pruefe(
+    "und ohne alles bleibt der Standard",
+    tonFuerAuftritt("hut", {}, "", {}) === STANDARD_AUFTRITT_TON,
+  );
+  pruefe("die Art des Tiers gilt", artFuerAuftritt("hut", {}, tier) === "jackpot");
+  pruefe(
+    "die Saga sticht auch sie",
+    artFuerAuftritt("hut", { neuzugangArten: { hut: "eis" } }, tier) === "eis",
+  );
+  pruefe("Unsinn am Tier wird ignoriert", artFuerAuftritt("hut", {}, { auftrittArt: "quatsch" }) === "klassisch");
+  pruefe("gar kein Tier", artFuerAuftritt("hut", {}) === "klassisch");
 }
 
 console.log(
