@@ -10,6 +10,7 @@ import {
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
 import { TonFeld } from "./TonFeld";
+import { VideoFeld } from "./VideoFeld";
 
 /**
  * Alle Vorgaben einer Saga an einem Ort.
@@ -113,6 +114,13 @@ export function SagaVorgabenFelder({
     const liste = [...vorgaben.kapitelStaedte];
     liste[i] = stadt;
     onAendern({ kapitelStaedte: liste });
+  };
+
+  /** Video vor einem Kapitel; der letzte Eintrag gehört zum Finale. */
+  const videoSetzen = (i: number, pfad: string) => {
+    const liste = [...(vorgaben.kapitelVideos ?? [])];
+    liste[i] = pfad;
+    onAendern({ kapitelVideos: liste });
   };
 
   /** Steht dieses Feld schon durch den Arc fest? */
@@ -222,6 +230,16 @@ export function SagaVorgabenFelder({
                 Im Finale ist der Drahtzieher der Täter - das steht oben.
               </p>
             )}
+
+            <VideoFeld
+              wert={vorgaben.kapitelVideos?.[i] ?? ""}
+              onAendern={(pfad) => videoSetzen(i, pfad)}
+              beschriftung={
+                istFinale
+                  ? "Video vor dem Finale (leer = kein Video)"
+                  : "Video vor dem Kapitel (leer = kein Video)"
+              }
+            />
 
             <span className="leise klein">Stadt</span>
             <div className="marken-reihe">

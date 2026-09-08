@@ -10,6 +10,7 @@ import { ladeSagas, loescheSaga, speichereSaga } from "@/lib/db";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
 import {
   STANDARD_SAGA_VORGABEN,
+  videoFuerKapitel,
   type Erzaehlerteil,
   type Saga,
   type SagaVorgaben,
@@ -240,7 +241,11 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           nummer: i + 1,
           name: rohBogen.kapitel[i].name,
           teaser: "",
-          erzaehler: { text: rohBogen.kapitel[i].erzaehlerText, audio: "" },
+          erzaehler: {
+            text: rohBogen.kapitel[i].erzaehlerText,
+            audio: "",
+            video: videoFuerKapitel(vorgaben, i),
+          },
           fall: gebaut.fall,
           siegel: gebaut.siegel,
         });
@@ -259,7 +264,11 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         auftakt: { text: rohBogen.auftaktText, audio: "" },
         kapitel,
         finale: {
-          erzaehler: { text: rohBogen.finale.erzaehlerText, audio: "" },
+          erzaehler: {
+            text: rohBogen.finale.erzaehlerText,
+            audio: "",
+            video: videoFuerKapitel(vorgaben, vorgaben.kapitelAnzahl),
+          },
           frage: rohBogen.finale.frage,
           epilog: { text: rohBogen.finale.epilogText, audio: "" },
           fall: finale.fall,

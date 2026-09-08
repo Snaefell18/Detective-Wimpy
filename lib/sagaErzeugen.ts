@@ -2,7 +2,12 @@
 
 import { postJson } from "./api";
 import { erzeugeFall } from "./fallErzeugen";
-import { LEERER_ERZAEHLER, type Saga, type SagaVorgaben } from "./sagaTypen";
+import {
+  LEERER_ERZAEHLER,
+  videoFuerKapitel,
+  type Saga,
+  type SagaVorgaben,
+} from "./sagaTypen";
 import type { Character, Einstellungen, Item, Location, PublicCase } from "./types";
 
 /**
@@ -115,7 +120,13 @@ export async function erzeugeSaga(
       nummer: k.nummer,
       name: k.name,
       teaser: k.teaser,
-      erzaehler: { text: k.erzaehlerText, audio: "" },
+      erzaehler: {
+        text: k.erzaehlerText,
+        audio: "",
+        // Was im Editor als Video für dieses Kapitel steht, wandert hier
+        // hinein - danach lässt es sich am Kapitel selbst ändern.
+        video: videoFuerKapitel(eingaben.vorgaben, k.nummer - 1),
+      },
       fall: gebaut.fall,
       siegel: gebaut.siegel,
     });
@@ -137,7 +148,11 @@ export async function erzeugeSaga(
     auftakt: { text: kern.auftaktText, audio: "" },
     kapitel,
     finale: {
-      erzaehler: { text: finaleBogen.finale.erzaehlerText, audio: "" },
+      erzaehler: {
+        text: finaleBogen.finale.erzaehlerText,
+        audio: "",
+        video: videoFuerKapitel(eingaben.vorgaben, eingaben.vorgaben.kapitelAnzahl),
+      },
       frage: finaleBogen.finale.frage,
       epilog: { text: finaleBogen.finale.epilogText, audio: "" },
       fall: finale.fall,

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Szene } from "./Bild";
+import { VideoSzene } from "./VideoSzene";
 import { spiele, stoppe, type Stueck } from "@/lib/introAudio";
 import { tonQuelle } from "@/lib/stimme";
-import type { Erzaehlerteil } from "@/lib/sagaTypen";
+import { videoVon, type Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
  * Ein Erzählerteil zwischen zwei Kapiteln: Text, der zeilenweise erscheint,
@@ -12,6 +13,9 @@ import type { Erzaehlerteil } from "@/lib/sagaTypen";
  *
  * Ohne Tondatei läuft der Text nach einer festen Zeit durch. Weiter geht es
  * immer erst auf Fingertipp, damit niemand etwas verpasst.
+ *
+ * Ist ein Video hinterlegt, läuft es davor - bildschirmfüllend, danach erst
+ * Titelkarte und Text. Ohne Eintrag bleibt alles wie bisher.
  */
 const STUMME_DAUER = 16;
 
@@ -69,9 +73,18 @@ export function ErzaehlerScreen({
     .map((z) => z.trim())
     .filter(Boolean);
   const [fortschritt, setFortschritt] = useState(0);
+  const video = videoVon(teil);
+  const [videoLaeuft, setVideoLaeuft] = useState(Boolean(video));
   const [karteLaeuft, setKarteLaeuft] = useState(Boolean(karte));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startRef = useRef(performance.now());
+
+  // Folgt im selben Bildschirm ein anderer Erzählerteil, fängt sein Video von
+  // vorn an - React behält sonst den Zustand des vorherigen.
+  useEffect(() => {
+    setVideoLaeuft(Boolean(video));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video, teil.text]);
 
   // Absichtlich an den Texten der Karte statt am Objekt: Der Aufrufer baut es
   // bei jedem Renderdurchgang neu, und ein Wecker, der ständig neu gestellt
@@ -79,13 +92,15 @@ export function ErzaehlerScreen({
   const karteMarke = karte?.marke;
   const karteName = karte?.name;
   useEffect(() => {
-    if (!karteMarke && !karteName) return;
+    // Erst das Video, dann die Karte - sonst wäre sie vorbei, bevor man sie
+    // zu sehen bekommt.
+    if (videoLaeuft || (!karteMarke && !karteName)) return;
     const id = window.setTimeout(() => setKarteLaeuft(false), KARTE_DAUER);
     return () => window.clearTimeout(id);
-  }, [karteMarke, karteName]);
+  }, [karteMarke, karteName, videoLaeuft]);
 
   useEffect(() => {
-    if (karteLaeuft) return;
+    if (videoLaeuft || karteLaeuft) return;
     let laeuftNoch = true;
     startRef.current = performance.now();
 
@@ -127,9 +142,13 @@ export function ErzaehlerScreen({
       audioRef.current = null;
       if (musik) stoppe(musik);
     };
-  }, [teil.audio, musik, karteLaeuft]);
+  }, [teil.audio, musik, karteLaeuft, videoLaeuft]);
 
   const sichtbar = Math.min(zeilen.length, Math.floor(fortschritt * zeilen.length) + 1);
+
+  if (videoLaeuft && video) {
+    return <VideoSzene quelle={video} onFertig={() => setVideoLaeuft(false)} />;
+  }
 
   if (karteLaeuft && karte) {
     return (

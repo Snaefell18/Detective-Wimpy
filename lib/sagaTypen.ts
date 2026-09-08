@@ -49,9 +49,21 @@ export type Erzaehlerteil = {
   text: string;
   /** Pfad in /public/audio, z.B. "/audio/saga-auftakt.mp3". Leer = nur Text. */
   audio: string;
+  /**
+   * Ein Video, das vor dem Erzählertext läuft - bildschirmfüllend, mit Ton.
+   *
+   * Pfad in /public/video, z.B. "/video/kapitel-1.mp4". Leer oder gar nicht
+   * gesetzt heißt: kein Video, es geht direkt weiter wie bisher. Das ist der
+   * Normalfall; ein Video gibt es nur, wo eines eingetragen wurde.
+   */
+  video?: string;
 };
 
-export const LEERER_ERZAEHLER: Erzaehlerteil = { text: "", audio: "" };
+export const LEERER_ERZAEHLER: Erzaehlerteil = { text: "", audio: "", video: "" };
+
+/** Ist hier ein Video hinterlegt? Leerzeichen zählen nicht als Eintrag. */
+export const videoVon = (teil: Erzaehlerteil | undefined): string =>
+  (teil?.video ?? "").trim();
 
 /** Was im Admin-Menü für eine ganze Saga eingestellt wird. */
 export type SagaVorgaben = {
@@ -72,6 +84,14 @@ export type SagaVorgaben = {
    * Einstellung darunter. Das Finale steht an letzter Stelle.
    */
   kapitelStaedte: string[];
+  /**
+   * Video vor einem Kapitel: Pfad in /public/video, leer heißt "kein Video".
+   * Wie bei den Städten steht das Finale an letzter Stelle.
+   *
+   * Beim Erzeugen wandert der Eintrag in den Erzählerteil des Kapitels;
+   * danach lässt er sich dort einzeln ändern.
+   */
+  kapitelVideos: string[];
   /** Stadt-Id oder "zufall". */
   stadt: string;
   /** true: Jedes Kapitel darf in einer anderen Stadt spielen. */
@@ -147,6 +167,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelWuensche: [],
   kapitelTaeter: [],
   kapitelStaedte: [],
+  kapitelVideos: [],
   stadt: "zufall",
   staedteWechseln: true,
   charaktere: [],
@@ -166,6 +187,15 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
+
+/**
+ * Das Video vor Kapitel `index` (0-basiert; das Finale steht an letzter
+ * Stelle, also bei kapitelAnzahl). Leer heißt: kein Video.
+ */
+export const videoFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelVideos"> | undefined,
+  index: number,
+): string => (vorgaben?.kapitelVideos?.[index] ?? "").trim();
 
 /** Ein Kapitel der Saga: ein Erzählerteil und danach ein Fall. */
 export type SagaKapitel = {

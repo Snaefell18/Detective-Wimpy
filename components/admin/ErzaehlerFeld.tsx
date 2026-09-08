@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { istStimme, spracheErzeugen } from "@/lib/stimme";
+import { VideoFeld } from "./VideoFeld";
 import type { Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
  * Text und Ton eines Erzählerteils - für Sagas wie für Arcs.
+ *
+ * Davor kann ein Video laufen - eine Datei aus /public/video. Ohne Eintrag
+ * kommt keins.
  *
  * Den Ton gibt es auf zwei Wegen: eine Datei, die man selbst in
  * /public/audio ablegt, oder einmal sprechen lassen. Das Sprechen kostet
@@ -92,6 +96,11 @@ export function ErzaehlerFeld({
           </button>
         </>
       )}
+
+      <VideoFeld
+        wert={teil.video ?? ""}
+        onAendern={(video) => onAendern({ video })}
+      />
 
       {fehler && <p className="fehler">{fehler}</p>}
     </div>
