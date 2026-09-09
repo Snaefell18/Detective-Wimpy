@@ -13,6 +13,19 @@ import { ladeSagas } from "@/lib/db";
 import type { Saga } from "@/lib/sagaTypen";
 
 /**
+ * Hat diese Saga überhaupt ein Finale, das sich spielen lässt?
+ *
+ * Entweder ein Gerichtssaal mit Beweisstücken oder ein Finalfall mit Siegel.
+ * Fehlt beides, hilft auch ein Knopf nicht - dann steht auch keiner da.
+ */
+const finaleSpielbar = (saga: Saga | undefined): boolean =>
+  Boolean(
+    saga &&
+      ((saga.finale.verhandlung?.beweise?.length ?? 0) > 0 ||
+        (saga.finale.fall && saga.finale.siegel)),
+  );
+
+/**
  * Die Drehscheibe eines Arcs: alle Sagen untereinander.
  *
  * Man sieht auf einen Blick, was geschafft ist, was als Nächstes ansteht und
@@ -30,6 +43,7 @@ export function ArcUebersicht({
   lauf,
   pausiert,
   onStarten,
+  onFinaleNachholen,
   onFinale,
   onSchliessen,
 }: {
@@ -38,6 +52,11 @@ export function ArcUebersicht({
   /** Nummer der Station, deren Fall gerade pausiert herumliegt. */
   pausiert: number | null;
   onStarten: (index: number) => void;
+  /**
+   * Das Finale einer schon abgeschlossenen Station noch einmal spielen -
+   * gedacht für den Fall, dass es beim ersten Durchgang ausgefallen ist.
+   */
+  onFinaleNachholen: (index: number) => void;
   onFinale: () => void;
   onSchliessen: () => void;
 }) {
@@ -112,6 +131,19 @@ export function ArcUebersicht({
                   {stand === "dran" && (
                     <button className="knopf klein aktion" onClick={() => onStarten(i)}>
                       {wartetAufFortsetzung ? "▶ Weiterspielen" : "Saga beginnen"}
+                    </button>
+                  )}
+
+                  {/* Eine abgeschlossene Station lässt sich nicht neu
+                      aufrollen - ihr Finale aber schon. Das steht hier für
+                      den Fall, dass es beim ersten Mal ausgefallen ist; die
+                      Kapitel muss deshalb niemand noch einmal spielen. */}
+                  {stand === "geschafft" && finaleSpielbar(saga) && (
+                    <button
+                      className="knopf klein"
+                      onClick={() => onFinaleNachholen(i)}
+                    >
+                      Finale noch einmal spielen
                     </button>
                   )}
                 </div>

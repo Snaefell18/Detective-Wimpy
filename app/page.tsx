@@ -507,6 +507,36 @@ export default function Home() {
     }
   };
 
+  /**
+   * Das Finale einer schon abgeschlossenen Station nachholen.
+   *
+   * Fiel es beim ersten Durchgang aus - etwa, weil die Verhandlung
+   * unvollständig gespeichert war -, muss deshalb niemand die ganze Saga noch
+   * einmal spielen. Es geht direkt beim Erzählertext vor dem Finale los.
+   * Am Fortschritt des Arcs ändert das nichts: Die Station ist ja schon
+   * abgehakt, und mehr als einmal wird sie nicht gezählt.
+   */
+  const arcFinaleNachholen = async (index: number) => {
+    void tonFreigeben();
+    if (!arc.stand) return;
+    const teil = arc.stand.arc.teile[index];
+    if (!teil?.sagaId) return;
+    setArcMeldung(null);
+    try {
+      const { daten } = await ladeSagas();
+      const gefunden = daten.find((s) => s.id === teil.sagaId);
+      if (!gefunden) {
+        setArcMeldung("Die Saga zu diesem Teil ist gerade nicht abrufbar.");
+        return;
+      }
+      arc.waehleTeil(index);
+      saga.nurFinale(gefunden);
+      arc.setzePhase("saga", gefunden.id);
+    } catch {
+      setArcMeldung("Die Saga zu diesem Teil konnte nicht geladen werden.");
+    }
+  };
+
   /** Eine Saga des Arcs ist durch - weiter zur nächsten Station. */
   const arcWeiter = () => {
     void tonFreigeben();
@@ -691,6 +721,7 @@ export default function Home() {
             lauf={lauf}
             pausiert={arcPausiert}
             onStarten={arcTeilStarten}
+            onFinaleNachholen={(i) => void arcFinaleNachholen(i)}
             onFinale={() => arc.setzePhase("finale")}
             // Der Arc bleibt liegen - über "Arcs" geht es später weiter.
             onSchliessen={() => setArcRuht(true)}

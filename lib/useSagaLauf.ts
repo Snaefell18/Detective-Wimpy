@@ -54,6 +54,27 @@ export function useSagaLauf() {
     });
   }, []);
 
+  /**
+   * Nur das Finale spielen - für eine Saga, die schon durch ist.
+   *
+   * Gedacht für den Fall, dass das Finale beim ersten Durchgang ausgefallen
+   * ist: Die Kapitel muss dann niemand noch einmal spielen. Es beginnt beim
+   * Erzählertext vor dem Finale; alle Kapitel gelten als gelöst, damit
+   * nichts mehr auf sie wartet.
+   */
+  const nurFinale = useCallback((saga: Saga) => {
+    setStand({
+      saga,
+      lauf: {
+        sagaId: saga.id,
+        kapitel: Math.max(0, saga.kapitel.length - 1),
+        phase: "finale-erzaehler",
+        fallId: null,
+        geloest: saga.kapitel.map((k) => k.nummer),
+      },
+    });
+  }, []);
+
   const setzePhase = useCallback(
     (
       phase: SagaLauf["phase"],
@@ -107,5 +128,5 @@ export function useSagaLauf() {
 
   const beenden = useCallback(() => setStand(null), []);
 
-  return { stand, geladen, starten, setzePhase, kapitelGeschafft, beenden };
+  return { stand, geladen, starten, nurFinale, setzePhase, kapitelGeschafft, beenden };
 }
