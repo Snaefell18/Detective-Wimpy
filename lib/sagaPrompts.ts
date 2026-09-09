@@ -386,6 +386,77 @@ ${
  * Fehlschlüsse sind genauso wichtig wie die tragenden Stücke: Ohne sie wäre
  * das Vorlegen keine Entscheidung, sondern Abarbeiten.
  */
+/** Der gemeinsame Kopf beider Verhandlungs-Aufrufe. */
+function kopf(
+  args: {
+    thema: string;
+    wahrheit: string;
+    motiv: string;
+    richter: string;
+    kapitel: { name: string; enthuellung: string }[];
+  },
+  ziel: string,
+): string {
+  return `Es gibt keinen Finalfall mehr - dieser Gerichtssaal IST das Finale der Saga.
+
+ÜBERTHEMA: ${args.thema}
+DIE WAHRHEIT: ${args.wahrheit}
+DAS MOTIV: ${args.motiv}
+DIE VERHANDLUNG: ${ziel}
+${args.richter} führt den Vorsitz und spricht das Urteil.
+
+WAS DIE KAPITEL PREISGEGEBEN HABEN
+${args.kapitel.map((k, i) => `- Kapitel ${i + 1} „${k.name}“: ${k.enthuellung}`).join("\n")}`;
+}
+
+/**
+ * Wohin die Verhandlung läuft - in beiden Aufrufen derselbe Satz.
+ */
+function verhandlungsZiel(args: {
+  art: FinaleArt;
+  angeklagter: string;
+  detektivName: string;
+}): string {
+  const { art, angeklagter, detektivName } = args;
+  return art === "gericht-daemon"
+    ? `${angeklagter} sitzt auf der Anklagebank - so, wie ihn alle kennen. Was in ihm steckt, kommt erst heraus, wenn ${detektivName} ihn wirklich benennt. Danach führt ${detektivName} den Beweis gegen das, was dann dasteht.`
+    : art === "ohne-taeter"
+      ? `${angeklagter} sitzt auf der Anklagebank, obwohl er nichts getan hat. ${detektivName} muss belegen, dass hinter der ganzen Serie überhaupt kein Tier steckt - und was stattdessen. Am Ende steht ein Freispruch.`
+      : art === "wimpy"
+        ? `Auf der Anklagebank sitzt ${detektivName} selbst. Er hat es getan, ohne es zu wissen, und legt jetzt die Beweise gegen sich selbst vor. Der Saal begreift es langsamer als er.`
+        : `${angeklagter} sitzt auf der Anklagebank. Alle ahnen seit Langem, dass er es war; was fehlte, war der Beweis. Jetzt legt ${detektivName} vor, was er über die ganze Saga gesammelt hat.`;
+}
+
+/**
+ * Die Beweisstücke - der zweite und größere Teil der Verhandlung.
+ *
+ * Er steht bewusst für sich: Zusammen mit den Sprechtexten war es ein Aufruf,
+ * der regelmäßig länger lief, als eine Serverfunktion darf - und weil das
+ * Finale ganz am Ende der Erzeugung steht, war dann alles davor bezahlt und
+ * verloren.
+ */
+export function buildBeweisePrompt(args: {
+  art: FinaleArt;
+  thema: string;
+  wahrheit: string;
+  angeklagter: string;
+  richter: string;
+  detektivName: string;
+  motiv: string;
+  kapitel: { name: string; enthuellung: string }[];
+}): string {
+  const { art, angeklagter, detektivName } = args;
+  return `${kopf(args, verhandlungsZiel(args))}
+
+DIE BEWEISSTÜCKE - darauf kommt es an
+- Genau sechs Stück, jedes eindeutig aus einem der Kapitel oben. Schreib die Herkunft dazu ("Kapitel 2 - Die Nacht am Hafen").
+- Drei davon tragen (traegt = true): Sie sind hart, überprüfbar und hängen unmittelbar mit der Wahrheit zusammen.
+- Die anderen drei tragen nicht (traegt = false), sehen aber überzeugend aus: ein Gefühl statt eines Fundes, eine Aussage vom Hörensagen, ein Gegenstand ohne Verbindung, ein Widerspruch, der sich harmlos erklären lässt.
+- Von außen darf man den Stücken nicht ansehen, welche tragen. Name und Text klingen bei allen gleich sicher.
+- Die Reaktion ist der Kern des Abends: Trägt es, gerät ${art === "wimpy" ? "der Saal ins Wanken und " + detektivName + " erkennt ein Stück mehr von sich selbst" : angeklagter + " ins Rutschen - erst freundlich, dann dünner, dann still"}. Trägt es nicht, dreht ${art === "ohne-taeter" ? "die Anklage" : art === "wimpy" ? "der Saal" : angeklagter} es um und lässt ${detektivName} klein dastehen.
+- Halte die Reaktionen bei drei bis vier Sätzen. Alles auf Deutsch.`;
+}
+
 export function buildVerhandlungPrompt(args: {
   art: FinaleArt;
   thema: string;
@@ -398,34 +469,12 @@ export function buildVerhandlungPrompt(args: {
   motiv: string;
   kapitel: { name: string; enthuellung: string }[];
 }): string {
-  const { art, thema, wahrheit, angeklagter, richter, detektivName, motiv, kapitel } = args;
+  const { art, angeklagter, richter, detektivName } = args;
+  const ziel = verhandlungsZiel(args);
 
-  const ziel =
-    art === "gericht-daemon"
-      ? `${angeklagter} sitzt auf der Anklagebank - so, wie ihn alle kennen. Was in ihm steckt, kommt erst heraus, wenn ${detektivName} ihn wirklich benennt. Danach führt ${detektivName} den Beweis gegen das, was dann dasteht.`
-      : art === "ohne-taeter"
-      ? `${angeklagter} sitzt auf der Anklagebank, obwohl er nichts getan hat. ${detektivName} muss belegen, dass hinter der ganzen Serie überhaupt kein Tier steckt - und was stattdessen. Am Ende steht ein Freispruch.`
-      : art === "wimpy"
-        ? `Auf der Anklagebank sitzt ${detektivName} selbst. Er hat es getan, ohne es zu wissen, und legt jetzt die Beweise gegen sich selbst vor. Der Saal begreift es langsamer als er.`
-        : `${angeklagter} sitzt auf der Anklagebank. Alle ahnen seit Langem, dass er es war; was fehlte, war der Beweis. Jetzt legt ${detektivName} vor, was er über die ganze Saga gesammelt hat.`;
+  return `${kopf(args, ziel)}
 
-  return `Entwirf die Schlussverhandlung dieser Saga. Es gibt keinen Finalfall mehr - dieser Gerichtssaal IST das Finale.
-
-ÜBERTHEMA: ${thema}
-DIE WAHRHEIT: ${wahrheit}
-DAS MOTIV: ${motiv}
-DIE VERHANDLUNG: ${ziel}
-${richter} führt den Vorsitz und spricht das Urteil.
-
-WAS DIE KAPITEL PREISGEGEBEN HABEN
-${kapitel.map((k, i) => `- Kapitel ${i + 1} „${k.name}“: ${k.enthuellung}`).join("\n")}
-
-DIE BEWEISSTÜCKE - darauf kommt es an
-- Sechs bis acht Stück, jedes eindeutig aus einem der Kapitel oben. Schreib die Herkunft dazu ("Kapitel 2 - Die Nacht am Hafen").
-- Drei oder vier davon tragen (traegt = true): Sie sind hart, überprüfbar und hängen unmittelbar mit der Wahrheit zusammen.
-- Der Rest trägt nicht (traegt = false), sieht aber überzeugend aus: ein Gefühl statt eines Fundes, eine Aussage vom Hörensagen, ein Gegenstand ohne Verbindung, ein Widerspruch, der sich harmlos erklären lässt.
-- Von außen darf man den Stücken nicht ansehen, welche tragen. Name und Text klingen bei allen gleich sicher.
-- Die Reaktion ist der Kern des Abends: Trägt es, gerät ${art === "wimpy" ? "der Saal ins Wanken und " + detektivName + " erkennt ein Stück mehr von sich selbst" : angeklagter + " ins Rutschen - erst freundlich, dann dünner, dann still"}. Trägt es nicht, dreht ${art === "ohne-taeter" ? "die Anklage" : art === "wimpy" ? "der Saal" : angeklagter} es um und lässt ${detektivName} klein dastehen.
+Entwirf, was in diesem Saal GESPROCHEN wird. Die Beweisstücke kommen in einem zweiten Schritt - erwähne sie hier nicht einzeln.
 
 WEITERES
 - Die Frage steht groß über dem Saal (z.B. "Reicht das, was du hast?").

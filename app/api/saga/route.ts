@@ -9,17 +9,25 @@ import { LOCATIONS } from "@/lib/locations";
 import { buildWorldPrompt } from "@/lib/prompts";
 import type { Bogen } from "@/lib/sagaBogen";
 import {
+  buildBeweisePrompt,
   buildFinalePrompt,
   buildKapitelPrompt,
   buildKernPrompt,
   buildVerhandlungPrompt,
   finaleArtRegeln,
 } from "@/lib/sagaPrompts";
-import type { FinaleDraft, KapitelDraft, KernDraft, VerhandlungDraft } from "@/lib/sagaSchemas";
+import type {
+  BeweiseDraft,
+  FinaleDraft,
+  KapitelDraft,
+  KernDraft,
+  VerhandlungSaalDraft,
+} from "@/lib/sagaSchemas";
 import {
+  BeweiseSchema,
   FinaleSchema,
   KernSchema,
-  VerhandlungSchema,
+  VerhandlungSaalSchema,
   makeKapitelSchema,
 } from "@/lib/sagaSchemas";
 import {
@@ -77,7 +85,7 @@ export const maxDuration = 60;
  * Zwischen den Schritten wandert der halbfertige Bogen verschlüsselt durch
  * den Browser: Drahtzieher, Wahrheit und Enthüllungen bleiben geheim.
  */
-type Schritt = "kern" | "kapitel" | "finale";
+type Schritt = "kern" | "kapitel" | "finale" | "beweise";
 
 const modellOptionen = (
   system: string,
@@ -126,7 +134,7 @@ const stadtName = (id: string, staedte: City[]) =>
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const schritt: Schritt = ["kapitel", "finale"].includes(body?.schritt)
+    const schritt: Schritt = ["kapitel", "finale", "beweise"].includes(body?.schritt)
       ? body.schritt
       : "kern";
 
@@ -149,8 +157,11 @@ export async function POST(request: Request) {
       (s) => s.orte.length >= bogen.vorgaben.ortsAnzahl,
     );
 
-    return schritt === "kapitel"
-      ? await kapitelSchritt(bogen, orte, staedte, Number(body?.nummer ?? 1))
+    if (schritt === "kapitel") {
+      return await kapitelSchritt(bogen, orte, staedte, Number(body?.nummer ?? 1));
+    }
+    return schritt === "beweise"
+      ? await beweiseSchritt(bogen, orte, staedte)
       : await finaleSchritt(bogen, orte, staedte);
   } catch (error) {
     return NextResponse.json(
@@ -568,6 +579,108 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
   });
 }
 
+/* --- Schritt 3c: die Beweisstücke ------------------------------------ */
+
+/**
+ * Der zweite Teil der Verhandlung.
+ *
+ * Er läuft für sich, weil beides zusammen zu lange dauerte: Die Uhr einer
+ * Serverfunktion steht bei einer Minute, und ein abgebrochenes Finale wirft
+ * eine ganze bezahlte Saga weg. Wer angeklagt ist und wer den Vorsitz führt,
+ * wird hier nicht neu gewürfelt, sondern aus dem Bogen wieder ausgerechnet -
+ * dieselben Angaben ergeben dieselben Namen.
+ */
+async function beweiseSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
+  const art: FinaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
+  const wahrheit = bogen.finale?.wahrheit;
+  if (!mitVerhandlung(art) || !wahrheit) {
+    return NextResponse.json(
+      { fehler: "Zu dieser Saga gehört keine Verhandlung." },
+      { status: 400 },
+    );
+  }
+
+  const besessenheit = besessen(bogen.vorgaben);
+  const angeklagterId = angeklagterAus({
+    art,
+    besetzung: bogen.besetzung,
+    drahtzieherId: bogen.drahtzieherId,
+    wirtId: besessenheit?.wirtId,
+  });
+  const angeklagter = bogen.besetzung.find((c) => c.id === angeklagterId);
+  const richter = richterAus(bogen.besetzung, angeklagterId);
+  const detektiv = bogen.besetzung.find((c) => c.istDetektiv);
+
+  if (!angeklagter || !richter) {
+    return NextResponse.json(
+      { fehler: "Für die Verhandlung fehlen Angeklagter oder Vorsitz." },
+      { status: 400 },
+    );
+  }
+
+  const response = await getAnthropic().messages.create(
+    modellOptionen(
+      welt(bogen.besetzung, orte, staedte, bogen.vorgaben),
+      buildBeweisePrompt({
+        art,
+        thema: bogen.thema,
+        wahrheit: bogen.wahrheit,
+        angeklagter: angeklagter.name,
+        richter: richter.name,
+        detektivName: detektiv?.name ?? "Wimpy",
+        motiv: bogen.drahtzieherMotiv,
+        kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
+      }),
+      zodOutputFormat(BeweiseSchema),
+      6000,
+    ),
+    budget(45),
+  );
+
+  const antwort = ergebnisAus<BeweiseDraft>(response, "api/saga:beweise");
+  if ("fehler" in antwort) {
+    return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
+  }
+
+  const roh = (antwort.daten.beweise ?? []).slice(0, 10);
+  if (roh.length < 2) {
+    return NextResponse.json(
+      { fehler: "Die Verhandlung kam ohne Beweise zurück. Bitte noch einmal erzeugen." },
+      { status: 502 },
+    );
+  }
+
+  const kurz = (text: string, laenge: number) => (text ?? "").trim().slice(0, laenge);
+  // Ohne ein einziges tragendes Stück wäre die Verhandlung nicht zu gewinnen -
+  // dann trägt eben das erste.
+  const traegtIrgendwas = roh.some((b) => b.traegt);
+
+  const beweise: Beweisstueck[] = roh.map((b, i) => ({
+    id: `b${i + 1}`,
+    name: kurz(b.name, 120) || `Beweisstück ${i + 1}`,
+    herkunft: kurz(b.herkunft, 120),
+    text: kurz(b.text, 600),
+  }));
+
+  const geheim = roh.map((b, i) => ({
+    id: `b${i + 1}`,
+    traegt: traegtIrgendwas ? b.traegt === true : i === 0,
+    reaktion: kurz(b.reaktion, 900),
+  }));
+
+  const fertig: Bogen = {
+    ...bogen,
+    finale: { ...bogen.finale, wahrheit: { ...wahrheit, beweise: geheim } },
+  };
+
+  return NextResponse.json({
+    schritt: "beweise",
+    bogenSiegel: seal(fertig),
+    beweise,
+    noetig: noetigeBeweise(geheim.filter((b) => b.traegt).length),
+  });
+}
+
 /**
  * Wen man anklagen kann.
  *
@@ -646,48 +759,26 @@ async function verhandlungsSchritt(
         motiv: bogen.drahtzieherMotiv,
         kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
       }),
-      // Der längste Aufruf der ganzen Erzeugung: acht Beweisstücke mit
-      // Reaktionen, dazu drei Urteilstexte. Mit 5000 Token kam die Antwort
-      // gelegentlich abgeschnitten zurück - und das ausgerechnet an der
-      // teuersten Stelle, nach allen Kapiteln.
-      zodOutputFormat(VerhandlungSchema),
-      9000,
+      zodOutputFormat(VerhandlungSaalSchema),
+      4000,
     ),
     budget(45),
   );
 
-  const antwort = ergebnisAus<VerhandlungDraft>(response, "api/saga:verhandlung");
+  const antwort = ergebnisAus<VerhandlungSaalDraft>(response, "api/saga:verhandlung");
   if ("fehler" in antwort) {
     return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
   }
   const d = antwort.daten;
-
-  const roh = (d.beweise ?? []).slice(0, 10);
-  if (roh.length < 2) {
-    return NextResponse.json(
-      { fehler: "Die Verhandlung kam ohne Beweise zurück. Bitte noch einmal erzeugen." },
-      { status: 502 },
-    );
-  }
-  // Ohne ein einziges tragendes Stück wäre die Verhandlung nicht zu gewinnen -
-  // dann trägt eben das erste.
-  const traegtIrgendwas = roh.some((b) => b.traegt);
-
   const kurz = (text: string, laenge: number) => (text ?? "").trim().slice(0, laenge);
 
-  const beweise: Beweisstueck[] = roh.map((b, i) => ({
-    id: `b${i + 1}`,
-    name: kurz(b.name, 120) || `Beweisstück ${i + 1}`,
-    herkunft: kurz(b.herkunft, 120),
-    text: kurz(b.text, 600),
-  }));
-
+  /*
+   * Die Beweisstücke folgen im zweiten Aufruf. Bis dahin steht im Bogen eine
+   * leere Liste - der Browser holt sie sofort danach ab, und erst dann ist
+   * die Verhandlung vollständig.
+   */
   const wahrheit: VerhandlungWahrheit = {
-    beweise: roh.map((b, i) => ({
-      id: `b${i + 1}`,
-      traegt: traegtIrgendwas ? b.traegt === true : i === 0,
-      reaktion: kurz(b.reaktion, 900),
-    })),
+    beweise: [],
     urteilSchuldig: kurz(d.urteilSchuldig, 1200),
     urteilFrei: kurz(d.urteilFrei, 1200),
     // Öhö sperrt niemanden weg - er denkt sich etwas aus, das zur Tat passt.
@@ -723,6 +814,8 @@ async function verhandlungsSchritt(
 
   return NextResponse.json({
     schritt: "finale",
+    // Sagt dem Browser: Es fehlt noch ein Schritt.
+    weiter: "beweise",
     bogenSiegel: seal(fertig),
     finale: {
       frage: fertig.finale.frage,
@@ -735,8 +828,9 @@ async function verhandlungsSchritt(
       bankId: mitAnklage(art) ? "" : angeklagterId,
       richterId: richter.id,
       anklage: kurz(d.anklage, 1200),
-      beweise,
-      noetig: noetigeBeweise(wahrheit.beweise.filter((b) => b.traegt).length),
+      // Kommen im zweiten Schritt dazu.
+      beweise: [],
+      noetig: 3,
       fehlgriffe: 2,
       // Angeklagter, Vorsitz und - beim Finale "Wimpy selbst" - die Gestalt,
       // die aus ihm herausbricht. Ohne sie hätte der Saal Gesichter, für die

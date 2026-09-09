@@ -41,6 +41,15 @@ type FinaleAntwort = {
   finale: { frage: string; erzaehlerText: string; epilogText: string };
   /** Nur bei einem Verhandlungsfinale - dann gibt es keinen Finalfall. */
   verhandlung?: Verhandlung;
+  /** "beweise": Die Verhandlung ist noch nicht vollständig. */
+  weiter?: "beweise";
+};
+
+/** Der Nachschlag zur Verhandlung: die Beweisstücke. */
+type BeweiseAntwort = {
+  bogenSiegel: string;
+  beweise: Verhandlung["beweise"];
+  noetig: number;
 };
 
 export type SagaEingaben = {
@@ -57,8 +66,17 @@ export type SagaEingaben = {
  * mehr Aufrufen hintereinander, und ohne ihn kostete ein einzelner Aussetzer
  * alles, was schon gebaut war.
  */
-const bei = <T>(was: string, arbeit: () => Promise<T>, onErneut?: () => void) =>
-  mitWiederholung(was, arbeit, 1, onErneut);
+const bei = <T>(
+  was: string,
+  arbeit: () => Promise<T>,
+  onErneut?: () => void,
+  /**
+   * Wie oft nachgefasst wird. Einmal reicht fast überall - am Schluss steht
+   * aber die ganze bezahlte Saga auf dem Spiel, deshalb gibt es dort einen
+   * Versuch mehr.
+   */
+  versuche = 1,
+) => mitWiederholung(was, arbeit, versuche, onErneut);
 
 export async function erzeugeSaga(
   eingaben: SagaEingaben,
@@ -110,8 +128,39 @@ export async function erzeugeSaga(
         orte: eingaben.orte,
       }),
     () => onSchritt?.("Das Finale wird geschmiedet … (noch einmal)"),
+    2,
   );
   siegel = finaleBogen.bogenSiegel;
+
+  /*
+   * Die Verhandlung kommt in zwei Teilen: erst der Saal, dann die
+   * Beweisstücke. Zusammen war es ein Aufruf, der regelmäßig länger lief,
+   * als eine Serverfunktion darf - und ein Abbruch an dieser Stelle wirft
+   * alles weg, was vorher schon bezahlt wurde.
+   */
+  let verhandlung = finaleBogen.verhandlung ?? null;
+  if (finaleBogen.weiter === "beweise") {
+    onSchritt?.("Die Beweisstücke werden zusammengetragen …");
+    const beweisBogen = await bei(
+      "Bei den Beweisstücken",
+      () =>
+        postJson<BeweiseAntwort>("/api/saga", {
+          schritt: "beweise",
+          bogenSiegel: siegel,
+          orte: eingaben.orte,
+        }),
+      () => onSchritt?.("Die Beweisstücke werden zusammengetragen … (noch einmal)"),
+      2,
+    );
+    siegel = beweisBogen.bogenSiegel;
+    if (verhandlung) {
+      verhandlung = {
+        ...verhandlung,
+        beweise: beweisBogen.beweise,
+        noetig: beweisBogen.noetig,
+      };
+    }
+  }
 
   // 4. Jetzt die eigentlichen Fälle - jeder wieder in drei Schritten.
   const einstellungen: Einstellungen = {
@@ -194,7 +243,7 @@ export async function erzeugeSaga(
       epilog: { text: finaleBogen.finale.epilogText, audio: "" },
       fall: finale.fall,
       siegel: finale.siegel,
-      verhandlung: finaleBogen.verhandlung ?? null,
+      verhandlung,
     },
     bogenSiegel: siegel,
     erstelltAm: Date.now(),

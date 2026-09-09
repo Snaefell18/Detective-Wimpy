@@ -79,7 +79,18 @@ export type FinaleDraft = z.infer<typeof FinaleSchema>;
  * nur so aus. Was trägt, steht später im Siegel - der Browser bekommt nur
  * Name, Herkunft und Text zu sehen.
  */
-export const VerhandlungSchema = z.object({
+/*
+ * Die Verhandlung entsteht in ZWEI Aufrufen, nicht in einem.
+ *
+ * Der Grund ist die Uhr: Acht Beweisstücke mit Reaktionen und dazu ein
+ * Dutzend Sprechtexte sind mehrere tausend Wörter am Stück. Das dauerte
+ * regelmäßig länger, als eine Serverfunktion laufen darf - und weil das
+ * Finale ganz am Ende steht, war dann alles davor bezahlt und verloren.
+ *
+ * Deshalb: erst der Saal (was gesprochen wird), dann die Beweise. Jeder
+ * Aufruf für sich ist gut halb so groß und läuft bequem durch.
+ */
+export const VerhandlungSaalSchema = z.object({
   frage: z.string().describe("Die Frage, um die es in der Verhandlung geht"),
   erzaehlerText: z
     .string()
@@ -126,6 +137,10 @@ export const VerhandlungSchema = z.object({
     .describe(
       "Was der Richter sagt, wenn die Beweisführung scheitert: drei bis fünf Sätze, bitter statt versöhnlich. Wird dabei jemand verurteilt, nennt der letzte Satz die Tage Schrankhaft.",
     ),
+});
+
+/** Der zweite Aufruf: nur noch die Beweisstücke. */
+export const BeweiseSchema = z.object({
   beweise: z
     .array(
       z.object({
@@ -142,13 +157,16 @@ export const VerhandlungSchema = z.object({
         reaktion: z
           .string()
           .describe(
-            "Was im Saal geschieht, wenn Wimpy es vorlegt: drei bis fünf Sätze. Trägt es, gerät der Angeklagte ins Rutschen; trägt es nicht, dreht er es gegen Wimpy.",
+            "Was im Saal geschieht, wenn Wimpy es vorlegt: drei bis vier Sätze. Trägt es, gerät der Angeklagte ins Rutschen; trägt es nicht, dreht er es gegen Wimpy.",
           ),
       }),
     )
     .describe(
-      "Sechs bis acht Beweisstücke, davon drei oder vier tragend, der Rest naheliegende Fehlschlüsse. Jedes Kapitel der Saga kommt mindestens einmal vor.",
+      "Sechs Beweisstücke, davon drei tragend, der Rest naheliegende Fehlschlüsse. Jedes Kapitel der Saga kommt mindestens einmal vor.",
     ),
 });
 
-export type VerhandlungDraft = z.infer<typeof VerhandlungSchema>;
+export type VerhandlungSaalDraft = z.infer<typeof VerhandlungSaalSchema>;
+export type BeweiseDraft = z.infer<typeof BeweiseSchema>;
+/** Beides zusammen - so, wie der Bogen es am Ende braucht. */
+export type VerhandlungDraft = VerhandlungSaalDraft & BeweiseDraft;
