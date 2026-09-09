@@ -51,7 +51,12 @@ import {
   worteOhneNamen,
 } from "@/lib/namenSchutz";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
-import { CharacterSchema, LocationSchema, SagaVorgabenSchema } from "@/lib/schemas";
+import {
+  CharacterSchema,
+  LocationSchema,
+  SagaVorgabenSchema,
+  einzelnGeprueft,
+} from "@/lib/schemas";
 import { seal, unseal } from "@/lib/seal";
 import type { Character, City, Location } from "@/lib/types";
 
@@ -137,7 +142,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const orte = orteAus(body?.orte);
+    // In den späteren Schritten zählt nur, dass genug Orte da sind - was
+    // nicht durchkommt, wurde beim ersten Schritt schon gemeldet.
+    const { orte } = orteAus(body?.orte);
     const staedte = alsStaedte(orte).filter(
       (s) => s.orte.length >= bogen.vorgaben.ortsAnzahl,
     );
@@ -153,9 +160,16 @@ export async function POST(request: Request) {
   }
 }
 
-function orteAus(roh: unknown): Location[] {
-  const geprueft = LocationSchema.array().max(120).safeParse(roh);
-  return geprueft.success && geprueft.data.length ? (geprueft.data as Location[]) : LOCATIONS;
+/**
+ * Die Schauplätze aus dem Browser - Stück für Stück geprüft.
+ *
+ * Kommt gar nichts an, gelten die Orte aus dem Projekt. Kommt etwas an, das
+ * teilweise nicht stimmt, wird genau das gemeldet: Ein stiller Rückfall auf
+ * fremde Orte wäre die schlimmere Antwort.
+ */
+function orteAus(roh: unknown): { orte: Location[]; verworfen: string[] } {
+  const { gut, verworfen } = einzelnGeprueft<Location>(LocationSchema, roh);
+  return { orte: gut.length ? gut : LOCATIONS, verworfen };
 }
 
 /**
@@ -178,12 +192,39 @@ function besessenheitVon(
 /* --- Schritt 1: der Kern -------------------------------------------- */
 
 async function kernSchritt(body: Record<string, unknown>) {
-  const rohBesetzung = CharacterSchema.array().max(24).safeParse(body?.charaktere);
-  const besetzung: Character[] = rohBesetzung.success
-    ? (rohBesetzung.data as Character[])
-    : CHARACTERS;
+  /*
+   * Tiere und Orte kommen aus der Datenbank des Browsers. Was daran nicht
+   * durch die Prüfung geht, wird BENANNT statt stillschweigend durch die
+   * Stammdaten des Projekts ersetzt.
+   *
+   * Der stille Rückfall war ein übler Fehler: Im Formular standen die eigenen
+   * Tiere, gerechnet wurde mit den sechs aus dem Projekt - und die Meldung
+   * lautete dann für jedes ausgewählte Tier „spielt aber nicht mit", obwohl
+   * alles angehakt war.
+   */
+  const { gut: eigene, verworfen: schlechteTiere } = einzelnGeprueft<Character>(
+    CharacterSchema,
+    body?.charaktere,
+  );
+  const besetzung: Character[] = eigene.length ? eigene : CHARACTERS;
 
-  const orte = orteAus(body?.orte);
+  const { orte, verworfen: schlechteOrte } = orteAus(body?.orte);
+
+  if (schlechteTiere.length || schlechteOrte.length) {
+    return NextResponse.json(
+      {
+        fehler: [
+          "Aus der Datenbank kam etwas, das nicht durch die Prüfung geht - damit würde die Saga mit den falschen Tieren entstehen.",
+          schlechteTiere.length ? `Tiere: ${schlechteTiere.join("; ")}.` : "",
+          schlechteOrte.length ? `Orte: ${schlechteOrte.join("; ")}.` : "",
+          "Bitte den genannten Eintrag im Admin-Menü kürzen oder ergänzen.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      },
+      { status: 400 },
+    );
+  }
 
   // Stimmt an den Vorgaben etwas nicht, wird das gesagt statt stillschweigend
   // auf Standardwerte zurückzufallen: Sonst entstünde eine Saga mit drei

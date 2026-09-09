@@ -155,7 +155,10 @@ export const CharacterSchema = z.object({
     kriminalitaetslevel: z.number(),
     intelligenz: z.number(),
   }),
-  beschreibung: z.string().max(600),
+  // Genauso lang, wie die Firestore-Regeln es zulassen. Eine engere Grenze
+  // hier hieße: Was sich speichern lässt, wird beim Erzeugen abgelehnt - und
+  // zwar für die ganze Liste auf einmal.
+  beschreibung: z.string().max(1000),
   bild: z.string().max(300),
   istDetektiv: z.boolean(),
   beruf: z.string().max(200).optional(),
@@ -178,10 +181,49 @@ export const LocationSchema = z.object({
   stadt: z.string().min(1).max(60),
   stadtId: z.string().min(1).max(60),
   name: z.string().min(1).max(60),
-  atmosphaere: z.string().max(120),
-  beschreibung: z.string().max(300),
+  atmosphaere: z.string().max(300),
+  // Wie oben: dieselbe Grenze wie in den Firestore-Regeln.
+  beschreibung: z.string().max(500),
   bild: z.string().max(300),
 });
+
+/**
+ * Eine Liste aus der Datenbank Stück für Stück prüfen.
+ *
+ * Und warum nicht am Stück: Eine einzige zu lange Beschreibung ließ früher
+ * die GANZE Liste durchfallen - und der Server nahm stillschweigend die
+ * Stammdaten aus dem Projekt. Im Formular standen dann die eigenen Tiere,
+ * gerechnet wurde mit sechs fremden, und heraus kam „X spielt aber nicht
+ * mit" für jedes einzelne davon.
+ *
+ * Jetzt fällt nur durch, was wirklich nicht stimmt - und zwar mit Namen und
+ * Grund, damit man weiß, was zu ändern ist.
+ */
+export function einzelnGeprueft<T>(
+  schema: { safeParse: (wert: unknown) => { success: boolean; data?: unknown; error?: z.ZodError } },
+  roh: unknown,
+): { gut: T[]; verworfen: string[] } {
+  if (!Array.isArray(roh)) return { gut: [], verworfen: [] };
+
+  const gut: T[] = [];
+  const verworfen: string[] = [];
+  for (const eintrag of roh) {
+    const geprueft = schema.safeParse(eintrag);
+    if (geprueft.success) {
+      gut.push(geprueft.data as T);
+      continue;
+    }
+    const stelle = geprueft.error?.issues[0];
+    const name =
+      (eintrag as { name?: string })?.name ||
+      (eintrag as { id?: string })?.id ||
+      "ein Eintrag";
+    verworfen.push(
+      `${name} (${stelle?.path.join(".") || "unbekanntes Feld"}: ${stelle?.message ?? "ungültig"})`,
+    );
+  }
+  return { gut, verworfen };
+}
 
 /** Prüft die Gegenstände, die der Client aus der Datenbank mitschickt. */
 export const ItemSchema = z.object({

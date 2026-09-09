@@ -21,6 +21,7 @@ import {
   ItemSchema,
   LocationSchema,
   VorgabenSchema,
+  einzelnGeprueft,
   makeGeruestSchema,
   makeSpurenSchema,
   makeVerdaechtigeSchema,
@@ -44,6 +45,10 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** Höchstens so viele Charaktere bzw. Orte - schützt vor riesigen Prompts. */
+/**
+ * Wie viele Tiere höchstens in EINEN Fall kommen. Die Liste aus der
+ * Datenbank darf länger sein - aus ihr wird gewählt.
+ */
 const MAX_CHARAKTERE = 24;
 const MAX_ORTE = 120;
 const MAX_ITEMS = 60;
@@ -55,13 +60,22 @@ const ITEMS_PRO_FALL = 8;
  * Nimmt die Besetzung aus dem Admin-Menü entgegen, sofern sie brauchbar ist.
  * Sonst gilt die im Repository hinterlegte Liste aus data/characters.csv.
  */
+/**
+ * Die Besetzung aus dem Browser.
+ *
+ * Geprüft wird Stück für Stück: Ein einziges Tier mit einer zu langen
+ * Beschreibung darf nicht die ganze Liste zu Fall bringen - sonst spielte
+ * man plötzlich mit den sechs Tieren aus dem Projekt statt mit den eigenen,
+ * ohne dass irgendwo stünde, warum.
+ */
 function besetzungAus(roh: unknown): Character[] {
-  const geprueft = CharacterSchema.array()
-    .max(MAX_CHARAKTERE)
-    .safeParse(roh);
-  if (!geprueft.success) return CHARACTERS;
+  const { gut, verworfen } = einzelnGeprueft<Character>(CharacterSchema, roh);
+  if (verworfen.length) {
+    console.warn("[api/case] verworfene Tiere:", verworfen.join("; "));
+  }
+  if (!gut.length) return CHARACTERS;
 
-  const besetzung = geprueft.data as Character[];
+  const besetzung = gut.slice(0, MAX_CHARAKTERE);
   const detektive = besetzung.filter((c) => c.istDetektiv);
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
   // Ohne genau einen Detektiv und mindestens zwei Verdächtige ist kein Fall spielbar.
@@ -70,18 +84,21 @@ function besetzungAus(roh: unknown): Character[] {
   return besetzung;
 }
 
-/** Orte aus dem Admin-Menü, sonst die Liste aus data/locations.csv. */
+/**
+ * Orte aus dem Admin-Menü, sonst die Liste aus data/locations.csv.
+ * Auch hier Stück für Stück - ein zu langer Text bringt nicht alles zu Fall.
+ */
 function orteAus(roh: unknown): Location[] {
-  const geprueft = LocationSchema.array().max(MAX_ORTE).safeParse(roh);
-  if (!geprueft.success || geprueft.data.length === 0) return LOCATIONS;
-  return geprueft.data as Location[];
+  const { gut, verworfen } = einzelnGeprueft<Location>(LocationSchema, roh);
+  if (verworfen.length) console.warn("[api/case] verworfene Orte:", verworfen.join("; "));
+  return gut.length ? gut.slice(0, MAX_ORTE) : LOCATIONS;
 }
 
 /** Gegenstände aus der Datenbank, sonst die Liste aus lib/items.ts. */
 function itemsAus(roh: unknown): Item[] {
-  const geprueft = ItemSchema.array().max(MAX_ITEMS).safeParse(roh);
-  if (!geprueft.success || geprueft.data.length === 0) return ITEMS;
-  return geprueft.data as Item[];
+  const { gut, verworfen } = einzelnGeprueft<Item>(ItemSchema, roh);
+  if (verworfen.length) console.warn("[api/case] verworfene Dinge:", verworfen.join("; "));
+  return gut.length ? gut.slice(0, MAX_ITEMS) : ITEMS;
 }
 
 /**
