@@ -2701,9 +2701,15 @@
   border: 1px solid var(--linie-akzent);
 }
 
+/* Im Noir trägt der Knopf das Wort "Tasche" - der Punkt muss in die Ecke
+   rücken, sonst sitzt er mitten in der Schrift. */
 [data-theme="noir"] .tasche-punkt {
   border-radius: 0;
   background: var(--akzent);
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 /* Der Taschenknopf trägt im Noir sein Wort statt eines Emoji. */
@@ -2718,4 +2724,55 @@
 [data-theme="noir"] .tasche-knopf[data-offen="true"] {
   border-color: var(--linie-akzent);
   color: var(--akzent);
+}
+
+/* --- Das Fingerabdruckset im Noir ------------------------------------ */
+
+/* Kein Kartenkasten, keine Rundungen: ein Blatt aus der Akte, mit Linie
+   oben und unten - so wie alles andere hier auch. */
+[data-theme="noir"] .abdruck-schau {
+  background: rgba(0, 0, 0, 0.88);
+}
+
+[data-theme="noir"] .abdruck-karte {
+  border-radius: 0;
+  background: var(--grund);
+  border: 1px solid var(--linie-akzent);
+}
+
+[data-theme="noir"] .abdruck-karte h2 {
+  font-family: var(--f-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .abdruck-folie {
+  border-radius: 0;
+  border-color: var(--linie);
+}
+
+/* Nur das Tier wird schwarzweiß - die Papillarlinien bleiben golden. */
+[data-theme="noir"] .abdruck-folie img {
+  filter: grayscale(1) contrast(1.1);
+}
+
+[data-theme="noir"] .abdruck-linien {
+  background: repeating-radial-gradient(
+    ellipse 62% 78% at 48% 52%,
+    rgba(194, 145, 63, 0.7) 0 1.5px,
+    transparent 1.5px 9px
+  );
+}
+
+[data-theme="noir"] .abdruck-tier strong {
+  font-family: var(--f-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+[data-theme="noir"] .tasche.tasche-oben {
+  border-radius: 0;
+  background: var(--grund);
+  box-shadow: none;
 }

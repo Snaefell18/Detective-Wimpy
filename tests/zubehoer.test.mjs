@@ -3,6 +3,8 @@
  * Geprüft wird die reine Rechnerei - der Beutel selbst hängt am Browser.
  */
 import {
+  FINGERABDRUCKSET,
+  GRUNDREGAL,
   LOHN_FALL,
   LOHN_SAGA,
   VERITASERUM,
@@ -10,6 +12,7 @@ import {
   wirkungVon,
   yen,
 } from "../lib/zubehoer.ts";
+import { abdrueckeAmTatort } from "../lib/abdruecke.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -50,6 +53,77 @@ console.log("\n4. Der Beutel rechnet nach");
   pruefe("derselbe Fall zahlt nicht noch einmal", !verdienen("fall:a", LOHN_FALL) && beutel.yen === 100);
   pruefe("ein zweiter Fall schon", verdienen("fall:b", LOHN_FALL) && beutel.yen === 200);
   pruefe("die Saga bringt den Batzen", verdienen("saga:x", LOHN_SAGA) && beutel.yen === 700);
+}
+
+console.log("\n5. Das Fingerabdruckset");
+pruefe("es kostet 500", FINGERABDRUCKSET.preis === 500);
+pruefe("und wirkt am Schauplatz", wirkungVon(FINGERABDRUCKSET.wirkung)?.wo === "fall");
+pruefe("beides steht im Grundregal", GRUNDREGAL.length === 2 &&
+  GRUNDREGAL.some((z) => z.id === VERITASERUM.id) &&
+  GRUNDREGAL.some((z) => z.id === FINGERABDRUCKSET.id));
+pruefe("Grundregal-Ids sind eindeutig", new Set(GRUNDREGAL.map((z) => z.id)).size === GRUNDREGAL.length);
+pruefe("jedes Grundstück hat eine bekannte Wirkung", GRUNDREGAL.every((z) => wirkungVon(z.wirkung)));
+
+{
+  const fall = {
+    taeterId: "t",
+    tatort: "hafen",
+    verdaechtige: [
+      { charakterId: "t", aufenthaltsort: "markt" },
+      { charakterId: "a", aufenthaltsort: "hafen" },
+      { charakterId: "b", aufenthaltsort: "hafen" },
+      { charakterId: "c", aufenthaltsort: "park" },
+    ],
+  };
+
+  // Über viele Ziehungen: nie mehr als zwei, immer mit Täter, nie jemand,
+  // der gar nicht am Tatort war, solange dort jemand war.
+  let hoechstens2 = true;
+  let immerTaeter = true;
+  let nurVomTatort = true;
+  let taeterMalVorn = false;
+  let taeterMalHinten = false;
+  let beideZweiten = new Set();
+  for (let i = 0; i < 400; i++) {
+    const ids = abdrueckeAmTatort(fall);
+    if (ids.length > 2) hoechstens2 = false;
+    if (!ids.includes("t")) immerTaeter = false;
+    for (const id of ids) if (id !== "t" && id !== "a" && id !== "b") nurVomTatort = false;
+    if (ids[0] === "t") taeterMalVorn = true;
+    else taeterMalHinten = true;
+    beideZweiten.add(ids.find((id) => id !== "t"));
+  }
+  pruefe("höchstens zwei Abdrücke", hoechstens2);
+  pruefe("der Täter ist immer dabei", immerTaeter);
+  pruefe("der zweite war wirklich am Tatort", nurVomTatort);
+  pruefe("der Täter steht mal vorn, mal hinten", taeterMalVorn && taeterMalHinten);
+  pruefe("beide Anwesenden kommen dran", beideZweiten.size === 2);
+
+  // Ist am Tatort sonst niemand, tut es ein anderer Verdächtiger.
+  const allein = {
+    taeterId: "t",
+    tatort: "hafen",
+    verdaechtige: [
+      { charakterId: "t", aufenthaltsort: "hafen" },
+      { charakterId: "c", aufenthaltsort: "park" },
+    ],
+  };
+  const zwei = abdrueckeAmTatort(allein, () => 0.1);
+  pruefe("sonst hilft ein anderer Verdächtiger aus", zwei.length === 2 && zwei.includes("c"));
+
+  // Gibt es überhaupt nur den Täter, bleibt ein Name übrig.
+  const nurTaeter = {
+    taeterId: "t",
+    tatort: "hafen",
+    verdaechtige: [{ charakterId: "t", aufenthaltsort: "hafen" }],
+  };
+  pruefe("mit nur einem Verdächtigen bleibt ein Name", 
+    JSON.stringify(abdrueckeAmTatort(nurTaeter)) === JSON.stringify(["t"]));
+
+  // Der Würfel darf nie danebengreifen, auch am Rand nicht.
+  const rand = abdrueckeAmTatort(fall, () => 0.999999);
+  pruefe("auch bei 0,999… ein gültiges Paar", rand.length === 2 && rand.includes("t") &&
+    rand.every((id) => ["t", "a", "b"].includes(id)));
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

@@ -14,7 +14,12 @@
  */
 
 /** Was ein Gegenstand bewirkt. */
-export type Wirkung = "wahrheit" | "spuersinn" | "beschuldigung" | "hinweis";
+export type Wirkung =
+  | "wahrheit"
+  | "spuersinn"
+  | "beschuldigung"
+  | "hinweis"
+  | "abdruecke";
 
 export const WIRKUNGEN: {
   id: Wirkung;
@@ -47,6 +52,14 @@ export const WIRKUNGEN: {
     hinweis: "Gibt dir in diesem Fall einen zusätzlichen Versuch, den Täter zu benennen.",
     wo: "fall",
     bestaetigung: "Du hast einen Versuch mehr.",
+  },
+  {
+    id: "abdruecke",
+    label: "Fingerabdrücke nehmen",
+    hinweis:
+      "Am Tatort finden sich die Abdrücke von höchstens zwei Tieren - und der Täter ist darunter.",
+    wo: "fall",
+    bestaetigung: "Der Kreis ist kleiner geworden.",
   },
   {
     id: "hinweis",
@@ -102,6 +115,26 @@ export const VERITASERUM: Zubehoer = {
   wirkung: "wahrheit",
   erstelltAm: 0,
 };
+
+/**
+ * Das Fingerabdruckset steht wie das Serum von Anfang an im Laden.
+ *
+ * Es ist das teure Stück: Wer es nimmt, hat den Täter unter zwei Namen - der
+ * Rest ist Fleißarbeit. Deshalb 500 Yen und nur einmal je Fall.
+ */
+export const FINGERABDRUCKSET: Zubehoer = {
+  id: "fingerabdruckset",
+  name: "Fingerabdruckset",
+  beschreibung:
+    "Puder, Pinsel, Klebefolie. Am Tatort bleiben so die Abdrücke von höchstens zwei Tieren übrig - und eines davon war es. Pro Fall nur einmal zu gebrauchen.",
+  preis: 500,
+  bild: "/items/fingerabdruckset.png",
+  wirkung: "abdruecke",
+  erstelltAm: 0,
+};
+
+/** Was ohne Zutun im Laden steht. */
+export const GRUNDREGAL: Zubehoer[] = [VERITASERUM, FINGERABDRUCKSET];
 
 /* --- Der Lohn ------------------------------------------------------- */
 

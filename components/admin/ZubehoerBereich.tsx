@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Bild } from "@/components/Bild";
 import { ladeZubehoer, loescheZubehoer, speichereZubehoer } from "@/lib/db";
 import {
+  GRUNDREGAL,
   LEERES_ZUBEHOER,
-  VERITASERUM,
   WIRKUNGEN,
   wirkungVon,
   yen,
@@ -88,8 +88,9 @@ export function ZubehoerBereich({ onMeldung, onFehler }: BereichProps) {
 
       {regal?.length === 0 && (
         <p className="leise">
-          Noch nichts angelegt. Im Spiel steht trotzdem das Veritaserum im
-          Regal - lege es hier an, wenn du Preis oder Text ändern willst.
+          Noch nichts angelegt. Im Spiel stehen trotzdem Veritaserum und
+          Fingerabdruckset im Regal - übernimm sie hier, wenn du Preis oder
+          Text ändern willst.
         </p>
       )}
 
@@ -123,14 +124,15 @@ export function ZubehoerBereich({ onMeldung, onFehler }: BereichProps) {
         <button className="knopf aktion" onClick={() => setEntwurf(LEERES_ZUBEHOER())}>
           Neues Zubehör
         </button>
-        {!regal?.some((s) => s.id === VERITASERUM.id) && (
+        {GRUNDREGAL.filter((g) => !regal?.some((s) => s.id === g.id)).map((g) => (
           <button
+            key={g.id}
             className="knopf"
-            onClick={() => setEntwurf({ ...VERITASERUM, erstelltAm: Date.now() })}
+            onClick={() => setEntwurf({ ...g, erstelltAm: Date.now() })}
           >
-            Veritaserum übernehmen
+            {g.name} übernehmen
           </button>
-        )}
+        ))}
       </div>
 
       {entwurf && (

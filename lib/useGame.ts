@@ -40,6 +40,17 @@ export type Fund = {
   text: string;
 };
 
+/**
+ * Was das Fingerabdruckset zutage fördert: höchstens zwei Namen, und der
+ * Täter ist darunter.
+ */
+export type Abdruecke = {
+  ids: string[];
+  namen: string[];
+  ortName: string;
+  text: string;
+};
+
 export type Spielstand = {
   fall: PublicCase | null;
   siegel: string | null;
@@ -47,6 +58,8 @@ export type Spielstand = {
   gefundeneSpuren: string[];
   notizen: NotebookEntry[];
   besuchteOrte: string[];
+  /** Die Namen aus dem Fingerabdruckset - leer, solange es nicht benutzt wurde. */
+  abdruecke: string[];
   verlauf: Record<string, ChatTurn[]>;
   verdacht: Record<string, number>;
   beschuldigungenUebrig: number;
@@ -61,6 +74,7 @@ const LEER: Spielstand = {
   gefundeneSpuren: [],
   notizen: [],
   besuchteOrte: [],
+  abdruecke: [],
   verlauf: {},
   verdacht: {},
   beschuldigungenUebrig: 2,
@@ -226,6 +240,32 @@ export function useGame() {
           ],
         }));
       }
+      return daten;
+    } catch (error) {
+      setFehler(error instanceof Error ? error.message : "Unbekannter Fehler");
+      return null;
+    } finally {
+      setLaedt(null);
+    }
+  }, []);
+
+  /**
+   * Das Fingerabdruckset: einmal je Fall. Der Server gibt zwei Namen zurück,
+   * einer davon ist der Täter - das Ergebnis landet im Notizbuch, damit es
+   * nicht verloren geht, wenn man das Fenster wegtippt.
+   */
+  const abdrueckeNehmen = useCallback(async (): Promise<Abdruecke | null> => {
+    const jetzt = standRef.current;
+    if (!jetzt.siegel) return null;
+    setFehler(null);
+    setLaedt("suche");
+    try {
+      const daten = await post<Abdruecke>("/api/abdruecke", { siegel: jetzt.siegel });
+      setStand((alt) => ({
+        ...alt,
+        abdruecke: daten.namen,
+        notizen: [...alt.notizen, notiz(daten.text, "Fingerabdruckset")],
+      }));
       return daten;
     } catch (error) {
       setFehler(error instanceof Error ? error.message : "Unbekannter Fehler");
@@ -404,6 +444,7 @@ export function useGame() {
     fortsetzen,
     gehZuOrt,
     umsehen,
+    abdrueckeNehmen,
     sprich,
     beschuldige,
     extraBeschuldigung,

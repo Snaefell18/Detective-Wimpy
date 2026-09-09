@@ -96,12 +96,63 @@ export function ChatOverlay({
           </p>
         </div>
 
+        {/* Die Tasche liegt oben, wo der Daumen sie nicht sucht, sondern
+            findet - und nicht mehr unten zwischen Eingabefeld und Senden. */}
+        <button
+          type="button"
+          className="rund-knopf tasche-knopf"
+          data-offen={tascheOffen}
+          aria-label="Tasche"
+          title="Tasche"
+          onClick={() => setTascheOffen((auf) => !auf)}
+        >
+          <span className="symbol">🧰</span>
+          <span className="knopf-wort">Tasche</span>
+          {tasche.length > 0 && <i className="tasche-punkt" />}
+        </button>
+
         {detektiv && (
           <div className="gespraech-marke ich" aria-hidden>
             <Bild src={detektiv.bild} alt="" platzhalter={detektiv.name} groesse="80px" />
           </div>
         )}
       </div>
+
+      {/* Was Wimpy dabeihat - eine Klappe direkt unter der Kopfzeile. */}
+        {tascheOffen && (
+        <div className="tasche">
+          {tasche.length === 0 ? (
+            <p className="leise klein">
+              Nichts dabei, was hier hilft. Im Detektiv-Zubehör gibt es welches.
+            </p>
+          ) : (
+            tasche.map(({ stueck, anzahl }) => {
+              const wirkung = wirkungVon(stueck.wirkung);
+              return (
+                <button
+                  key={stueck.id}
+                  className="tasche-stueck"
+                  disabled={laedt}
+                  onClick={() => {
+                    onEinsetzen(stueck);
+                    setTascheOffen(false);
+                  }}
+                >
+                  <div className="tasche-bild">
+                    <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
+                  </div>
+                  <span className="tasche-text">
+                    <strong>
+                      {stueck.name} <span className="leise">×{anzahl}</span>
+                    </strong>
+                    <span className="leise klein">{wirkung?.hinweis}</span>
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
 
       <div className="scroll chat">
         {verlauf.length === 0 && (
@@ -141,41 +192,6 @@ export function ChatOverlay({
       )}
 
       <div className="chat-fuss">
-        {/* Was Wimpy dabeihat - eine Klappe über dem Eingabefeld. */}
-        {tascheOffen && (
-          <div className="tasche">
-            {tasche.length === 0 ? (
-              <p className="leise klein">
-                Nichts dabei, was hier hilft. Im Detektiv-Zubehör gibt es welches.
-              </p>
-            ) : (
-              tasche.map(({ stueck, anzahl }) => {
-                const wirkung = wirkungVon(stueck.wirkung);
-                return (
-                  <button
-                    key={stueck.id}
-                    className="tasche-stueck"
-                    disabled={laedt}
-                    onClick={() => {
-                      onEinsetzen(stueck);
-                      setTascheOffen(false);
-                    }}
-                  >
-                    <div className="tasche-bild">
-                      <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
-                    </div>
-                    <span className="tasche-text">
-                      <strong>
-                        {stueck.name} <span className="leise">×{anzahl}</span>
-                      </strong>
-                      <span className="leise klein">{wirkung?.hinweis}</span>
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        )}
 
         {wirktGerade && <p className="wirkt">{wirktGerade}</p>}
 
@@ -215,19 +231,6 @@ export function ChatOverlay({
             maxLength={300}
             enterKeyHint="send"
           />
-          <button
-            type="button"
-            className="tasche-knopf"
-            data-offen={tascheOffen}
-            aria-label="Tasche"
-            title="Tasche"
-            onClick={() => setTascheOffen((auf) => !auf)}
-          >
-            {/* Im Noir kommen keine Emoji vor - dort steht das Wort. */}
-            <span className="symbol">🧰</span>
-            <span className="knopf-wort">Tasche</span>
-            {tasche.length > 0 && <i className="tasche-punkt" />}
-          </button>
           <button type="submit" className="senden" disabled={laedt || !text.trim()}>
             ➤
           </button>

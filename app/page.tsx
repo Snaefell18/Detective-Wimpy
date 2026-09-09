@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AbdruckSchau } from "@/components/AbdruckSchau";
+import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
@@ -46,10 +48,10 @@ import {
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
 import { ladeZubehoer } from "@/lib/db";
-import { VERITASERUM, wirkungVon, type Zubehoer } from "@/lib/zubehoer";
+import { GRUNDREGAL, wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useBeutel } from "@/lib/useBeutel";
-import { useGame } from "@/lib/useGame";
+import { useGame, type Abdruecke } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
 
 export default function Home() {
@@ -64,7 +66,7 @@ export default function Home() {
   const [arcsOffen, setArcsOffen] = useState(false);
   const [ladenOffen, setLadenOffen] = useState(false);
   /** Was Wimpy gekauft hat - die Beschreibungen kommen aus der Datenbank. */
-  const [zubehoer, setZubehoer] = useState<Zubehoer[]>([VERITASERUM]);
+  const [zubehoer, setZubehoer] = useState<Zubehoer[]>(GRUNDREGAL);
   /**
    * Eingesetztes Zubehör, das auf die nächste Antwort wartet.
    * Charakter-Id -> Wirkung; verbraucht wird beim Absenden der Frage.
@@ -72,6 +74,10 @@ export default function Home() {
   const [wirkt, setWirkt] = useState<Record<string, string>>({});
   /** Geschärfter Spürsinn fürs nächste Umsehen. */
   const [spuersinn, setSpuersinn] = useState(false);
+  /** Die Tasche im Fall - eine Klappe unter der Kopfzeile. */
+  const [tascheOffen, setTascheOffen] = useState(false);
+  /** Das Ergebnis des Fingerabdrucksets - liegt über dem Schauplatz. */
+  const [abdruckSchau, setAbdruckSchau] = useState<Abdruecke | null>(null);
   const [arcMeldung, setArcMeldung] = useState<string | null>(null);
   /**
    * Der Arc liegt beiseite, ohne beendet zu sein: Der Fortschritt bleibt
@@ -130,9 +136,10 @@ export default function Home() {
       .then(({ daten }) => {
         if (!sichtbar) return;
         const eigene = daten.filter((z) => !z.versteckt);
-        setZubehoer(
-          eigene.some((z) => z.id === VERITASERUM.id) ? eigene : [VERITASERUM, ...eigene],
-        );
+        // Was im Admin-Menü unter derselben Id angelegt wurde, gewinnt; der
+        // Rest des Grundregals kommt dazu, damit der Laden nie leer ist.
+        const fehlend = GRUNDREGAL.filter((g) => !eigene.some((z) => z.id === g.id));
+        setZubehoer([...fehlend, ...eigene]);
       })
       .catch(() => {});
     return () => {
@@ -212,6 +219,16 @@ export default function Home() {
   const einsetzen = (stueck: Zubehoer, charakterId?: string) => {
     const wirkung = wirkungVon(stueck.wirkung);
     if (!wirkung) return;
+
+    // Ein zweites Set am selben Tatort fände dieselben zwei Abdrücke - das
+    // wäre teuer bezahlte Wiederholung. Also gar nicht erst verbrauchen.
+    if (stueck.wirkung === "abdruecke" && stand.abdruecke.length > 0) {
+      setFehler(
+        "Die Abdrücke von diesem Tatort hast du schon - sie stehen im Notizbuch.",
+      );
+      return;
+    }
+
     geld.verbrauchen(stueck.id);
 
     if (wirkung.wo === "gespraech" && charakterId) {
@@ -220,6 +237,12 @@ export default function Home() {
     }
     if (stueck.wirkung === "spuersinn") {
       setSpuersinn(true);
+      return;
+    }
+    if (stueck.wirkung === "abdruecke") {
+      void spiel.abdrueckeNehmen().then((gefunden) => {
+        if (gefunden) setAbdruckSchau(gefunden);
+      });
       return;
     }
     if (stueck.wirkung === "beschuldigung") spiel.extraBeschuldigung();
@@ -896,6 +919,21 @@ export default function Home() {
         {/* Im Klassisch trägt das Symbol den Knopf, im Noir das Wort - beide
             stehen im Markup, das Design blendet aus, was es nicht braucht. */}
         <div className="kopf-knoepfe">
+          {/* Die Tasche steht oben bei den anderen Knöpfen - sie gehört zum
+              Fall, nicht zum Schauplatz, und ist von überall erreichbar. */}
+          {tascheFuer("fall").length > 0 && (
+            <button
+              className="rund-knopf tasche-knopf"
+              data-offen={tascheOffen}
+              onClick={() => setTascheOffen((auf) => !auf)}
+              aria-label="Tasche"
+              title="Tasche"
+            >
+              <span className="symbol">🧰</span>
+              <span className="knopf-wort">Tasche</span>
+              <i className="tasche-punkt" />
+            </button>
+          )}
           <button
             className="rund-knopf"
             onClick={spiel.pausieren}
@@ -919,6 +957,39 @@ export default function Home() {
         </div>
       </header>
 
+      {tascheOffen && (
+        <div className="tasche tasche-oben">
+          {tascheFuer("fall").map(({ stueck, anzahl }) => (
+            <button
+              key={stueck.id}
+              className="tasche-stueck"
+              onClick={() => {
+                einsetzen(stueck);
+                setTascheOffen(false);
+              }}
+            >
+              <div className="tasche-bild">
+                <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
+              </div>
+              <span className="tasche-text">
+                <strong>
+                  {stueck.name} <span className="leise">×{anzahl}</span>
+                </strong>
+                <span className="leise klein">{wirkungVon(stueck.wirkung)?.hinweis}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {abdruckSchau && stand.fall && (
+        <AbdruckSchau
+          abdruecke={abdruckSchau}
+          besetzung={stand.fall.besetzung}
+          onSchliessen={() => setAbdruckSchau(null)}
+        />
+      )}
+
       <div className={tab === "ort" ? "buehne" : "scroll"}>
         {tab === "ort" && (
           <OrtScreen
@@ -935,8 +1006,6 @@ export default function Home() {
               if (spuersinn) setSpuersinn(false);
               return spiel.umsehen(wirkung);
             }}
-            tasche={tascheFuer("fall")}
-            onEinsetzen={(stueck) => einsetzen(stueck)}
             suchtGerade={laedt === "suche"}
             wetter={sagaWetter}
           />

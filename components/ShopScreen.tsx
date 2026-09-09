@@ -3,20 +3,15 @@
 import { useEffect, useState } from "react";
 import { Bild } from "./Bild";
 import { ladeZubehoer } from "@/lib/db";
-import {
-  VERITASERUM,
-  wirkungVon,
-  yen,
-  type Zubehoer,
-} from "@/lib/zubehoer";
+import { GRUNDREGAL, wirkungVon, yen, type Zubehoer } from "@/lib/zubehoer";
 
 /**
  * Der Detektiv-Laden.
  *
  * Was hier steht, kommt aus der Datenbank und lässt sich im Admin-Menü
- * anlegen. Das Veritaserum ist immer dabei - so ist der Laden nie leer, auch
- * bevor jemand etwas angelegt hat; sobald es unter demselben Namen in der
- * Datenbank steht, gewinnt der Eintrag von dort.
+ * anlegen. Veritaserum und Fingerabdruckset sind immer dabei - so ist der
+ * Laden nie leer, auch bevor jemand etwas angelegt hat; sobald eines davon
+ * unter derselben Id in der Datenbank steht, gewinnt der Eintrag von dort.
  *
  * Gekauft wird von dem, was Wimpy verdient hat. Was er kauft, liegt auf dem
  * Gerät und wandert ins Inventar - im Gespräch ist es einen Fingertipp weit
@@ -42,10 +37,10 @@ export function ShopScreen({
 
     // Ohne Verbindung antwortet die Datenbank erst nach vielen Sekunden -
     // solange soll niemand vor einem leeren Regal stehen. Nach kurzer Zeit
-    // steht deshalb wenigstens das Serum da; kommt die Antwort später doch
+    // steht deshalb wenigstens das Grundregal da; kommt die Antwort später doch
     // noch, ersetzt sie es.
     const notregal = window.setTimeout(() => {
-      if (sichtbar) setRegal((alt) => alt ?? [VERITASERUM]);
+      if (sichtbar) setRegal((alt) => alt ?? GRUNDREGAL);
     }, 4000);
 
     void ladeZubehoer()
@@ -53,14 +48,12 @@ export function ShopScreen({
         if (!sichtbar) return;
         const eigene = daten.filter((s) => !s.versteckt);
         window.clearTimeout(notregal);
-        const mitSerum = eigene.some((s) => s.id === VERITASERUM.id)
-          ? eigene
-          : [VERITASERUM, ...eigene];
-        setRegal(mitSerum.sort((a, b) => a.preis - b.preis));
+        const fehlend = GRUNDREGAL.filter((g) => !eigene.some((s) => s.id === g.id));
+        setRegal([...fehlend, ...eigene].sort((a, b) => a.preis - b.preis));
       })
       .catch(() => {
-        // Ohne Verbindung steht wenigstens das Serum im Regal.
-        if (sichtbar) setRegal([VERITASERUM]);
+        // Ohne Verbindung steht wenigstens das Grundregal bereit.
+        if (sichtbar) setRegal(GRUNDREGAL);
       });
     return () => {
       sichtbar = false;

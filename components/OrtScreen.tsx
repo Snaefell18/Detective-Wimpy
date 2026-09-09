@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Bild, Szene } from "./Bild";
 import { FundMoment } from "./FundMoment";
 import { Wetter, lageFuer } from "./Wetter";
-import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import { useAdmin } from "@/lib/adminStore";
 import { findeOrt } from "@/lib/locations";
 import type { Character, PublicCase, Wetterlage } from "@/lib/types";
@@ -17,8 +16,6 @@ export function OrtScreen({
   onCharakter,
   onUmsehen,
   suchtGerade,
-  tasche = [],
-  onEinsetzen,
   wetter,
 }: {
   fall: PublicCase;
@@ -27,9 +24,6 @@ export function OrtScreen({
   onCharakter: (id: string) => void;
   onUmsehen: () => Promise<Fund | null>;
   suchtGerade: boolean;
-  /** Was Wimpy dabeihat und hier einsetzen kann. */
-  tasche?: { stueck: Zubehoer; anzahl: number }[];
-  onEinsetzen?: (stueck: Zubehoer) => void;
   /**
    * Wetter für genau diesen Fall - kommt aus dem Kapitel einer Saga. Ohne
    * Angabe gilt, was im Admin-Menü steht.
@@ -98,22 +92,6 @@ export function OrtScreen({
           <span className="zeilen-meta">Spur möglich</span>
         </button>
 
-        {/* Zubehör, das hier draußen wirkt - Spürsinn, ein Versuch mehr. */}
-        {tasche.length > 0 && onEinsetzen && (
-          <div className="ort-tasche">
-            {tasche.map(({ stueck, anzahl }) => (
-              <button
-                key={stueck.id}
-                className="knopf dezent klein"
-                onClick={() => onEinsetzen(stueck)}
-                title={wirkungVon(stueck.wirkung)?.hinweis}
-              >
-                <span className="zeilen-text">{stueck.name}</span>
-                <span className="zeilen-meta">×{anzahl}</span>
-              </button>
-            ))}
-          </div>
-        )}
 
         <div className="orte-leiste">
           {fall.orte.map((o) => {
