@@ -1,6 +1,6 @@
 import { alsStaedte } from "./csv";
 import { angeklagterAus, mitVerhandlung, richterAus } from "./sagaFinale";
-import { besetzungFuerSaga, besessen, type SagaVorgaben } from "./sagaTypen";
+import { auftrittVon, besetzungFuerSaga, besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, Location } from "./types";
 
 /**
@@ -120,16 +120,64 @@ export function pruefeVorgaben(args: {
     );
   }
 
-  // Ein von Hand gesetzter Kapiteltäter, der dort gar nicht auftritt.
+  /*
+   * Ein von Hand gesetzter Kapiteltäter, der dort gar nicht auftritt.
+   *
+   * Das ist der heimtückische Fall: Der Server sucht sich dann still einen
+   * anderen Täter, die Saga entsteht - nur eben anders als bestellt, und das
+   * merkt man erst beim Spielen. Deshalb wird hier alles geprüft, was den
+   * Wunsch unerfüllbar macht: Auftritt zu spät, in diesem Kapitel abwesend,
+   * oder ohnehin der Drahtzieher.
+   */
   for (const [i, id] of (vorgaben.kapitelTaeter ?? []).entries()) {
     if (!id) continue;
+    const kapitel = i + 1;
+    if (kapitel > vorgaben.kapitelAnzahl) continue;
+
     if (!dabei(id)) {
-      probleme.push(`${name(id)} ist Täter von Kapitel ${i + 1}, spielt aber nicht mit.`);
+      probleme.push(`${name(id)} ist Täter von Kapitel ${kapitel}, spielt aber nicht mit.`);
       continue;
     }
     if (id === vorgaben.drahtzieherId) {
       probleme.push(
-        `${name(id)} kann nicht Täter von Kapitel ${i + 1} sein - er ist der Drahtzieher und erst im Finale schuldig.`,
+        `${name(id)} kann nicht Täter von Kapitel ${kapitel} sein - er ist der Drahtzieher und erst im Finale schuldig.`,
+      );
+      continue;
+    }
+
+    const auftritt = auftrittVon({
+      charakterId: id,
+      vorgaben,
+      drahtzieherId: vorgaben.drahtzieherId,
+    });
+    if (auftritt > kapitel) {
+      probleme.push(
+        auftritt > vorgaben.kapitelAnzahl
+          ? `${name(id)} ist Täter von Kapitel ${kapitel}, tritt aber erst im Finale auf.`
+          : `${name(id)} ist Täter von Kapitel ${kapitel}, steigt aber erst in Kapitel ${auftritt} ein.`,
+      );
+      continue;
+    }
+
+    if ((vorgaben.abwesenheiten?.[id] ?? []).includes(kapitel)) {
+      probleme.push(
+        `${name(id)} ist Täter von Kapitel ${kapitel} und dort zugleich als abwesend eingetragen.`,
+      );
+    }
+  }
+
+  // Wer in jedem Kapitel und im Finale abwesend ist, spielt nie mit - dann
+  // gehört er aus der Besetzung, nicht in jede Abwesenheitsliste.
+  for (const [id, kapitel] of Object.entries(vorgaben.abwesenheiten ?? {})) {
+    if (!dabei(id) || !Array.isArray(kapitel)) continue;
+    const alle = new Set(kapitel);
+    const immerWeg = Array.from(
+      { length: vorgaben.kapitelAnzahl + 1 },
+      (_, i) => i + 1,
+    ).every((nummer) => alle.has(nummer));
+    if (immerWeg) {
+      probleme.push(
+        `${name(id)} ist in jedem Kapitel und im Finale abwesend - so kommt er in der ganzen Saga nicht vor.`,
       );
     }
   }

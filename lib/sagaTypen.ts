@@ -395,6 +395,10 @@ export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }
  * Blitze, die Figur als Silhouette davor; für Tiere, bei denen einem mulmig
  * werden soll. "jackpot" ist das Gegenteil: Strahlenkranz, Konfetti,
  * Geldregen, alles blinkt.
+ *
+ * Keine dieser Bühnen darf stroboskopisch werden: Was pulsiert, pulsiert
+ * langsam und weich. Grelles Flackern kann Migräne auslösen und hat hier
+ * nichts zu suchen.
  */
 export type AuftrittsArt =
   | "klassisch"
@@ -404,7 +408,13 @@ export type AuftrittsArt =
   | "dschungel"
   | "erzfeind"
   | "blumen"
-  | "eis";
+  | "eis"
+  | "neon"
+  | "sternenfall"
+  | "zirkus"
+  | "wueste"
+  | "tiefsee"
+  | "akte";
 
 export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
   { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
@@ -415,6 +425,16 @@ export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string
   { id: "erzfeind", label: "Erzfeind", hinweis: "Glut, Puls, alles wankt" },
   { id: "blumen", label: "Blumen", hinweis: "Blüten, Sonne, alles blüht auf" },
   { id: "eis", label: "Eis", hinweis: "Frost, Kristalle, der Atem steht" },
+  { id: "neon", label: "Neon", hinweis: "Großstadt bei Nacht, Regen, Leuchtschrift" },
+  {
+    id: "sternenfall",
+    label: "Sternenfall",
+    hinweis: "Nachthimmel, Sternschnuppen, ein Sternbild zieht sich zusammen",
+  },
+  { id: "zirkus", label: "Zirkus", hinweis: "Vorhang, Scheinwerfer, Konfetti" },
+  { id: "wueste", label: "Wüste", hinweis: "Dünen, Hitzeflimmern, Sand im Wind" },
+  { id: "tiefsee", label: "Tiefsee", hinweis: "Lichtstrahlen von oben, Plankton, Stille" },
+  { id: "akte", label: "Akte", hinweis: "Papier, Stempel, die Akte wird aufgeschlagen" },
 ];
 
 /** Ist das eine Art, die es wirklich gibt? */
@@ -434,7 +454,10 @@ export const artFuerAuftritt = (
   /** Das Tier mit seiner Voreinstellung. */
   tier?: { auftrittArt?: string },
 ): AuftrittsArt =>
-  vorgaben?.neuzugangArten?.[charakterId] ??
+  // Auch der Wert aus der Saga wird geprüft: In einer alten Saga kann eine
+  // Art stehen, die es nicht mehr gibt - dann bleibt es bei der ruhigen
+  // Enthüllung, statt vor einer leeren Bühne zu stehen.
+  alsAuftrittsArt(vorgaben?.neuzugangArten?.[charakterId]) ??
   alsAuftrittsArt(tier?.auftrittArt) ??
   "klassisch";
 

@@ -7,8 +7,10 @@
  * Standardwerte zurück (drei Kapitel), während der Browser fünf erwartete;
  * beim vierten brach das Erzeugen ab.
  */
-import { SagaVorgabenSchema } from "../lib/schemas.ts";
-import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
+import { EinstellungenSchema, SagaVorgabenSchema } from "../lib/schemas.ts";
+import { AUFTRITTS_ARTEN, STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
+import { FINALE_ARTEN } from "../lib/sagaFinale.ts";
+import { WETTERLAGEN, STANDARD_EINSTELLUNGEN } from "../lib/types.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -59,6 +61,65 @@ console.log("\n3. Echter Unsinn wird weiterhin abgelehnt");
     kapitelWetter: ["sonnenfinsternis"],
   });
   pruefe("unbekanntes Wetter", SagaVorgabenSchema.safeParse(falscheLage).success === false);
+}
+
+console.log("\n4. Jede Auswahl aus dem Admin-Menü kommt durch");
+{
+  /*
+   * Der teuerste Fehler, den dieses Projekt kannte: Im Formular stand eine
+   * Finale-Art zur Wahl, die das Schema nicht kannte. Die Prüfung schlug fehl,
+   * das Erzeugen brach ab - und jeder Versuch kostete Credits. Deshalb wird
+   * hier jede einzelne angebotene Möglichkeit durchgereicht.
+   */
+  for (const art of FINALE_ARTEN) {
+    const g = SagaVorgabenSchema.safeParse(
+      uebertragen({ ...STANDARD_SAGA_VORGABEN, finaleArt: art.id }),
+    );
+    pruefe(`Finale „${art.label}“`, g.success && g.data.finaleArt === art.id,
+      g.error?.issues[0]?.message);
+  }
+
+  for (const art of AUFTRITTS_ARTEN) {
+    const g = SagaVorgabenSchema.safeParse(
+      uebertragen({ ...STANDARD_SAGA_VORGABEN, neuzugangArten: { irgendwer: art.id } }),
+    );
+    pruefe(`Auftritt „${art.label}“`, g.success && g.data.neuzugangArten.irgendwer === art.id,
+      g.error?.issues[0]?.message);
+  }
+
+  for (const lage of [...WETTERLAGEN.map((w) => w.id), "aus", "zufall", ""]) {
+    const g = SagaVorgabenSchema.safeParse(
+      uebertragen({ ...STANDARD_SAGA_VORGABEN, kapitelWetter: [lage] }),
+    );
+    pruefe(`Wetter „${lage || "wie im Admin-Menü"}“`, g.success && g.data.kapitelWetter[0] === lage,
+      g.error?.issues[0]?.message);
+  }
+
+  for (const lage of [...WETTERLAGEN.map((w) => w.id), "aus", "zufall"]) {
+    const g = EinstellungenSchema.safeParse({ ...STANDARD_EINSTELLUNGEN, wetter: lage });
+    pruefe(`Einstellung Wetter „${lage}“`, g.success && g.data.wetter === lage,
+      g.error?.issues[0]?.message);
+  }
+}
+
+console.log("\n5. Die Einstellungen verlieren nichts");
+{
+  const g = EinstellungenSchema.safeParse({
+    ...STANDARD_EINSTELLUNGEN,
+    neuzugangTon: "/audio/hutsong.mp3",
+    wetter: "schneesturm",
+  });
+  pruefe("angenommen", g.success, g.error?.issues[0]?.message);
+  pruefe("der Auftrittston bleibt", g.data?.neuzugangTon === "/audio/hutsong.mp3");
+  pruefe("das Wetter bleibt", g.data?.wetter === "schneesturm");
+  pruefe(
+    "kein Feld fehlt",
+    g.success &&
+      Object.keys(STANDARD_EINSTELLUNGEN).every((feld) => feld in g.data),
+    Object.keys(STANDARD_EINSTELLUNGEN)
+      .filter((f) => g.success && !(f in g.data))
+      .join(", "),
+  );
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

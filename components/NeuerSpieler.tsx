@@ -40,23 +40,47 @@ const BLAETTER = ["🍃", "🌿", "🍀", "🦋", "🍃", "🌱", "🌿", "🍃"
 const GLUT = ["●", "•", "◆", "▪", "●", "•", "▴", "◆", "•", "●", "▪", "•"];
 const BLUETEN = ["🌸", "🌼", "🌺", "🌷", "🌸", "🌻", "💐", "🌸", "🌼", "🌷", "🌺", "🌸"];
 const KRISTALLE = ["❄", "✧", "❅", "•", "❄", "✦", "❆", "◇", "❄", "✧", "❅", "◆"];
+const STERNE = ["✦", "✧", "·", "✶", "✴", "·", "✦", "✧", "✩", "·", "✷", "✦"];
+const KONFETTI = ["▰", "▪", "●", "▬", "◆", "▰", "▪", "●", "▬", "◆", "▰", "▪"];
+const SAND = ["·", "˙", "•", "·", "˙", "·", "•", "·", "˙", "·", "•", "·"];
+const PLANKTON = ["·", "•", "○", "∘", "·", "•", "◦", "·", "•", "○", "∘", "·"];
+const PAPIER = ["▤", "▥", "▦", "▤", "▧", "▤", "▥", "▦", "▤", "▧", "▤", "▥"];
 
-/** Eine Schicht fliegender Zeichen - die Bahnen stehen fest. */
-function Schauer({ zeichen, klasse }: { zeichen: string[]; klasse: string }) {
+/**
+ * Eine Schicht fliegender Zeichen - die Bahnen stehen fest.
+ *
+ * Fallendes und Steigendes wird über die Breite verteilt, Waagerechtes über
+ * die Höhe, Streuung über beides; wohin es dann zieht, sagt allein das CSS
+ * der jeweiligen Bühne.
+ */
+function Schauer({
+  zeichen,
+  klasse,
+  richtung = "senkrecht",
+}: {
+  zeichen: string[];
+  klasse: string;
+  richtung?: "senkrecht" | "waagerecht" | "streuung";
+}) {
   return (
     <div className={klasse} aria-hidden="true">
-      {zeichen.map((z, i) => (
-        <span
-          key={i}
-          style={{
-            left: `${(i * 37 + 11) % 96}%`,
-            animationDelay: `${((i * 13) % 40) / 10}s`,
-            animationDuration: `${3.2 + ((i * 7) % 5) * 0.6}s`,
-          }}
-        >
-          {z}
-        </span>
-      ))}
+      {zeichen.map((z, i) => {
+        const takt = {
+          animationDelay: `${((i * 13) % 40) / 10}s`,
+          animationDuration: `${3.2 + ((i * 7) % 5) * 0.6}s`,
+        };
+        const platz =
+          richtung === "waagerecht"
+            ? { top: `${(i * 29 + 7) % 92}%` }
+            : richtung === "streuung"
+              ? { left: `${(i * 37 + 11) % 92}%`, top: `${(i * 23 + 5) % 88}%` }
+              : { left: `${(i * 37 + 11) % 96}%` };
+        return (
+          <span key={i} style={{ ...platz, ...takt }}>
+            {z}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -292,6 +316,102 @@ export function NeuerSpieler({
           <div className="eis-licht" />
           <Schauer zeichen={KRISTALLE} klasse="eis-kristalle" />
           <div className="eis-frost" />
+        </>
+      )}
+
+      {/* Großstadt bei Nacht: Regen auf Asphalt, Leuchtschrift, die im Nass
+          steht. Die Schilder atmen langsam - sie flackern nicht. */}
+      {auftritt === "neon" && (
+        <>
+          <div className="neon-himmel" />
+          <div className="neon-schilder">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <Wetter lage="regen" />
+          <div className="neon-pfuetze" />
+        </>
+      )}
+
+      {/* Nachthimmel: Sternschnuppen ziehen quer, und mit der Enthüllung
+          zieht sich ein Sternbild um die Figur zusammen. */}
+      {auftritt === "sternenfall" && (
+        <>
+          <div className="stern-milchstrasse" />
+          <Schauer zeichen={STERNE} klasse="stern-funkeln" richtung="streuung" />
+          <div className="stern-schnuppen">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="stern-bild">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+        </>
+      )}
+
+      {/* Manege frei: Der Vorhang teilt sich, während die Figur auftaucht,
+          zwei Scheinwerfer wandern langsam, Konfetti fällt. */}
+      {auftritt === "zirkus" && (
+        <>
+          <div className="zirkus-kuppel" />
+          <div className="zirkus-strahler">
+            <span />
+            <span />
+          </div>
+          <div className="zirkus-manege" />
+          <Schauer zeichen={KONFETTI} klasse="zirkus-konfetti" />
+          <div className="zirkus-vorhang">
+            <span />
+            <span />
+          </div>
+        </>
+      )}
+
+      {/* Wüste: Dünenkämme, Hitze, die über dem Boden steht, und Sand, der
+          waagerecht durchs Bild weht. */}
+      {auftritt === "wueste" && (
+        <>
+          <div className="wueste-sonne" />
+          <div className="wueste-duenen">
+            <span />
+            <span />
+            <span />
+          </div>
+          <Schauer zeichen={SAND} klasse="wueste-sand" richtung="waagerecht" />
+          <div className="wueste-flimmern" />
+        </>
+      )}
+
+      {/* Tiefsee: Lichtstrahlen von oben, Plankton, das aufsteigt, und ein
+          Druck, der von unten dunkler wird. */}
+      {auftritt === "tiefsee" && (
+        <>
+          <div className="tiefsee-strahlen" />
+          <Schauer zeichen={PLANKTON} klasse="tiefsee-plankton" />
+          <div className="tiefsee-schwarm">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="tiefsee-druck" />
+        </>
+      )}
+
+      {/* Die Akte: Papier wirbelt, und mit der Enthüllung senkt sich der
+          Stempel auf das Blatt. Das ist der Auftritt fürs Noir. */}
+      {auftritt === "akte" && (
+        <>
+          <div className="akte-tisch" />
+          <div className="akte-lampe" />
+          <Schauer zeichen={PAPIER} klasse="akte-blaetter" />
+          <div className="akte-stempel">NEU</div>
         </>
       )}
 

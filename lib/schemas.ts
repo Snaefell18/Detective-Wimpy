@@ -2,6 +2,10 @@ import * as z from "zod/v4";
 import { ITEMS } from "./items";
 import type { Character, Item, Location } from "./types";
 import { STIMMUNGEN } from "./zuordnen";
+import { AUFTRITTS_ARTEN } from "./sagaTypen";
+import { FINALE_ARTEN } from "./sagaFinale";
+import { WETTERLAGEN } from "./types";
+import type { Wetterlage } from "./types";
 
 /**
  * Wichtig: Feste Auswahllisten werden vom Modell nur *beschrieben*, nicht
@@ -263,6 +267,31 @@ export const CaseFileSchema = z.object({
 const luecken = <T extends z.ZodTypeAny>(feld: T, leer: z.infer<T>) =>
   z.array(feld.nullish().transform((wert) => wert ?? leer));
 
+/**
+ * Eine Auswahl aus einer Liste, die woanders gepflegt wird.
+ *
+ * Damit stehen die erlaubten Werte genau einmal im Projekt. Früher waren sie
+ * hier abgeschrieben - und als eine neue Finale-Art dazukam, nahm dieses
+ * Schema sie nicht an: Die ganze Saga ließ sich dann nicht mehr erzeugen,
+ * obwohl im Formular alles richtig stand.
+ *
+ * Streng bleibt es trotzdem: Ein Wert, den es nicht gibt, soll eine klare
+ * Fehlermeldung geben und nicht heimlich zu etwas anderem werden - sonst
+ * entstünde für teures Geld ein Finale, das niemand bestellt hat.
+ * tests/vorgaben.test.mjs wacht darüber, dass jede angebotene Auswahl hier
+ * auch wirklich durchgeht.
+ */
+const ausAuswahl = <T extends string>(ids: readonly T[]) =>
+  z.enum(ids as unknown as [T, ...T[]]);
+
+/** Die Wetterlagen, wie sie im Saga-Editor zur Wahl stehen. */
+const WETTER_WAHL: ("" | Wetterlage)[] = [
+  "",
+  "aus",
+  "zufall",
+  ...WETTERLAGEN.map((w) => w.id),
+];
+
 export const SagaVorgabenSchema = z.object({
   name: z.string().max(120),
   thema: z.string().max(2000),
@@ -272,19 +301,8 @@ export const SagaVorgabenSchema = z.object({
   kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
   kapitelWetter: luecken(
-    z.enum([
-        "",
-        "aus",
-        "zufall",
-        "sonne",
-        "wolken",
-        "regen",
-        "gewitter",
-        "schnee",
-        "schneesturm",
-      "nebel",
-      "nacht",
-    ]),
+    // "" heißt "wie im Admin-Menü", "aus" heißt ausdrücklich kein Wetter.
+    ausAuswahl(WETTER_WAHL),
     "",
   )
     .max(9)
@@ -315,21 +333,10 @@ export const SagaVorgabenSchema = z.object({
   neuzugangArten: z
     .record(
       z.string().max(40),
-      z.enum([
-        "klassisch",
-        "gewitter",
-        "jackpot",
-        "welle",
-        "dschungel",
-        "erzfeind",
-        "blumen",
-        "eis",
-      ]),
+      ausAuswahl(AUFTRITTS_ARTEN.map((a) => a.id)),
     )
     .default({}),
-  finaleArt: z
-    .enum(["klassisch", "gericht", "ohne-taeter", "wimpy"])
-    .default("klassisch"),
+  finaleArt: ausAuswahl(FINALE_ARTEN.map((f) => f.id)).default("klassisch"),
   gerichtTon: z.string().max(200).default(""),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
@@ -342,4 +349,13 @@ export const EinstellungenSchema = z.object({
   stadt: z.string().max(60),
   ortsAnzahl: z.number().min(3).max(8),
   intro: z.boolean(),
+  // Diese beiden gehören zu den Einstellungen und dürfen beim Prüfen nicht
+  // stillschweigend verlorengehen - sonst käme aus dem Schema etwas anderes
+  // heraus, als der Browser geschickt hat.
+  neuzugangTon: z.string().max(200).default(""),
+  wetter: ausAuswahl<Wetterlage>([
+    "aus",
+    "zufall",
+    ...WETTERLAGEN.map((w) => w.id),
+  ]).default("aus"),
 });

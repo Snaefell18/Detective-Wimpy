@@ -161,5 +161,54 @@ pruefe("fehlender Schlüssel nicht", !lohntWiederholung(new Error("ANTHROPIC_API
 pruefe("ungültige Vorgaben nicht", !lohntWiederholung(new Error("Die Vorgaben sind unvollständig: kapitelAnzahl")));
 pruefe("kein Fehlerobjekt", !lohntWiederholung("kaputt"));
 
+console.log("\nX. Kapiteltäter und Abwesenheiten kommen sich nicht in die Quere");
+{
+  const basis = { charaktere: ["wimpy", "oeho", "nala", "hut", "boss"], kapitelAnzahl: 3 };
+
+  pruefe(
+    "ein früher Täter ist in Ordnung",
+    probleme({ ...basis, kapitelTaeter: ["nala", "", ""] }).length === 0,
+    probleme({ ...basis, kapitelTaeter: ["nala", "", ""] })[0],
+  );
+
+  const zuSpaet = probleme({
+    ...basis,
+    kapitelTaeter: ["nala", "", ""],
+    neuzugaenge: { nala: 3 },
+  });
+  pruefe("wer erst später einsteigt, kann nicht Täter sein", zuSpaet.length === 1, zuSpaet[0]);
+  pruefe("und die Meldung nennt das Kapitel", /Kapitel 3/.test(zuSpaet[0] ?? ""), zuSpaet[0]);
+
+  const abwesend = probleme({
+    ...basis,
+    kapitelTaeter: ["", "nala", ""],
+    abwesenheiten: { nala: [2] },
+  });
+  pruefe("in seinem Kapitel abwesend fällt auf", abwesend.length === 1, abwesend[0]);
+
+  // Die Dämonenform gibt es vor dem Finale nicht.
+  const daemon = probleme({
+    ...basis,
+    kapitelTaeter: ["boss", "", ""],
+    besessenheit: { wirtId: "hut", daemonId: "boss", ton: "" },
+  });
+  pruefe("die Dämonenform kann kein Kapiteltäter sein", daemon.length === 1, daemon[0]);
+  pruefe("und die Meldung nennt das Finale", /Finale/.test(daemon[0] ?? ""), daemon[0]);
+
+  const immerWeg = probleme({ ...basis, abwesenheiten: { nala: [1, 2, 3, 4] } });
+  pruefe("wer immer abwesend ist, fällt auf", immerWeg.length === 1, immerWeg[0]);
+  pruefe(
+    "einmal abwesend ist dagegen erlaubt",
+    probleme({ ...basis, abwesenheiten: { nala: [2] } }).length === 0,
+  );
+
+  // Ein Eintrag hinter dem letzten Kapitel gehört zum Finale und ist keine
+  // Kapitelvorgabe - er darf nichts auslösen.
+  pruefe(
+    "ein Eintrag für das Finale stört nicht",
+    probleme({ ...basis, kapitelTaeter: ["", "", "", "nala"] }).length === 0,
+  );
+}
+
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);

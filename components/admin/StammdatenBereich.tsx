@@ -1,9 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bild } from "@/components/Bild";
 import { alsStaedte, parseCharacterCsv, parseLocationCsv, pruefeBesetzung } from "@/lib/csv";
 import {
+  ORDNER_ZU_ART,
+  freieBilder,
+  nameAusPfad,
+  ordnerVon,
+} from "@/lib/freieBilder";
+import {
+  ladeZubehoer,
   loesche,
   speichereCharakter,
   speichereItem,
@@ -36,6 +43,14 @@ export function StammdatenBereich({
   const [bearbeitet, setBearbeitet] = useState<string | null>(null);
   const [neu, setNeu] = useState(false);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
+  /**
+   * Ein Bild aus /public, zu dem gerade ein Eintrag entsteht. Steht hier ein
+   * Pfad, öffnet sich das Formular mit diesem Bild und einem Namensvorschlag.
+   */
+  const [ausBild, setAusBild] = useState<string | null>(null);
+  /** Bilder, die schon im Laden hängen - sie sind nicht frei. */
+  const [ladenBilder, setLadenBilder] = useState<string[]>([]);
+  const [alleZeigen, setAlleZeigen] = useState(false);
 
   const eintraege: (Character | Location | Item)[] =
     art === "charaktere"
@@ -45,6 +60,41 @@ export function StammdatenBereich({
         : stammdaten.items;
 
   const ausDerDatenbank = stammdaten.quelle[art] === "datenbank";
+
+  // Auch der Laden belegt Bilder. Klappt das Laden nicht, gilt eben nur, was
+  // in den Stammdaten steht - dann steht ein Bild zu viel in der Liste, was
+  // niemandem wehtut.
+  useEffect(() => {
+    let sichtbar = true;
+    void ladeZubehoer()
+      .then(({ daten }) => {
+        if (sichtbar) setLadenBilder(daten.map((z) => z.bild));
+      })
+      .catch(() => {});
+    return () => {
+      sichtbar = false;
+    };
+  }, []);
+
+  /**
+   * Bilder aus /public, an denen nichts hängt.
+   *
+   * Zuerst die aus dem Ordner, der zu dieser Ansicht gehört - auf der Seite
+   * "Tiere" also die aus /public/charaktere. Der Rest steht dahinter, denn
+   * ein Bild kann auch im falschen Ordner gelandet sein.
+   */
+  const freie = useMemo(() => {
+    const belegt = [
+      ...stammdaten.charaktere.map((c) => c.bild),
+      ...stammdaten.orte.map((o) => o.bild),
+      ...stammdaten.items.map((i) => i.bild),
+      ...ladenBilder,
+    ];
+    const offen = freieBilder(belegt);
+    const passend = offen.filter((p) => ORDNER_ZU_ART[ordnerVon(p)] === art);
+    const andere = offen.filter((p) => ORDNER_ZU_ART[ordnerVon(p)] !== art);
+    return { passend, andere };
+  }, [stammdaten.charaktere, stammdaten.orte, stammdaten.items, ladenBilder, art]);
 
   const mitFehler = async (arbeit: () => Promise<void>, erfolg: string) => {
     setBeschaeftigt(true);
@@ -138,18 +188,41 @@ export function StammdatenBereich({
         }}
       />
 
-      {neu && (
+      {(neu || ausBild) && (
         <Formular
           art={art}
           alleCharaktere={stammdaten.charaktere}
-          eintrag={null}
-          onAbbrechen={() => setNeu(false)}
+          // Kommt der Anstoß von einem Bild, steht es schon drin - samt einem
+          // Namensvorschlag aus dem Dateinamen.
+          eintrag={
+            ausBild
+              ? { ...leererEintrag(art), bild: ausBild, name: nameAusPfad(ausBild) }
+              : null
+          }
+          onAbbrechen={() => {
+            setNeu(false);
+            setAusBild(null);
+          }}
           onSpeichern={async (eintrag) => {
             await mitFehler(() => speichern(art, eintrag), `${nameVon(eintrag)} angelegt.`);
             setNeu(false);
+            setAusBild(null);
           }}
         />
       )}
+
+      <FreieBilder
+        art={art}
+        passend={freie.passend}
+        andere={freie.andere}
+        alleZeigen={alleZeigen}
+        onAlleZeigen={() => setAlleZeigen((auf) => !auf)}
+        onAnlegen={(pfad) => {
+          setNeu(false);
+          setBearbeitet(null);
+          setAusBild(pfad);
+        }}
+      />
 
       <h2 className="abschnitt">
         {TITEL[art]} ({eintraege.length})
@@ -216,6 +289,95 @@ export function StammdatenBereich({
 }
 
 /* ------------------------------------------------------------------ */
+
+const ART_WORT: Record<Art, string> = {
+  charaktere: "Tier",
+  orte: "Schauplatz",
+  items: "Ding",
+};
+
+/**
+ * Bilder aus /public, an denen noch nichts hängt.
+ *
+ * Wer ein Bild in den Ordner legt und einträgt, sieht es hier - ein Tipp, und
+ * das Formular steht offen, Bild und Namensvorschlag schon eingetragen. Die
+ * Liste kommt aus lib/bilder.generated.ts und wird bei jedem Build neu
+ * geschrieben; ein frisch hochgeladenes Bild taucht also nach dem nächsten
+ * Deploy auf.
+ */
+function FreieBilder({
+  art,
+  passend,
+  andere,
+  alleZeigen,
+  onAlleZeigen,
+  onAnlegen,
+}: {
+  art: Art;
+  /** Bilder aus dem Ordner, der zu dieser Ansicht gehört. */
+  passend: string[];
+  /** Alles Übrige - ein Bild kann auch im falschen Ordner liegen. */
+  andere: string[];
+  alleZeigen: boolean;
+  onAlleZeigen: () => void;
+  onAnlegen: (pfad: string) => void;
+}) {
+  if (passend.length === 0 && andere.length === 0) return null;
+  const gezeigt = alleZeigen ? [...passend, ...andere] : passend;
+
+  return (
+    <>
+      <h2 className="abschnitt">
+        Bilder ohne Eintrag ({passend.length}
+        {andere.length > 0 ? ` + ${andere.length} aus anderen Ordnern` : ""})
+      </h2>
+      <p className="leise klein">
+        Diese Dateien liegen in /public, gehören aber zu keinem Tier, keinem
+        Schauplatz, keinem Ding und zu nichts im Laden. Ein Tipp auf „Anlegen“
+        öffnet das Formular mit diesem Bild.
+      </p>
+
+      {passend.length === 0 && !alleZeigen && (
+        <p className="leise">
+          Im passenden Ordner ist alles zugeordnet.{" "}
+          {andere.length > 0 && "Aus anderen Ordnern liegt aber noch etwas herum."}
+        </p>
+      )}
+
+      <div className="bild-gitter">
+        {gezeigt.map((pfad) => {
+          const ordner = ordnerVon(pfad);
+          return (
+            <div key={pfad} className="bild-kachel">
+              <div className="bild-kachel-bild">
+                <Bild src={pfad} alt={pfad} platzhalter={nameAusPfad(pfad)} />
+              </div>
+              {/* Der Dateiname trägt die Information - der ganze Pfad würde
+                  abgeschnitten und stünde dann nutzlos da. */}
+              <span className="leise pfad" title={pfad}>
+                {pfad.split("/").pop()}
+              </span>
+              {ORDNER_ZU_ART[ordner] !== art && <span className="marke">{ordner}</span>}
+              <button className="knopf klein aktion" onClick={() => onAnlegen(pfad)}>
+                Als {ART_WORT[art]} anlegen
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {andere.length > 0 && (
+        <div className="knopf-reihe">
+          <button className="knopf klein" onClick={onAlleZeigen}>
+            {alleZeigen
+              ? "Nur den passenden Ordner zeigen"
+              : `Auch die ${andere.length} aus anderen Ordnern zeigen`}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
 
 const nameVon = (eintrag: { name: string }) => eintrag.name;
 

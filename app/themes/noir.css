@@ -1693,8 +1693,6 @@
   display: none;
 }
 
-
-
 /* Ein echtes Leerzeichen zwischen Wert und Namen: ein normales
    kollabiert an der Kante des Flex-Kindes. */
 [data-theme="noir"] .stat-label::after {
@@ -2055,8 +2053,6 @@
   text-align: right;
 }
 
-
-
 /* Die Extrusion braucht oben Luft, sonst schneidet der Container sie ab. */
 [data-theme="noir"] .ergebnis-titel {
   padding-top: 10px;
@@ -2327,6 +2323,35 @@
 /* Im Gewitter bleibt alles grau - bis auf den Himmel. */
 [data-theme="noir"] .neuzugang[data-art="gewitter"] .intro-portraet {
   filter: saturate(0) contrast(1.2) drop-shadow(0 16px 30px rgba(0, 0, 0, 0.9));
+}
+
+/* Die gebauten Bühnen leben von ihrem Licht - dort darf die Figur Farbe
+   behalten, sonst stünde sie tot vor einer bunten Kulisse. Jede bekommt den
+   Schein, der zu ihr gehört. */
+[data-theme="noir"] .neuzugang[data-art="neon"] .intro-portraet {
+  filter: saturate(1.1) contrast(1.08) drop-shadow(0 0 24px rgba(255, 63, 142, 0.45));
+}
+
+[data-theme="noir"] .neuzugang[data-art="zirkus"] .intro-portraet {
+  filter: saturate(1.15) contrast(1.05) drop-shadow(0 0 26px rgba(255, 224, 168, 0.5));
+}
+
+[data-theme="noir"] .neuzugang[data-art="tiefsee"] .intro-portraet {
+  filter: saturate(0.9) contrast(1.08) drop-shadow(0 0 26px rgba(120, 230, 255, 0.4));
+}
+
+[data-theme="noir"] .neuzugang[data-art="sternenfall"] .intro-portraet {
+  filter: saturate(0.6) contrast(1.08) drop-shadow(0 0 24px rgba(190, 210, 255, 0.4));
+}
+
+[data-theme="noir"] .neuzugang[data-art="wueste"] .intro-portraet {
+  filter: saturate(0.8) contrast(1.1) drop-shadow(0 16px 30px rgba(60, 24, 10, 0.8));
+}
+
+/* Die Akte ist von Haus aus Noir - hier bleibt es beim Sepia der Lampe. */
+[data-theme="noir"] .neuzugang[data-art="akte"] .intro-portraet {
+  filter: sepia(0.45) saturate(0.5) contrast(1.12)
+    drop-shadow(0 16px 30px rgba(0, 0, 0, 0.9));
 }
 
 /* Im Noir ist der Schleier der Grund selbst - die Figur tritt aus dem
@@ -2775,4 +2800,17 @@
   border-radius: 0;
   background: var(--grund);
   box-shadow: none;
+}
+
+/* --- Bilder ohne Eintrag im Noir ------------------------------------- */
+
+[data-theme="noir"] .bild-kachel {
+  border-radius: 0;
+  background: none;
+  border: 1px solid var(--linie);
+}
+
+[data-theme="noir"] .bild-kachel-bild {
+  border-radius: 0;
+  filter: grayscale(1) contrast(1.05);
 }
