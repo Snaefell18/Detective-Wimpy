@@ -13,6 +13,8 @@ import type { Character } from "@/lib/types";
  * Schlägen:
  *
  *   1. Unruhe  - der Wirt steht da, aber etwas flackert. Man weiß nicht, was.
+ *                Und es steht auch nirgends: Kommentiert wird die Verwandlung
+ *                nicht, sie läuft einfach ab.
  *   2. Riss    - er verzerrt, zerfällt, das Bild bricht auf.
  *   3. Bruch   - Schwarz. Nur ein Auge, ein Herzschlag, Stille im Bild.
  *   4. Dämon   - der Einschlag: Schockwelle, und die neue Gestalt steht da.
@@ -181,16 +183,6 @@ export function Verwandlung({
 
       <div className="intro-buehne">
         <div className="szene-block verwandlung-szene">
-          <p className="intro-oberzeile">
-            {schlag === "unruhe"
-              ? "Etwas stimmt nicht …"
-              : schlag === "riss"
-                ? "Es reißt auf!"
-                : schlag === "bruch"
-                  ? "Es kommt heraus."
-                  : "Es war die ganze Zeit hier."}
-          </p>
-
           <div className="verwandlung-portraet">
             {/* Beide Bilder liegen übereinander; der Schlag entscheidet, was
                 man sieht - so gibt es keinen Ladehänger im Umschlag. */}
@@ -203,22 +195,23 @@ export function Verwandlung({
             <span className="verwandlung-auge" />
           </div>
 
+          {/* Kommentiert wird hier nichts. Was gerade geschieht, sieht man -
+              es dazuzuschreiben nähme der Sache das Unheimliche und verriete
+              obendrein zu früh, worauf es hinausläuft. Bis zum Schluss steht
+              hier nur ein Name, dann ein Fragezeichen. */}
           {schlag === "daemon" ? (
             <>
               <h1 className="intro-logo slam verwandlung-name">{daemon.name}</h1>
-              <p className="leise verwandlung-zeile">
-                {[daemon.beruf, daemon.tierart].filter(Boolean).join(" · ") || "Aus dem Dunkel"}
-              </p>
+              {[daemon.beruf, daemon.tierart].filter(Boolean).length > 0 && (
+                <p className="leise verwandlung-zeile">
+                  {[daemon.beruf, daemon.tierart].filter(Boolean).join(" · ")}
+                </p>
+              )}
             </>
           ) : (
-            <>
-              <h1 className="intro-logo verwandlung-fragen">
-                {schlag === "unruhe" ? wirt.name : "?"}
-              </h1>
-              <p className="leise verwandlung-zeile">
-                {schlag === "unruhe" ? "So kennst du ihn." : "Was ist das?"}
-              </p>
-            </>
+            <h1 className="intro-logo verwandlung-fragen">
+              {schlag === "unruhe" ? wirt.name : "?"}
+            </h1>
           )}
         </div>
       </div>
