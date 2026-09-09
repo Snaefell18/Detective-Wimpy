@@ -275,6 +275,12 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
 
   if (entwurfSaga) {
     const { arc, index, vorgaben } = entwurfSaga;
+    const vorschau = pruefeVorgaben({
+      vorgaben,
+      charaktere: stammdaten.charaktere,
+      orte: stammdaten.orte,
+      zubehoerIds: regal.map((z) => z.id),
+    });
     const teil = arc.teile[index];
     const letzte = index >= arc.teile.length - 1;
     const culprit = verdaechtige.find((c) => c.id === arc.culprit.charakterId);
@@ -315,10 +321,29 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
           }}
         />
 
+        {/* Dieselbe kostenlose Vorprüfung wie bei einer einzelnen Saga -
+            und zwar schon beim Ausfüllen, nicht erst nach dem Klick. Wer
+            "Gerichtssaal" wählt, sieht sofort, dass der Twist dazu nicht
+            passt, statt es nach dem ersten Versuch zu erfahren. */}
+        {vorschau.length > 0 && (
+          <div className="pruefung">
+            <strong>So kann die Saga nicht entstehen</strong>
+            <ul>
+              {vorschau.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+            <p className="leise klein">
+              Geprüft wird vorher, damit kein angefangener Lauf bezahlt und
+              dann weggeworfen wird.
+            </p>
+          </div>
+        )}
+
         <div className="knopf-reihe" style={{ marginTop: 16 }}>
           <button
             className="knopf aktion"
-            disabled={laeuft || !admin}
+            disabled={laeuft || !admin || vorschau.length > 0}
             onClick={() => void sagaErzeugen(arc, index, vorgaben)}
           >
             {laeuft ? "Die Saga entsteht …" : "Saga erzeugen und speichern"}

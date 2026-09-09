@@ -156,6 +156,8 @@ export function Verwandlung({
       onPointerDown={antippen}
     >
       <div className="verwandlung-grund" />
+      {/* Sprünge im Bild - sie bleiben, wenn die Gestalt dasteht. */}
+      <div className="verwandlung-sprunge" aria-hidden="true" />
       <div className="verwandlung-ringe">
         <span />
         <span />

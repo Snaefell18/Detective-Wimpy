@@ -527,6 +527,31 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
   });
 }
 
+/**
+ * Wen man anklagen kann.
+ *
+ * Alle Tiere der Saga außer dem Detektiv und dem Vorsitz. Die Dämonengestalt
+ * gehört ausdrücklich nicht dazu: Sie kennt vor ihrem Auftritt niemand, und
+ * bei "Gericht & Dämon" klagt man den Wirt an - was in ihm steckt, zeigt sich
+ * erst danach.
+ *
+ * Und der Richtige steht IMMER darin. Das ist keine Schönheitsfrage: Fehlte
+ * er, wäre die Verhandlung nicht zu gewinnen - nach zwanzig bezahlten
+ * Modellaufrufen.
+ */
+function anklagbar(bogen: Bogen, richterId: string, angeklagterId: string): string[] {
+  const daemonId = besessen(bogen.vorgaben)?.daemonId ?? "";
+  const ids = bogen.besetzung
+    .filter(
+      (c) =>
+        !c.istDetektiv &&
+        c.id !== richterId &&
+        (c.id === angeklagterId || c.id !== daemonId),
+    )
+    .map((c) => c.id);
+  return ids.includes(angeklagterId) ? ids : [angeklagterId, ...ids];
+}
+
 /* --- Schritt 3b: die Verhandlung statt eines Finalfalls -------------- */
 
 /**
@@ -678,17 +703,7 @@ async function verhandlungsSchritt(
       // Wen man anklagen kann: alle Tiere, die in der Saga aufgetreten sind.
       // Die Dämonengestalt gehört ausdrücklich nicht dazu - sie kennt vor
       // ihrem Auftritt niemand.
-      anklagbareIds: mitAnklage(art)
-        ? bogen.besetzung
-            .filter(
-              (c) =>
-                !c.istDetektiv &&
-                c.id !== richter.id &&
-                c.id !== besessenheit?.daemonId &&
-                (art !== "gericht-daemon" || c.id !== bogen.drahtzieherId),
-            )
-            .map((c) => c.id)
-        : [],
+      anklagbareIds: mitAnklage(art) ? anklagbar(bogen, richter.id, angeklagterId) : [],
       anklageVersuche: 2,
       personen: [angeklagter, richter, drahtzieherFigur].filter(
         (c, i, alle): c is Character =>

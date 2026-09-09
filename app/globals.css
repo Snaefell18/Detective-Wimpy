@@ -5372,13 +5372,18 @@ a.zurueck {
     transform: translateX(-3px) skewX(2deg);
   }
   94% {
-    filter: invert(0.15);
+    /* Farbe und Versatz, aber keine Helligkeitssprünge: Ein Bild, das
+       mehrmals je Sekunde hell und dunkel wird, ist genau das Flackern, das
+       Migräne auslösen kann. Der Schrecken kommt hier aus der Verzerrung. */
+    filter: hue-rotate(300deg) saturate(0.4);
     transform: translateX(4px);
   }
 }
 
+/* Bewusst langsamer als ein Flackern und ohne Helligkeitswechsel - was hier
+   erschreckt, ist das Zerreißen selbst, nicht ein Blinken. */
 .verwandlung[data-schlag="riss"] .verwandlung-wirt {
-  animation: verwandlung-zerreissen 0.42s steps(4) infinite;
+  animation: verwandlung-zerreissen 0.66s steps(4) infinite;
 }
 
 @keyframes verwandlung-zerreissen {
@@ -5394,8 +5399,8 @@ a.zurueck {
   }
   50% {
     clip-path: inset(48% 0 6% 0);
-    transform: translateX(11px);
-    filter: invert(0.3) hue-rotate(300deg);
+    transform: translateX(11px) scaleY(0.94);
+    filter: hue-rotate(300deg) saturate(2.8);
   }
   75% {
     clip-path: inset(4% 0 62% 0);
@@ -5457,21 +5462,59 @@ a.zurueck {
 @keyframes verwandlung-einschlag {
   0% {
     opacity: 0;
-    transform: scale(2.4);
-    filter: brightness(4) saturate(0);
+    transform: scale(2.4) rotate(-4deg);
+    /* Einmal kurz überstrahlt, nicht geblitzt: ein einzelner weicher Anstieg
+       statt eines Schlags ins Auge. */
+    filter: brightness(1.9) saturate(0.4)
+      drop-shadow(0 0 40px rgba(255, 40, 40, 0));
   }
   35% {
     opacity: 1;
-    filter: brightness(1.8) saturate(1.4);
+    filter: brightness(1.25) saturate(1.4)
+      drop-shadow(0 0 46px rgba(255, 40, 40, 0.8));
   }
   60% {
-    transform: scale(0.94);
+    transform: scale(0.94) rotate(0.6deg);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
-    filter: none;
+    transform: scale(1) rotate(0);
+    filter: none drop-shadow(0 0 34px rgba(255, 40, 40, 0.55));
   }
+}
+
+/* Die Gestalt behält ihren roten Schein, solange sie dasteht. */
+.verwandlung[data-schlag="daemon"] .verwandlung-daemon .bild,
+.verwandlung[data-schlag="daemon"] .verwandlung-daemon .bild-platzhalter {
+  filter: drop-shadow(0 0 34px rgba(255, 40, 40, 0.55));
+}
+
+/* Sprünge im Bild: Sie reißen im zweiten Schlag auf und bleiben danach
+   stehen - das Bild ist kaputt, und das sieht man. */
+.verwandlung-sprunge {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(103deg, transparent 49.4%, rgba(255, 214, 236, 0.75) 49.7% 50.1%, transparent 50.4%),
+    linear-gradient(72deg, transparent 31.6%, rgba(190, 230, 255, 0.6) 31.9% 32.2%, transparent 32.5%),
+    linear-gradient(126deg, transparent 66.5%, rgba(255, 170, 200, 0.55) 66.8% 67.1%, transparent 67.4%),
+    linear-gradient(88deg, transparent 22.4%, rgba(230, 200, 255, 0.45) 22.7% 23%, transparent 23.3%);
+  transition: opacity 320ms ease-out;
+}
+
+.verwandlung[data-schlag="riss"] .verwandlung-sprunge,
+.verwandlung[data-schlag="bruch"] .verwandlung-sprunge {
+  opacity: 0.85;
+}
+
+/* Steht die Gestalt, rücken die Sprünge hinter sie - sie gehören dann zur
+   Welt, nicht mehr übers Gesicht. */
+.verwandlung[data-schlag="daemon"] .verwandlung-sprunge {
+  z-index: 1;
+  opacity: 0.3;
 }
 
 /* --- Schrift -------------------------------------------------------- */
