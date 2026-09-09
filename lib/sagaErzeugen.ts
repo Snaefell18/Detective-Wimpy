@@ -216,6 +216,22 @@ export async function erzeugeSaga(
   // Läuft die Saga in eine Verhandlung, gibt es keinen Finalfall mehr: Der
   // Gerichtssaal ist das Finale.
   const saalStattFall = mitVerhandlung(eingaben.vorgaben.finaleArt);
+
+  /*
+   * Und dann ist der Saal auch das Einzige, was am Ende steht - fehlt er,
+   * fehlt das ganze Finale.
+   *
+   * Genau das ist einmal passiert: Der Server lieferte die Beweisstücke in
+   * einem zweiten Schritt, ein Browser mit älterem Stand holte ihn nicht ab,
+   * und die Saga wurde ohne Beweise gespeichert. Beim Spielen sprang es vom
+   * Erzählertext direkt in den Epilog - ohne Verhandlung, ohne Anklage, ohne
+   * Urteil. Lieber hier abbrechen, solange nichts gespeichert ist.
+   */
+  if (saalStattFall && (verhandlung?.beweise?.length ?? 0) < 2) {
+    throw new Error(
+      "Die Verhandlung ist unvollständig zurückgekommen (keine Beweisstücke). Bitte noch einmal erzeugen - gespeichert wurde nichts.",
+    );
+  }
   if (!saalStattFall) onSchritt?.("Der Finalfall wird gebaut …");
   const finale = saalStattFall
     ? { fall: null, siegel: null }

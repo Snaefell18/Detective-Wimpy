@@ -478,7 +478,11 @@ Entwirf, was in diesem Saal GESPROCHEN wird. Die Beweisstücke kommen in einem z
 
 WEITERES
 - Die Frage steht groß über dem Saal (z.B. "Reicht das, was du hast?").
-- Der Erzählertext davor führt in den Saal: kurze Zeilen, Atmosphäre, keine Anrede. Er verrät nicht, wie es ausgeht.
+- Der Erzählertext davor führt in den Saal: kurze Zeilen, Atmosphäre, keine Anrede. Er verrät nicht, wie es ausgeht.${
+    art === "gericht" || art === "gericht-daemon"
+      ? `\n- WICHTIG: Weder die Frage noch der Erzählertext noch die Eröffnung nennen ${angeklagter} beim Namen oder umschreiben ihn erkennbar. ${detektivName} muss selbst benennen, wen er anklagt - stünde der Name schon vorher da, wäre das ganze Finale entwertet. Erst die Texte NACH der Anklage dürfen ihn nennen.`
+      : ""
+  }
 - Die Eröffnung spricht ${richter} - streng, trocken, kein Wort zu viel.
 - Das Urteil bei Erfolg spricht ${richter} ebenfalls${
     art === "ohne-taeter"

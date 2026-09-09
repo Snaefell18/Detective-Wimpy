@@ -8,6 +8,8 @@
  */
 import { BeweiseSchema, VerhandlungSaalSchema } from "../lib/sagaSchemas.ts";
 import { buildBeweisePrompt, buildVerhandlungPrompt } from "../lib/sagaPrompts.ts";
+import { mitVerhandlung } from "../lib/sagaFinale.ts";
+import { sagaMitVerhandlung } from "../lib/sagaTypen.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -89,6 +91,33 @@ console.log("\n4. Bei „Gericht & Dämon“ steht die Verwandlung in beiden");
     pruefe(`${name}: was in ihm steckt, kommt erst später heraus`,
       /Was in ihm steckt, kommt erst heraus/.test(text));
   }
+}
+
+console.log("\n5. Eine Verhandlung ohne Beweise gilt als keine");
+{
+  /*
+   * Der Fall, der einen ganzen Spielabend gekostet hat: Die Saga wurde mit
+   * leerer Beweisliste gespeichert. Beim Spielen sprang es vom Erzählertext
+   * direkt in den Epilog - kein Saal, keine Anklage, kein Urteil.
+   */
+  const saga = (beweise) => ({
+    finale: { verhandlung: { art: "gericht-daemon", beweise } },
+    vorgaben: { finaleArt: "gericht-daemon" },
+  });
+
+  pruefe("ohne Beweise: kein Saal", sagaMitVerhandlung(saga([])) === null);
+  pruefe("ohne verhandlung: kein Saal", sagaMitVerhandlung({ finale: {} }) === null);
+  pruefe("mit Beweisen: Saal", sagaMitVerhandlung(saga([{ id: "b1" }])) !== null);
+
+  // Und genau dann muss das Spiel stehen bleiben statt weiterzublättern:
+  // dieselbe Bedingung wie in app/page.tsx.
+  const bliebeStehen = (s) => !sagaMitVerhandlung(s) && mitVerhandlung(s.vorgaben.finaleArt);
+  pruefe("bei leerer Liste bleibt das Spiel stehen", bliebeStehen(saga([])));
+  pruefe("bei voller Liste läuft es weiter", !bliebeStehen(saga([{ id: "b1" }])));
+  pruefe(
+    "ein klassisches Finale ist davon unberührt",
+    !bliebeStehen({ finale: {}, vorgaben: { finaleArt: "klassisch" } }),
+  );
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

@@ -6,7 +6,9 @@ import { akteLesen, akteSchreiben, bogenLesen, bogenSchreiben } from "@/lib/akte
 import { leererFall } from "@/lib/leereAkte";
 import type { Bogen } from "@/lib/sagaBogen";
 import { alsStaedte } from "@/lib/csv";
+import { postJson } from "@/lib/api";
 import { ladeSagas, loescheSaga, speichereSaga } from "@/lib/db";
+import { mitVerhandlung, type Verhandlung } from "@/lib/sagaFinale";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import {
@@ -133,6 +135,56 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         fehler instanceof Error ? fehler.message : "Die Saga konnte nicht erzeugt werden.";
       setAbbruch({ text, schritt });
       onFehler(text);
+    } finally {
+      setLaeuft(false);
+      setSchritt(null);
+    }
+  };
+
+  /**
+   * Eine Verhandlung nachliefern.
+   *
+   * Es gab einen Fall, in dem eine Saga mit Gerichtsfinale ohne Beweisstücke
+   * gespeichert wurde - beim Spielen sprang es dann vom Erzählertext direkt
+   * in den Epilog, das ganze Finale fiel aus. Das lässt sich heilen, ohne
+   * alles neu zu erzeugen: Im versiegelten Bogen steht die Verhandlung
+   * bereits, es fehlen nur die Stücke. Ein einziger Aufruf holt sie nach.
+   */
+  const verhandlungNachliefern = async (saga: Saga) => {
+    setLaeuft(true);
+    setSchritt("Die Beweisstücke werden nachgeholt …");
+    onFehler(null);
+    try {
+      const antwort = await postJson<{
+        bogenSiegel: string;
+        beweise: Verhandlung["beweise"];
+        noetig: number;
+      }>("/api/saga", { schritt: "beweise", bogenSiegel: saga.bogenSiegel, orte: stammdaten.orte }, 90);
+
+      const alt = saga.finale.verhandlung;
+      if (!alt) {
+        onFehler(
+          "Zu dieser Saga gehört gar keine Verhandlung - das Finale ist ein gewöhnlicher Fall.",
+        );
+        return;
+      }
+      const kopie: Saga = {
+        ...saga,
+        bogenSiegel: antwort.bogenSiegel,
+        finale: {
+          ...saga.finale,
+          verhandlung: { ...alt, beweise: antwort.beweise, noetig: antwort.noetig },
+        },
+      };
+      await speichereSaga(kopie);
+      await laden();
+      onMeldung(
+        `Die Verhandlung von „${saga.name}“ ist vollständig: ${antwort.beweise.length} Beweisstücke, ${antwort.noetig} müssen tragen.`,
+      );
+    } catch (fehler) {
+      onFehler(
+        fehler instanceof Error ? fehler.message : "Die Beweisstücke ließen sich nicht nachholen.",
+      );
     } finally {
       setLaeuft(false);
       setSchritt(null);
@@ -753,6 +805,29 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                 teil={saga.finale.epilog}
                 onAendern={(t) => void erzaehlerAendern(saga, "epilog", t)}
               />
+
+              {/* Eine Verhandlung ohne Beweisstücke ist keine: Beim Spielen
+                  fiele das ganze Finale aus. Hier lässt sie sich mit einem
+                  einzigen Aufruf nachholen. */}
+              {mitVerhandlung(saga.vorgaben.finaleArt) &&
+                !saga.finale.verhandlung?.beweise?.length && (
+                  <div className="pruefung">
+                    <strong>Dieser Saga fehlt die Verhandlung</strong>
+                    <p className="leise klein">
+                      Das Finale ist ein Gerichtssaal, aber es sind keine
+                      Beweisstücke hinterlegt - gespielt spränge es vom
+                      Erzählertext direkt in den Epilog. Ein einziger Aufruf
+                      holt sie nach; alles andere bleibt, wie es ist.
+                    </p>
+                    <button
+                      className="knopf aktion klein"
+                      disabled={laeuft}
+                      onClick={() => void verhandlungNachliefern(saga)}
+                    >
+                      {laeuft ? "Wird geholt …" : "Verhandlung nachliefern"}
+                    </button>
+                  </div>
+                )}
 
               <button
                 className="knopf klein"

@@ -34,6 +34,7 @@ import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
 import { arcAbspann, type Arc } from "@/lib/arcTypen";
+import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
@@ -97,6 +98,11 @@ export default function Home() {
   const [verwandlung, setVerwandlung] = useState(false);
   /** Der Einzug des Gerichts - kommt zwischen Erzähler und Saal. */
   const [einzug, setEinzug] = useState(false);
+  /**
+   * Was an dieser Saga fehlt - steht statt eines stillen Weiterblätterns da.
+   * Lieber ein ehrlicher Satz als ein verschlucktes Finale.
+   */
+  const [sagaFehlt, setSagaFehlt] = useState<string | null>(null);
   const [verdachtsMeldung, setVerdachtsMeldung] = useState<Verdachtsmeldung | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
@@ -354,6 +360,20 @@ export default function Home() {
     const quelle = finale
       ? saga.stand.saga.finale
       : saga.stand.saga.kapitel[saga.stand.lauf.kapitel];
+
+    /*
+     * Sollte eine Verhandlung kommen, ist aber keine da, wird NICHT einfach
+     * weitergeblättert. Genau das ist einmal passiert: Vom Erzählertext ging
+     * es direkt in den Epilog, das ganze Finale fiel aus, und niemand erfuhr,
+     * warum. Lieber ehrlich stehen bleiben und sagen, was fehlt.
+     */
+    if (finale && !saal && mitVerhandlung(saga.stand.saga.vorgaben.finaleArt)) {
+      setSagaFehlt(
+        "Zu dieser Saga fehlt die Verhandlung - der Gerichtssaal wurde beim Erzeugen nicht fertig. Im Admin-Menü lässt sie sich unter „Sagas“ nachliefern, ohne die Saga neu zu erzeugen.",
+      );
+      return;
+    }
+
     if (!saal && (!quelle?.fall || !quelle.siegel)) {
       saga.setzePhase(finale ? "epilog" : "erzaehler");
       return;
@@ -786,6 +806,40 @@ export default function Home() {
             weiterText="Fall übernehmen ›"
             onWeiter={() => sagaFallStarten(false)}
           />
+        </main>
+      );
+    }
+
+    if (sagaFehlt) {
+      return (
+        <main className="app">
+          <div className="scroll">
+            <div className="inhalt">
+              <h1>Hier fehlt etwas</h1>
+              <p className="hinweis warnung">{sagaFehlt}</p>
+              <div className="knopf-reihe">
+                <button
+                  className="knopf aktion"
+                  onClick={() => {
+                    setSagaFehlt(null);
+                    saga.setzePhase("epilog", null, false);
+                  }}
+                >
+                  Trotzdem zum Abspann ›
+                </button>
+                <button
+                  className="knopf"
+                  onClick={() => {
+                    setSagaFehlt(null);
+                    saga.beenden();
+                    spiel.aufgeben();
+                  }}
+                >
+                  Zum Hauptmenü
+                </button>
+              </div>
+            </div>
+          </div>
         </main>
       );
     }

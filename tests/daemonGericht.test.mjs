@@ -16,6 +16,7 @@ import {
 import { pruefeVorgaben } from "../lib/sagaPruefung.ts";
 import { STANDARD_SAGA_VORGABEN, auftrittVon, besessen } from "../lib/sagaTypen.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
+import { ohneNamen } from "../lib/namenSchutz.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -160,6 +161,26 @@ console.log("\n8. Der Arc setzt den Twist - das Gericht verträgt ihn nicht");
     art: "gericht-daemon", besetzung: charaktere, drahtzieherId: "hut", wirtId: "hut",
   });
   pruefe("angeklagt wird weiterhin der Wirt", angeklagt === "hut");
+}
+
+console.log("\n9. Der Text vor dem Saal verrät den Angeklagten nicht");
+{
+  /*
+   * Vor der Anklage darf nirgends stehen, wen man anzuklagen hat - sonst ist
+   * das Finale entwertet, bevor es beginnt. Der Server streicht Sätze mit
+   * dem Namen; hier wird genau diese Regel nachgestellt.
+   */
+  const ohneVerrat = (text, namen) => ohneNamen(text, namen);
+  const heikel = ["Herr Hut", "Der Schatten"];
+
+  const verraten = "Der Saal füllt sich. Herr Hut sitzt schon da. Es riecht nach Regen.";
+  const sauber = ohneVerrat(verraten, heikel);
+  pruefe("der Satz mit dem Namen fällt weg", !sauber.includes("Herr Hut"), sauber);
+  pruefe("der Rest bleibt stehen", sauber.includes("Es riecht nach Regen."), sauber);
+  pruefe("auch die Gestalt bleibt geheim",
+    !ohneVerrat("Der Schatten wartet.", heikel).includes("Schatten"));
+  pruefe("ohne Namen bleibt alles",
+    ohneVerrat("Der Saal füllt sich.", heikel) === "Der Saal füllt sich.");
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

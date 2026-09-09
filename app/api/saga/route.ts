@@ -800,12 +800,27 @@ async function verhandlungsSchritt(
         : undefined,
   };
 
+  /*
+   * Wo der Spieler selbst anklagt, darf der Text VOR dem Saal den Angeklagten
+   * nicht nennen - sonst steht die Lösung schon da, bevor man gewählt hat.
+   * Der Prompt sagt das; hier wird es zusätzlich durchgesetzt, denn ein
+   * verratener Name macht das ganze Finale wertlos.
+   *
+   * Der Epilog darf alles sagen - er kommt nach dem Urteil.
+   */
+  const heikel = mitAnklage(art)
+    ? [angeklagter.name, ...(besessenheit?.daemonId
+        ? [bogen.besetzung.find((c) => c.id === besessenheit.daemonId)?.name ?? ""]
+        : [])].filter(Boolean)
+    : [];
+  const ohneVerrat = (text: string) => (heikel.length ? ohneNamen(text, heikel) : text);
+
   const fertig: Bogen = {
     ...bogen,
     finale: {
-      frage: kurz(d.frage, 200) || "Reicht, was du hast?",
+      frage: ohneVerrat(kurz(d.frage, 200)) || "Reicht, was du hast?",
       auftrag: "",
-      erzaehlerText: kurz(d.erzaehlerText, 2000),
+      erzaehlerText: ohneVerrat(kurz(d.erzaehlerText, 2000)),
       epilogText: kurz(d.epilogText, 2000),
       stadt: stadtFuer(bogen.vorgaben, 0, staedte),
       wahrheit,
@@ -827,7 +842,8 @@ async function verhandlungsSchritt(
       // Wo der Spieler selbst anklagt, bleibt die Bank im Offenen leer.
       bankId: mitAnklage(art) ? "" : angeklagterId,
       richterId: richter.id,
-      anklage: kurz(d.anklage, 1200),
+      // Auch die Eröffnung des Richters nennt noch keinen Namen.
+      anklage: ohneVerrat(kurz(d.anklage, 1200)),
       // Kommen im zweiten Schritt dazu.
       beweise: [],
       noetig: 3,
