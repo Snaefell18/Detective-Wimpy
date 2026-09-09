@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Bild } from "@/components/Bild";
-import { auftragReicht, type BildArt, type BildEintrag } from "@/lib/bildPrompt";
+import { auftragReicht, FREIGESTELLT, type BildArt, type BildEintrag } from "@/lib/bildPrompt";
 import { bildErzeugen, istGespeichertesBild } from "@/lib/bildSpeicher";
+import { pruefeFreistellung } from "@/lib/bildPruefung";
 
 /**
  * Das Bild eines Eintrags: von Hand hinterlegen oder erzeugen lassen.
@@ -22,6 +23,7 @@ export function BildFeld({
   onAendern,
   art,
   eintrag,
+  vorlage,
 }: {
   wert: string;
   vorschlag: string;
@@ -29,21 +31,42 @@ export function BildFeld({
   art: BildArt;
   /** Was im Formular steht - daraus entsteht der Auftrag ans Bildmodell. */
   eintrag: BildEintrag;
+  /**
+   * Das Bild, aus dem eine andere Fassung werden soll - beim Anlegen einer
+   * Version. Das Original wird dabei nur gelesen; es bleibt unangetastet.
+   */
+  vorlage?: { quelle: string; name: string };
 }) {
   const [wunsch, setWunsch] = useState("");
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [frisch, setFrisch] = useState<string | null>(null);
+  const [warnung, setWarnung] = useState<string | null>(null);
+  /** Vorlage benutzen? Bei einer Version ist das der Sinn der Sache. */
+  const [mitVorlage, setMitVorlage] = useState(true);
 
   const reicht = auftragReicht(art, eintrag, wunsch);
+  const benutzt = vorlage?.quelle && mitVorlage ? vorlage.quelle : undefined;
 
   const erzeugen = async () => {
     setLaeuft(true);
     setFehler(null);
+    setWarnung(null);
     try {
-      const { wert: neu, daten } = await bildErzeugen(art, eintrag, wunsch.trim());
+      const { wert: neu, daten } = await bildErzeugen(art, eintrag, wunsch.trim(), benutzt);
       onAendern(neu);
       setFrisch(daten);
+
+      // Nachsehen, ob der Hintergrund wirklich weg ist. Zusichern lässt sich
+      // das nicht - deshalb wird es wenigstens gesagt.
+      if (FREIGESTELLT[art]) {
+        const { freigestellt } = await pruefeFreistellung(daten);
+        if (!freigestellt) {
+          setWarnung(
+            "Der Hintergrund ist nicht durchsichtig geworden. Das Bild ist gespeichert - wenn es stören sollte, erzeuge es einfach noch einmal.",
+          );
+        }
+      }
     } catch (grund) {
       setFehler(grund instanceof Error ? grund.message : "Das hat nicht geklappt.");
     } finally {
@@ -62,21 +85,48 @@ export function BildFeld({
         />
       </label>
 
+      {vorlage?.quelle && (
+        <>
+          <p className="leise klein">
+            Version von „{vorlage.name}“. Mit Vorlage bleibt es unverkennbar
+            dasselbe Tier - verändert wird nur, was du unten schreibst. Das
+            ursprüngliche Tier bleibt dabei unangetastet: Hier entsteht ein
+            neuer Eintrag mit einem neuen Bild.
+          </p>
+          <label className="feld reihe">
+            <input
+              type="checkbox"
+              checked={mitVorlage}
+              onChange={(e) => setMitVorlage(e.target.checked)}
+            />
+            <span>Vorlage benutzen</span>
+          </label>
+          {mitVorlage && (
+            <div className="bild-vorschau klein">
+              <Bild src={vorlage.quelle} alt={vorlage.name} platzhalter={vorlage.name} />
+            </div>
+          )}
+        </>
+      )}
+
       <label className="feld">
         <span className="leise">
-          Wie soll es aussehen? (Farben, Kleidung, Licht, Details - der
-          Comicstil steht fest)
+          {benutzt
+            ? "Was ist anders? (der Rest bleibt wie auf der Vorlage)"
+            : "Wie soll es aussehen? (Farben, Kleidung, Licht, Details - der Comicstil steht fest)"}
         </span>
         <textarea
           rows={2}
           value={wunsch}
           onChange={(e) => setWunsch(e.target.value)}
           placeholder={
-            art === "charaktere"
-              ? "z.B. rote Latzhose, Mehl an den Pfoten, verschmitzter Blick"
-              : art === "orte"
-                ? "z.B. Abendlicht, Lampions über der Gasse, nasses Kopfsteinpflaster"
-                : "z.B. messingfarben, abgegriffen, mit kleiner Delle"
+            benutzt
+              ? "z.B. als Dämon: glühende Augen, Schattenhörner, Rauch um die Pfoten"
+              : art === "charaktere"
+                ? "z.B. rote Latzhose, Mehl an den Pfoten, verschmitzter Blick"
+                : art === "orte"
+                  ? "z.B. Abendlicht, Lampions über der Gasse, nasses Kopfsteinpflaster"
+                  : "z.B. messingfarben, abgegriffen, mit kleiner Delle"
           }
           maxLength={600}
         />
@@ -89,7 +139,11 @@ export function BildFeld({
           disabled={laeuft || !reicht}
           onClick={() => void erzeugen()}
         >
-          {laeuft ? "Wird gemalt … (bis zu einer Minute)" : "🎨 Bild erzeugen"}
+          {laeuft
+            ? "Wird gemalt … (bis zu einer Minute)"
+            : benutzt
+              ? "🎨 Version malen"
+              : "🎨 Bild erzeugen"}
         </button>
         {istGespeichertesBild(wert) && (
           <button type="button" className="knopf klein" onClick={() => onAendern("")}>
@@ -111,6 +165,7 @@ export function BildFeld({
         </div>
       )}
 
+      {warnung && <p className="hinweis warnung">{warnung}</p>}
       {fehler && <p className="fehler">{fehler}</p>}
     </>
   );

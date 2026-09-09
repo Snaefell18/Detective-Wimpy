@@ -1703,6 +1703,11 @@ a.zurueck {
   border: 1px solid var(--rand);
 }
 
+/* Das Vorlagenbild steht kleiner da - es ist nur der Ausgangspunkt. */
+.bild-vorschau.klein {
+  max-width: 132px;
+}
+
 /* Bilder ohne Eintrag: ein Gitter aus Kacheln, damit man auf einen Blick
    sieht, was da noch herumliegt. */
 .bild-gitter {

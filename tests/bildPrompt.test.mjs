@@ -43,7 +43,10 @@ console.log("\n3. Die Eingaben kommen an");
   pruefe("Alter mit Einheit", auftrag.includes("Alter: 9 Jahre"));
   pruefe("Beruf", auftrag.includes("Beruf: Bäcker"));
   pruefe("Beschreibung", auftrag.includes("Wesen und Aussehen: schlau"));
-  pruefe("und der Wunsch zuletzt", auftrag.trimEnd().endsWith("Zusätzliche Wünsche: rote Latzhose"));
+  pruefe(
+    "der Wunsch steht hinter den Angaben",
+    auftrag.indexOf("Wesen und Aussehen") < auftrag.indexOf("Zusätzliche Wünsche: rote Latzhose"),
+  );
 }
 {
   const auftrag = bildAuftrag("orte", {
@@ -73,6 +76,35 @@ pruefe("mit Beschreibung", auftragReicht("items", { beschreibung: "rund" }));
 pruefe("mit bloßem Wunsch", auftragReicht("items", {}, "eine Lupe"));
 pruefe("ohne alles nicht", !auftragReicht("items", {}));
 pruefe("Leerzeichen zählen nicht", !auftragReicht("items", { name: "  " }, " "));
+
+console.log("\n6. Der Stil und die Freistellung haben das letzte Wort");
+{
+  // Ein Wunsch, der den Stil unterlaufen würde: Danach muss der Stil noch
+  // einmal kommen, sonst gewinnt das Ende der Beschreibung.
+  const frech = bildAuftrag("charaktere", { name: "X" }, "fotorealistisch, 3D, glänzend");
+  const zeilen = frech.trimEnd().split("\n");
+  pruefe("der Stil steht auch ganz unten", /naiven Comicstil/.test(zeilen[zeilen.length - 1]));
+  pruefe("und nach dem Wunsch", frech.indexOf("Zusätzliche Wünsche") < frech.lastIndexOf("naiven Comicstil"));
+  pruefe("die Freistellung ebenfalls", /Alphakanal/.test(frech));
+  pruefe("und steht nach dem Wunsch",
+    frech.indexOf("Zusätzliche Wünsche") < frech.indexOf("Alphakanal"));
+
+  const ort = bildAuftrag("orte", { name: "Hafen" }, "");
+  pruefe("Orte bekommen keine Freistellung", !/Alphakanal/.test(ort));
+  pruefe("aber den Stil zum Schluss", /naiven Comicstil/.test(ort.trimEnd().split("\n").pop()));
+}
+
+console.log("\n7. Eine Version desselben Tiers");
+{
+  const ohne = bildAuftrag("charaktere", { name: "Mikkeli" }, "als Dämon", false);
+  const mit = bildAuftrag("charaktere", { name: "Mikkeli" }, "als Dämon", true);
+  pruefe("ohne Vorlage kein Vorlagensatz", !/Vorlage ist die mitgeschickte Figur/.test(ohne));
+  pruefe("mit Vorlage schon", /Vorlage ist die mitgeschickte Figur/.test(mit));
+  pruefe("und die Wiedererkennbarkeit steht drin", /unverkennbar dasselbe Tier/.test(mit));
+  pruefe("der Wunsch bleibt trotzdem stehen", mit.includes("Zusätzliche Wünsche: als Dämon"));
+  pruefe("der Vorlagensatz kommt vor dem Wunsch",
+    mit.indexOf("Vorlage ist die mitgeschickte") < mit.indexOf("Zusätzliche Wünsche"));
+}
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);

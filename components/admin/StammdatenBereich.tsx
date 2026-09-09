@@ -49,6 +49,12 @@ export function StammdatenBereich({
    * Pfad, öffnet sich das Formular mit diesem Bild und einem Namensvorschlag.
    */
   const [ausBild, setAusBild] = useState<string | null>(null);
+  /**
+   * Eine andere Fassung eines vorhandenen Eintrags - etwa die Dämonenform
+   * eines Tiers. Das Original steht hier nur Modell: Gespeichert wird ein
+   * neuer Eintrag unter einer neuen Id, angefasst wird das alte nie.
+   */
+  const [version, setVersion] = useState<(Character | Location | Item) | null>(null);
   /** Bilder, die schon im Laden hängen - sie sind nicht frei. */
   const [ladenBilder, setLadenBilder] = useState<string[]>([]);
   const [alleZeigen, setAlleZeigen] = useState(false);
@@ -189,25 +195,36 @@ export function StammdatenBereich({
         }}
       />
 
-      {(neu || ausBild) && (
+      {(neu || ausBild || version) && (
         <Formular
           art={art}
           alleCharaktere={stammdaten.charaktere}
           // Kommt der Anstoß von einem Bild, steht es schon drin - samt einem
-          // Namensvorschlag aus dem Dateinamen.
+          // Namensvorschlag aus dem Dateinamen. Bei einer Version stehen alle
+          // Angaben des Originals drin, aber ohne dessen Id und ohne dessen
+          // Bild: Beides bekommt die neue Fassung für sich.
           eintrag={
-            ausBild
-              ? { ...leererEintrag(art), bild: ausBild, name: nameAusPfad(ausBild) }
-              : null
+            version
+              ? { ...version, id: "", name: `${version.name} (Version)`, bild: "" }
+              : ausBild
+                ? { ...leererEintrag(art), bild: ausBild, name: nameAusPfad(ausBild) }
+                : null
+          }
+          vorlage={
+            version
+              ? { quelle: version.bild, name: version.name, id: version.id }
+              : undefined
           }
           onAbbrechen={() => {
             setNeu(false);
             setAusBild(null);
+            setVersion(null);
           }}
           onSpeichern={async (eintrag) => {
             await mitFehler(() => speichern(art, eintrag), `${nameVon(eintrag)} angelegt.`);
             setNeu(false);
             setAusBild(null);
+            setVersion(null);
           }}
         />
       )}
@@ -265,6 +282,19 @@ export function StammdatenBereich({
               <div className="listen-aktionen">
                 <button className="knopf klein" onClick={() => setBearbeitet(eintrag.id)}>
                   Ändern
+                </button>
+                {/* Eine andere Fassung desselben Eintrags - das Original
+                    bleibt dabei unangetastet. */}
+                <button
+                  className="knopf klein"
+                  onClick={() => {
+                    setNeu(false);
+                    setBearbeitet(null);
+                    setAusBild(null);
+                    setVersion(eintrag);
+                  }}
+                >
+                  Version
                 </button>
                 {ausDerDatenbank && (
                   <button
@@ -440,11 +470,21 @@ const leererEintrag = (art: Art): Character | Location | Item => {
   return { id: "", name: "", beschreibung: "", bild: "" } satisfies Item;
 };
 
+/**
+ * Woraus eine andere Fassung entsteht - das Original.
+ *
+ * Die Id steht dabei, weil sie das eine ist, was die neue Fassung NICHT
+ * übernehmen darf: Sonst überschriebe die Dämonenform das Tier, aus dem sie
+ * hervorgegangen ist.
+ */
+export type Vorlage = { quelle: string; name: string; id: string };
+
 /** Ein Formular je Art - so bleiben die Felder typsicher. */
 function Formular({
   art,
   alleCharaktere,
   eintrag,
+  vorlage,
   onSpeichern,
   onAbbrechen,
 }: {
@@ -452,6 +492,7 @@ function Formular({
   /** Für die Beziehungen: alle Tiere, die zur Auswahl stehen. */
   alleCharaktere: Character[];
   eintrag: Character | Location | Item | null;
+  vorlage?: Vorlage;
   onSpeichern: (eintrag: Character | Location | Item) => void;
   onAbbrechen: () => void;
 }) {
@@ -460,6 +501,7 @@ function Formular({
       <CharakterFormular
         alle={alleCharaktere}
         eintrag={(eintrag as Character) ?? (leererEintrag("charaktere") as Character)}
+        vorlage={vorlage}
         onSpeichern={onSpeichern}
         onAbbrechen={onAbbrechen}
       />
@@ -469,6 +511,7 @@ function Formular({
     return (
       <OrtFormular
         eintrag={(eintrag as Location) ?? (leererEintrag("orte") as Location)}
+        vorlage={vorlage}
         onSpeichern={onSpeichern}
         onAbbrechen={onAbbrechen}
       />
@@ -477,6 +520,7 @@ function Formular({
   return (
     <ItemFormular
       eintrag={(eintrag as Item) ?? (leererEintrag("items") as Item)}
+      vorlage={vorlage}
       onSpeichern={onSpeichern}
       onAbbrechen={onAbbrechen}
     />
@@ -487,11 +531,14 @@ function Rahmen({
   kannSpeichern,
   onAbsenden,
   onAbbrechen,
+  warnung,
   children,
 }: {
   kannSpeichern: boolean;
   onAbsenden: () => void;
   onAbbrechen: () => void;
+  /** Steht über den Knöpfen - etwa, wenn eine Version das Original träfe. */
+  warnung?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -503,6 +550,7 @@ function Rahmen({
       }}
     >
       {children}
+      {warnung && <p className="hinweis warnung">{warnung}</p>}
       <div className="knopf-reihe">
         <button type="submit" className="knopf aktion" disabled={!kannSpeichern}>
           Speichern
@@ -529,15 +577,20 @@ const BEZIEHUNGS_FELDER: {
 function CharakterFormular({
   eintrag,
   alle,
+  vorlage,
   onSpeichern,
   onAbbrechen,
 }: {
   eintrag: Character;
   alle: Character[];
+  /** Beim Anlegen einer Version: das Original, aus dem sie hervorgeht. */
+  vorlage?: Vorlage;
   onSpeichern: (eintrag: Character) => void;
   onAbbrechen: () => void;
 }) {
   const [entwurf, setEntwurf] = useState<Character>(eintrag);
+  // Eine Version darf ihrem Original nie den Platz nehmen.
+  const trifftOriginal = ueberschreibtOriginal("charaktere", entwurf, vorlage);
   const aendern = (teil: Partial<Character>) =>
     setEntwurf((alt) => ({ ...alt, ...teil }));
 
@@ -561,9 +614,14 @@ function CharakterFormular({
 
   return (
     <Rahmen
-      kannSpeichern={entwurf.name.trim().length > 0}
+      kannSpeichern={entwurf.name.trim().length > 0 && !trifftOriginal}
       onAbbrechen={onAbbrechen}
       onAbsenden={() => onSpeichern(vervollstaendigen("charaktere", entwurf) as Character)}
+      warnung={
+        trifftOriginal
+          ? `Diese Version würde „${vorlage?.name}“ überschreiben. Bitte gib ihr einen eigenen Namen - das Original soll ja bleiben.`
+          : null
+      }
     >
       <label className="feld">
         <span className="leise">Name</span>
@@ -720,6 +778,7 @@ function CharakterFormular({
           beruf: entwurf.beruf,
           beschreibung: entwurf.beschreibung,
         }}
+        vorlage={vorlage}
       />
     </Rahmen>
   );
@@ -727,22 +786,36 @@ function CharakterFormular({
 
 function OrtFormular({
   eintrag,
+  vorlage,
   onSpeichern,
   onAbbrechen,
 }: {
   eintrag: Location;
+  /** Beim Anlegen einer Version: das Original, aus dem sie hervorgeht. */
+  vorlage?: Vorlage;
   onSpeichern: (eintrag: Location) => void;
   onAbbrechen: () => void;
 }) {
   const [entwurf, setEntwurf] = useState<Location>(eintrag);
+  // Eine Version darf ihrem Original nie den Platz nehmen.
+  const trifftOriginal = ueberschreibtOriginal("orte", entwurf, vorlage);
   const aendern = (teil: Partial<Location>) =>
     setEntwurf((alt) => ({ ...alt, ...teil }));
 
   return (
     <Rahmen
-      kannSpeichern={entwurf.name.trim().length > 0 && entwurf.stadt.trim().length > 0}
+      kannSpeichern={
+        entwurf.name.trim().length > 0 &&
+        entwurf.stadt.trim().length > 0 &&
+        !trifftOriginal
+      }
       onAbbrechen={onAbbrechen}
       onAbsenden={() => onSpeichern(vervollstaendigen("orte", entwurf) as Location)}
+      warnung={
+        trifftOriginal
+          ? `Diese Version würde „${vorlage?.name}“ überschreiben. Bitte gib ihr einen eigenen Namen - das Original soll ja bleiben.`
+          : null
+      }
     >
       <div className="feld-reihe">
         <label className="feld">
@@ -787,6 +860,7 @@ function OrtFormular({
           atmosphaere: entwurf.atmosphaere,
           beschreibung: entwurf.beschreibung,
         }}
+        vorlage={vorlage}
       />
     </Rahmen>
   );
@@ -794,21 +868,31 @@ function OrtFormular({
 
 function ItemFormular({
   eintrag,
+  vorlage,
   onSpeichern,
   onAbbrechen,
 }: {
   eintrag: Item;
+  /** Beim Anlegen einer Version: das Original, aus dem sie hervorgeht. */
+  vorlage?: Vorlage;
   onSpeichern: (eintrag: Item) => void;
   onAbbrechen: () => void;
 }) {
   const [entwurf, setEntwurf] = useState<Item>(eintrag);
+  // Eine Version darf ihrem Original nie den Platz nehmen.
+  const trifftOriginal = ueberschreibtOriginal("items", entwurf, vorlage);
   const aendern = (teil: Partial<Item>) => setEntwurf((alt) => ({ ...alt, ...teil }));
 
   return (
     <Rahmen
-      kannSpeichern={entwurf.name.trim().length > 0}
+      kannSpeichern={entwurf.name.trim().length > 0 && !trifftOriginal}
       onAbbrechen={onAbbrechen}
       onAbsenden={() => onSpeichern(vervollstaendigen("items", entwurf) as Item)}
+      warnung={
+        trifftOriginal
+          ? `Diese Version würde „${vorlage?.name}“ überschreiben. Bitte gib ihr einen eigenen Namen - das Original soll ja bleiben.`
+          : null
+      }
     >
       <label className="feld">
         <span className="leise">Name</span>
@@ -830,28 +914,46 @@ function ItemFormular({
         onAendern={(bild) => aendern({ bild })}
         art="items"
         eintrag={{ name: entwurf.name, beschreibung: entwurf.beschreibung }}
+        vorlage={vorlage}
       />
     </Rahmen>
   );
 }
+
+/**
+ * Würde diese Version ihr Original überschreiben?
+ *
+ * Die Id entsteht aus dem Namen. Bleibt der Name gleich, entstünde dieselbe
+ * Id - und der Dämon nähme dem Tier seinen Platz in der Datenbank. Das ist
+ * genau das, was nie passieren darf, deshalb wird hier gebremst.
+ */
+export const ueberschreibtOriginal = (
+  art: Art,
+  entwurf: Character | Location | Item,
+  vorlage?: { id: string },
+): boolean =>
+  // Gerechnet wird mit derselben Funktion, die auch beim Speichern die Id
+  // vergibt - alles andere wäre eine zweite Wahrheit.
+  Boolean(vorlage && vervollstaendigen(art, entwurf).id === vorlage.id);
+
+/** Aus "Öhös Kanzlei" wird "oehos-kanzlei" - daraus entstehen die Ids. */
+const slug = (wert: string) =>
+  wert
+    .toLowerCase()
+    .replaceAll("ä", "ae")
+    .replaceAll("ö", "oe")
+    .replaceAll("ü", "ue")
+    .replaceAll("ß", "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 /** Ergänzt Id, Bildpfad und abgeleitete Felder. */
 function vervollstaendigen(
   art: Art,
   entwurf: Character | Location | Item,
 ): Character | Location | Item {
-  const slug = (wert: string) =>
-    wert
-      .toLowerCase()
-      .replaceAll("ä", "ae")
-      .replaceAll("ö", "oe")
-      .replaceAll("ü", "ue")
-      .replaceAll("ß", "ss")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
   if (art === "orte") {
     const ort = entwurf as Location;
     const stadtId = slug(ort.stadt);

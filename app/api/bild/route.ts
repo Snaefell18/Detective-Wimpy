@@ -19,32 +19,58 @@ export const maxDuration = 60;
  *   OPENAI_API_KEY - der Schlüssel aus dem OpenAI-Konto
  *
  * Optional:
- *   OPENAI_IMAGE_MODEL   - Voreinstellung "gpt-image-2.5-sunburst"
- *   OPENAI_IMAGE_QUALITY - "low", "medium" (Voreinstellung), "high", "xhigh",
- *                          "max" oder "auto"; die oberen Stufen kennen erst
- *                          die 2.5er-Modelle
+ *   OPENAI_IMAGE_MODEL   - Voreinstellung "gpt-image-2.5-flare"
+ *   OPENAI_IMAGE_QUALITY - Voreinstellung "high"; daneben "low", "medium",
+ *                          "xhigh", "max" und "auto"
  *
  * Ohne Schlüssel bleibt alles wie bisher: Der Knopf sagt, dass nichts
  * eingerichtet ist, und Bilder lassen sich weiterhin von Hand ablegen.
  */
 
 /**
- * Welches Modell malt.
+ * Welches Modell malt - und wie sorgfältig.
  *
- * Voreingestellt ist Sunburst aus der 2.5er-Reihe: die genauere der beiden
- * Varianten. Die schnellere und billigere heißt "gpt-image-2.5-flare" - für
- * flächige Comicbilder reicht sie meist und braucht weniger Zeit, was auf
- * einer Serverless-Funktion mit einer Minute Laufzeit zählt. Ein anderes
- * Modell trägt man einfach in OPENAI_IMAGE_MODEL ein.
+ * Voreingestellt ist Flare aus der 2.5er-Reihe: die schnellere und günstigere
+ * der beiden Varianten. Für flächige Comicbilder mit klaren Konturen ist das
+ * genau richtig; Sunburst spielt seine Stärke beim genauen Nachbearbeiten
+ * aus, und nachbearbeitet wird hier nichts - jedes Bild entsteht einmal.
+ *
+ * Die Qualität steht auf "high": deutlich mehr Sorgfalt als "medium", aber
+ * ohne die Sprünge nach "xhigh" oder "max", die vor allem länger dauern und
+ * die Rechnung treiben. Weil jedes Bild nur einmal entsteht und danach für
+ * immer im Spiel steht, lohnt sich diese Stufe.
+ *
+ * Beides lässt sich über Umgebungsvariablen ändern, ohne den Code anzufassen.
  */
 const modellName = (): string =>
-  process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-sunburst";
+  process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare";
+
+const qualitaet = (): string => process.env.OPENAI_IMAGE_QUALITY ?? "high";
 
 /** Was das Format sein darf - alles andere lehnt die Schnittstelle ab. */
 const FORMATE = new Set(["1024x1024", "1024x1536", "1536x1024"]);
 
 /** Genug für eine ausführliche Beschreibung - und eine Bremse für die Kosten. */
 const MAX_ZEICHEN = 4000;
+
+/**
+ * Die Vorlage als Datei verpacken.
+ *
+ * Der Umzeichnen-Weg erwartet multipart/form-data, nicht JSON - das Bild
+ * kommt vom Browser als data:-URL und wird hier zurückverwandelt.
+ */
+function alsFormular(vorlage: string, felder: Record<string, string>): FormData {
+  const [kopf, inhalt] = vorlage.split(",");
+  const typ = /data:([^;]+)/.exec(kopf ?? "")?.[1] ?? "image/png";
+  const bytes = Buffer.from(inhalt ?? "", "base64");
+  const endung = typ.includes("jpeg") ? "jpg" : typ.includes("webp") ? "webp" : "png";
+
+  const formular = new FormData();
+  formular.append("image", new Blob([new Uint8Array(bytes)], { type: typ }), `vorlage.${endung}`);
+  formular.append("n", "1");
+  for (const [name, wert] of Object.entries(felder)) formular.append(name, wert);
+  return formular;
+}
 
 function zugangGeprueft(request: Request): string | null {
   const erwartet = process.env.ADMIN_TOKEN;
@@ -86,6 +112,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Eine Vorlage kommt als data:-URL; mehr als ein paar Megabyte nimmt
+    // weder die Schnittstelle noch die Funktion selbst entgegen.
+    if (typeof body?.vorlage === "string" && body.vorlage.length > 4_000_000) {
+      return NextResponse.json({ fehler: "Die Vorlage ist zu groß." }, { status: 400 });
+    }
+
     const format = String(body?.format ?? "1024x1024");
     if (!FORMATE.has(format)) {
       return NextResponse.json({ fehler: "Unbekanntes Bildformat." }, { status: 400 });
@@ -95,23 +127,38 @@ export async function POST(request: Request) {
     // Die feineren Regler kennt nur die gpt-image-Reihe; ältere Modelle wie
     // dall-e-3 lehnen sie ab. Bei durchsichtigem Grund verlangt die
     // Schnittstelle png oder webp - deshalb steht png hier fest.
-    const extras = modell.startsWith("gpt-image")
+    const gptBild = modell.startsWith("gpt-image");
+    const extras: Record<string, string> = gptBild
       ? {
           background: body?.freigestellt ? "transparent" : "opaque",
           output_format: "png",
-          quality: process.env.OPENAI_IMAGE_QUALITY ?? "medium",
+          quality: qualitaet(),
         }
       : {};
 
-    const antwort = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${schluessel}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: modell, prompt: auftrag, n: 1, size: format, ...extras }),
-      signal: AbortSignal.timeout(55_000),
-    });
+    /*
+     * Eine Vorlage macht aus dem Malen ein Umzeichnen: Dieselbe Figur, neu
+     * eingekleidet - so entsteht aus einem Tier seine Dämonenfassung, ohne
+     * dass es ein anderes Tier wird. Dafür gibt es einen eigenen Weg
+     * (/images/edits), der das Bild als Datei erwartet.
+     */
+    const vorlage = typeof body?.vorlage === "string" ? body.vorlage : "";
+    const antwort = vorlage
+      ? await fetch("https://api.openai.com/v1/images/edits", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${schluessel}` },
+          body: alsFormular(vorlage, { model: modell, prompt: auftrag, size: format, ...extras }),
+          signal: AbortSignal.timeout(55_000),
+        })
+      : await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${schluessel}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ model: modell, prompt: auftrag, n: 1, size: format, ...extras }),
+          signal: AbortSignal.timeout(55_000),
+        });
 
     if (!antwort.ok) {
       const grund = await antwort.text().catch(() => "");
@@ -162,7 +209,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         fehler: abgelaufen
-          ? "Die Bilderzeugung hat zu lange gebraucht. Bitte noch einmal versuchen - oder in den Umgebungsvariablen OPENAI_IMAGE_QUALITY herunterstellen (etwa auf „low“) oder mit OPENAI_IMAGE_MODEL auf „gpt-image-2.5-flare“ wechseln, das schneller malt."
+          ? "Die Bilderzeugung hat zu lange gebraucht. Bitte noch einmal versuchen - oder in den Umgebungsvariablen OPENAI_IMAGE_QUALITY eine Stufe herunterstellen (etwa auf „medium“)."
           : fehler instanceof Error
             ? fehler.message
             : "Unbekannter Fehler",

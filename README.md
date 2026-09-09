@@ -154,9 +154,9 @@ Claude.
 
 ```
 OPENAI_API_KEY=…
-OPENAI_IMAGE_MODEL=gpt-image-2.5-sunburst   # optional, das ist der Default
-OPENAI_IMAGE_QUALITY=medium                 # optional: low, medium, high,
-                                            # xhigh, max oder auto
+OPENAI_IMAGE_MODEL=gpt-image-2.5-flare   # optional, das ist der Default
+OPENAI_IMAGE_QUALITY=high                # optional: low, medium, high,
+                                         # xhigh, max oder auto
 ```
 
 Der Stil steht fest (naiver Comicstil, `lib/bildPrompt.ts`), damit alles
@@ -165,11 +165,13 @@ hochkant, Dinge quadratisch, Tiere und Dinge freigestellt. Das fertige Bild
 wird verkleinert und landet in der Sammlung `bilder`; der Eintrag merkt sich
 nur `bild:<id>`. Erzeugt wird einmal - im Spiel wird nur geladen.
 
-Sunburst ist die genauere der beiden 2.5er-Varianten; die schnellere und
-billigere heißt `gpt-image-2.5-flare`. Für flächige Comicbilder reicht Flare
-meist und braucht weniger Zeit - was zählt, weil die Funktion nach einer
-Minute abbricht. Umstellen genügt in der Umgebungsvariablen, am Code ändert
-sich nichts.
+Flare ist die schnellere und günstigere der beiden 2.5er-Varianten - für
+flächige Comicbilder mit klaren Konturen genau richtig. Die genauere heißt
+`gpt-image-2.5-sunburst`; sie lohnt vor allem beim Nachbearbeiten, und
+nachbearbeitet wird hier nichts. Die Qualität steht auf `high`: deutlich mehr
+Sorgfalt als `medium`, ohne die teuren Sprünge nach `xhigh` oder `max`. Weil
+jedes Bild nur einmal entsteht und danach für immer im Spiel steht, lohnt
+sich diese Stufe. Umstellen genügt in der Umgebungsvariablen.
 
 Für die gpt-image-Modelle muss die Organisation bei OpenAI einmal verifiziert sein;
 ist sie es nicht, steht genau das in der Fehlermeldung. Ohne Schlüssel ändert

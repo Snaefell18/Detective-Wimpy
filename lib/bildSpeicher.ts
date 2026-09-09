@@ -82,20 +82,53 @@ export function useBildQuelle(wert?: string | null): string | null {
 }
 
 /**
+ * Eine Vorlage auf ein Maß bringen, das durch die Leitung passt.
+ *
+ * Sie geht als data:-URL an den Server und von dort als Datei weiter; in
+ * voller Größe wäre das unnötig viel. Transparenz bleibt erhalten, sonst
+ * käme die Dämonenfassung mit weißem Kasten zurück.
+ */
+async function vorlageVorbereiten(quelle: string): Promise<string> {
+  const roh = quelle.startsWith("data:")
+    ? quelle
+    : await fetch(quelle)
+        .then((r) => r.blob())
+        .then(
+          (blob) =>
+            new Promise<string>((fertig, schief) => {
+              const leser = new FileReader();
+              leser.onload = () => fertig(String(leser.result));
+              leser.onerror = () => schief(new Error("Die Vorlage ließ sich nicht laden."));
+              leser.readAsDataURL(blob);
+            }),
+        );
+  return verkleinereDataUrl(roh, { transparenz: true, maxBytes: 1_400_000 });
+}
+
+/**
  * Ein Bild erzeugen lassen und ablegen. Zurück kommt der Wert fürs Feld
  * "bild" - nur im Admin-Menü aufzurufen.
+ *
+ * Mit `vorlage` wird aus dem Malen ein Umzeichnen: Dieselbe Figur, neu
+ * eingekleidet. Das ursprüngliche Bild wird dabei nur gelesen; gespeichert
+ * wird ein neues unter einer neuen Id.
  */
 export async function bildErzeugen(
   art: BildArt,
   eintrag: BildEintrag,
   wunsch: string,
+  /** Pfad oder data:-URL des Bildes, das als Vorlage dient. */
+  vorlage?: string,
 ): Promise<{ wert: string; daten: string }> {
+  const mitVorlage = vorlage ? await vorlageVorbereiten(vorlage) : "";
+
   const antwort = await postJson<{ bild: string }>(
     "/api/bild",
     {
-      auftrag: bildAuftrag(art, eintrag, wunsch),
+      auftrag: bildAuftrag(art, eintrag, wunsch, Boolean(mitVorlage)),
       format: FORMAT[art],
       freigestellt: FREIGESTELLT[art],
+      vorlage: mitVorlage,
     },
     // Ein Bild braucht seine Zeit - deutlich mehr als ein Gespräch.
     90,
