@@ -104,8 +104,20 @@ export function SagaVorgabenFelder({
    */
   const finaleArtSetzen = (neu: FinaleArt) => {
     const ton = vorgaben.besessenheit?.ton ?? "";
+
+    /*
+     * Ein Gerichtsfinale und der Twist schließen einander aus: Vor Gericht
+     * tritt der Drahtzieher von Anfang an auf und spielt mit Wimpy, der Twist
+     * verlangt genau das Gegenteil. Statt es hinterher zu beanstanden, wird
+     * der Twist hier gleich abgeschaltet - eine Arc-Station setzt ihn nämlich
+     * von selbst, und dann stünde man vor einer Meldung, die man gar nicht
+     * verursacht hat.
+     */
+    const ohneTwist = neu === "gericht" || neu === "gericht-daemon" ? { twist: false } : {};
+
     if (neu === "wimpy") {
       onAendern({
+        ...ohneTwist,
         finaleArt: neu,
         besessenheit: {
           wirtId: detektivId,
@@ -116,11 +128,18 @@ export function SagaVorgabenFelder({
       return;
     }
     if (vorgaben.besessenheit?.wirtId === detektivId) {
-      onAendern({ finaleArt: neu, besessenheit: { wirtId: "", daemonId: "", ton } });
+      onAendern({
+        ...ohneTwist,
+        finaleArt: neu,
+        besessenheit: { wirtId: "", daemonId: "", ton },
+      });
       return;
     }
-    onAendern({ finaleArt: neu });
+    onAendern({ ...ohneTwist, finaleArt: neu });
   };
+
+  /** Vor Gericht gibt es keinen Twist - dann bleibt die Wahl auch gesperrt. */
+  const twistGesperrt = art === "gericht" || art === "gericht-daemon";
 
   const namenVon = (id: string) =>
     stammdaten.charaktere.find((c) => c.id === id)?.name ?? id;
@@ -509,12 +528,19 @@ export function SagaVorgabenFelder({
         <button
           className="wahl-chip"
           data-aktiv={vorgaben.twist}
+          disabled={twistGesperrt}
           onClick={() => setzen({ twist: true })}
         >
           <strong>Twist</strong>
           <span className="leise">Man begegnet ihm erst im Finale</span>
         </button>
       </div>
+      {twistGesperrt && (
+        <p className="leise klein">
+          Beim Gerichtsfinale gibt es keinen Twist: Dort tritt der Drahtzieher
+          von Anfang an auf und spielt mit Wimpy - das ist der ganze Reiz.
+        </p>
+      )}
       <p className="leise klein">
         Mit Twist kommt der Drahtzieher in keinem Kapitel vor - man sieht ihn
         nicht und kann ihn nicht befragen. Die Hinweise auf ihn gibt es

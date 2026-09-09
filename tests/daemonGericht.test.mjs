@@ -139,5 +139,28 @@ console.log("\n7. Sie kann kein Kapiteltäter sein");
   pruefe("das fällt vorher auf", probleme.length === 1, probleme[0]);
 }
 
+console.log("\n8. Der Arc setzt den Twist - das Gericht verträgt ihn nicht");
+{
+  /*
+   * So kommt eine letzte Arc-Station aus vorgabenFuerTeil: mit Twist. Wählt
+   * man dort ein Gerichtsfinale, schaltet das Formular den Twist ab (siehe
+   * finaleArtSetzen). Hier wird beides nachgestellt.
+   */
+  const ausDemArc = { ...vorgaben, drahtzieherId: "hut", twist: true };
+  const mitTwist = pruefeVorgaben({ vorgaben: ausDemArc, charaktere, orte });
+  pruefe("mit Twist wird gebremst", mitTwist.length === 1 && /Twist/.test(mitTwist[0]));
+
+  // Und was das Formular daraus macht:
+  const abgeschaltet = { ...ausDemArc, twist: false };
+  const danach = pruefeVorgaben({ vorgaben: abgeschaltet, charaktere, orte });
+  pruefe("ohne Twist ist alles in Ordnung", danach.length === 0, danach[0]);
+
+  // Auch mit dem Wirt als Drahtzieher bleibt der Richtige anklagbar.
+  const angeklagt = angeklagterAus({
+    art: "gericht-daemon", besetzung: charaktere, drahtzieherId: "hut", wirtId: "hut",
+  });
+  pruefe("angeklagt wird weiterhin der Wirt", angeklagt === "hut");
+}
+
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);
