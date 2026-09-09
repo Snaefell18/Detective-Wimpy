@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LOHN_FALL, LOHN_SAGA, type Zubehoer } from "./zubehoer";
 
 /**
@@ -35,6 +35,17 @@ export type Geschenk = { stueck: Zubehoer; grund: string };
 
 export function useBeutel() {
   const [beutel, setBeutel] = useState<Beutel>(LEER);
+  /**
+   * Der Beutel, wie er in diesem Augenblick ist.
+   *
+   * Er steht hier, damit die Buchungen unten ohne Umweg über eine
+   * Aktualisierungsfunktion auskommen: Wer in einer solchen Funktion noch
+   * etwas anderes anstößt, baut sich eine Endlosschleife, sobald sie zweimal
+   * ausgewertet wird. Der Zeiger wird gleich mitgeschrieben, damit zwei
+   * Buchungen im selben Wimpernschlag einander sehen.
+   */
+  const jetzt = useRef<Beutel>(LEER);
+  jetzt.current = beutel;
   const [geladen, setGeladen] = useState(false);
   /** Die letzte Belohnung - die Anzeige holt sie sich ab und räumt sie weg. */
   const [lohn, setLohn] = useState<Lohn | null>(null);
@@ -73,11 +84,12 @@ export function useBeutel() {
    */
   const verdienen = useCallback((was: string, betrag: number, grund: string) => {
     if (!was) return;
-    setBeutel((alt) => {
-      if (alt.bezahlt.includes(was)) return alt;
-      setLohn({ betrag, grund });
-      return { ...alt, yen: alt.yen + betrag, bezahlt: [...alt.bezahlt, was] };
-    });
+    const alt = jetzt.current;
+    if (alt.bezahlt.includes(was)) return;
+    const neu = { ...alt, yen: alt.yen + betrag, bezahlt: [...alt.bezahlt, was] };
+    jetzt.current = neu;
+    setBeutel(neu);
+    setLohn({ betrag, grund });
   }, []);
 
   /** Ein gelöster Fall. */
@@ -102,43 +114,44 @@ export function useBeutel() {
   const geschenkErhalten = useCallback(
     (was: string, stueck: Zubehoer | null | undefined, grund: string) => {
       if (!was || !stueck?.id) return;
-      setBeutel((alt) => {
-        if (alt.bezahlt.includes(was)) return alt;
-        setGeschenk({ stueck, grund });
-        return {
-          ...alt,
-          bezahlt: [...alt.bezahlt, was],
-          vorrat: { ...alt.vorrat, [stueck.id]: (alt.vorrat[stueck.id] ?? 0) + 1 },
-        };
-      });
+      const alt = jetzt.current;
+      if (alt.bezahlt.includes(was)) return;
+      const neu = {
+        ...alt,
+        bezahlt: [...alt.bezahlt, was],
+        vorrat: { ...alt.vorrat, [stueck.id]: (alt.vorrat[stueck.id] ?? 0) + 1 },
+      };
+      jetzt.current = neu;
+      setBeutel(neu);
+      setGeschenk({ stueck, grund });
     },
     [],
   );
 
   /** Kaufen. Gibt zurück, ob es geklappt hat. */
   const kaufen = useCallback((id: string, preis: number): boolean => {
-    let geklappt = false;
-    setBeutel((alt) => {
-      if (alt.yen < preis) return alt;
-      geklappt = true;
-      return {
-        ...alt,
-        yen: alt.yen - preis,
-        vorrat: { ...alt.vorrat, [id]: (alt.vorrat[id] ?? 0) + 1 },
-      };
-    });
-    return geklappt;
+    const alt = jetzt.current;
+    if (alt.yen < preis) return false;
+    const neu = {
+      ...alt,
+      yen: alt.yen - preis,
+      vorrat: { ...alt.vorrat, [id]: (alt.vorrat[id] ?? 0) + 1 },
+    };
+    jetzt.current = neu;
+    setBeutel(neu);
+    return true;
   }, []);
 
   /** Einsetzen - und damit verbrauchen. */
   const verbrauchen = useCallback((id: string) => {
-    setBeutel((alt) => {
-      const uebrig = (alt.vorrat[id] ?? 0) - 1;
-      const vorrat = { ...alt.vorrat };
-      if (uebrig > 0) vorrat[id] = uebrig;
-      else delete vorrat[id];
-      return { ...alt, vorrat };
-    });
+    const alt = jetzt.current;
+    const uebrig = (alt.vorrat[id] ?? 0) - 1;
+    const vorrat = { ...alt.vorrat };
+    if (uebrig > 0) vorrat[id] = uebrig;
+    else delete vorrat[id];
+    const neu = { ...alt, vorrat };
+    jetzt.current = neu;
+    setBeutel(neu);
   }, []);
 
   const lohnAbholen = useCallback(() => setLohn(null), []);

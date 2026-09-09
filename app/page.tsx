@@ -187,6 +187,24 @@ export default function Home() {
   }, [stand.status, stand.ergebnis?.richtig, stand.fall, fallGeloest]);
 
   /**
+   * Der große Batzen: 500 ¥ für eine geschaffte Saga.
+   *
+   * Das gehört in einen Nebeneffekt und nirgendwo anders hin. Stand die
+   * Buchung im Aufbau des Epilog-Bildschirms, buchte sie bei jedem Neuzeichnen
+   * erneut - und weil jede Buchung die Lohnanzeige anstößt, zeichnete der
+   * Bildschirm sich wieder neu. Das Spiel stieg mit einem Fehler aus, sobald
+   * man eine Saga wirklich gewonnen hatte.
+   */
+  const sagaGeschafft = geld.sagaGeschafft;
+  const sagaBezahlbar =
+    saga.stand && saga.stand.lauf.phase === "epilog" && saga.stand.lauf.finaleGeschafft
+      ? saga.stand.saga.id
+      : null;
+  useEffect(() => {
+    if (sagaBezahlbar) sagaGeschafft(sagaBezahlbar);
+  }, [sagaBezahlbar, sagaGeschafft]);
+
+  /**
    * Was Wimpy gerade dabeihat - gefiltert danach, wo es überhaupt wirkt.
    * Ein Spürsinn-Fläschchen gehört nicht ins Gespräch, das Serum nicht an
    * den Schauplatz.
@@ -898,7 +916,6 @@ export default function Home() {
     if (lauf.phase === "epilog") {
       // 500 ¥ für eine ganze Saga - aber nur, wenn das Finale wirklich
       // geschafft ist. Verbucht wird über die Saga-Id, also genau einmal.
-      if (lauf.finaleGeschafft) geld.sagaGeschafft(sagaDaten.id);
       return (
         <main className="app">
           <ErzaehlerScreen
