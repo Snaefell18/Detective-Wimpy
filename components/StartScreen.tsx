@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Szene } from "./Bild";
 import { alsStaedte } from "@/lib/csv";
 import { useStammdaten } from "@/lib/stammdaten";
+import { yen } from "@/lib/zubehoer";
 
 /** Der Startbildschirm ist das Titelbild - die Knöpfe liegen im Himmel darüber. */
 export function StartScreen({
@@ -12,6 +13,8 @@ export function StartScreen({
   onKampagnen,
   onSagas,
   onArcs,
+  onLaden,
+  yenImBeutel,
   onFortsetzen,
   laufenderFall,
   laedt,
@@ -22,6 +25,10 @@ export function StartScreen({
   onKampagnen: () => void;
   onSagas: () => void;
   onArcs: () => void;
+  /** Der Detektiv-Laden. */
+  onLaden: () => void;
+  /** Was Wimpy verdient hat - steht auf dem Knopf. */
+  yenImBeutel: number;
   /** Nur gesetzt, wenn ein pausierter Fall wartet. */
   onFortsetzen?: () => void;
   laufenderFall?: string;
@@ -82,6 +89,12 @@ export function StartScreen({
         <button className="knopf glas schmal" onClick={onArcs}>
           <span className="symbol">🎞</span>
           <span className="zeilen-text">Arcs</span>
+        </button>
+
+        <button className="knopf glas schmal" onClick={onLaden}>
+          <span className="symbol">🧰</span>
+          <span className="zeilen-text">Detektiv-Zubehör</span>
+          <span className="zeilen-meta">{yen(yenImBeutel)}</span>
         </button>
 
         <span className="start-info">

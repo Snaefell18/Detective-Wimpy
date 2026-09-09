@@ -1,0 +1,128 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { LOHN_FALL, LOHN_SAGA } from "./zubehoer";
+
+/**
+ * Wimpys Geldbeutel und sein Zubehör.
+ *
+ * Beides liegt auf dem Gerät, nicht in der Datenbank: Es ist der Fortschritt
+ * eines Spielers und nichts, was jemand anderes sehen müsste. Wer den Speicher
+ * leert, fängt bei null an - dasselbe gilt ja auch für angefangene Sagas.
+ *
+ * `bezahlt` merkt sich, wofür schon Lohn geflossen ist. Ohne diese Liste
+ * bekäme man für denselben Fall zweimal Geld, sobald ein Bildschirm neu
+ * gezeichnet wird - und Wimpy wäre in einer Stunde reicher als die ganze
+ * Stadt.
+ */
+const KEY = "detective-wimpy:beutel:v1";
+
+export type Beutel = {
+  yen: number;
+  /** Gekaufte Gegenstände: Zubehör-Id -> Anzahl. */
+  vorrat: Record<string, number>;
+  /** Wofür schon gezahlt wurde: Fall-Ids und Saga-Ids. */
+  bezahlt: string[];
+};
+
+const LEER: Beutel = { yen: 0, vorrat: {}, bezahlt: [] };
+
+/** Wie viel eine gerade eingelöste Belohnung wert war - für die Anzeige. */
+export type Lohn = { betrag: number; grund: string };
+
+export function useBeutel() {
+  const [beutel, setBeutel] = useState<Beutel>(LEER);
+  const [geladen, setGeladen] = useState(false);
+  /** Die letzte Belohnung - die Anzeige holt sie sich ab und räumt sie weg. */
+  const [lohn, setLohn] = useState<Lohn | null>(null);
+
+  useEffect(() => {
+    try {
+      const roh = window.localStorage.getItem(KEY);
+      if (roh) {
+        const daten = JSON.parse(roh) as Partial<Beutel>;
+        setBeutel({
+          yen: Number.isFinite(daten.yen) ? Number(daten.yen) : 0,
+          vorrat: daten.vorrat ?? {},
+          bezahlt: daten.bezahlt ?? [],
+        });
+      }
+    } catch {
+      // Kaputter Eintrag - dann eben von vorn.
+    }
+    setGeladen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!geladen) return;
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(beutel));
+    } catch {
+      // Voller Speicher - das Spiel läuft trotzdem weiter.
+    }
+  }, [beutel, geladen]);
+
+  /**
+   * Lohn für etwas Gelöstes. `was` ist die Id, unter der es verbucht wird -
+   * derselbe Fall zahlt nur einmal.
+   */
+  const verdienen = useCallback((was: string, betrag: number, grund: string) => {
+    if (!was) return;
+    setBeutel((alt) => {
+      if (alt.bezahlt.includes(was)) return alt;
+      setLohn({ betrag, grund });
+      return { ...alt, yen: alt.yen + betrag, bezahlt: [...alt.bezahlt, was] };
+    });
+  }, []);
+
+  /** Ein gelöster Fall. */
+  const fallGeloest = useCallback(
+    (fallId: string) => verdienen(`fall:${fallId}`, LOHN_FALL, "Fall gelöst"),
+    [verdienen],
+  );
+
+  /** Eine ganze Saga - der große Batzen. */
+  const sagaGeschafft = useCallback(
+    (sagaId: string) => verdienen(`saga:${sagaId}`, LOHN_SAGA, "Saga abgeschlossen"),
+    [verdienen],
+  );
+
+  /** Kaufen. Gibt zurück, ob es geklappt hat. */
+  const kaufen = useCallback((id: string, preis: number): boolean => {
+    let geklappt = false;
+    setBeutel((alt) => {
+      if (alt.yen < preis) return alt;
+      geklappt = true;
+      return {
+        ...alt,
+        yen: alt.yen - preis,
+        vorrat: { ...alt.vorrat, [id]: (alt.vorrat[id] ?? 0) + 1 },
+      };
+    });
+    return geklappt;
+  }, []);
+
+  /** Einsetzen - und damit verbrauchen. */
+  const verbrauchen = useCallback((id: string) => {
+    setBeutel((alt) => {
+      const uebrig = (alt.vorrat[id] ?? 0) - 1;
+      const vorrat = { ...alt.vorrat };
+      if (uebrig > 0) vorrat[id] = uebrig;
+      else delete vorrat[id];
+      return { ...alt, vorrat };
+    });
+  }, []);
+
+  const lohnAbholen = useCallback(() => setLohn(null), []);
+
+  return {
+    beutel,
+    geladen,
+    lohn,
+    lohnAbholen,
+    fallGeloest,
+    sagaGeschafft,
+    kaufen,
+    verbrauchen,
+  };
+}

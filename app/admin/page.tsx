@@ -7,10 +7,20 @@ import { ArcsBereich } from "@/components/admin/ArcsBereich";
 import { BilderBereich } from "@/components/admin/BilderBereich";
 import { KampagnenBereich } from "@/components/admin/KampagnenBereich";
 import { SagenBereich } from "@/components/admin/SagenBereich";
+import { ZubehoerBereich } from "@/components/admin/ZubehoerBereich";
 import { SpielBereich } from "@/components/admin/SpielBereich";
 import { StammdatenBereich } from "@/components/admin/StammdatenBereich";
 
-type Bereich = "kampagnen" | "sagen" | "arcs" | "tiere" | "orte" | "items" | "bilder" | "spiel";
+type Bereich =
+  | "kampagnen"
+  | "sagen"
+  | "arcs"
+  | "tiere"
+  | "orte"
+  | "items"
+  | "zubehoer"
+  | "bilder"
+  | "spiel";
 
 const REITER: { id: Bereich; label: string }[] = [
   { id: "kampagnen", label: "Kampagnen" },
@@ -19,6 +29,7 @@ const REITER: { id: Bereich; label: string }[] = [
   { id: "tiere", label: "Tiere" },
   { id: "orte", label: "Orte" },
   { id: "items", label: "Dinge" },
+  { id: "zubehoer", label: "Laden" },
   { id: "bilder", label: "Bilder" },
   { id: "spiel", label: "Spiel" },
 ];
@@ -94,6 +105,7 @@ function AdminInhalt() {
           {bereich === "tiere" && <StammdatenBereich art="charaktere" {...gemeinsam} />}
           {bereich === "orte" && <StammdatenBereich art="orte" {...gemeinsam} />}
           {bereich === "items" && <StammdatenBereich art="items" {...gemeinsam} />}
+          {bereich === "zubehoer" && <ZubehoerBereich {...gemeinsam} />}
           {bereich === "bilder" && <BilderBereich {...gemeinsam} />}
           {bereich === "spiel" && <SpielBereich {...gemeinsam} />}
         </div>

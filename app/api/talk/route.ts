@@ -20,6 +20,8 @@ type Body = {
   nachricht: string;
   verlauf: ChatTurn[];
   gefundeneSpuren: string[];
+  /** Eingesetztes Zubehör - wirkt nur auf diese eine Antwort. */
+  wirkung?: string;
 };
 
 export async function POST(request: Request) {
@@ -75,6 +77,8 @@ export async function POST(request: Request) {
             nachricht: body.nachricht.slice(0, 500),
             verlauf: body.verlauf ?? [],
             gefundeneSpuren: body.gefundeneSpuren ?? [],
+            // Detektiv-Zubehör, das Wimpy gerade eingesetzt hat.
+            wirkung: typeof body.wirkung === "string" ? body.wirkung : undefined,
           }),
         },
       ],

@@ -2660,3 +2660,62 @@
   margin-left: 8px;
   box-shadow: none;
 }
+
+/* --- Yen: Lohn, Laden und Tasche im Noir ----------------------------- */
+
+[data-theme="noir"] .lohn {
+  background: radial-gradient(70% 50% at 50% 45%, rgba(194, 145, 63, 0.18), transparent 72%), var(--tief);
+}
+
+[data-theme="noir"] .lohn-muenzen span,
+[data-theme="noir"] .lohn-betrag,
+[data-theme="noir"] .laden-preis,
+[data-theme="noir"] .wirkt {
+  color: var(--akzent);
+  text-shadow: none;
+}
+
+[data-theme="noir"] .lohn-betrag {
+  font-family: var(--f-display);
+  text-shadow: var(--titel-schatten);
+}
+
+[data-theme="noir"] .laden-stueck,
+[data-theme="noir"] .tasche-stueck {
+  border-radius: 0;
+  background: none;
+  border-top: 1px solid var(--linie);
+  padding: 16px 0;
+}
+
+[data-theme="noir"] .laden-bild,
+[data-theme="noir"] .tasche-bild,
+[data-theme="noir"] .tasche-knopf {
+  border-radius: 0;
+}
+
+[data-theme="noir"] .tasche,
+[data-theme="noir"] .wirkt {
+  border-radius: 0;
+  background: none;
+  border: 1px solid var(--linie-akzent);
+}
+
+[data-theme="noir"] .tasche-punkt {
+  border-radius: 0;
+  background: var(--akzent);
+}
+
+/* Der Taschenknopf trägt im Noir sein Wort statt eines Emoji. */
+[data-theme="noir"] .tasche-knopf {
+  width: auto;
+  min-width: 64px;
+  padding: 0 12px;
+  background: none;
+  border: 1px solid var(--linie);
+}
+
+[data-theme="noir"] .tasche-knopf[data-offen="true"] {
+  border-color: var(--linie-akzent);
+  color: var(--akzent);
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bild, Szene } from "./Bild";
+import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import type { Character, ChatTurn, TalkMode } from "@/lib/types";
 
 const MODI: { id: TalkMode; label: string; symbol: string }[] = [
@@ -32,6 +33,9 @@ export function ChatOverlay({
   onSchliessen,
   laedt,
   fehler,
+  tasche,
+  onEinsetzen,
+  wirktGerade,
 }: {
   charakter: Character;
   /** Wimpy - er steht als Fragender vorne in der Szene. */
@@ -41,9 +45,16 @@ export function ChatOverlay({
   onSchliessen: () => void;
   laedt: boolean;
   fehler: string | null;
+  /** Was Wimpy dabeihat und hier einsetzen kann - mit Anzahl. */
+  tasche: { stueck: Zubehoer; anzahl: number }[];
+  /** Einsetzen und verbrauchen. */
+  onEinsetzen: (stueck: Zubehoer) => void;
+  /** Was gerade wirkt - steht über dem Eingabefeld. */
+  wirktGerade: string | null;
 }) {
   const [modus, setModus] = useState<TalkMode>("reden");
   const [text, setText] = useState("");
+  const [tascheOffen, setTascheOffen] = useState(false);
   const endeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,6 +141,44 @@ export function ChatOverlay({
       )}
 
       <div className="chat-fuss">
+        {/* Was Wimpy dabeihat - eine Klappe über dem Eingabefeld. */}
+        {tascheOffen && (
+          <div className="tasche">
+            {tasche.length === 0 ? (
+              <p className="leise klein">
+                Nichts dabei, was hier hilft. Im Detektiv-Zubehör gibt es welches.
+              </p>
+            ) : (
+              tasche.map(({ stueck, anzahl }) => {
+                const wirkung = wirkungVon(stueck.wirkung);
+                return (
+                  <button
+                    key={stueck.id}
+                    className="tasche-stueck"
+                    disabled={laedt}
+                    onClick={() => {
+                      onEinsetzen(stueck);
+                      setTascheOffen(false);
+                    }}
+                  >
+                    <div className="tasche-bild">
+                      <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
+                    </div>
+                    <span className="tasche-text">
+                      <strong>
+                        {stueck.name} <span className="leise">×{anzahl}</span>
+                      </strong>
+                      <span className="leise klein">{wirkung?.hinweis}</span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {wirktGerade && <p className="wirkt">{wirktGerade}</p>}
+
         <div className="modus-reihe">
           {MODI.map((m) => (
             <button
@@ -166,6 +215,19 @@ export function ChatOverlay({
             maxLength={300}
             enterKeyHint="send"
           />
+          <button
+            type="button"
+            className="tasche-knopf"
+            data-offen={tascheOffen}
+            aria-label="Tasche"
+            title="Tasche"
+            onClick={() => setTascheOffen((auf) => !auf)}
+          >
+            {/* Im Noir kommen keine Emoji vor - dort steht das Wort. */}
+            <span className="symbol">🧰</span>
+            <span className="knopf-wort">Tasche</span>
+            {tasche.length > 0 && <i className="tasche-punkt" />}
+          </button>
           <button type="submit" className="senden" disabled={laedt || !text.trim()}>
             ➤
           </button>

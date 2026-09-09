@@ -14,6 +14,7 @@ import {
 import { anmelden, getDb } from "./firebase";
 import type { Saga } from "./sagaTypen";
 import type { Arc } from "./arcTypen";
+import type { Zubehoer } from "./zubehoer";
 import type { Character, Item, Kampagne, Location } from "./types";
 
 /**
@@ -170,6 +171,28 @@ export async function speichereArc(arc: Arc): Promise<void> {
 
 export const loescheArc = (id: string) => loesche("arcs", id);
 
+
+/* --- Detektiv-Zubehör: der Laden ----------------------------------- */
+
+/**
+ * Was im Detektiv-Laden steht. Der Inhalt gehört zum Spiel und liegt deshalb
+ * in der Datenbank; was jemand davon gekauft hat, liegt auf seinem Gerät.
+ */
+export const ladeZubehoer = () => alle<Zubehoer>("zubehoer");
+
+export async function speichereZubehoer(stueck: Zubehoer): Promise<void> {
+  await anmelden();
+  await setDoc(
+    doc(getDb(), "zubehoer", stueck.id),
+    sauber({
+      ...stueck,
+      name: kuerze(stueck.name, 80),
+      beschreibung: kuerze(stueck.beschreibung, 600),
+    }),
+  );
+}
+
+export const loescheZubehoer = (id: string) => loesche("zubehoer", id);
 
 /* --- Gesprochene Erzählertexte ------------------------------------- */
 

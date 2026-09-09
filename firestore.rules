@@ -93,6 +93,17 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Detektiv-Zubehör: der Inhalt des Ladens. Nichts davon ist geheim -
+    // Preise und Beschreibungen stehen ohnehin im Regal.
+    match /zubehoer/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && textLimit('name', 80)
+        && textLimit('beschreibung', 600)
+        && request.resource.data.preis is number;
+      allow delete: if angemeldet();
+    }
+
     // Alles andere ist gesperrt.
     match /{document=**} {
       allow read, write: if false;

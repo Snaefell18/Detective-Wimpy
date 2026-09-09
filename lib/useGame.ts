@@ -203,7 +203,7 @@ export function useGame() {
     }));
   }, []);
 
-  const umsehen = useCallback(async (): Promise<Fund | null> => {
+  const umsehen = useCallback(async (wirkung?: string): Promise<Fund | null> => {
     const jetzt = standRef.current;
     if (!jetzt.siegel) return null;
     setFehler(null);
@@ -213,6 +213,7 @@ export function useGame() {
         siegel: jetzt.siegel,
         ortId: jetzt.ortId,
         gefundeneSpuren: jetzt.gefundeneSpuren,
+        wirkung,
       });
 
       if (daten.spur) {
@@ -235,7 +236,13 @@ export function useGame() {
   }, []);
 
   const sprich = useCallback(
-    async (charakterId: string, modus: TalkMode, nachricht: string) => {
+    async (
+      charakterId: string,
+      modus: TalkMode,
+      nachricht: string,
+      /** Eingesetztes Detektiv-Zubehör - wirkt auf genau diese Antwort. */
+      wirkung?: string,
+    ) => {
       const jetzt = standRef.current;
       if (!jetzt.siegel) return;
       setFehler(null);
@@ -259,6 +266,7 @@ export function useGame() {
           nachricht,
           verlauf: jetzt.verlauf[charakterId] ?? [],
           gefundeneSpuren: jetzt.gefundeneSpuren,
+          wirkung,
         });
 
         setStand((alt) => {
@@ -373,6 +381,11 @@ export function useGame() {
   }, []);
 
   /** Beenden: Der Fall ist weg. */
+  /** Detektiv-Zubehör: eine Beschuldigung mehr in diesem Fall. */
+  const extraBeschuldigung = useCallback(() => {
+    setStand((alt) => ({ ...alt, beschuldigungenUebrig: alt.beschuldigungenUebrig + 1 }));
+  }, []);
+
   const aufgeben = useCallback(() => {
     setStand(LEER);
   }, []);
@@ -393,6 +406,7 @@ export function useGame() {
     umsehen,
     sprich,
     beschuldige,
+    extraBeschuldigung,
     aufgeben,
   };
 }

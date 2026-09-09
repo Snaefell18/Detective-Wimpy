@@ -284,8 +284,22 @@ export function buildTalkPrompt(args: {
   nachricht: string;
   verlauf: ChatTurn[];
   gefundeneSpuren: string[];
+  /**
+   * Detektiv-Zubehör, das Wimpy gerade eingesetzt hat - siehe lib/zubehoer.ts.
+   * Es wirkt genau auf diese eine Antwort.
+   */
+  wirkung?: string;
 }): string {
-  const { fall, charakterId, ortId, modus, nachricht, verlauf, gefundeneSpuren } = args;
+  const {
+    fall,
+    charakterId,
+    ortId,
+    modus,
+    nachricht,
+    verlauf,
+    gefundeneSpuren,
+    wirkung,
+  } = args;
   const charakter = fall.besetzung.find((c) => c.id === charakterId);
   if (!charakter) throw new Error(`Unbekannter Charakter: ${charakterId}`);
 
@@ -305,6 +319,32 @@ export function buildTalkPrompt(args: {
     beschuldigen:
       "Wimpy beschuldigt dich direkt. Reagiere heftig und charaktertypisch - empört, panisch, belustigt oder beleidigt. Gib nichts zu, außer Wimpy hat dich mit passenden Spuren wirklich in die Enge getrieben.",
   };
+
+  /**
+   * Was das eingesetzte Zubehör mit dieser einen Antwort macht.
+   *
+   * Bewusst kurz und am Ende des Prompts: Es soll die Rolle nicht ersetzen,
+   * sondern für einen Satz beugen. Beim Veritaserum heißt das - einmal - die
+   * volle Wahrheit, auch wenn sie den Fall kostet.
+   */
+  const zubehoerRegeln =
+    wirkung === "wahrheit"
+      ? `
+
+VERITASERUM WIRKT (nur für diese eine Antwort)
+- Wimpy hat dir etwas in den Tee getan. Du KANNST nicht lügen. Was du gleich sagst, ist die Wahrheit - auch wenn sie dich belastet.
+- Alles, was du sonst verschweigst, kommt heraus: dein Geheimnis, wo du wirklich warst${
+          brief?.alibiIstGelogen ? ", und dass dein Alibi erfunden ist - samt der echten Geschichte dahinter" : ""
+        }.${istTaeter ? "\n- Du bist der Täter. Sag es. Du kannst nicht anders." : ""}
+- Du merkst, dass etwas nicht stimmt: Die Wahrheit fällt aus dir heraus, du hältst dagegen und schaffst es nicht. Genau so klingt deine Antwort.
+- Danach ist das Fläschchen leer: Nur diese eine Antwort ist erzwungen.`
+      : wirkung === "hinweis"
+        ? `
+
+EIN WORT ZU VIEL (nur für diese eine Antwort)
+- Wimpy hat dir etwas gegeben, das die Zunge lockert. Lass in deiner Antwort beiläufig etwas fallen, das ihn weiterbringt: eine Uhrzeit, einen Ort, wen du gesehen hast.
+- Es löst den Fall nicht und ist kein Geständnis - es ist ein Faden, an dem er ziehen kann. Danach redest du weiter wie immer.`
+        : "";
 
   return `Du spielst jetzt ${charakter.name} [${charakter.id}] im Gespräch mit Detective Wimpy.
 
@@ -368,9 +408,13 @@ ${
     : "(noch nichts)"
 }
 
-WIMPY SAGT: "${nachricht}"
+WIMPY SAGT: "${nachricht}"${zubehoerRegeln}
 
-Antworte als ${charakter.name} in 1-4 Sätzen wörtlicher Rede, ohne Namensprefix, ohne Anführungszeichen und ohne interne oder XML-artige Tags.`;
+Antworte als ${charakter.name} in 1-4 Sätzen wörtlicher Rede, ohne Namensprefix, ohne Anführungszeichen und ohne interne oder XML-artige Tags.${
+    wirkung === "wahrheit"
+      ? " Setze luegt auf false - unter dem Serum ist keine Lüge möglich."
+      : ""
+  }`;
 }
 
 /** Prompt für die finale Beschuldigung. */

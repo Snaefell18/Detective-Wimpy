@@ -10,6 +10,8 @@ type Body = {
   siegel: string;
   ortId: string;
   gefundeneSpuren: string[];
+  /** Eingesetztes Detektiv-Zubehör - "spuersinn" schärft den Riecher. */
+  wirkung?: string;
 };
 
 /**
@@ -31,9 +33,18 @@ export async function POST(request: Request) {
     }
 
     const gefunden = new Set(body.gefundeneSpuren ?? []);
-    const spur = fall.spuren.find(
-      (s) => s.ortId === body.ortId && !gefunden.has(s.itemId),
-    );
+    const hier = fall.spuren.find((s) => s.ortId === body.ortId && !gefunden.has(s.itemId));
+
+    /*
+     * Mit geschärftem Spürsinn reicht der Blick über den Ort hinaus: Liegt
+     * hier nichts mehr, führt eine Ahnung zur nächsten offenen Spur - egal,
+     * wo sie liegt. Ohne das Zubehör bleibt alles wie bisher.
+     */
+    const woanders =
+      !hier && body.wirkung === "spuersinn"
+        ? fall.spuren.find((s) => !gefunden.has(s.itemId))
+        : undefined;
+    const spur = hier ?? woanders;
 
     if (!spur) {
       const ort = findeOrt(fall.orte, body.ortId);
@@ -62,9 +73,13 @@ export async function POST(request: Request) {
         beobachtung,
         vermutung: vermutung || null,
       },
-      text: `Wimpy hebt etwas auf: ${name}. ${beobachtung}${
-        vermutung ? `\n\nWimpy murmelt: „${vermutung}“` : ""
-      }`,
+      text: `${
+        woanders
+          ? `Wimpy stutzt, dreht sich um - und hat plötzlich ${
+              findeOrt(fall.orte, spur.ortId)?.name ?? "einen anderen Ort"
+            } im Kopf. Dort liegt es: ${name}. `
+          : `Wimpy hebt etwas auf: ${name}. `
+      }${beobachtung}${vermutung ? `\n\nWimpy murmelt: „${vermutung}“` : ""}`,
     });
   } catch (error) {
     console.error("[api/search]", error);

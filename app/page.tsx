@@ -9,6 +9,8 @@ import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
+import { LohnSchau } from "@/components/LohnSchau";
+import { ShopScreen } from "@/components/ShopScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
 import { ErzaehlerScreen, roemisch } from "@/components/ErzaehlerScreen";
 import { SagaVorspann } from "@/components/SagaVorspann";
@@ -43,7 +45,10 @@ import {
   type Saga,
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
+import { ladeZubehoer } from "@/lib/db";
+import { VERITASERUM, wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import { useArcLauf } from "@/lib/useArcLauf";
+import { useBeutel } from "@/lib/useBeutel";
 import { useGame } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
 
@@ -57,6 +62,16 @@ export default function Home() {
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
   const [sagenOffen, setSagenOffen] = useState(false);
   const [arcsOffen, setArcsOffen] = useState(false);
+  const [ladenOffen, setLadenOffen] = useState(false);
+  /** Was Wimpy gekauft hat - die Beschreibungen kommen aus der Datenbank. */
+  const [zubehoer, setZubehoer] = useState<Zubehoer[]>([VERITASERUM]);
+  /**
+   * Eingesetztes Zubehör, das auf die nächste Antwort wartet.
+   * Charakter-Id -> Wirkung; verbraucht wird beim Absenden der Frage.
+   */
+  const [wirkt, setWirkt] = useState<Record<string, string>>({});
+  /** Geschärfter Spürsinn fürs nächste Umsehen. */
+  const [spuersinn, setSpuersinn] = useState(false);
   const [arcMeldung, setArcMeldung] = useState<string | null>(null);
   /**
    * Der Arc liegt beiseite, ohne beendet zu sein: Der Fortschritt bleibt
@@ -75,6 +90,7 @@ export default function Home() {
   const [verdachtsMeldung, setVerdachtsMeldung] = useState<Verdachtsmeldung | null>(null);
   const saga = useSagaLauf();
   const arc = useArcLauf();
+  const geld = useBeutel();
 
   const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
 
@@ -105,6 +121,24 @@ export default function Home() {
       break;
     }
   }, [stand.verdacht, stand.fall]);
+
+  // Der Inhalt des Ladens - einmal beim Start geholt. Ohne Verbindung bleibt
+  // es beim Veritaserum, damit die Tasche nie leer aussieht.
+  useEffect(() => {
+    let sichtbar = true;
+    void ladeZubehoer()
+      .then(({ daten }) => {
+        if (!sichtbar) return;
+        const eigene = daten.filter((z) => !z.versteckt);
+        setZubehoer(
+          eigene.some((z) => z.id === VERITASERUM.id) ? eigene : [VERITASERUM, ...eigene],
+        );
+      })
+      .catch(() => {});
+    return () => {
+      sichtbar = false;
+    };
+  }, []);
 
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
@@ -142,6 +176,54 @@ export default function Home() {
   };
 
   /* --- Sagas: Erzählerteile und Kapitel ------------------------------ */
+
+  /**
+   * Der Lohn: 100 ¥ für jeden gelösten Fall.
+   *
+   * Verbucht wird über die Fall-Id, und der Beutel merkt sich, wofür schon
+   * gezahlt wurde - derselbe Fall zahlt also nie zweimel, egal wie oft dieser
+   * Bildschirm neu gezeichnet wird.
+   */
+  const fallGeloest = geld.fallGeloest;
+  useEffect(() => {
+    if (stand.status === "beendet" && stand.ergebnis?.richtig && stand.fall) {
+      fallGeloest(stand.fall.id);
+    }
+  }, [stand.status, stand.ergebnis?.richtig, stand.fall, fallGeloest]);
+
+  /**
+   * Was Wimpy gerade dabeihat - gefiltert danach, wo es überhaupt wirkt.
+   * Ein Spürsinn-Fläschchen gehört nicht ins Gespräch, das Serum nicht an
+   * den Schauplatz.
+   */
+  const tascheFuer = (wo: "gespraech" | "fall") =>
+    zubehoer
+      .filter((z) => (geld.beutel.vorrat[z.id] ?? 0) > 0 && wirkungVon(z.wirkung)?.wo === wo)
+      .map((stueck) => ({ stueck, anzahl: geld.beutel.vorrat[stueck.id] ?? 0 }));
+
+  /**
+   * Ein Stück Zubehör einsetzen.
+   *
+   * Verbraucht wird sofort - wer es aus der Tasche nimmt, hat es benutzt.
+   * Was danach passiert, hängt an der Wirkung: Das Gespräch merkt sich die
+   * nächste Antwort, der Spürsinn das nächste Umsehen, und eine zusätzliche
+   * Beschuldigung wirkt auf der Stelle.
+   */
+  const einsetzen = (stueck: Zubehoer, charakterId?: string) => {
+    const wirkung = wirkungVon(stueck.wirkung);
+    if (!wirkung) return;
+    geld.verbrauchen(stueck.id);
+
+    if (wirkung.wo === "gespraech" && charakterId) {
+      setWirkt((alt) => ({ ...alt, [charakterId]: stueck.wirkung }));
+      return;
+    }
+    if (stueck.wirkung === "spuersinn") {
+      setSpuersinn(true);
+      return;
+    }
+    if (stueck.wirkung === "beschuldigung") spiel.extraBeschuldigung();
+  };
 
   /** Läuft gerade der Fall, der zur Saga gehört? */
   const sagaFallLaeuft = Boolean(
@@ -350,6 +432,20 @@ export default function Home() {
 
   if (!geladen || !saga.geladen || !arc.geladen) {
     return <main className="app" />;
+  }
+
+  // Die Auszahlung: Sie kommt über allem und wartet, bis man weitertippt.
+  if (geld.lohn) {
+    return (
+      <main className="app">
+        <LohnSchau
+          betrag={geld.lohn.betrag}
+          grund={geld.lohn.grund}
+          gesamt={geld.beutel.yen}
+          onFertig={geld.lohnAbholen}
+        />
+      </main>
+    );
   }
 
   // Erst der gesprochene Prolog, dann das Intro mit dem Titelsong.
@@ -652,6 +748,9 @@ export default function Home() {
     }
 
     if (lauf.phase === "epilog") {
+      // 500 ¥ für eine ganze Saga - aber nur, wenn das Finale wirklich
+      // geschafft ist. Verbucht wird über die Saga-Id, also genau einmal.
+      if (lauf.finaleGeschafft) geld.sagaGeschafft(sagaDaten.id);
       return (
         <main className="app">
           <ErzaehlerScreen
@@ -682,6 +781,8 @@ export default function Home() {
           onKampagnen={() => setKampagnenOffen(true)}
           onSagas={() => setSagenOffen(true)}
           onArcs={() => setArcsOffen(true)}
+          onLaden={() => setLadenOffen(true)}
+          yenImBeutel={geld.beutel.yen}
           onFortsetzen={stand.status === "pausiert" ? spiel.fortsetzen : undefined}
           laufenderFall={stand.status === "pausiert" ? stand.fall?.titel : undefined}
           laedt={laedt === "fall"}
@@ -703,6 +804,15 @@ export default function Home() {
             laufend={
               arc.stand ? { arcId: arc.stand.arc.id, teil: arc.stand.lauf.teil } : null
             }
+          />
+        )}
+
+        {ladenOffen && (
+          <ShopScreen
+            yenImBeutel={geld.beutel.yen}
+            vorrat={geld.beutel.vorrat}
+            onKaufen={(stueck) => geld.kaufen(stueck.id, stueck.preis)}
+            onSchliessen={() => setLadenOffen(false)}
           />
         )}
 
@@ -819,7 +929,14 @@ export default function Home() {
               setFehler(null);
               setChatMit(id);
             }}
-            onUmsehen={spiel.umsehen}
+            onUmsehen={async () => {
+              // Geschärfter Spürsinn gilt für genau ein Umsehen.
+              const wirkung = spuersinn ? "spuersinn" : undefined;
+              if (spuersinn) setSpuersinn(false);
+              return spiel.umsehen(wirkung);
+            }}
+            tasche={tascheFuer("fall")}
+            onEinsetzen={(stueck) => einsetzen(stueck)}
             suchtGerade={laedt === "suche"}
             wetter={sagaWetter}
           />
@@ -871,7 +988,19 @@ export default function Home() {
           charakter={chatCharakter}
           detektiv={stand.fall.besetzung.find((c) => c.istDetektiv)}
           verlauf={stand.verlauf[chatMit] ?? []}
-          onSenden={(modus, text) => spiel.sprich(chatMit, modus, text)}
+          tasche={tascheFuer("gespraech")}
+          wirktGerade={
+            wirkt[chatMit] ? (wirkungVon(wirkt[chatMit])?.bestaetigung ?? null) : null
+          }
+          onEinsetzen={(stueck) => einsetzen(stueck, chatMit)}
+          onSenden={(modus, text) => {
+            // Eingesetztes Zubehör wirkt auf genau diese eine Frage.
+            const wirkung = wirkt[chatMit];
+            if (wirkung) {
+              setWirkt(({ [chatMit]: _weg, ...rest }) => rest);
+            }
+            return spiel.sprich(chatMit, modus, text, wirkung);
+          }}
           onSchliessen={() => {
             setFehler(null);
             setChatMit(null);

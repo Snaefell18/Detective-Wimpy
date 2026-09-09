@@ -77,3 +77,8 @@
 [data-theme="klassisch"] .gespraech-marke {
   display: none;
 }
+
+/* Der Taschenknopf im Gespräch: hier zeigt das Symbol, was gemeint ist. */
+[data-theme="klassisch"] .tasche-knopf .knopf-wort {
+  display: none;
+}

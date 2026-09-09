@@ -6300,3 +6300,261 @@ a.zurueck {
     animation: none;
   }
 }
+
+/* =================================================================
+   Yen: Lohn, Laden und Tasche
+   ================================================================= */
+
+/* --- Die Auszahlung -------------------------------------------------- */
+
+/* Der Moment nach einem gelösten Fall: Münzen fallen, die Zahl zählt hoch.
+   Warmes Anschwellen statt Blitzen - es soll gut tun, nicht blenden. */
+.lohn {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 50% at 50% 45%, rgba(247, 147, 32, 0.22), transparent 72%),
+    var(--nacht);
+}
+
+.lohn-strahlen {
+  position: absolute;
+  inset: -30%;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 210, 74, 0.11) 0deg 6deg,
+    transparent 6deg 18deg
+  );
+  animation: lohn-drehen 24s linear infinite;
+}
+
+@keyframes lohn-drehen {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lohn-muenzen {
+  position: absolute;
+  inset: 0;
+}
+
+.lohn-muenzen span {
+  position: absolute;
+  top: -12%;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--gelb);
+  text-shadow: 0 0 18px rgba(255, 210, 74, 0.7);
+  animation-name: muenze-fallen;
+  animation-timing-function: cubic-bezier(0.4, 0.1, 0.7, 1);
+  animation-iteration-count: 2;
+  animation-fill-mode: both;
+}
+
+@keyframes muenze-fallen {
+  from {
+    transform: translateY(0) rotate(0deg) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(112vh) rotate(220deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.lohn-mitte {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* Die Zahl selbst: groß, golden, und mit einem letzten kleinen Satz nach
+   oben, sobald sie steht. */
+.lohn-betrag {
+  font-size: 54px;
+  line-height: 1;
+  color: var(--gelb);
+  text-shadow: 0 0 40px rgba(255, 210, 74, 0.5);
+  transition: transform 260ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.lohn-betrag[data-fertig="true"] {
+  transform: scale(1.08);
+}
+
+.lohn-beutel {
+  font-size: 15px;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.lohn-hinweis {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-leise);
+  animation: pochen 2.4s ease-in-out infinite;
+}
+
+/* --- Der Laden -------------------------------------------------------- */
+
+.laden-stueck {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.laden-bild {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.laden-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.laden-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.laden-preis {
+  flex: none;
+  font-weight: 700;
+  color: var(--gelb);
+}
+
+.laden-wirkung {
+  margin: 0 0 8px;
+}
+
+.laden-habe {
+  align-self: center;
+  font-size: 12px;
+  color: var(--text-leise);
+}
+
+/* --- Die Tasche im Gespräch ------------------------------------------ */
+
+.tasche-knopf {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 20px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.tasche-knopf[data-offen="true"] {
+  background: rgba(247, 147, 32, 0.2);
+}
+
+/* Ein kleiner Punkt sagt: Da ist etwas drin. */
+.tasche-punkt {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gelb);
+}
+
+.tasche {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+  background: rgba(3, 10, 24, 0.9);
+  border: 1px solid rgba(255, 210, 74, 0.35);
+  animation: einblenden 200ms ease both;
+}
+
+.tasche-stueck {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 14px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tasche-bild {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tasche-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Was gerade wirkt - eine ruhige Zeile über dem Eingabefeld. */
+.wirkt {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--gelb);
+  background: rgba(255, 210, 74, 0.12);
+  border: 1px solid rgba(255, 210, 74, 0.35);
+}
+
+/* Zubehör am Schauplatz. */
+.ort-tasche {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.ort-tasche .knopf {
+  width: auto;
+  min-height: 40px;
+}
+
+/* Im klassischen Design trägt das Symbol den Taschenknopf, im Noir das Wort -
+   beides steht im Markup, das Design blendet aus, was es nicht braucht. */
+.tasche-knopf .knopf-wort {
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
