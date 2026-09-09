@@ -989,7 +989,11 @@ export default function Home() {
             stehen im Markup, das Design blendet aus, was es nicht braucht. */}
         <div className="kopf-knoepfe">
           {/* Die Tasche steht oben bei den anderen Knöpfen - sie gehört zum
-              Fall, nicht zum Schauplatz, und ist von überall erreichbar. */}
+              Fall, nicht zum Schauplatz, und ist von überall erreichbar.
+
+              Und sie zeigt sich erst, wenn wirklich etwas darin ist: Wer noch
+              nie einen Gegenstand bekommen hat, soll von der Möglichkeit gar
+              nichts wissen. Das erste Stück ist dann eine Überraschung. */}
           {tascheFuer("fall").length > 0 && (
             <button
               className="rund-knopf tasche-knopf"
@@ -1026,7 +1030,9 @@ export default function Home() {
         </div>
       </header>
 
-      {tascheOffen && (
+      {/* Verbraucht man das letzte Stück, verschwindet die Klappe mitsamt
+          dem Knopf - eine leere Tasche steht nirgends herum. */}
+      {tascheOffen && tascheFuer("fall").length > 0 && (
         <div className="tasche tasche-oben">
           {tascheFuer("fall").map(({ stueck, anzahl }) => (
             <button

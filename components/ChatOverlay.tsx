@@ -96,20 +96,29 @@ export function ChatOverlay({
           </p>
         </div>
 
-        {/* Die Tasche liegt oben, wo der Daumen sie nicht sucht, sondern
-            findet - und nicht mehr unten zwischen Eingabefeld und Senden. */}
-        <button
-          type="button"
-          className="rund-knopf tasche-knopf"
-          data-offen={tascheOffen}
-          aria-label="Tasche"
-          title="Tasche"
-          onClick={() => setTascheOffen((auf) => !auf)}
-        >
-          <span className="symbol">🧰</span>
-          <span className="knopf-wort">Tasche</span>
-          {tasche.length > 0 && <i className="tasche-punkt" />}
-        </button>
+        {/*
+          Die Tasche liegt oben, wo der Daumen sie nicht sucht, sondern
+          findet - und nicht mehr unten zwischen Eingabefeld und Senden.
+
+          Sie taucht überhaupt erst auf, wenn wirklich etwas darin ist. Wer
+          noch nie einen Gegenstand bekommen hat, soll gar nicht wissen, dass
+          es so etwas gibt: Das erste Stück ist dann eine Überraschung und
+          kein längst bekannter, bloß leerer Knopf.
+        */}
+        {tasche.length > 0 && (
+          <button
+            type="button"
+            className="rund-knopf tasche-knopf"
+            data-offen={tascheOffen}
+            aria-label="Tasche"
+            title="Tasche"
+            onClick={() => setTascheOffen((auf) => !auf)}
+          >
+            <span className="symbol">🧰</span>
+            <span className="knopf-wort">Tasche</span>
+            <i className="tasche-punkt" />
+          </button>
+        )}
 
         {detektiv && (
           <div className="gespraech-marke ich" aria-hidden>
@@ -118,39 +127,34 @@ export function ChatOverlay({
         )}
       </div>
 
-      {/* Was Wimpy dabeihat - eine Klappe direkt unter der Kopfzeile. */}
-        {tascheOffen && (
+      {/* Was Wimpy dabeihat - eine Klappe direkt unter der Kopfzeile. Wird
+          das letzte Stück verbraucht, verschwindet sie mitsamt dem Knopf. */}
+      {tascheOffen && tasche.length > 0 && (
         <div className="tasche">
-          {tasche.length === 0 ? (
-            <p className="leise klein">
-              Nichts dabei, was hier hilft. Im Detektiv-Zubehör gibt es welches.
-            </p>
-          ) : (
-            tasche.map(({ stueck, anzahl }) => {
-              const wirkung = wirkungVon(stueck.wirkung);
-              return (
-                <button
-                  key={stueck.id}
-                  className="tasche-stueck"
-                  disabled={laedt}
-                  onClick={() => {
-                    onEinsetzen(stueck);
-                    setTascheOffen(false);
-                  }}
-                >
-                  <div className="tasche-bild">
-                    <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
-                  </div>
-                  <span className="tasche-text">
-                    <strong>
-                      {stueck.name} <span className="leise">×{anzahl}</span>
-                    </strong>
-                    <span className="leise klein">{wirkung?.hinweis}</span>
-                  </span>
-                </button>
-              );
-            })
-          )}
+          {tasche.map(({ stueck, anzahl }) => {
+            const wirkung = wirkungVon(stueck.wirkung);
+            return (
+              <button
+                key={stueck.id}
+                className="tasche-stueck"
+                disabled={laedt}
+                onClick={() => {
+                  onEinsetzen(stueck);
+                  setTascheOffen(false);
+                }}
+              >
+                <div className="tasche-bild">
+                  <Bild src={stueck.bild} alt={stueck.name} platzhalter={stueck.name} />
+                </div>
+                <span className="tasche-text">
+                  <strong>
+                    {stueck.name} <span className="leise">×{anzahl}</span>
+                  </strong>
+                  <span className="leise klein">{wirkung?.hinweis}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
