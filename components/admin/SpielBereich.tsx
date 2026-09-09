@@ -6,6 +6,7 @@ import { DESIGNS, leseDesign, setzeDesign, type Design } from "@/lib/design";
 import { useAdmin } from "@/lib/adminStore";
 import { useStammdaten } from "@/lib/stammdaten";
 import { SPEICHER_KEY } from "@/lib/useGame";
+import { SongFeld } from "./SongFeld";
 import { TonFeld } from "./TonFeld";
 import {
   STANDARD_EINSTELLUNGEN,
@@ -140,6 +141,21 @@ export function SpielBereich({ onMeldung }: BereichProps) {
           </button>
         ))}
       </div>
+
+      <h2 className="abschnitt">Hintergrundmusik</h2>
+      <p className="leise">
+        Läuft leise weiter, solange man ermittelt - am Schauplatz, bei den
+        Verdächtigen, im Inventar, im Notizbuch und im Gespräch. Szenen mit
+        eigener Musik (Intro, Auftritt, Gericht, Auflösung) halten sie so
+        lange an und geben sie danach an derselben Stelle wieder frei. In
+        einer Saga darf jedes Kapitel eine andere wählen; nichts gewählt
+        heißt: keine Musik.
+      </p>
+      <SongFeld
+        wert={e.musik}
+        onAendern={(musik) => aendern({ einstellungen: { ...e, musik } })}
+        leerText="Keine Hintergrundmusik"
+      />
 
       <h2 className="abschnitt">Auftritt eines neuen Tiers</h2>
       <p className="leise">

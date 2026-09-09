@@ -147,5 +147,26 @@ console.log("\n6. Geschenke nach einem Kapitel");
     finale.error?.issues[0]?.message);
 }
 
+console.log("\n7. Hintergrundmusik");
+{
+  const ohne = SagaVorgabenSchema.safeParse(uebertragen(STANDARD_SAGA_VORGABEN));
+  pruefe("ohne Musik geht durch", ohne.success && ohne.data.kapitelMusik.length === 0,
+    ohne.error?.issues[0]?.message);
+
+  // Nur für das Finale - davor stehen wieder Löcher.
+  const nurFinale = { ...STANDARD_SAGA_VORGABEN, kapitelAnzahl: 3, kapitelMusik: [] };
+  nurFinale.kapitelMusik[3] = "/audio/hutsong.mp3";
+  const g = SagaVorgabenSchema.safeParse(uebertragen(nurFinale));
+  pruefe("nur im Finale", g.success && g.data.kapitelMusik[3] === "/audio/hutsong.mp3",
+    g.error?.issues[0]?.message);
+  pruefe("die Löcher davor sind leer", g.data?.kapitelMusik.slice(0, 3).every((m) => m === ""));
+
+  const e = EinstellungenSchema.safeParse({ ...STANDARD_EINSTELLUNGEN, musik: "/audio/intro.mp3" });
+  pruefe("die Einstellung bleibt erhalten", e.success && e.data.musik === "/audio/intro.mp3",
+    e.error?.issues[0]?.message);
+  const leer = EinstellungenSchema.safeParse({ ...STANDARD_EINSTELLUNGEN, musik: "" });
+  pruefe("und darf leer sein", leer.success && leer.data.musik === "");
+}
+
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);

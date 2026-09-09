@@ -105,6 +105,11 @@ export type SagaVorgaben = {
    */
   kapitelGeschenke: string[];
   /**
+   * Hintergrundmusik je Kapitel: ein Pfad in /public/audio, leer heißt "wie
+   * im Admin-Menü eingestellt". Das Finale steht an letzter Stelle.
+   */
+  kapitelMusik: string[];
+  /**
    * Wetter je Kapitel: eine Lage, "zufall" oder leer für die Einstellung im
    * Admin-Menü. Das Finale steht an letzter Stelle.
    *
@@ -202,6 +207,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelStaedte: [],
   kapitelVideos: [],
   kapitelGeschenke: [],
+  kapitelMusik: [],
   kapitelWetter: [],
   stadt: "zufall",
   staedteWechseln: true,
@@ -251,6 +257,17 @@ export const wetterFuerKapitel = (
  * Leer heißt: kein Geschenk. Eine Liste, die gar nicht so weit reicht, ist
  * kein Fehler - dann steht dort eben nichts.
  */
+/**
+ * Die Hintergrundmusik über einem Kapitel - dieselbe Zählung wie beim Wetter.
+ * Leer heißt: das, was im Admin-Menü eingestellt ist; auch das darf leer
+ * sein, dann läuft eben keine.
+ */
+export const musikFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelMusik"> | undefined,
+  index: number,
+  allgemein: string,
+): string => (vorgaben?.kapitelMusik?.[index] ?? "").trim() || allgemein;
+
 export const geschenkFuerKapitel = (
   vorgaben: Pick<SagaVorgaben, "kapitelGeschenke"> | undefined,
   index: number,

@@ -121,8 +121,9 @@ export async function erzeugeSaga(
     stadt: eingaben.vorgaben.stadt,
     ortsAnzahl: eingaben.vorgaben.ortsAnzahl,
     intro: true,
-    // Auftrittston und Wetter hängen am Gerät, nicht am Fall.
+    // Auftrittston, Wetter und Musik hängen am Gerät, nicht am Fall.
     neuzugangTon: "",
+    musik: "",
     wetter: "aus",
   };
 

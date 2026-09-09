@@ -13,7 +13,11 @@ import {
   yen,
 } from "../lib/zubehoer.ts";
 import { abdrueckeAmTatort } from "../lib/abdruecke.ts";
-import { STANDARD_SAGA_VORGABEN, geschenkFuerKapitel } from "../lib/sagaTypen.ts";
+import {
+  STANDARD_SAGA_VORGABEN,
+  geschenkFuerKapitel,
+  musikFuerKapitel,
+} from "../lib/sagaTypen.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -147,6 +151,24 @@ console.log("\n6. Das Geschenk nach einem Kapitel");
     geschenkFuerKapitel(mitLoch, 2) === "fingerabdruckset");
   pruefe("Leerzeichen zählen nicht als Eintrag",
     geschenkFuerKapitel({ kapitelGeschenke: ["   "] }, 0) === "");
+}
+
+console.log("\n7. Hintergrundmusik je Kapitel");
+{
+  const allgemein = "/audio/intro.mp3";
+  pruefe("ohne Eintrag gilt die Einstellung",
+    musikFuerKapitel({ kapitelMusik: [] }, 0, allgemein) === allgemein);
+  pruefe("ohne Vorgaben ebenso", musikFuerKapitel(undefined, 0, allgemein) === allgemein);
+  pruefe("ohne alles bleibt es still", musikFuerKapitel(undefined, 0, "") === "");
+  pruefe("ein Eintrag gewinnt",
+    musikFuerKapitel({ kapitelMusik: ["/audio/hutsong.mp3"] }, 0, allgemein) === "/audio/hutsong.mp3");
+  pruefe("Löcher davor stören nicht",
+    musikFuerKapitel({ kapitelMusik: [null, undefined, "/audio/geckerl.mp3"] }, 2, allgemein) ===
+      "/audio/geckerl.mp3");
+  pruefe("und ein Loch nimmt die Einstellung",
+    musikFuerKapitel({ kapitelMusik: [null, "", "/audio/geckerl.mp3"] }, 1, allgemein) === allgemein);
+  pruefe("Leerzeichen zählen als nichts",
+    musikFuerKapitel({ kapitelMusik: ["   "] }, 0, allgemein) === allgemein);
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

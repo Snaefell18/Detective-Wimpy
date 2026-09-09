@@ -218,3 +218,34 @@ export async function ladeStimme(id: string): Promise<Stimme | null> {
 }
 
 export const loescheStimme = (id: string) => loesche("stimmen", id);
+
+/**
+ * Ein erzeugtes Bild - genauso abgelegt wie eine Aufnahme: als data:-URL in
+ * einem eigenen Dokument.
+ *
+ * Der Grund ist derselbe: Ein Firestore-Dokument darf 1 MB groß sein, und ein
+ * Tier mit seinem Bild im selben Dokument wäre schnell darüber. Der Eintrag
+ * merkt sich deshalb nur "bild:<id>". Wer sein Bild lieber ins Projekt legt,
+ * trägt weiterhin einfach einen Pfad ein - beides funktioniert nebeneinander.
+ */
+export type Bilddatei = {
+  id: string;
+  /** Die verkleinerte data:-URL. */
+  daten: string;
+  /** Wozu es gehört - reine Gedächtnisstütze im Datenbank-Fenster. */
+  zweck: string;
+  erstelltAm: number;
+};
+
+export async function speichereBilddatei(bild: Bilddatei): Promise<void> {
+  await anmelden();
+  await setDoc(
+    doc(getDb(), "bilder", bild.id),
+    sauber({ ...bild, zweck: kuerze(bild.zweck, 200) }),
+  );
+}
+
+export async function ladeBilddatei(id: string): Promise<Bilddatei | null> {
+  const schnappschuss = await getDoc(doc(getDb(), "bilder", id));
+  return schnappschuss.exists() ? { ...(schnappschuss.data() as Bilddatei), id } : null;
+}

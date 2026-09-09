@@ -12,6 +12,7 @@ import {
   type Wirkung,
   type Zubehoer,
 } from "@/lib/zubehoer";
+import { BildFeld } from "./BildFeld";
 import type { BereichProps } from "./typen";
 
 /**
@@ -192,15 +193,15 @@ export function ZubehoerBereich({ onMeldung, onFehler }: BereichProps) {
             .
           </p>
 
-          <label className="feld">
-            <span className="leise">Bild · Pfad in /public/items</span>
-            <input
-              value={entwurf.bild}
-              onChange={(e) => aendern({ bild: e.target.value })}
-              placeholder="/items/veritaserum.png"
-              maxLength={300}
-            />
-          </label>
+          {/* Dasselbe Bildfeld wie bei den Stammdaten: von Hand hinterlegen
+              oder aus Name und Beschreibung erzeugen lassen. */}
+          <BildFeld
+            wert={entwurf.bild}
+            vorschlag="/items/veritaserum.png"
+            onAendern={(bild) => aendern({ bild })}
+            art="items"
+            eintrag={{ name: entwurf.name, beschreibung: entwurf.beschreibung }}
+          />
 
           <label className="feld reihe">
             <input

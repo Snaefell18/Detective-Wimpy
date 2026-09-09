@@ -14,6 +14,7 @@ export function StartScreen({
   onSagas,
   onArcs,
   onLaden,
+  ladenBekannt,
   yenImBeutel,
   onFortsetzen,
   laufenderFall,
@@ -27,6 +28,11 @@ export function StartScreen({
   onArcs: () => void;
   /** Der Detektiv-Laden. */
   onLaden: () => void;
+  /**
+   * Ob der Laden überhaupt schon zu sehen ist. Erst nach dem ersten Honorar -
+   * vorher ist der Knopf nicht da, nicht einmal ausgegraut.
+   */
+  ladenBekannt: boolean;
   /** Was Wimpy verdient hat - steht auf dem Knopf. */
   yenImBeutel: number;
   /** Nur gesetzt, wenn ein pausierter Fall wartet. */
@@ -91,11 +97,16 @@ export function StartScreen({
           <span className="zeilen-text">Arcs</span>
         </button>
 
-        <button className="knopf glas schmal" onClick={onLaden}>
-          <span className="symbol">🧰</span>
-          <span className="zeilen-text">Detektiv-Zubehör</span>
-          <span className="zeilen-meta">{yen(yenImBeutel)}</span>
-        </button>
+        {/* Den Laden gibt es erst, wenn Wimpy zum ersten Mal etwas verdient
+            hat. Vorher soll niemand ahnen, dass es ihn überhaupt gibt - das
+            erste Honorar ist die Einladung. */}
+        {ladenBekannt && (
+          <button className="knopf glas schmal" onClick={onLaden}>
+            <span className="symbol">🧰</span>
+            <span className="zeilen-text">Detektiv-Zubehör</span>
+            <span className="zeilen-meta">{yen(yenImBeutel)}</span>
+          </button>
+        )}
 
         <span className="start-info">
           {laufenderFall

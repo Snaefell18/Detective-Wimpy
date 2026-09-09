@@ -301,6 +301,7 @@ export const SagaVorgabenSchema = z.object({
   kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
   kapitelGeschenke: luecken(z.string().max(40), "").max(9).default([]),
+  kapitelMusik: luecken(z.string().max(200), "").max(9).default([]),
   kapitelWetter: luecken(
     // "" heißt "wie im Admin-Menü", "aus" heißt ausdrücklich kein Wetter.
     ausAuswahl(WETTER_WAHL),
@@ -354,6 +355,7 @@ export const EinstellungenSchema = z.object({
   // stillschweigend verlorengehen - sonst käme aus dem Schema etwas anderes
   // heraus, als der Browser geschickt hat.
   neuzugangTon: z.string().max(200).default(""),
+  musik: z.string().max(200).default(""),
   wetter: ausAuswahl<Wetterlage>([
     "aus",
     "zufall",

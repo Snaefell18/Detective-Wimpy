@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { istStimme, spracheErzeugen } from "@/lib/stimme";
+import { SongWahl } from "./SongFeld";
 import { VideoFeld } from "./VideoFeld";
 import type { Erzaehlerteil } from "@/lib/sagaTypen";
 
@@ -82,8 +83,15 @@ export function ErzaehlerFeld({
         </>
       ) : (
         <>
+          <SongWahl
+            wert={teil.audio}
+            onAendern={(audio) => onAendern({ audio })}
+            beschriftung="Tondatei aus /public/audio (leer = nur Text)"
+            leerText="Nur Text, kein Ton"
+          />
+
           <label className="feld">
-            <span className="leise">Tondatei in /public/audio (leer = nur Text)</span>
+            <span className="leise">Oder ein Pfad von Hand</span>
             <input
               value={teil.audio}
               onChange={(e) => onAendern({ audio: e.target.value })}

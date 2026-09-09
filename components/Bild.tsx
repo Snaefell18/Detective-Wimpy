@@ -3,14 +3,16 @@
 import NextImage from "next/image";
 import { useEffect, useState } from "react";
 import { bildQuelle, useAdmin } from "@/lib/adminStore";
+import { useBildQuelle } from "@/lib/bildSpeicher";
 
 /** Im Admin hinterlegte Bilder sind Data-URLs - die kann Next nicht optimieren. */
 const istDataUrl = (quelle: string) => quelle.startsWith("data:");
 
 /**
  * Bild mit Platzhalter. Ein im Admin-Menü hinterlegtes Bild gewinnt, sonst wird
- * die Datei aus /public geladen. Fehlt beides, erscheint ein Platzhalter -
- * das Spiel funktioniert also auch ganz ohne Grafiken.
+ * die Datei aus /public geladen. Ein erzeugtes Bild ("bild:<id>") kommt aus
+ * der Datenbank und ist einen Wimpernschlag später da. Fehlt alles, erscheint
+ * ein Platzhalter - das Spiel funktioniert also auch ganz ohne Grafiken.
  */
 export function Bild({
   src,
@@ -31,7 +33,7 @@ export function Bild({
 }) {
   const { daten } = useAdmin();
   const [fehlt, setFehlt] = useState(false);
-  const quelle = bildQuelle(daten, src);
+  const quelle = useBildQuelle(bildQuelle(daten, src));
 
   // Wechselt die Quelle (z.B. weil im Admin ein Bild hinterlegt wurde),
   // bekommt sie einen neuen Versuch - sonst bliebe der Platzhalter stehen.
@@ -74,7 +76,7 @@ export function Szene({
 }) {
   const { daten } = useAdmin();
   const [fehlt, setFehlt] = useState(false);
-  const quelle = bildQuelle(daten, src);
+  const quelle = useBildQuelle(bildQuelle(daten, src));
 
   useEffect(() => setFehlt(false), [quelle]);
 

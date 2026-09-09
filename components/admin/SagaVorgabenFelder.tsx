@@ -2,6 +2,7 @@
 
 import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
+import { SongWahl } from "./SongFeld";
 import { yen } from "@/lib/zubehoer";
 import {
   AUFTRITTS_ARTEN,
@@ -165,6 +166,10 @@ export function SagaVorgabenFelder({
   const videoSetzen = (i: number, pfad: string) =>
     onAendern({ kapitelVideos: anStelle(vorgaben.kapitelVideos, i, pfad, "") });
 
+  /** Hintergrundmusik je Kapitel; der letzte Eintrag gehört zum Finale. */
+  const musikSetzen = (i: number, pfad: string) =>
+    onAendern({ kapitelMusik: anStelle(vorgaben.kapitelMusik, i, pfad, "") });
+
   /** Geschenk nach einem Kapitel; der letzte Eintrag gehört zum Finale. */
   const geschenkSetzen = (i: number, id: string) =>
     onAendern({ kapitelGeschenke: anStelle(vorgaben.kapitelGeschenke, i, id, "") });
@@ -291,6 +296,20 @@ export function SagaVorgabenFelder({
                   ? "Video vor dem Finale (leer = kein Video)"
                   : "Video vor dem Kapitel (leer = kein Video)"
               }
+            />
+
+            {/* Die Hintergrundmusik dieses Kapitels. Nichts gewählt heißt:
+                die aus dem Admin-Menü - und wenn dort auch nichts steht,
+                eben keine. */}
+            <SongWahl
+              wert={vorgaben.kapitelMusik?.[i] ?? ""}
+              onAendern={(pfad) => musikSetzen(i, pfad)}
+              beschriftung={
+                istFinale
+                  ? "Hintergrundmusik im Finale"
+                  : "Hintergrundmusik in diesem Kapitel"
+              }
+              leerText="Wie im Admin-Menü eingestellt"
             />
 
             {/* Ein Geschenk nach dem Kapitel - freiwillig, und jede Lücke

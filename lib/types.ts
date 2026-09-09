@@ -114,6 +114,13 @@ export type Einstellungen = {
   /** Intro mit Titelmusik vor jeder Runde. */
   intro: boolean;
   /**
+   * Hintergrundmusik während des Ermittelns: ein Pfad in /public/audio, leer
+   * heißt "keine". Sie läuft leise weiter, solange man an einem Schauplatz,
+   * bei den Verdächtigen oder im Gespräch ist - und pausiert, wo eine Szene
+   * ihre eigene Musik hat. In einer Saga darf jedes Kapitel sie überschreiben.
+   */
+  musik: string;
+  /**
    * Der Ton beim Auftritt eines neuen Tiers - leer heißt: keiner.
    * Entweder ein Pfad in /public/audio oder "stimme:<id>" aus der Datenbank
    * (hochgeladen oder vom Sprecher). Solange er läuft, bleibt die Figur im
@@ -163,6 +170,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   intro: true,
   neuzugangTon: "",
   wetter: "aus",
+  musik: "",
 };
 
 /** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */

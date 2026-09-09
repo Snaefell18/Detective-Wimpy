@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { OHNE_AUFTRITT_TON, STANDARD_AUFTRITT_TON } from "@/lib/sagaTypen";
 import { dateiAlsStimme, istStimme, spracheErzeugen, tonQuelle } from "@/lib/stimme";
+import { SongWahl } from "./SongFeld";
 
 /**
  * Der Ton beim Auftritt eines neuen Tiers - auf drei Wegen.
@@ -113,8 +114,15 @@ export function TonFeld({
         />
       </div>
 
+      {/* Der bequeme Weg: alle Songs, die im Projekt liegen, als Liste. */}
+      <SongWahl
+        wert={istStimme(wert) || still ? "" : wert}
+        onAendern={onAendern}
+        beschriftung="Oder ein Song aus /public/audio"
+      />
+
       <label className="feld">
-        <span className="leise">Oder ein Pfad in /public/audio</span>
+        <span className="leise">Oder ein Pfad von Hand</span>
         <input
           value={istStimme(wert) || still ? "" : wert}
           onChange={(ereignis) => onAendern(ereignis.target.value)}

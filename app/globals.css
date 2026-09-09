@@ -1688,6 +1688,21 @@ a.zurueck {
   min-width: 0;
 }
 
+/* Das frisch erzeugte Bild - groß genug, um es wirklich zu beurteilen. */
+.bild-vorschau {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 3 / 4;
+  margin: 4px 0 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%) 0 0 / 18px 18px,
+    rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--rand);
+}
+
 /* Bilder ohne Eintrag: ein Gitter aus Kacheln, damit man auf einen Blick
    sieht, was da noch herumliegt. */
 .bild-gitter {

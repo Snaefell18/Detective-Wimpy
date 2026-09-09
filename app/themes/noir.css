@@ -2858,3 +2858,9 @@
   text-transform: uppercase;
   color: var(--akzent);
 }
+
+/* Die Bildvorschau im Admin bleibt kantig wie alles hier. */
+[data-theme="noir"] .bild-vorschau {
+  border-radius: 0;
+  border-color: var(--linie);
+}

@@ -19,6 +19,41 @@ export function songName(pfad: string): string {
   return ohneEndung.charAt(0).toUpperCase() + ohneEndung.slice(1);
 }
 
+/**
+ * Nur die Auswahlliste - für Felder, die ihre eigenen Knöpfe mitbringen.
+ *
+ * Ein Wert, der kein Pfad aus dem Ordner ist (etwa eine Aufnahme aus der
+ * Datenbank), wird hier nicht angezeigt: Dort steht dann "Nichts gewählt",
+ * und das Feld darunter sagt, was wirklich hinterlegt ist.
+ */
+export function SongWahl({
+  wert,
+  onAendern,
+  beschriftung = "Song aus dem Ordner /public/audio",
+  leerText = "Nichts gewählt",
+}: {
+  wert: string;
+  onAendern: (wert: string) => void;
+  beschriftung?: string;
+  leerText?: string;
+}) {
+  const eigener = wert && !AUDIO_DATEIEN.includes(wert);
+  const liste = eigener ? [wert, ...AUDIO_DATEIEN] : AUDIO_DATEIEN;
+  return (
+    <label className="feld">
+      <span className="leise">{beschriftung}</span>
+      <select value={wert} onChange={(e) => onAendern(e.target.value)}>
+        <option value="">{leerText}</option>
+        {liste.map((pfad) => (
+          <option key={pfad} value={pfad}>
+            {songName(pfad)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function SongFeld({
   wert,
   onAendern,

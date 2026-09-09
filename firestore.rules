@@ -104,6 +104,16 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Erzeugte Bilder: eine data:-URL je Dokument. Sie zeigen dasselbe, was
+    // im Spiel ohnehin zu sehen ist - nichts davon ist geheim.
+    match /bilder/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && request.resource.data.daten is string
+        && request.resource.data.daten.size() < 900000;
+      allow delete: if angemeldet();
+    }
+
     // Alles andere ist gesperrt.
     match /{document=**} {
       allow read, write: if false;

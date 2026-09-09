@@ -12,6 +12,7 @@ import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
 import { GeschenkSchau } from "@/components/GeschenkSchau";
+import { Hintergrundmusik } from "@/components/Hintergrundmusik";
 import { LohnSchau } from "@/components/LohnSchau";
 import { ShopScreen } from "@/components/ShopScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
@@ -39,6 +40,7 @@ import {
   artFuerAuftritt,
   besessen,
   geschenkFuerKapitel,
+  musikFuerKapitel,
   neueGesichter,
   neuImSaal,
   sagaBesetzung,
@@ -254,6 +256,22 @@ export default function Home() {
           admin.einstellungen.wetter,
         )
       : undefined;
+
+  /**
+   * Die Hintergrundmusik über dem laufenden Fall - dieselbe Rechnung wie
+   * beim Wetter: Ein Kapitel darf sie überschreiben, sonst gilt, was im
+   * Admin-Menü steht. Leer heißt überall: keine Musik.
+   */
+  const laufendeMusik =
+    sagaFallLaeuft && saga.stand
+      ? musikFuerKapitel(
+          saga.stand.saga.vorgaben,
+          saga.stand.lauf.phase === "finale"
+            ? saga.stand.saga.vorgaben.kapitelAnzahl
+            : saga.stand.lauf.kapitel,
+          admin.einstellungen.musik,
+        )
+      : admin.einstellungen.musik;
 
   /**
    * Das Geschenk nach einem gelösten Kapitel.
@@ -843,6 +861,14 @@ export default function Home() {
           onArcs={() => setArcsOffen(true)}
           onLaden={() => setLadenOffen(true)}
           yenImBeutel={geld.beutel.yen}
+          // Der Laden zeigt sich erst nach dem ersten Honorar - oder wenn
+          // schon etwas in der Tasche liegt, damit er nach dem Ausgeben des
+          // letzten Yen nicht wieder verschwindet.
+          ladenBekannt={
+            geld.beutel.yen > 0 ||
+            geld.beutel.bezahlt.length > 0 ||
+            Object.keys(geld.beutel.vorrat).length > 0
+          }
           onFortsetzen={stand.status === "pausiert" ? spiel.fortsetzen : undefined}
           laufenderFall={stand.status === "pausiert" ? stand.fall?.titel : undefined}
           laedt={laedt === "fall"}
@@ -946,6 +972,12 @@ export default function Home() {
 
   return (
     <main className="app">
+      {/* Die Hintergrundmusik läuft, solange dieser Bildschirm steht - also
+          am Schauplatz, bei den Verdächtigen, im Inventar, im Notizbuch und
+          im Gespräch. Jede Szene mit eigener Musik ist ein anderer Zweig;
+          dort pausiert sie und läuft danach an derselben Stelle weiter. */}
+      <Hintergrundmusik stueck={laufendeMusik} />
+
       <header className={tab === "ort" ? "kopf schwebend" : "kopf"}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1>{stand.fall.titel}</h1>

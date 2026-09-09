@@ -27,6 +27,8 @@ npm run dev                    # http://localhost:3000
      Menü jedem offen, der die Adresse kennt (die Akten bleiben trotzdem zu).
    - `ELEVENLABS_API_KEY` und `ELEVENLABS_VOICE_ID` - optional, für gesprochene
      Erzählertexte (siehe unten). Ohne sie bleibt alles beim Text.
+   - `OPENAI_API_KEY` - optional, für erzeugte Bilder im Admin-Menü (siehe
+     unten). Ohne ihn legt man Bilder weiterhin von Hand in `public/` ab.
 3. Deployen. Fertig - kein Server, keine Datenbank nötig.
 
 ## Firebase einrichten
@@ -141,6 +143,31 @@ die Bühne.
 
 Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
 spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.
+
+## Bilder erzeugen lassen
+
+Tiere, Schauplätze, Dinge und Ladenzubehör lassen sich im Admin-Menü malen
+lassen - aus dem, was im Formular steht, plus einem freien Feld für Wünsche
+ans Aussehen. Das ist die einzige Stelle, an der ein anderes Haus als
+Anthropic gefragt wird; Fälle, Sagen und Gespräche laufen unverändert über
+Claude.
+
+```
+OPENAI_API_KEY=…
+OPENAI_IMAGE_MODEL=gpt-image-1   # optional, das ist der Default
+OPENAI_IMAGE_QUALITY=medium      # optional: low, medium oder high
+```
+
+Der Stil steht fest (naiver Comicstil, `lib/bildPrompt.ts`), damit alles
+zusammenpasst; Format und Größe stimmen von selbst: Tiere und Schauplätze
+hochkant, Dinge quadratisch, Tiere und Dinge freigestellt. Das fertige Bild
+wird verkleinert und landet in der Sammlung `bilder`; der Eintrag merkt sich
+nur `bild:<id>`. Erzeugt wird einmal - im Spiel wird nur geladen.
+
+Für `gpt-image-1` muss die Organisation bei OpenAI einmal verifiziert sein;
+ist sie es nicht, steht genau das in der Fehlermeldung. Ohne Schlüssel ändert
+sich nichts: Der Knopf sagt, was fehlt, und Bilder lassen sich weiterhin von
+Hand in `public/charaktere`, `public/orte` und `public/items` ablegen.
 
 ## Erzählertexte sprechen lassen
 

@@ -9,6 +9,7 @@ import {
   nameAusPfad,
   ordnerVon,
 } from "@/lib/freieBilder";
+import { BildFeld } from "./BildFeld";
 import {
   ladeZubehoer,
   loesche,
@@ -514,27 +515,6 @@ function Rahmen({
   );
 }
 
-function BildFeld({
-  wert,
-  vorschlag,
-  onAendern,
-}: {
-  wert: string;
-  vorschlag: string;
-  onAendern: (wert: string) => void;
-}) {
-  return (
-    <label className="feld">
-      <span className="leise">Bildpfad (leer = automatisch)</span>
-      <input
-        value={wert}
-        placeholder={vorschlag}
-        onChange={(e) => onAendern(e.target.value)}
-      />
-    </label>
-  );
-}
-
 const BEZIEHUNGS_FELDER: {
   key: keyof Beziehungen;
   label: string;
@@ -732,6 +712,14 @@ function CharakterFormular({
         wert={entwurf.bild}
         vorschlag={`/charaktere/${entwurf.id || "name"}.png`}
         onAendern={(bild) => aendern({ bild })}
+        art="charaktere"
+        eintrag={{
+          name: entwurf.name,
+          tierart: entwurf.tierart,
+          alter: entwurf.alter,
+          beruf: entwurf.beruf,
+          beschreibung: entwurf.beschreibung,
+        }}
       />
     </Rahmen>
   );
@@ -792,6 +780,13 @@ function OrtFormular({
         wert={entwurf.bild}
         vorschlag={`/orte/${entwurf.id || "stadt-ort"}.png`}
         onAendern={(bild) => aendern({ bild })}
+        art="orte"
+        eintrag={{
+          name: entwurf.name,
+          stadt: entwurf.stadt,
+          atmosphaere: entwurf.atmosphaere,
+          beschreibung: entwurf.beschreibung,
+        }}
       />
     </Rahmen>
   );
@@ -833,6 +828,8 @@ function ItemFormular({
         wert={entwurf.bild}
         vorschlag={`/items/${entwurf.id || "name"}.png`}
         onAendern={(bild) => aendern({ bild })}
+        art="items"
+        eintrag={{ name: entwurf.name, beschreibung: entwurf.beschreibung }}
       />
     </Rahmen>
   );
