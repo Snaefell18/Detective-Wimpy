@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bild, Szene } from "./Bild";
+import { Gerichtseinzug } from "./Gerichtseinzug";
 import { Verwandlung } from "./Verwandlung";
 import { postJson } from "@/lib/api";
 import { spiele } from "@/lib/introAudio";
@@ -48,6 +49,7 @@ export function Gerichtssaal({
   bogenSiegel,
   besetzung,
   frage,
+  einzugTon = "",
   onFertig,
 }: {
   verhandlung: Verhandlung;
@@ -56,6 +58,8 @@ export function Gerichtssaal({
   besetzung: Character[];
   /** Steht groß über dem Saal. */
   frage: string;
+  /** Das Stück zum Einzug des Gerichts - leer heißt: feste Dauer. */
+  einzugTon?: string;
   /** Die Verhandlung ist durch - mit oder ohne Schuldspruch. */
   onFertig: (geschafft: boolean) => void;
 }) {
@@ -79,6 +83,14 @@ export function Gerichtssaal({
   const [spruch, setSpruch] = useState<{ text: string; richtig: boolean } | null>(null);
   /** Läuft gerade die Verwandlung des Angeklagten? */
   const [wandelt, setWandelt] = useState<AnklageAntwort["verwandlung"]>(null);
+  /**
+   * Ist das Gericht schon eingezogen?
+   *
+   * Der Einzug kommt bewusst spät: erst wird angeklagt, dann zeigt sich, was
+   * in dem Angeklagten steckt - und dann erst flattert Öhö herein und
+   * eröffnet. Vorher wüsste er ja noch gar nicht, gegen wen.
+   */
+  const [eingezogen, setEingezogen] = useState(false);
 
   const [stand, setStand] = useState(LEERER_VERHANDLUNGS_STAND);
   const [offen, setOffen] = useState<Beweisstueck | null>(null);
@@ -336,6 +348,25 @@ export function Gerichtssaal({
           </button>
         </div>
       </div>
+    );
+  }
+
+  /* --- Das Gericht zieht ein ------------------------------------------ */
+
+  /*
+   * Jetzt steht fest, wer auf der Bank sitzt - und bei einer Besessenheit
+   * auch, was wirklich dort sitzt. Erst hier lohnt sich der große Auftritt.
+   *
+   * Wo gar nicht angeklagt wird, gibt es nichts abzuwarten: Dort zieht das
+   * Gericht sofort ein - auch dann, wenn zur Bank kein Tier zu finden ist.
+   */
+  if (!eingezogen && (bank || !klagenNoetig)) {
+    return (
+      <Gerichtseinzug
+        richter={richter}
+        ton={einzugTon}
+        onFertig={() => setEingezogen(true)}
+      />
     );
   }
 

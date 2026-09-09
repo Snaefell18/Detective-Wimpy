@@ -761,6 +761,24 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                     />
                   </label>
 
+                  {k.fall && (
+                    <label className="feld">
+                      <span className="leise">
+                        Falltitel · steht während des Falls über dem Chat
+                      </span>
+                      <input
+                        value={k.fall.titel}
+                        onChange={(e) => {
+                          const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                          const fall = kopie.kapitel[i].fall;
+                          if (fall) fall.titel = e.target.value;
+                          void sagaAendern(kopie);
+                        }}
+                        maxLength={160}
+                      />
+                    </label>
+                  )}
+
                   <label className="feld">
                     <span className="leise">Anriss · kurze Zeile für die Übersicht</span>
                     <textarea
@@ -792,13 +810,53 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                 onAendern={(t) => void erzaehlerAendern(saga, "finale", t)}
               />
 
-              <button
-                className="knopf klein"
-                onClick={() => void akteOeffnen(saga, -1)}
-                style={{ marginBottom: 12 }}
-              >
-                Finalfall bearbeiten
-              </button>
+              {/* Der Titel des Finales ist das Erste, was der Spieler vom
+                  Schluss sieht - und verrät erzeugt gern schon, wer dahinter
+                  steckt. Deshalb steht er hier zum Nachbessern, und zwar
+                  ohne Umweg über die Akte: Bei einer Verhandlung gibt es gar
+                  keinen Finalfall, den man öffnen könnte. */}
+              <label className="feld">
+                <span className="leise">
+                  Finalfrage · steht als Überschrift über dem Erzählertext und
+                  im Gerichtssaal
+                </span>
+                <input
+                  value={saga.finale.frage}
+                  onChange={(e) => {
+                    const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                    kopie.finale.frage = e.target.value;
+                    void sagaAendern(kopie);
+                  }}
+                  maxLength={160}
+                />
+              </label>
+
+              {saga.finale.fall && (
+                <label className="feld">
+                  <span className="leise">
+                    Titel des Finalfalls · steht während des Finales über dem Chat
+                  </span>
+                  <input
+                    value={saga.finale.fall.titel}
+                    onChange={(e) => {
+                      const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                      if (kopie.finale.fall) kopie.finale.fall.titel = e.target.value;
+                      void sagaAendern(kopie);
+                    }}
+                    maxLength={160}
+                  />
+                </label>
+              )}
+
+              {saga.finale.fall && saga.finale.siegel && (
+                <button
+                  className="knopf klein"
+                  onClick={() => void akteOeffnen(saga, -1)}
+                  style={{ marginBottom: 12 }}
+                >
+                  Finalfall bearbeiten
+                </button>
+              )}
 
               <ErzaehlerFeld
                 titel="Epilog"

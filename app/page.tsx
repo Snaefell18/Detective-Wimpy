@@ -23,7 +23,6 @@ import { SagenListe } from "@/components/SagenListe";
 import { Nav, type Tab } from "@/components/Nav";
 import { NeuerSpieler } from "@/components/NeuerSpieler";
 import { ReaktionScreen } from "@/components/ReaktionScreen";
-import { Gerichtseinzug } from "@/components/Gerichtseinzug";
 import { Gerichtssaal } from "@/components/Gerichtssaal";
 import { VideoSzene } from "@/components/VideoSzene";
 import { Verwandlung } from "@/components/Verwandlung";
@@ -96,8 +95,6 @@ export default function Home() {
   const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
   /** Die Verwandlung vor dem Finale - läuft, sobald sie gesetzt ist. */
   const [verwandlung, setVerwandlung] = useState(false);
-  /** Der Einzug des Gerichts - kommt zwischen Erzähler und Saal. */
-  const [einzug, setEinzug] = useState(false);
   /**
    * Was an dieser Saga fehlt - steht statt eines stillen Weiterblätterns da.
    * Lieber ein ehrlicher Satz als ein verschlucktes Finale.
@@ -410,8 +407,13 @@ export default function Home() {
     }
 
     if (saal) {
-      // Erst das Gericht ankündigen - Öhö flattert herein -, dann der Saal.
-      setEinzug(true);
+      /*
+       * Der Saal übernimmt ab hier selbst - samt Reihenfolge: erst die
+       * Anklage, dann die Verwandlung, dann der Einzug des Gerichts und erst
+       * danach die Beweisführung. Öhö flattert nämlich nicht herein, bevor
+       * feststeht, gegen wen er verhandelt.
+       */
+      saga.setzePhase("verhandlung", null);
       return;
     }
 
@@ -621,24 +623,6 @@ export default function Home() {
           onFertig={() => {
             setVerwandlung(false);
             sagaFallStarten(true, true);
-          }}
-        />
-      </main>
-    );
-  }
-
-  // Der Einzug des Gerichts - die Ankündigung vor der Verhandlung.
-  if (einzug && saga.stand && phase === "aus") {
-    const saal = sagaMitVerhandlung(saga.stand.saga);
-    const richter = sagaBesetzung(saga.stand.saga).find((c) => c.id === saal?.richterId);
-    return (
-      <main className="app">
-        <Gerichtseinzug
-          richter={richter}
-          ton={saga.stand.saga.vorgaben.gerichtTon}
-          onFertig={() => {
-            setEinzug(false);
-            saga.setzePhase("verhandlung", null);
           }}
         />
       </main>
@@ -903,6 +887,7 @@ export default function Home() {
               bogenSiegel={sagaDaten.bogenSiegel}
               besetzung={sagaBesetzung(sagaDaten)}
               frage={sagaDaten.finale.frage}
+              einzugTon={sagaDaten.vorgaben.gerichtTon}
               onFertig={(geschafft) => saga.setzePhase("epilog", null, geschafft)}
             />
           </main>
