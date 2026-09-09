@@ -1,6 +1,8 @@
 "use client";
 
 import { alsStaedte } from "@/lib/csv";
+import { useLaden } from "@/lib/useLaden";
+import { yen } from "@/lib/zubehoer";
 import {
   AUFTRITTS_ARTEN,
   artFuerAuftritt,
@@ -129,6 +131,11 @@ export function SagaVorgabenFelder({
         : [...vorgaben[feld], id],
     });
 
+  // Der Laden - für die Geschenke nach einem Kapitel. Ohne Verbindung bleibt
+  // es beim Grundregal: Die Auswahl ist dann kürzer, aber nie leer, und
+  // "kein Geschenk" steht ohnehin immer zur Wahl.
+  const laden = useLaden();
+
   /**
    * Ein Eintrag in einer Liste je Kapitel - ohne Löcher davor.
    *
@@ -157,6 +164,10 @@ export function SagaVorgabenFelder({
   /** Video vor einem Kapitel; der letzte Eintrag gehört zum Finale. */
   const videoSetzen = (i: number, pfad: string) =>
     onAendern({ kapitelVideos: anStelle(vorgaben.kapitelVideos, i, pfad, "") });
+
+  /** Geschenk nach einem Kapitel; der letzte Eintrag gehört zum Finale. */
+  const geschenkSetzen = (i: number, id: string) =>
+    onAendern({ kapitelGeschenke: anStelle(vorgaben.kapitelGeschenke, i, id, "") });
 
   /** Wetter je Kapitel; der letzte Eintrag gehört zum Finale. */
   const wetterSetzen = (i: number, lage: Wetterlage | "") =>
@@ -281,6 +292,38 @@ export function SagaVorgabenFelder({
                   : "Video vor dem Kapitel (leer = kein Video)"
               }
             />
+
+            {/* Ein Geschenk nach dem Kapitel - freiwillig, und jede Lücke
+                ist erlaubt: Es lässt sich auch nur für ein einziges Kapitel
+                eintragen. Steht der Gegenstand später nicht mehr im Laden,
+                bleibt die Übergabe einfach aus. */}
+            <label className="feld">
+              <span className="leise">
+                {istFinale
+                  ? "Geschenk nach dem Finale"
+                  : "Geschenk nach diesem Kapitel"}{" "}
+                · nur wenn gelöst
+              </span>
+              <select
+                value={vorgaben.kapitelGeschenke?.[i] ?? ""}
+                onChange={(e) => geschenkSetzen(i, e.target.value)}
+              >
+                <option value="">Kein Geschenk</option>
+                {laden.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name} · sonst {yen(z.preis)}
+                  </option>
+                ))}
+                {/* Ein Gegenstand, den es nicht mehr gibt, würde die Auswahl
+                    sonst still auf "Kein Geschenk" stellen. */}
+                {(vorgaben.kapitelGeschenke?.[i] ?? "") !== "" &&
+                  !laden.some((z) => z.id === vorgaben.kapitelGeschenke[i]) && (
+                    <option value={vorgaben.kapitelGeschenke[i]}>
+                      {vorgaben.kapitelGeschenke[i]} · nicht mehr im Laden
+                    </option>
+                  )}
+              </select>
+            </label>
 
             <span className="leise klein">Wetter</span>
             <div className="marken-reihe">

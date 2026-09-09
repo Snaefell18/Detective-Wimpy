@@ -20,8 +20,13 @@ export function pruefeVorgaben(args: {
   vorgaben: SagaVorgaben;
   charaktere: Character[];
   orte: Location[];
+  /**
+   * Was im Laden steht - nur für die Geschenke. Wer die Liste nicht hat (der
+   * Server zum Beispiel), lässt sie weg; dann wird das eben nicht geprüft.
+   */
+  zubehoerIds?: string[];
 }): string[] {
-  const { vorgaben, charaktere, orte } = args;
+  const { vorgaben, charaktere, orte, zubehoerIds } = args;
   const probleme: string[] = [];
 
   const besetzung = besetzungFuerSaga(charaktere, vorgaben);
@@ -163,6 +168,24 @@ export function pruefeVorgaben(args: {
       probleme.push(
         `${name(id)} ist Täter von Kapitel ${kapitel} und dort zugleich als abwesend eingetragen.`,
       );
+    }
+  }
+
+  /*
+   * Geschenke: Ein Gegenstand, den es im Laden nicht gibt, wird im Spiel
+   * stillschweigend übersprungen - das ist die sichere Seite, aber niemand
+   * würde es merken. Deshalb steht es hier, wo die Liste bekannt ist.
+   */
+  if (zubehoerIds) {
+    const vorhanden = new Set(zubehoerIds);
+    for (const [i, id] of (vorgaben.kapitelGeschenke ?? []).entries()) {
+      if (!id || i > vorgaben.kapitelAnzahl) continue;
+      if (!vorhanden.has(id)) {
+        const wo = i === vorgaben.kapitelAnzahl ? "nach dem Finale" : `nach Kapitel ${i + 1}`;
+        probleme.push(
+          `Das Geschenk ${wo} („${id}“) steht nicht mehr im Laden - dann gäbe es dort nichts.`,
+        );
+      }
     }
   }
 

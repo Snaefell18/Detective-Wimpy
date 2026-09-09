@@ -16,6 +16,7 @@ import {
   type Saga,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
+import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
@@ -37,6 +38,8 @@ import type { BereichProps } from "./typen";
  */
 export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const stammdaten = useStammdaten();
+  /** Der Ladeninhalt - für die Prüfung der Kapitelgeschenke. */
+  const regal = useLaden();
   const { daten: admin } = useAdmin();
   const [sagas, setSagas] = useState<Saga[] | null>(null);
   const [vorgaben, setVorgaben] = useState<SagaVorgaben>(STANDARD_SAGA_VORGABEN);
@@ -95,6 +98,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
     vorgaben,
     charaktere: stammdaten.charaktere,
     orte: stammdaten.orte,
+    zubehoerIds: regal.map((z) => z.id),
   });
 
   const erzeugen = async () => {

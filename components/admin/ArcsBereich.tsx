@@ -30,6 +30,7 @@ import {
   type Saga,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
+import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
@@ -126,6 +127,8 @@ const FINALE_ARTEN: { id: ArcFinaleArt; label: string; hinweis: string }[] = [
  */
 export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const stammdaten = useStammdaten();
+  /** Der Ladeninhalt - für die Prüfung der Kapitelgeschenke. */
+  const regal = useLaden();
   const { daten: admin } = useAdmin();
   const [arcs, setArcs] = useState<Arc[] | null>(null);
   const [sagas, setSagas] = useState<Saga[]>([]);
@@ -221,6 +224,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       vorgaben,
       charaktere: stammdaten.charaktere,
       orte: stammdaten.orte,
+      zubehoerIds: regal.map((z) => z.id),
     });
     if (probleme.length) {
       setAbbruch({ text: probleme.join(" "), schritt: null });

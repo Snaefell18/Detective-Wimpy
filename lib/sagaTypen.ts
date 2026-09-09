@@ -95,6 +95,16 @@ export type SagaVorgaben = {
    */
   kapitelVideos: string[];
   /**
+   * Ein Geschenk nach einem gelösten Kapitel: die Id eines Zubehörs aus dem
+   * Laden, leer heißt "kein Geschenk". Wie bei den Städten steht das Finale
+   * an letzter Stelle.
+   *
+   * Alles daran ist freiwillig: Wer nichts einträgt, bekommt nichts, und
+   * einzelne Kapitel dürfen ausgelassen werden - auch nur das letzte. Gibt es
+   * den Gegenstand im Laden nicht mehr, bleibt die Übergabe schlicht aus.
+   */
+  kapitelGeschenke: string[];
+  /**
    * Wetter je Kapitel: eine Lage, "zufall" oder leer für die Einstellung im
    * Admin-Menü. Das Finale steht an letzter Stelle.
    *
@@ -191,6 +201,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelTaeter: [],
   kapitelStaedte: [],
   kapitelVideos: [],
+  kapitelGeschenke: [],
   kapitelWetter: [],
   stadt: "zufall",
   staedteWechseln: true,
@@ -232,6 +243,18 @@ export const wetterFuerKapitel = (
   index: number,
   allgemein: Wetterlage,
 ): Wetterlage => vorgaben?.kapitelWetter?.[index] || allgemein;
+
+/**
+ * Das Geschenk nach einem Kapitel - dieselbe Zählung wie beim Wetter:
+ * `index` 0 ist das erste Kapitel, `kapitelAnzahl` das Finale.
+ *
+ * Leer heißt: kein Geschenk. Eine Liste, die gar nicht so weit reicht, ist
+ * kein Fehler - dann steht dort eben nichts.
+ */
+export const geschenkFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelGeschenke"> | undefined,
+  index: number,
+): string => (vorgaben?.kapitelGeschenke?.[index] ?? "").trim();
 
 /** Ein Kapitel der Saga: ein Erzählerteil und danach ein Fall. */
 export type SagaKapitel = {

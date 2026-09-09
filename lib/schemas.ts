@@ -300,6 +300,7 @@ export const SagaVorgabenSchema = z.object({
   kapitelTaeter: luecken(z.string().max(40), "").max(8).default([]),
   kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
+  kapitelGeschenke: luecken(z.string().max(40), "").max(9).default([]),
   kapitelWetter: luecken(
     // "" heißt "wie im Admin-Menü", "aus" heißt ausdrücklich kein Wetter.
     ausAuswahl(WETTER_WAHL),

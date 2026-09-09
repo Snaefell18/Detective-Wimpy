@@ -11,6 +11,7 @@ import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
+import { GeschenkSchau } from "@/components/GeschenkSchau";
 import { LohnSchau } from "@/components/LohnSchau";
 import { ShopScreen } from "@/components/ShopScreen";
 import { KampagnenListe } from "@/components/KampagnenListe";
@@ -37,6 +38,7 @@ import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
   besessen,
+  geschenkFuerKapitel,
   neueGesichter,
   neuImSaal,
   sagaBesetzung,
@@ -47,8 +49,8 @@ import {
   type Saga,
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
-import { ladeZubehoer } from "@/lib/db";
-import { GRUNDREGAL, wirkungVon, type Zubehoer } from "@/lib/zubehoer";
+import { useLaden } from "@/lib/useLaden";
+import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useBeutel } from "@/lib/useBeutel";
 import { useGame, type Abdruecke } from "@/lib/useGame";
@@ -65,8 +67,8 @@ export default function Home() {
   const [sagenOffen, setSagenOffen] = useState(false);
   const [arcsOffen, setArcsOffen] = useState(false);
   const [ladenOffen, setLadenOffen] = useState(false);
-  /** Was Wimpy gekauft hat - die Beschreibungen kommen aus der Datenbank. */
-  const [zubehoer, setZubehoer] = useState<Zubehoer[]>(GRUNDREGAL);
+  /** Der Inhalt des Ladens - die Beschreibungen kommen aus der Datenbank. */
+  const zubehoer = useLaden();
   /**
    * Eingesetztes Zubehör, das auf die nächste Antwort wartet.
    * Charakter-Id -> Wirkung; verbraucht wird beim Absenden der Frage.
@@ -127,25 +129,6 @@ export default function Home() {
       break;
     }
   }, [stand.verdacht, stand.fall]);
-
-  // Der Inhalt des Ladens - einmal beim Start geholt. Ohne Verbindung bleibt
-  // es beim Veritaserum, damit die Tasche nie leer aussieht.
-  useEffect(() => {
-    let sichtbar = true;
-    void ladeZubehoer()
-      .then(({ daten }) => {
-        if (!sichtbar) return;
-        const eigene = daten.filter((z) => !z.versteckt);
-        // Was im Admin-Menü unter derselben Id angelegt wurde, gewinnt; der
-        // Rest des Grundregals kommt dazu, damit der Laden nie leer ist.
-        const fehlend = GRUNDREGAL.filter((g) => !eigene.some((z) => z.id === g.id));
-        setZubehoer([...fehlend, ...eigene]);
-      })
-      .catch(() => {});
-    return () => {
-      sichtbar = false;
-    };
-  }, []);
 
   // Stabile Rückmeldungen: sonst starten Prolog und Intro bei jedem Render neu.
   const prologFertig = useCallback(() => setPhase("intro"), []);
@@ -271,6 +254,47 @@ export default function Home() {
           admin.einstellungen.wetter,
         )
       : undefined;
+
+  /**
+   * Das Geschenk nach einem gelösten Kapitel.
+   *
+   * Alles daran ist freiwillig, und jede Lücke ist erlaubt: Wer nichts
+   * einträgt, bekommt nichts; wer es nur für das dritte Kapitel einträgt,
+   * bekommt es auch nur dort. Steht der Gegenstand nicht mehr im Laden,
+   * passiert schlicht nichts - lieber kein Geschenk als ein Fehler.
+   *
+   * Verbucht wird über Saga und Kapitelnummer: Dasselbe Kapitel noch einmal
+   * zu spielen bringt kein zweites Exemplar.
+   */
+  const geschenkErhalten = geld.geschenkErhalten;
+  useEffect(() => {
+    if (stand.status !== "beendet" || !stand.ergebnis?.richtig) return;
+    if (!saga.stand || !stand.fall) return;
+    const { saga: sagaDaten, lauf } = saga.stand;
+    if (stand.fall.id !== lauf.fallId) return;
+
+    // Dieselbe Zählung wie beim Wetter: Das Finale steht hinter den Kapiteln.
+    const index =
+      lauf.phase === "finale" ? sagaDaten.vorgaben.kapitelAnzahl : lauf.kapitel;
+    const id = geschenkFuerKapitel(sagaDaten.vorgaben, index);
+    if (!id) return;
+
+    const stueck = zubehoer.find((z) => z.id === id);
+    if (!stueck) return;
+
+    geschenkErhalten(
+      `geschenk:${sagaDaten.id}:${index}`,
+      stueck,
+      lauf.phase === "finale" ? "Ein Geschenk zum Abschluss" : `Geschenk für Kapitel ${index + 1}`,
+    );
+  }, [
+    stand.status,
+    stand.ergebnis?.richtig,
+    stand.fall,
+    saga.stand,
+    zubehoer,
+    geschenkErhalten,
+  ]);
 
   const sagaStarten = (gewaehlt: Saga, vonVorn: boolean) => {
     void tonFreigeben();
@@ -466,6 +490,19 @@ export default function Home() {
           grund={geld.lohn.grund}
           gesamt={geld.beutel.yen}
           onFertig={geld.lohnAbholen}
+        />
+      </main>
+    );
+  }
+
+  // Und danach die Übergabe: erst das Geld, dann das Päckchen.
+  if (geld.geschenk) {
+    return (
+      <main className="app">
+        <GeschenkSchau
+          stueck={geld.geschenk.stueck}
+          grund={geld.geschenk.grund}
+          onFertig={geld.geschenkAbholen}
         />
       </main>
     );

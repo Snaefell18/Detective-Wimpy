@@ -122,5 +122,30 @@ console.log("\n5. Die Einstellungen verlieren nichts");
   );
 }
 
+console.log("\n6. Geschenke nach einem Kapitel");
+{
+  // Nichts eingetragen ist der Normalfall - und muss durchgehen.
+  const ohne = SagaVorgabenSchema.safeParse(uebertragen(STANDARD_SAGA_VORGABEN));
+  pruefe("gar keine Geschenke", ohne.success && ohne.data.kapitelGeschenke.length === 0,
+    ohne.error?.issues[0]?.message);
+
+  // Nur für ein späteres Kapitel: davor entstehen Löcher, aus denen über JSON
+  // null wird - genau daran ist früher die ganze Prüfung gescheitert.
+  const nurSpaet = { ...STANDARD_SAGA_VORGABEN, kapitelAnzahl: 5, kapitelGeschenke: [] };
+  nurSpaet.kapitelGeschenke[3] = "veritaserum";
+  const spaet = SagaVorgabenSchema.safeParse(uebertragen(nurSpaet));
+  pruefe("nur für Kapitel 4", spaet.success, spaet.error?.issues[0]?.message);
+  pruefe("steht an seiner Stelle", spaet.data?.kapitelGeschenke[3] === "veritaserum");
+  pruefe("die Löcher davor sind leer",
+    spaet.data?.kapitelGeschenke.slice(0, 3).every((g) => g === ""));
+
+  // Und nur nach dem Finale.
+  const nurFinale = { ...STANDARD_SAGA_VORGABEN, kapitelAnzahl: 3, kapitelGeschenke: [] };
+  nurFinale.kapitelGeschenke[3] = "fingerabdruckset";
+  const finale = SagaVorgabenSchema.safeParse(uebertragen(nurFinale));
+  pruefe("nur nach dem Finale", finale.success && finale.data.kapitelGeschenke[3] === "fingerabdruckset",
+    finale.error?.issues[0]?.message);
+}
+
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);

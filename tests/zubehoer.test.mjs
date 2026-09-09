@@ -13,6 +13,7 @@ import {
   yen,
 } from "../lib/zubehoer.ts";
 import { abdrueckeAmTatort } from "../lib/abdruecke.ts";
+import { STANDARD_SAGA_VORGABEN, geschenkFuerKapitel } from "../lib/sagaTypen.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -124,6 +125,28 @@ pruefe("jedes Grundstück hat eine bekannte Wirkung", GRUNDREGAL.every((z) => wi
   const rand = abdrueckeAmTatort(fall, () => 0.999999);
   pruefe("auch bei 0,999… ein gültiges Paar", rand.length === 2 && rand.includes("t") &&
     rand.every((id) => ["t", "a", "b"].includes(id)));
+}
+
+console.log("\n6. Das Geschenk nach einem Kapitel");
+{
+  const leer = STANDARD_SAGA_VORGABEN;
+  pruefe("ohne Eintrag gibt es nichts", geschenkFuerKapitel(leer, 0) === "");
+  pruefe("auch ohne Vorgaben nicht", geschenkFuerKapitel(undefined, 0) === "");
+  pruefe("und weit hinter dem Ende nicht", geschenkFuerKapitel(leer, 99) === "");
+
+  // Nur für Kapitel 3 (Index 2) eingetragen - davor stehen leere Plätze.
+  const nurDrittes = { kapitelGeschenke: ["", "", "veritaserum"] };
+  pruefe("Kapitel 1 bekommt nichts", geschenkFuerKapitel(nurDrittes, 0) === "");
+  pruefe("Kapitel 3 bekommt das Serum", geschenkFuerKapitel(nurDrittes, 2) === "veritaserum");
+  pruefe("Kapitel 4 wieder nichts", geschenkFuerKapitel(nurDrittes, 3) === "");
+
+  // Löcher, wie sie über JSON ankommen können.
+  const mitLoch = { kapitelGeschenke: [null, undefined, "fingerabdruckset"] };
+  pruefe("ein null-Loch gibt nichts", geschenkFuerKapitel(mitLoch, 0) === "");
+  pruefe("dahinter wird trotzdem gefunden",
+    geschenkFuerKapitel(mitLoch, 2) === "fingerabdruckset");
+  pruefe("Leerzeichen zählen nicht als Eintrag",
+    geschenkFuerKapitel({ kapitelGeschenke: ["   "] }, 0) === "");
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LOHN_FALL, LOHN_SAGA } from "./zubehoer";
+import { LOHN_FALL, LOHN_SAGA, type Zubehoer } from "./zubehoer";
 
 /**
  * Wimpys Geldbeutel und sein Zubehör.
@@ -30,11 +30,16 @@ const LEER: Beutel = { yen: 0, vorrat: {}, bezahlt: [] };
 /** Wie viel eine gerade eingelöste Belohnung wert war - für die Anzeige. */
 export type Lohn = { betrag: number; grund: string };
 
+/** Ein Gegenstand, den Wimpy geschenkt bekommen hat - für die Übergabe. */
+export type Geschenk = { stueck: Zubehoer; grund: string };
+
 export function useBeutel() {
   const [beutel, setBeutel] = useState<Beutel>(LEER);
   const [geladen, setGeladen] = useState(false);
   /** Die letzte Belohnung - die Anzeige holt sie sich ab und räumt sie weg. */
   const [lohn, setLohn] = useState<Lohn | null>(null);
+  /** Dasselbe für ein Geschenk: Es wartet, bis es übergeben wurde. */
+  const [geschenk, setGeschenk] = useState<Geschenk | null>(null);
 
   useEffect(() => {
     try {
@@ -87,6 +92,29 @@ export function useBeutel() {
     [verdienen],
   );
 
+  /**
+   * Ein Geschenk: ein Gegenstand, für den nichts bezahlt wird.
+   *
+   * `was` ist die Id, unter der es verbucht wird - dasselbe Geschenk gibt es
+   * nie zweimal, auch wenn ein Kapitel erneut gespielt wird. Ohne Gegenstand
+   * passiert nichts; das ist der Normalfall, wenn nichts eingetragen wurde.
+   */
+  const geschenkErhalten = useCallback(
+    (was: string, stueck: Zubehoer | null | undefined, grund: string) => {
+      if (!was || !stueck?.id) return;
+      setBeutel((alt) => {
+        if (alt.bezahlt.includes(was)) return alt;
+        setGeschenk({ stueck, grund });
+        return {
+          ...alt,
+          bezahlt: [...alt.bezahlt, was],
+          vorrat: { ...alt.vorrat, [stueck.id]: (alt.vorrat[stueck.id] ?? 0) + 1 },
+        };
+      });
+    },
+    [],
+  );
+
   /** Kaufen. Gibt zurück, ob es geklappt hat. */
   const kaufen = useCallback((id: string, preis: number): boolean => {
     let geklappt = false;
@@ -114,12 +142,16 @@ export function useBeutel() {
   }, []);
 
   const lohnAbholen = useCallback(() => setLohn(null), []);
+  const geschenkAbholen = useCallback(() => setGeschenk(null), []);
 
   return {
     beutel,
     geladen,
     lohn,
     lohnAbholen,
+    geschenk,
+    geschenkAbholen,
+    geschenkErhalten,
     fallGeloest,
     sagaGeschafft,
     kaufen,

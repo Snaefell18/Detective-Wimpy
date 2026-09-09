@@ -2814,3 +2814,47 @@
   border-radius: 0;
   filter: grayscale(1) contrast(1.05);
 }
+
+/* --- Die Übergabe im Noir -------------------------------------------- */
+
+/* Kein rotes Geschenkpapier: ein Aktendeckel in Messing und Papier, wie
+   alles hier. */
+[data-theme="noir"] .geschenk {
+  background:
+    radial-gradient(70% 50% at 50% 45%, rgba(194, 145, 63, 0.16), transparent 72%),
+    var(--grund);
+}
+
+[data-theme="noir"] .geschenk-boden {
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, transparent 44%, var(--akzent) 44% 56%, transparent 56%),
+    linear-gradient(180deg, #1a1710, #0c0a07);
+  border: 1px solid var(--linie-akzent);
+}
+
+[data-theme="noir"] .geschenk-deckel {
+  border-radius: 0;
+  background: linear-gradient(180deg, #241f16, #14110c);
+  border: 1px solid var(--linie-akzent);
+}
+
+[data-theme="noir"] .geschenk-band {
+  background: linear-gradient(180deg, transparent 38%, var(--akzent) 38% 50%, transparent 50%);
+}
+
+[data-theme="noir"] .geschenk-schnipsel span {
+  border-radius: 0;
+  background: var(--akzent);
+}
+
+[data-theme="noir"] .geschenk-stueck {
+  border-radius: 0;
+}
+
+[data-theme="noir"] .geschenk-name {
+  font-family: var(--f-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--akzent);
+}

@@ -210,5 +210,38 @@ console.log("\nX. Kapiteltäter und Abwesenheiten kommen sich nicht in die Quere
   );
 }
 
+console.log("\nY. Geschenke stören nichts - und ein fehlendes fällt auf");
+{
+  const basis = { charaktere: ["wimpy", "oeho", "nala", "hut", "boss"], kapitelAnzahl: 3 };
+  const mitLaden = (teil, ids) =>
+    pruefeVorgaben({ vorgaben: mit(teil), charaktere, orte, zubehoerIds: ids });
+
+  pruefe("ohne Geschenke ist alles gut", mitLaden(basis, ["veritaserum"]).length === 0);
+
+  const sparsam = { ...basis, kapitelGeschenke: [] };
+  sparsam.kapitelGeschenke[2] = "veritaserum";
+  pruefe(
+    "nur für ein späteres Kapitel geht auch",
+    mitLaden(sparsam, ["veritaserum"]).length === 0,
+    mitLaden(sparsam, ["veritaserum"])[0],
+  );
+
+  const weg = mitLaden(sparsam, ["fingerabdruckset"]);
+  pruefe("ein Gegenstand, den es nicht gibt, fällt auf", weg.length === 1, weg[0]);
+  pruefe("und die Meldung nennt das Kapitel", /Kapitel 3/.test(weg[0] ?? ""), weg[0]);
+
+  // Ohne Ladenliste (so läuft es auf dem Server) wird nicht geprüft - und
+  // vor allem nichts abgelehnt.
+  pruefe("ohne Ladenliste keine Meldung", probleme(sparsam).length === 0);
+
+  // Ein Eintrag hinter dem Finale gehört zu keinem Kapitel mehr.
+  const zuWeit = { ...basis, kapitelGeschenke: ["", "", "", "", "veritaserum"] };
+  pruefe("ein Eintrag hinter dem Finale stört nicht", mitLaden(zuWeit, []).length === 0);
+
+  const nachFinale = { ...basis, kapitelGeschenke: ["", "", "", "gibtsnicht"] };
+  const f = mitLaden(nachFinale, []);
+  pruefe("das Finale wird aber geprüft", f.length === 1 && /Finale/.test(f[0]), f[0]);
+}
+
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);
 process.exit(fehlgeschlagen === 0 ? 0 : 1);
