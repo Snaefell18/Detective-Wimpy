@@ -19,14 +19,26 @@ export const maxDuration = 60;
  *   OPENAI_API_KEY - der Schlüssel aus dem OpenAI-Konto
  *
  * Optional:
- *   OPENAI_IMAGE_MODEL   - Voreinstellung "gpt-image-1"
- *   OPENAI_IMAGE_QUALITY - "low", "medium" (Voreinstellung) oder "high"
+ *   OPENAI_IMAGE_MODEL   - Voreinstellung "gpt-image-2.5-sunburst"
+ *   OPENAI_IMAGE_QUALITY - "low", "medium" (Voreinstellung), "high", "xhigh",
+ *                          "max" oder "auto"; die oberen Stufen kennen erst
+ *                          die 2.5er-Modelle
  *
  * Ohne Schlüssel bleibt alles wie bisher: Der Knopf sagt, dass nichts
  * eingerichtet ist, und Bilder lassen sich weiterhin von Hand ablegen.
  */
 
-const modellName = (): string => process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1";
+/**
+ * Welches Modell malt.
+ *
+ * Voreingestellt ist Sunburst aus der 2.5er-Reihe: die genauere der beiden
+ * Varianten. Die schnellere und billigere heißt "gpt-image-2.5-flare" - für
+ * flächige Comicbilder reicht sie meist und braucht weniger Zeit, was auf
+ * einer Serverless-Funktion mit einer Minute Laufzeit zählt. Ein anderes
+ * Modell trägt man einfach in OPENAI_IMAGE_MODEL ein.
+ */
+const modellName = (): string =>
+  process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-sunburst";
 
 /** Was das Format sein darf - alles andere lehnt die Schnittstelle ab. */
 const FORMATE = new Set(["1024x1024", "1024x1536", "1536x1024"]);
@@ -80,7 +92,9 @@ export async function POST(request: Request) {
     }
 
     const modell = modellName();
-    // Die feineren Regler kennt nur gpt-image-1; ältere Modelle lehnen sie ab.
+    // Die feineren Regler kennt nur die gpt-image-Reihe; ältere Modelle wie
+    // dall-e-3 lehnen sie ab. Bei durchsichtigem Grund verlangt die
+    // Schnittstelle png oder webp - deshalb steht png hier fest.
     const extras = modell.startsWith("gpt-image")
       ? {
           background: body?.freigestellt ? "transparent" : "opaque",
@@ -103,7 +117,7 @@ export async function POST(request: Request) {
       const grund = await antwort.text().catch(() => "");
       const hinweise: Record<number, string> = {
         401: "Der OPENAI_API_KEY stimmt nicht.",
-        403: `Das Konto darf „${modell}“ nicht benutzen. Für gpt-image-1 muss die Organisation bei OpenAI einmal verifiziert werden.`,
+        403: `Das Konto darf „${modell}“ nicht benutzen. Für die gpt-image-Modelle muss die Organisation bei OpenAI einmal verifiziert werden.`,
         404: `Das Modell „${modell}“ gibt es für dieses Konto nicht.`,
         429: "Das Kontingent bei OpenAI ist aufgebraucht oder es kamen zu viele Anfragen.",
       };
@@ -148,7 +162,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         fehler: abgelaufen
-          ? "Die Bilderzeugung hat zu lange gebraucht. Bitte noch einmal versuchen - oder in den Umgebungsvariablen OPENAI_IMAGE_QUALITY auf „low“ stellen."
+          ? "Die Bilderzeugung hat zu lange gebraucht. Bitte noch einmal versuchen - oder in den Umgebungsvariablen OPENAI_IMAGE_QUALITY herunterstellen (etwa auf „low“) oder mit OPENAI_IMAGE_MODEL auf „gpt-image-2.5-flare“ wechseln, das schneller malt."
           : fehler instanceof Error
             ? fehler.message
             : "Unbekannter Fehler",
