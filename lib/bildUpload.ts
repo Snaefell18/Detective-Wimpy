@@ -31,6 +31,19 @@ export async function alsDataUrl(datei: File, maxKante = 640): Promise<string> {
 }
 
 /**
+ * Wie lang die gespeicherte Zeichenkette höchstens sein darf.
+ *
+ * Und warum ausgerechnet Zeichen und nicht Bytes: Firestore zählt beim
+ * Dokument und in den Sicherheitsregeln die Zeichenkette, wie sie dasteht -
+ * also die base64-Fassung. Die ist um ein Drittel länger als das Bild selbst.
+ * Wer auf 700 kB Bilddaten kürzt, schreibt 933.000 Zeichen und wird von der
+ * Regel abgewiesen - mit "Missing or insufficient permissions", was nach
+ * einem Rechteproblem aussieht, aber keines ist. Deshalb wird hier in
+ * Zeichen gerechnet, in derselben Währung wie die Regel.
+ */
+export const MAX_BILD_ZEICHEN = 820_000;
+
+/**
  * Eine fertige data:-URL noch einmal verkleinern.
  *
  * Ein frisch erzeugtes Bild kommt in voller Auflösung und ist damit größer,
@@ -43,9 +56,14 @@ export async function alsDataUrl(datei: File, maxKante = 640): Promise<string> {
  */
 export async function verkleinereDataUrl(
   dataUrl: string,
-  { transparenz, maxBytes = 700_000, kanten = [1280, 1024, 832, 640, 512] }: {
+  {
+    transparenz,
+    maxZeichen = MAX_BILD_ZEICHEN,
+    kanten = [1280, 1024, 832, 640, 512, 384],
+  }: {
     transparenz: boolean;
-    maxBytes?: number;
+    /** Höchstlänge der fertigen data:-URL - in Zeichen, nicht in Bytes. */
+    maxZeichen?: number;
     kanten?: number[];
   },
 ): Promise<string> {
@@ -63,9 +81,14 @@ export async function verkleinereDataUrl(
       if (!ctx) throw new Error("Das Bild konnte nicht verarbeitet werden.");
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       letzte = canvas.toDataURL(transparenz ? "image/png" : "image/jpeg", 0.85);
-      if (bytesVon(letzte) <= maxBytes) return letzte;
+      if (letzte.length <= maxZeichen) return letzte;
     }
-    return letzte;
+
+    // Selbst die kleinste Stufe passt nicht. Lieber hier klar sagen, warum,
+    // als es die Datenbank mit einer irreführenden Meldung ablehnen lassen.
+    throw new Error(
+      `Das Bild bleibt auch verkleinert zu groß (${groesse(letzte)}). Bitte noch einmal erzeugen.`,
+    );
   } finally {
     bitmap.close();
   }

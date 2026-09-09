@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { adminToken } from "./akte";
 import { postJson } from "./api";
-import { ladeBilddatei, speichereBilddatei } from "./db";
-import { verkleinereDataUrl } from "./bildUpload";
+import { istZugriffVerweigert, ladeBilddatei, speichereBilddatei } from "./db";
+import { groesse, verkleinereDataUrl } from "./bildUpload";
 import { FORMAT, FREIGESTELLT, bildAuftrag, type BildArt, type BildEintrag } from "./bildPrompt";
 
 /**
@@ -102,7 +102,9 @@ async function vorlageVorbereiten(quelle: string): Promise<string> {
               leser.readAsDataURL(blob);
             }),
         );
-  return verkleinereDataUrl(roh, { transparenz: true, maxBytes: 1_400_000 });
+  // Die Vorlage geht nur durch die Leitung, nicht in die Datenbank - hier
+  // darf es also großzügiger sein als beim Speichern.
+  return verkleinereDataUrl(roh, { transparenz: true, maxZeichen: 1_800_000 });
 }
 
 /**
@@ -141,12 +143,28 @@ export async function bildErzeugen(
   });
 
   const id = crypto.randomUUID();
-  await speichereBilddatei({
-    id,
-    daten: verkleinert,
-    zweck: `${art}: ${eintrag.name ?? ""}`.trim(),
-    erstelltAm: Date.now(),
-  });
+  try {
+    await speichereBilddatei({
+      id,
+      daten: verkleinert,
+      zweck: `${art}: ${eintrag.name ?? ""}`.trim(),
+      erstelltAm: Date.now(),
+    });
+  } catch (fehler) {
+    /*
+     * Firestore lehnt zu große Dokumente mit demselben Wort ab wie fehlende
+     * Rechte: "Missing or insufficient permissions". Das führt in die Irre -
+     * also wird hier gesagt, was wirklich in Frage kommt.
+     */
+    if (istZugriffVerweigert(fehler)) {
+      throw new Error(
+        "Die Datenbank hat das Bild abgelehnt. Meist fehlt die Sammlung „bilder“ in den veröffentlichten Firestore-Regeln - dann einmal firestore.rules aus dem Projekt in der Firebase-Konsole neu veröffentlichen. (Das Bild selbst ist mit " +
+          groesse(verkleinert) +
+          " klein genug.)",
+      );
+    }
+    throw fehler;
+  }
   gemerkt.set(id, verkleinert);
   return { wert: `${PRAEFIX}${id}`, daten: verkleinert };
 }

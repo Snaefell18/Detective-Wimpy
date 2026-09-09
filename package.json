@@ -14,7 +14,7 @@
     "import:orte": "node scripts/import-locations.mjs",
     "bilder:optimieren": "node scripts/optimize-images.mjs",
     "firebase:rules": "npx --yes firebase-tools deploy --only firestore:rules,firestore:indexes",
-    "test": "npx tsx tests/fallReparieren.test.mjs && npx tsx tests/loesbarkeit.test.mjs && npx tsx tests/twist.test.mjs && npx tsx tests/arcs.test.mjs && npx tsx tests/namenSchutz.test.mjs && npx tsx tests/neuzugang.test.mjs && npx tsx tests/besessenheit.test.mjs && npx tsx tests/video.test.mjs && npx tsx tests/finale.test.mjs && npx tsx tests/vorgaben.test.mjs && npx tsx tests/pruefung.test.mjs && npx tsx tests/zubehoer.test.mjs && npx tsx tests/bilder.test.mjs && npx tsx tests/bildPrompt.test.mjs",
+    "test": "npx tsx tests/fallReparieren.test.mjs && npx tsx tests/loesbarkeit.test.mjs && npx tsx tests/twist.test.mjs && npx tsx tests/arcs.test.mjs && npx tsx tests/namenSchutz.test.mjs && npx tsx tests/neuzugang.test.mjs && npx tsx tests/besessenheit.test.mjs && npx tsx tests/video.test.mjs && npx tsx tests/finale.test.mjs && npx tsx tests/vorgaben.test.mjs && npx tsx tests/pruefung.test.mjs && npx tsx tests/zubehoer.test.mjs && npx tsx tests/bilder.test.mjs && npx tsx tests/bildPrompt.test.mjs && npx tsx tests/bildGroesse.test.mjs",
     "test:ton": "node tests/ton.mjs"
   },
   "dependencies": {

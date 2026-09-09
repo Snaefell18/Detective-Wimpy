@@ -75,19 +75,46 @@ export const ladeCharaktere = () => alle<Character>("charaktere");
 export const ladeOrte = () => alle<Location>("orte");
 export const ladeItems = () => alle<Item>("items");
 
+/*
+ * Name und Beschreibung werden gekürzt, bevor geschrieben wird - genau auf
+ * die Längen, die in firestore.rules stehen. Sonst lehnt die Datenbank ab,
+ * und zwar mit "Missing or insufficient permissions": eine Meldung über
+ * Rechte für ein Problem, das keines ist.
+ */
 export async function speichereCharakter(charakter: Character): Promise<void> {
   await anmelden();
-  await setDoc(doc(getDb(), "charaktere", charakter.id), sauber(charakter));
+  await setDoc(
+    doc(getDb(), "charaktere", charakter.id),
+    sauber({
+      ...charakter,
+      name: kuerze(charakter.name, 60),
+      beschreibung: kuerze(charakter.beschreibung, 1000),
+    }),
+  );
 }
 
 export async function speichereOrt(ort: Location): Promise<void> {
   await anmelden();
-  await setDoc(doc(getDb(), "orte", ort.id), sauber(ort));
+  await setDoc(
+    doc(getDb(), "orte", ort.id),
+    sauber({
+      ...ort,
+      name: kuerze(ort.name, 60),
+      beschreibung: kuerze(ort.beschreibung, 500),
+    }),
+  );
 }
 
 export async function speichereItem(item: Item): Promise<void> {
   await anmelden();
-  await setDoc(doc(getDb(), "items", item.id), sauber(item));
+  await setDoc(
+    doc(getDb(), "items", item.id),
+    sauber({
+      ...item,
+      name: kuerze(item.name, 60),
+      beschreibung: kuerze(item.beschreibung, 500),
+    }),
+  );
 }
 
 export async function loesche(sammlung: string, id: string): Promise<void> {
