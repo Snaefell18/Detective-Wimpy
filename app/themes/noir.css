@@ -1870,13 +1870,6 @@
   font-size: 56px;
 }
 
-[data-theme="noir"] .akte-text {
-  font-family: var(--f-text);
-  font-size: 16.5px;
-  line-height: 1.6;
-  color: var(--text-2);
-}
-
 /* Der Übernehmen-Text ist kein Kasten, sondern der eine Akzent. */
 [data-theme="noir"] .akte-start {
   font-family: var(--f-display);

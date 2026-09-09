@@ -298,11 +298,18 @@ function SzenenInhalt({
       );
 
     case "akte":
-      // Nur Titel und Text - ein Tipp irgendwo darauf startet die Runde.
+      /*
+       * Nur der Titel - ein Tipp irgendwo darauf startet die Runde.
+       *
+       * Die Tatbeschreibung stand hier früher in voller Länge. Ein Intro
+       * lebt aber von Schlagworten, nicht von Absätzen: Was zu lesen ist,
+       * bremst, was aufblitzt, zieht hinein. Verloren geht dabei nichts -
+       * derselbe Text steht als erster Eintrag im Notizbuch.
+       */
       return (
         <button className="akte einblenden" onClick={onStarten}>
+          <span className="intro-oberzeile">Die Akte</span>
           <h1 className="akte-titel">{fall.titel}</h1>
-          <p className="akte-text">{fall.tatbeschreibung}</p>
           <span className="akte-start pochen">Fall übernehmen ›</span>
         </button>
       );

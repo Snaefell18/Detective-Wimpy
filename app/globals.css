@@ -2967,14 +2967,6 @@ a.zurueck {
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
 }
 
-.akte-text {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.6;
-  color: #d8e6fa;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
-}
-
 /* Kein Knopf, nur Schrift - sie pocht, damit klar ist: hier geht es weiter. */
 .akte-start {
   margin-top: 4px;
@@ -5566,6 +5558,23 @@ a.zurueck {
   height: 100%;
   object-fit: cover;
   background: #000;
+}
+
+/* Der schwarze Vorhang vor und nach dem Video. Er liegt über dem Bild, aber
+   unter den Knöpfen - überspringen muss auch während der Blende gehen. */
+.video-szene-blende {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition-property: opacity;
+  transition-timing-function: ease-in-out;
+}
+
+.video-szene-blende[data-zu="true"] {
+  opacity: 1;
 }
 
 .video-szene-skip {

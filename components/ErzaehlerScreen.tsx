@@ -78,6 +78,13 @@ export function ErzaehlerScreen({
   const [karteLaeuft, setKarteLaeuft] = useState(Boolean(karte));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startRef = useRef(performance.now());
+  /**
+   * Läuft die gesprochene Fassung wirklich? Dann bleibt der Text vom
+   * Bildschirm - man hört ihn ja. Klappt es nicht (kein Ton hinterlegt, oder
+   * der Browser verweigert ihn), steht er wie bisher da; niemand soll vor
+   * einer leeren Fläche sitzen.
+   */
+  const [spricht, setSpricht] = useState(false);
 
   // Folgt im selben Bildschirm ein anderer Erzählerteil, fängt sein Video von
   // vorn an - React behält sonst den Zustand des vorherigen.
@@ -104,16 +111,32 @@ export function ErzaehlerScreen({
     let laeuftNoch = true;
     startRef.current = performance.now();
 
+    setSpricht(false);
+
     if (teil.audio) {
+      /*
+       * Der Sprecher hat Vorrang - und zwar wirklich: Vom vorherigen
+       * Bildschirm kann noch die Siegermusik laufen (nach einem gewonnenen
+       * Finale etwa). Zwei Stimmen übereinander versteht niemand, deshalb
+       * wird erst alles angehalten, was der Tonmanager gerade spielt.
+       */
+      stoppe();
+
       // Eine gesprochene Fassung kann in der Datenbank liegen ("stimme:…").
       // Das Nachschlagen dauert einen Moment; bis dahin läuft der Text schon.
       void tonQuelle(teil.audio).then((quelle) => {
         if (!laeuftNoch || !quelle) return;
         const audio = new Audio(quelle);
         audioRef.current = audio;
-        void audio.play().catch(() => {
-          // Blockiert der Browser den Ton, läuft die Szene stumm weiter.
-        });
+        void audio
+          .play()
+          .then(() => {
+            if (laeuftNoch) setSpricht(true);
+          })
+          .catch(() => {
+            // Blockiert der Browser den Ton, läuft die Szene stumm weiter -
+            // und der Text erscheint wie früher zeilenweise.
+          });
       });
     } else if (musik) {
       void spiele(musik);
@@ -173,15 +196,17 @@ export function ErzaehlerScreen({
       <div className="prolog-text">
         {titel && <p className="erzaehler-titel">{titel}</p>}
 
-        {zeilen.slice(0, sichtbar).map((zeile, i) => (
-          <p
-            key={i}
-            className="prolog-zeile"
-            data-letzte={i === sichtbar - 1 ? "true" : undefined}
-          >
-            {zeile}
-          </p>
-        ))}
+        {/* Wird vorgelesen, bleibt der Text weg - zuhören statt mitlesen. */}
+        {!spricht &&
+          zeilen.slice(0, sichtbar).map((zeile, i) => (
+            <p
+              key={i}
+              className="prolog-zeile"
+              data-letzte={i === sichtbar - 1 ? "true" : undefined}
+            >
+              {zeile}
+            </p>
+          ))}
       </div>
 
       {/* Tippen geht überall - der Knopf darf den Tipp nicht doppelt zählen. */}
