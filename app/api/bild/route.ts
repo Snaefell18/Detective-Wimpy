@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adminGesperrt } from "@/lib/adminSchloss";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -72,21 +73,9 @@ function alsFormular(vorlage: string, felder: Record<string, string>): FormData 
   return formular;
 }
 
-function zugangGeprueft(request: Request): string | null {
-  const erwartet = process.env.ADMIN_TOKEN;
-  if (!erwartet) {
-    return process.env.NODE_ENV === "production"
-      ? "Die Bilderzeugung ist gesperrt: Bitte ADMIN_TOKEN in den Umgebungsvariablen setzen."
-      : null;
-  }
-  return (request.headers.get("x-admin-token") ?? "") === erwartet
-    ? null
-    : "Falsches Admin-Passwort.";
-}
-
 export async function POST(request: Request) {
   try {
-    const gesperrt = zugangGeprueft(request);
+    const gesperrt = adminGesperrt(request, "Die Bilderzeugung");
     if (gesperrt) return NextResponse.json({ fehler: gesperrt }, { status: 403 });
 
     const schluessel = process.env.OPENAI_API_KEY;

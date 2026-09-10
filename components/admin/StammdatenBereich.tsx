@@ -10,6 +10,7 @@ import {
   ordnerVon,
 } from "@/lib/freieBilder";
 import { BildFeld } from "./BildFeld";
+import { StadtErfinden } from "./StadtErfinden";
 import {
   ladeZubehoer,
   loesche,
@@ -18,8 +19,10 @@ import {
   speichereListe,
   speichereOrt,
 } from "@/lib/db";
+import { erfindeDing } from "@/lib/erfinden";
 import { stammdatenAktualisieren, useStammdaten } from "@/lib/stammdaten";
 import { LEERE_BEZIEHUNGEN } from "@/lib/types";
+import { vervollstaendigen } from "@/lib/stammdatenIds";
 import type { Beziehungen, Character, Item, Location } from "@/lib/types";
 import { AUFTRITTS_ARTEN } from "@/lib/sagaTypen";
 import { SongFeld } from "./SongFeld";
@@ -55,6 +58,18 @@ export function StammdatenBereich({
    * neuer Eintrag unter einer neuen Id, angefasst wird das alte nie.
    */
   const [version, setVersion] = useState<(Character | Location | Item) | null>(null);
+  /**
+   * Ein frisch erfundener Vorschlag, der noch niemandem gehört.
+   *
+   * Er öffnet das gewöhnliche Formular - mit Namen und Beschreibung schon
+   * ausgefüllt. Gespeichert wird erst, wenn dort auf Speichern getippt wird;
+   * bis dahin lässt sich alles ändern und ein Bild dazu erzeugen.
+   */
+  const [erfunden, setErfunden] = useState<Item | null>(null);
+  /** Läuft gerade ein Erfinden-Aufruf? */
+  const [erfindet, setErfindet] = useState(false);
+  /** Der Bildschirm für eine ganze Stadt. */
+  const [stadtOffen, setStadtOffen] = useState(false);
   /** Bilder, die schon im Laden hängen - sie sind nicht frei. */
   const [ladenBilder, setLadenBilder] = useState<string[]>([]);
   const [alleZeigen, setAlleZeigen] = useState(false);
@@ -121,6 +136,37 @@ export function StammdatenBereich({
     }
   };
 
+  /**
+   * Ein Ding erfinden lassen.
+   *
+   * Der Vorschlag kostet einen Aufruf und landet direkt im Formular - nicht
+   * in der Datenbank. Was schon da ist, geht mit: Sonst kämen dieselben drei
+   * Taschenuhren immer wieder.
+   */
+  const dingErfinden = async () => {
+    setErfindet(true);
+    onFehler(null);
+    try {
+      const vorschlag = await erfindeDing(
+        stammdaten.items.map((i) => i.name),
+        "",
+      );
+      setNeu(false);
+      setAusBild(null);
+      setVersion(null);
+      setBearbeitet(null);
+      setErfunden({
+        ...(leererEintrag("items") as Item),
+        name: vorschlag.name,
+        beschreibung: vorschlag.beschreibung,
+      });
+    } catch (fehler) {
+      onFehler(fehler instanceof Error ? fehler.message : "Das hat nicht geklappt.");
+    } finally {
+      setErfindet(false);
+    }
+  };
+
   const uebernehmen = () =>
     mitFehler(
       () => speichereListe(art, eintraege as { id: string }[]),
@@ -172,6 +218,32 @@ export function StammdatenBereich({
             Projektdaten übernehmen
           </button>
         )}
+        {/* Erfinden lassen statt selbst ausdenken. Kostet einen Aufruf und
+            legt nichts an - der Vorschlag landet im Formular. */}
+        {art === "items" && (
+          <button
+            className="knopf"
+            onClick={() => void dingErfinden()}
+            disabled={beschaeftigt || erfindet}
+          >
+            {erfindet ? "Wird erfunden …" : "✨ Ding erfinden"}
+          </button>
+        )}
+        {art === "orte" && (
+          <button
+            className="knopf"
+            onClick={() => {
+              setNeu(false);
+              setAusBild(null);
+              setVersion(null);
+              setBearbeitet(null);
+              setStadtOffen(true);
+            }}
+            disabled={beschaeftigt || stadtOffen}
+          >
+            ✨ Stadt erfinden
+          </button>
+        )}
         {art !== "items" && (
           <button
             className="knopf"
@@ -182,6 +254,16 @@ export function StammdatenBereich({
           </button>
         )}
       </div>
+
+      {stadtOffen && art === "orte" && (
+        <StadtErfinden
+          vorhandeneStaedte={[...new Set(stammdaten.orte.map((o) => o.stadt))]}
+          onFertig={() => setStadtOffen(false)}
+          onAbbrechen={() => setStadtOffen(false)}
+          onMeldung={onMeldung}
+          onFehler={onFehler}
+        />
+      )}
 
       <input
         ref={dateiRef}
@@ -195,7 +277,7 @@ export function StammdatenBereich({
         }}
       />
 
-      {(neu || ausBild || version) && (
+      {(neu || ausBild || version || erfunden) && (
         <Formular
           art={art}
           alleCharaktere={stammdaten.charaktere}
@@ -204,11 +286,15 @@ export function StammdatenBereich({
           // Angaben des Originals drin, aber ohne dessen Id und ohne dessen
           // Bild: Beides bekommt die neue Fassung für sich.
           eintrag={
-            version
-              ? { ...version, id: "", name: `${version.name} (Version)`, bild: "" }
-              : ausBild
-                ? { ...leererEintrag(art), bild: ausBild, name: nameAusPfad(ausBild) }
-                : null
+            // Erfunden wird nur bei den Dingen - der Riegel steht hier, damit
+            // ein Vorschlag nie in einem anderen Formular landet.
+            erfunden && art === "items"
+              ? erfunden
+              : version
+                ? { ...version, id: "", name: `${version.name} (Version)`, bild: "" }
+                : ausBild
+                  ? { ...leererEintrag(art), bild: ausBild, name: nameAusPfad(ausBild) }
+                  : null
           }
           vorlage={
             version
@@ -219,12 +305,14 @@ export function StammdatenBereich({
             setNeu(false);
             setAusBild(null);
             setVersion(null);
+            setErfunden(null);
           }}
           onSpeichern={async (eintrag) => {
             await mitFehler(() => speichern(art, eintrag), `${nameVon(eintrag)} angelegt.`);
             setNeu(false);
             setAusBild(null);
             setVersion(null);
+            setErfunden(null);
           }}
         />
       )}
@@ -935,41 +1023,3 @@ export const ueberschreibtOriginal = (
   // Gerechnet wird mit derselben Funktion, die auch beim Speichern die Id
   // vergibt - alles andere wäre eine zweite Wahrheit.
   Boolean(vorlage && vervollstaendigen(art, entwurf).id === vorlage.id);
-
-/** Aus "Öhös Kanzlei" wird "oehos-kanzlei" - daraus entstehen die Ids. */
-const slug = (wert: string) =>
-  wert
-    .toLowerCase()
-    .replaceAll("ä", "ae")
-    .replaceAll("ö", "oe")
-    .replaceAll("ü", "ue")
-    .replaceAll("ß", "ss")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-/** Ergänzt Id, Bildpfad und abgeleitete Felder. */
-function vervollstaendigen(
-  art: Art,
-  entwurf: Character | Location | Item,
-): Character | Location | Item {
-  if (art === "orte") {
-    const ort = entwurf as Location;
-    const stadtId = slug(ort.stadt);
-    const id = ort.id || `${stadtId}-${slug(ort.name)}`;
-    return {
-      ...ort,
-      id,
-      stadtId,
-      bild: ort.bild || `/orte/${id}.png`,
-      beschreibung:
-        ort.beschreibung ||
-        (ort.atmosphaere ? `${ort.name} - ${ort.atmosphaere}.` : ort.name),
-    };
-  }
-
-  const id = entwurf.id || slug(entwurf.name);
-  const ordner = art === "charaktere" ? "charaktere" : "items";
-  return { ...entwurf, id, bild: entwurf.bild || `/${ordner}/${id}.png` };
-}

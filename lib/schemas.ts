@@ -427,3 +427,31 @@ export const EinstellungenSchema = z.object({
     ...WETTERLAGEN.map((w) => w.id),
   ]).default("aus"),
 });
+
+/* --- Neue Stammdaten erfinden lassen -------------------------------- */
+
+/** Ein einzelner Gegenstand, frisch erfunden. */
+export const DingSchema = z.object({
+  name: z.string().describe("Kurzer, konkreter Name - ein bis drei Wörter, ohne Artikel"),
+  beschreibung: z
+    .string()
+    .describe("Ein bis zwei Sätze: was es ist, wie es aussieht, wozu es dient"),
+});
+
+export type DingDraft = z.infer<typeof DingSchema>;
+
+/** Eine Stadt mit ihren Schauplätzen. */
+export const StadtSchema = z.object({
+  stadt: z.string().describe("Name der Stadt"),
+  orte: z
+    .array(
+      z.object({
+        name: z.string().describe("Kurzer, konkreter Name des Schauplatzes"),
+        atmosphaere: z.string().describe("Drei bis sechs Wörter zur Stimmung, kein Satz"),
+        beschreibung: z.string().describe("Ein bis zwei Sätze, was man dort sieht und riecht"),
+      }),
+    )
+    .describe("Die Schauplätze dieser Stadt"),
+});
+
+export type StadtDraft = z.infer<typeof StadtSchema>;
