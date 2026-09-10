@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getItem } from "@/lib/items";
 import { findeOrt } from "@/lib/locations";
-import { unseal } from "@/lib/seal";
+import { seal, unseal } from "@/lib/seal";
+import type { BeweismittelKern } from "@/lib/beweismittel";
 import type { CaseFile } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -65,6 +66,25 @@ export async function POST(request: Request) {
     const beobachtung = spur.beobachtung?.trim() || spur.bedeutung;
     const vermutung = spur.vermutung?.trim();
 
+    /*
+     * Das Siegel des Fundes.
+     *
+     * Nimmt der Spieler das Stück in die Beweismitteltasche, trägt es diesen
+     * Umschlag mit sich - und die Verhandlung kann später nachlesen, was er
+     * wirklich beweist, ohne den ganzen Fall zu kennen. Im Browser bleibt er
+     * unlesbar; dort steht wie immer nur die Beobachtung.
+     */
+    const ortName = findeOrt(fall.orte, spur.ortId)?.name ?? "";
+    const kern: BeweismittelKern = {
+      id: spur.itemId,
+      name,
+      beobachtung,
+      bedeutung: spur.bedeutung,
+      zeigtAufCharakterId: spur.zeigtAufCharakterId,
+      fuehrtInDieIrre: spur.fuehrtInDieIrre === true,
+      herkunft: [ortName, fall.titel].filter(Boolean).join(" · "),
+    };
+
     return NextResponse.json({
       spur: {
         itemId: spur.itemId,
@@ -72,6 +92,8 @@ export async function POST(request: Request) {
         bild: item?.bild ?? null,
         beobachtung,
         vermutung: vermutung || null,
+        herkunft: ortName,
+        siegel: seal(kern),
       },
       text: `${
         woanders

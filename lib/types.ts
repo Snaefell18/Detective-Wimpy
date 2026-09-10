@@ -287,6 +287,19 @@ export type TalkResult = {
    * im Inventar nicht ohne Text landet. Wie beim Umsehen nie die Bedeutung.
    */
   gefundeneSpurNotiz: string | null;
+  /**
+   * Der Fund selbst - mit Siegel, damit er in die Beweismitteltasche kann.
+   * Null, wenn das Gespräch auf nichts gestoßen ist.
+   */
+  gefundeneSpur: {
+    itemId: string;
+    name: string;
+    bild: string | null;
+    beobachtung: string;
+    vermutung: string | null;
+    herkunft: string;
+    siegel: string;
+  } | null;
   verdachtsaenderung: number;
   luegt: boolean;
 };

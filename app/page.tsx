@@ -9,6 +9,7 @@ import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
 import { ErgebnisScreen } from "@/components/ErgebnisScreen";
+import { FundMoment } from "@/components/FundMoment";
 import { IntroSequenz } from "@/components/IntroSequenz";
 import { InventarScreen } from "@/components/InventarScreen";
 import { GeschenkSchau } from "@/components/GeschenkSchau";
@@ -52,6 +53,8 @@ import {
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
 import { useLaden } from "@/lib/useLaden";
+import { TASCHE_MAX, herkunftsZeile } from "@/lib/beweismittel";
+import { useTasche } from "@/lib/useTasche";
 import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
 import { useArcLauf } from "@/lib/useArcLauf";
 import { useBeutel } from "@/lib/useBeutel";
@@ -104,6 +107,16 @@ export default function Home() {
   const saga = useSagaLauf();
   const arc = useArcLauf();
   const geld = useBeutel();
+  /**
+   * Die Beweismitteltasche: sechs Stücke für eine ganze Saga.
+   *
+   * Sie hängt am Durchgang, nicht am Fall - was in Kapitel eins hineinwandert,
+   * liegt im Finale noch darin. Gebunden wird sie dort, wo ein Durchgang
+   * beginnt (siehe sagaStarten und fallStarten), nicht in einem Nebeneffekt:
+   * Zwischen zwei Kapiteln liegt der fertige Fall noch herum, und eine
+   * Bindung, die daraus schließt, würde die Tasche genau dann leeren.
+   */
+  const tasche = useTasche();
 
   const { stand, geladen, laedt, schritt, fehler, setFehler } = spiel;
 
@@ -153,6 +166,8 @@ export default function Home() {
     // Die Freigabe gehört in jeden Klick, der ein Spiel beginnt - auch ohne
     // Intro, sonst bleibt die Siegermusik am Ende stumm.
     void tonFreigeben();
+    // Ein einzelner Fall beginnt mit leerer Tasche.
+    tasche.neu(`einzel:${Date.now()}`);
     if (admin.einstellungen.intro) {
       spieleSofort("prolog");
       setPhase("prolog");
@@ -164,6 +179,7 @@ export default function Home() {
   /** Vorbereiteter Fall aus der Datenbank - startet ohne Modellaufruf. */
   const kampagneStarten = (kampagne: Parameters<typeof spiel.kampagneStarten>[0]) => {
     void tonFreigeben();
+    tasche.neu(`einzel:${kampagne.fall.id}`);
     if (admin.einstellungen.intro) spieleSofort("prolog");
     spiel.kampagneStarten(kampagne);
     setKampagnenOffen(false);
@@ -260,6 +276,17 @@ export default function Home() {
   );
 
   /**
+   * In welchem Kapitel Wimpy gerade sucht - für die Herkunftszeile eines
+   * Fundes. 1-basiert, 0 heißt Finale, null: kein Saga-Fall.
+   */
+  const laufendesKapitel =
+    sagaFallLaeuft && saga.stand
+      ? saga.stand.lauf.phase === "finale"
+        ? 0
+        : saga.stand.lauf.kapitel + 1
+      : null;
+
+  /**
    * Das Wetter über dem laufenden Kapitel.
    *
    * Es hängt am Kapitel, nicht am Ort: Wer durch die Schauplätze läuft, hat
@@ -341,10 +368,14 @@ export default function Home() {
 
     const weiter = !vonVorn && saga.stand?.saga.id === gewaehlt.id;
     if (!weiter) {
+      // Von vorn heißt auch: von vorn sammeln.
+      tasche.neu(`saga:${gewaehlt.id}`);
       saga.starten(gewaehlt, true);
       return;
     }
 
+    // Weiterspielen: Die Tasche dieser Saga bleibt, wie sie war.
+    tasche.fuer(`saga:${gewaehlt.id}`);
     saga.starten(gewaehlt, false);
     const phase = saga.stand!.lauf.phase;
 
@@ -519,8 +550,12 @@ export default function Home() {
         setArcMeldung("Die Saga zu diesem Teil ist gerade nicht abrufbar.");
         return;
       }
-      // Eine angefangene Saga läuft weiter, wo sie stand.
-      saga.starten(gefunden, saga.stand?.saga.id !== gefunden.id);
+      // Eine angefangene Saga läuft weiter, wo sie stand - mitsamt ihrer
+      // Beweismitteltasche. Ein neuer Teil fängt mit leerer an.
+      const vonVorn = saga.stand?.saga.id !== gefunden.id;
+      if (vonVorn) tasche.neu(`saga:${gefunden.id}`);
+      else tasche.fuer(`saga:${gefunden.id}`);
+      saga.starten(gefunden, vonVorn);
       arc.setzePhase("saga", gefunden.id);
     } catch {
       setArcMeldung("Die Saga zu diesem Teil konnte nicht geladen werden.");
@@ -550,6 +585,9 @@ export default function Home() {
         return;
       }
       arc.waehleTeil(index);
+      // Was von dieser Saga noch in der Tasche liegt, gilt weiter; von einer
+      // anderen Saga fängt sie leer an.
+      tasche.fuer(`saga:${gefunden.id}`);
       saga.nurFinale(gefunden);
       arc.setzePhase("saga", gefunden.id);
     } catch {
@@ -906,6 +944,7 @@ export default function Home() {
               besetzung={sagaBesetzung(sagaDaten)}
               frage={sagaDaten.finale.frage}
               einzugTon={sagaDaten.vorgaben.gerichtTon}
+              tasche={tasche.inhalt}
               onFertig={(geschafft) => saga.setzePhase("epilog", null, geschafft)}
             />
           </main>
@@ -1170,6 +1209,9 @@ export default function Home() {
             }}
             suchtGerade={laedt === "suche"}
             wetter={sagaWetter}
+            tasche={tasche.inhalt}
+            kapitel={laufendesKapitel}
+            onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
           />
         )}
 
@@ -1193,8 +1235,8 @@ export default function Home() {
 
         {tab === "inventar" && (
           <InventarScreen
-            gefundeneSpuren={stand.gefundeneSpuren}
-            notizen={stand.notizen}
+            inhalt={tasche.inhalt}
+            onWegwerfen={tasche.wegwerfen}
           />
         )}
 
@@ -1212,7 +1254,12 @@ export default function Home() {
         />
       )}
 
-      <Nav aktiv={tab} onWechsel={setTab} spurenAnzahl={stand.gefundeneSpuren.length} />
+      <Nav
+        aktiv={tab}
+        onWechsel={setTab}
+        spurenAnzahl={tasche.inhalt.length}
+        spurenMax={TASCHE_MAX}
+      />
 
       {chatMit && chatCharakter && (
         <ChatOverlay
@@ -1238,6 +1285,23 @@ export default function Home() {
           }}
           laedt={laedt === "gespraech"}
           fehler={fehler}
+        />
+      )}
+
+      {/* Stößt ein Tier Wimpy im Gespräch auf etwas, bekommt der Fund
+          denselben Moment wie am Schauplatz - samt der Frage, ob er in die
+          Beweismitteltasche wandert. Ohne das wäre alles, was man im
+          Gespräch findet, vor Gericht nicht zu gebrauchen. */}
+      {spiel.gespraechsFund && (
+        <FundMoment
+          fund={spiel.gespraechsFund}
+          herkunft={herkunftsZeile(
+            spiel.gespraechsFund.spur?.herkunft || "",
+            laufendesKapitel,
+          )}
+          inhalt={tasche.inhalt}
+          onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
+          onFertig={spiel.fundAbholen}
         />
       )}
 

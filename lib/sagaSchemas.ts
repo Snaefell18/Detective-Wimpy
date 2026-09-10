@@ -170,3 +170,31 @@ export type VerhandlungSaalDraft = z.infer<typeof VerhandlungSaalSchema>;
 export type BeweiseDraft = z.infer<typeof BeweiseSchema>;
 /** Beides zusammen - so, wie der Bogen es am Ende braucht. */
 export type VerhandlungDraft = VerhandlungSaalDraft & BeweiseDraft;
+
+/**
+ * Ein Zug in der Anhörung: was der Angeklagte sagt, was Öhö sagt, und was
+ * der Zug im Saal bewegt hat.
+ *
+ * Beide Stimmen in einer Antwort - siehe lib/anhoerungPrompt.ts. Die Zahlen
+ * werden serverseitig eingeklammert (lib/anhoerung.ts), bevor sie zu
+ * Spielwerten werden.
+ */
+export const AnhoerungSchema = z.object({
+  angeklagter: z
+    .string()
+    .describe("1-3 Sätze wörtliche Rede des Angeklagten, oder leer, wenn er schweigt"),
+  richter: z
+    .string()
+    .describe("1-3 Sätze des Vorsitzes - Nachfrage, Einordnung oder Zurückweisung, oder leer"),
+  ueberzeugungPlus: z
+    .number()
+    .describe("Wie viel weiter das Gericht durch diesen Zug ist: -15 bis 45"),
+  geduldMinus: z
+    .number()
+    .describe("Wie viel Geduld dieser Zug gekostet hat: 0, 1 oder 2"),
+  gestaendnis: z
+    .boolean()
+    .describe("true nur, wenn der Angeklagte in diesem Zug wirklich gesteht"),
+});
+
+export type AnhoerungDraft = z.infer<typeof AnhoerungSchema>;

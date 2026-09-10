@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Anhoerung } from "./Anhoerung";
 import { Bild, Szene } from "./Bild";
 import { Gerichtseinzug } from "./Gerichtseinzug";
 import { Verwandlung } from "./Verwandlung";
 import { postJson } from "@/lib/api";
+import type { Beweismittel } from "@/lib/beweismittel";
 import { spiele } from "@/lib/introAudio";
-import {
-  LEERER_VERHANDLUNGS_STAND,
-  mitAnklage,
-  saalTexte,
-  verhandlungsErgebnis,
-  type Beweisstueck,
-  type Verhandlung,
-} from "@/lib/sagaFinale";
+import { mitAnklage, saalTexte, type Verhandlung } from "@/lib/sagaFinale";
 import { hatStrafe, type Strafe } from "@/lib/urteil";
 import type { Character } from "@/lib/types";
 
@@ -25,18 +20,18 @@ import type { Character } from "@/lib/types";
  *   1. Die Anklage - Wimpy benennt, wen er beschuldigt. Zwei Versuche.
  *      Sitzt sie, wird der Saal still; und ist der Angeklagte besessen,
  *      zeigt sich das genau jetzt und keinen Moment früher.
- *   2. Die Beweisführung - Stück für Stück auf den Tisch. Was trägt, bringt
- *      den Angeklagten ins Rutschen; was nicht trägt, kostet Geduld.
+ *   2. Die Anhörung - verhandelt wird im Gespräch zu dritt: Wimpy fragt, der
+ *      Angeklagte antwortet, Öhö hakt nach und urteilt, sobald er überzeugt
+ *      ist. Vorlegen kann Wimpy nur, was in der Beweismitteltasche liegt.
  *   3. Das Urteil - Öhö sperrt niemanden weg, er denkt sich eine
  *      Wiedergutmachung aus, die zur Sache passt.
  *
- * Nichts davon liegt im Browser: Wer angeklagt werden muss, welches Stück
- * trägt und was am Ende verhängt wird, steht im versiegelten Bogen. Jeder
- * Schritt fragt beim Server nach - und der antwortet ohne Modellaufruf, denn
- * alle Texte stehen seit der Erzeugung fest.
+ * Nichts Entscheidendes liegt im Browser: Wer angeklagt werden muss, was ein
+ * Beweismittel wirklich beweist und was am Ende verhängt wird, steht im
+ * versiegelten Bogen und in den Siegeln der Tasche. Die Anhörung selbst ist
+ * der einzige Schritt mit Modellaufruf; Anklage und Urteil kommen ohne aus,
+ * denn ihre Texte stehen seit der Erzeugung fest.
  */
-type Antwort = { traegt: boolean; reaktion: string };
-
 type AnklageAntwort = {
   richtig: boolean;
   text: string;
@@ -50,6 +45,7 @@ export function Gerichtssaal({
   besetzung,
   frage,
   einzugTon = "",
+  tasche,
   onFertig,
 }: {
   verhandlung: Verhandlung;
@@ -60,6 +56,12 @@ export function Gerichtssaal({
   frage: string;
   /** Das Stück zum Einzug des Gerichts - leer heißt: feste Dauer. */
   einzugTon?: string;
+  /**
+   * Die Beweismitteltasche - alles, was Wimpy über die Saga hinweg
+   * mitgenommen hat. Nur damit lässt sich hier arbeiten; leer heißt: Es
+   * bleibt beim Fragen.
+   */
+  tasche: Beweismittel[];
   /** Die Verhandlung ist durch - mit oder ohne Schuldspruch. */
   onFertig: (geschafft: boolean) => void;
 }) {
@@ -92,9 +94,6 @@ export function Gerichtssaal({
    */
   const [eingezogen, setEingezogen] = useState(false);
 
-  const [stand, setStand] = useState(LEERER_VERHANDLUNGS_STAND);
-  const [offen, setOffen] = useState<Beweisstueck | null>(null);
-  const [antwort, setAntwort] = useState<(Antwort & { stueck: Beweisstueck }) | null>(null);
   const [urteil, setUrteil] = useState<
     { text: string; geschafft: boolean; strafe?: Strafe } | null
   >(null);
@@ -129,36 +128,6 @@ export function Gerichtssaal({
       setSpruch({ text: ergebnis.text, richtig: false });
       // Zwei Fehlgriffe, und das Verfahren ist zu Ende, bevor es begann.
       if (uebrig <= 0) await urteilHolen(false);
-    } catch (grund) {
-      setFehler(grund instanceof Error ? grund.message : "Das ging schief.");
-    } finally {
-      setLaeuft(false);
-    }
-  };
-
-  /* --- Die Beweisführung ---------------------------------------------- */
-
-  const vorlegen = async (stueck: Beweisstueck) => {
-    if (laeuft) return;
-    setLaeuft(true);
-    setFehler(null);
-    try {
-      const ergebnis = await postJson<Antwort>(
-        "/api/verhandlung",
-        { bogenSiegel, schritt: "vorlegen", beweisId: stueck.id },
-        30,
-      );
-      const naechster = {
-        gelegt: [...stand.gelegt, stueck.id],
-        getroffen: stand.getroffen + (ergebnis.traegt ? 1 : 0),
-        daneben: stand.daneben + (ergebnis.traegt ? 0 : 1),
-      };
-      setStand(naechster);
-      setOffen(null);
-      setAntwort({ ...ergebnis, stueck });
-
-      const wie = verhandlungsErgebnis(naechster, verhandlung);
-      if (wie !== "laeuft") await urteilHolen(wie === "gewonnen");
     } catch (grund) {
       setFehler(grund instanceof Error ? grund.message : "Das ging schief.");
     } finally {
@@ -321,36 +290,6 @@ export function Gerichtssaal({
     );
   }
 
-  /* --- Was der Saal auf ein vorgelegtes Stück sagt -------------------- */
-
-  if (antwort) {
-    const gesicht = verhandlung.art === "ohne-taeter" ? richter : (bank ?? richter);
-    return (
-      <div className="saal reaktion" data-traegt={antwort.traegt}>
-        <Szene
-          src={gesicht?.bild}
-          alt={gesicht?.name ?? ""}
-          platzhalter={gesicht?.name}
-          variante="portraet"
-        />
-        <div className="saal-schleier" />
-        <div className="saal-mitte">
-          <span className="saal-siegel" data-traegt={antwort.traegt}>
-            {antwort.traegt ? "Trägt" : "Haltlos"}
-          </span>
-          <span className="intro-oberzeile">{antwort.stueck.name}</span>
-          <h1 className="intro-stadt">
-            {antwort.traegt ? "Das sitzt." : "Das trägt nicht."}
-          </h1>
-          <p className="saal-spruch">{antwort.reaktion}</p>
-          <button className="knopf aktion" onClick={() => setAntwort(null)}>
-            Weiter ›
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   /* --- Das Gericht zieht ein ------------------------------------------ */
 
   /*
@@ -453,86 +392,27 @@ export function Gerichtssaal({
     );
   }
 
-  /* --- Die Beweisführung ---------------------------------------------- */
+  /* --- Die Anhörung ---------------------------------------------------- */
 
-  const offeneStuecke = verhandlung.beweise.filter((b) => !stand.gelegt.includes(b.id));
-
+  /*
+   * Ab hier führt die Anhörung die Verhandlung: ein Gespräch zu dritt, in
+   * dem Beweismittel Argumente sind und nicht Knöpfe. Sie bringt ihre eigene
+   * Fußzeile mit, deshalb bekommt sie Kulisse und Kopfzeile von hier - so
+   * sieht der Saal überall gleich aus.
+   */
   return (
-    <div className="saal">
-      {kulisse}
-      {kopf}
-
-      <div className="scroll">
-        <div className="inhalt">
-          <h2 className="saal-frage">{frage}</h2>
-          {verhandlung.anklage && <p className="saal-anklage">„{verhandlung.anklage}“</p>}
-
-          <div className="saal-waage">
-            <div>
-              <span className="saal-marke">Beweislast</span>
-              <div className="saal-meter">
-                {Array.from({ length: verhandlung.noetig }, (_, i) => (
-                  <i key={i} data-voll={i < stand.getroffen} />
-                ))}
-              </div>
-            </div>
-            <div className="saal-geduld">
-              <span className="saal-marke">Geduld des Gerichts</span>
-              <span className="saal-lichter">
-                {Array.from({ length: verhandlung.fehlgriffe + 1 }, (_, i) => (
-                  <i key={i} data-weg={i < stand.daneben} />
-                ))}
-              </span>
-            </div>
-          </div>
-
-          <h3 className="abschnitt">{worte.regal}</h3>
-
-          {offeneStuecke.map((stueck) => (
-            <button
-              key={stueck.id}
-              className="saal-beweis"
-              data-offen={offen?.id === stueck.id}
-              onClick={() => setOffen(offen?.id === stueck.id ? null : stueck)}
-            >
-              <span className="saal-beweis-kopf">
-                <span className="saal-nummer">
-                  {String(verhandlung.beweise.indexOf(stueck) + 1).padStart(2, "0")}
-                </span>
-                <span className="saal-beweis-namen">
-                  <strong>{stueck.name}</strong>
-                  {stueck.herkunft && <span className="saal-herkunft">{stueck.herkunft}</span>}
-                </span>
-              </span>
-              {offen?.id === stueck.id && (
-                <>
-                  <p className="saal-beweis-text">{stueck.text}</p>
-                  <span
-                    className="knopf aktion klein"
-                    onClick={(ereignis) => {
-                      ereignis.stopPropagation();
-                      void vorlegen(stueck);
-                    }}
-                  >
-                    {laeuft ? "Der Saal sieht hin …" : `${worte.vorlegen} ›`}
-                  </span>
-                </>
-              )}
-            </button>
-          ))}
-
-          {offeneStuecke.length === 0 && (
-            <>
-              <p className="leise">Mehr hast du nicht. Der Vorsitz wartet nicht ewig.</p>
-              <button className="knopf" onClick={() => void urteilHolen(false)}>
-                Schlusswort anhören ›
-              </button>
-            </>
-          )}
-
-          {fehler && <p className="fehler">{fehler}</p>}
-        </div>
-      </div>
-    </div>
+    <Anhoerung
+      art={verhandlung.art}
+      bogenSiegel={bogenSiegel}
+      frage={frage}
+      anklage={verhandlung.anklage}
+      richter={richter}
+      angeklagter={bank}
+      detektiv={besetzung.find((c) => c.istDetektiv)}
+      tasche={tasche}
+      kulisse={kulisse}
+      kopf={kopf}
+      onUrteil={(geschafft) => void urteilHolen(geschafft)}
+    />
   );
 }

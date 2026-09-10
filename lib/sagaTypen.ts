@@ -333,6 +333,15 @@ export function neuImSaal(saga: Saga, charakterId: string): Character[] {
 }
 
 /** Läuft diese Saga in eine Verhandlung? Auch alte Sagas beantworten das. */
+/**
+ * Läuft diese Saga in einen Gerichtssaal - und ist er vollständig?
+ *
+ * Gemessen wird an der Aktenlage: Eine Saga, deren Erzeugung mittendrin
+ * abgebrochen ist, hat keine Beweisstücke, und ihr Finale würde beim Spielen
+ * schlicht ausfallen. Vorgelegt wird die Aktenlage längst nicht mehr - im
+ * Saal zählt nur die Beweismitteltasche -, aber als Zeichen für "hier ist
+ * alles da" bleibt sie richtig.
+ */
 export const sagaMitVerhandlung = (saga: Saga | undefined): Verhandlung | null =>
   saga?.finale?.verhandlung?.beweise?.length ? saga.finale.verhandlung : null;
 

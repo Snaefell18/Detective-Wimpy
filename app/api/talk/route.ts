@@ -6,7 +6,9 @@ import { MODEL_GESPRAECH, budget, getAnthropic, schnellOptionen } from "@/lib/an
 import { buildTalkPrompt, buildWorldPrompt } from "@/lib/prompts";
 import { TalkSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
-import { unseal } from "@/lib/seal";
+import { seal, unseal } from "@/lib/seal";
+import { findeOrt } from "@/lib/locations";
+import type { BeweismittelKern } from "@/lib/beweismittel";
 import type { CaseFile, ChatTurn, TalkMode, TalkResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -104,15 +106,48 @@ export async function POST(request: Request) {
     const spurName =
       (fall.items?.find((i) => i.id === spurId)?.name ?? spurId) || spurId;
 
+    /*
+     * Stößt ein Tier Wimpy auf eine Spur, ist das ein Fund wie jeder andere:
+     * Er bekommt seinen Moment, seine Beobachtung - und sein Siegel, damit er
+     * in die Beweismitteltasche und später vor Gericht kann.
+     */
+    const spurItem = spurId
+      ? (fall.items?.find((i) => i.id === spurId) ?? null)
+      : null;
+    const spurBeobachtung = spur ? spur.beobachtung?.trim() || spur.bedeutung : "";
+    const spurOrt = spur ? (findeOrt(fall.orte, spur.ortId)?.name ?? "") : "";
+    const spurKern: BeweismittelKern | null =
+      spur && spurId
+        ? {
+            id: spurId,
+            name: String(spurName ?? spurId),
+            beobachtung: spurBeobachtung,
+            bedeutung: spur.bedeutung,
+            zeigtAufCharakterId: spur.zeigtAufCharakterId,
+            fuehrtInDieIrre: spur.fuehrtInDieIrre === true,
+            herkunft: [spurOrt, fall.titel].filter(Boolean).join(" · "),
+          }
+        : null;
+
     const ergebnis: TalkResult = {
       // Formatreste wie "json" oder Tags gehören nicht in den Mund eines Tieres.
       antwort: sauberText(parsed.antwort),
       stimmung: stimmungAus(parsed.stimmung),
       neueNotiz: sauberText(parsed.neueNotiz) || null,
       gefundeneSpurItemId: spurId,
-      gefundeneSpurNotiz: spur
-        ? `${spurName}: ${spur.beobachtung?.trim() || spur.bedeutung}`
-        : null,
+      gefundeneSpurNotiz: spur ? `${spurName}: ${spurBeobachtung}` : null,
+      gefundeneSpur:
+        spur && spurId && spurKern
+          ? {
+              itemId: spurId,
+              name: String(spurName ?? spurId),
+              bild: spurItem?.bild ?? null,
+              beobachtung: spurBeobachtung,
+              vermutung: spur.vermutung?.trim() || null,
+              herkunft: spurOrt,
+              siegel: seal(spurKern),
+            }
+          : null,
       // Grenzen erzwingen, damit ein Ausrutscher des Modells die Anzeige nicht sprengt.
       verdachtsaenderung: Math.max(-20, Math.min(20, Math.round(parsed.verdachtsaenderung))),
       luegt: parsed.luegt,

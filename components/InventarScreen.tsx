@@ -2,60 +2,92 @@
 
 import { useState } from "react";
 import { Bild } from "./Bild";
-import { useStammdaten } from "@/lib/stammdaten";
-import type { Item, NotebookEntry } from "@/lib/types";
+import { TASCHE_MAX, type Beweismittel } from "@/lib/beweismittel";
 
 /**
- * Inventar: ausschließlich die Dinge, die Wimpy unterwegs wirklich
- * eingesammelt hat, mit dem, was er dazu notiert hat. Antippen zeigt die
- * Einzelheiten.
+ * Die Beweismitteltasche.
+ *
+ * Hier liegt, was Wimpy wirklich mitgenommen hat - sechs Stücke, und sie
+ * gelten für die ganze Saga. Vor Gericht kann er nur damit arbeiten, also
+ * ist jedes Stück eine Entscheidung gegen ein anderes.
+ *
+ * Antippen zeigt, was er dazu notiert hat; wegwerfen geht auch hier, damit
+ * man nicht bis zum nächsten Fund warten muss, um Platz zu schaffen.
  */
 export function InventarScreen({
-  gefundeneSpuren,
-  notizen,
+  inhalt,
+  onWegwerfen,
 }: {
-  gefundeneSpuren: string[];
-  notizen: NotebookEntry[];
+  inhalt: Beweismittel[];
+  onWegwerfen: (id: string) => void;
 }) {
-  const { items } = useStammdaten();
   const [offen, setOffen] = useState<string | null>(null);
-
-  const gefunden: Item[] = gefundeneSpuren
-    .map((id) => items.find((i) => i.id === id))
-    .filter((i): i is Item => Boolean(i));
-
-  /** Die Fundnotiz zu einem Gegenstand (dort steht seine Bedeutung im Fall). */
-  const fundNotiz = (item: Item) =>
-    notizen.find((n) => n.quelle === "Fund" && n.text.startsWith(item.name))?.text ??
-    item.beschreibung;
 
   return (
     <div className="inhalt einblenden">
-      <h3 className="abschnitt">Beweisstücke ({gefunden.length})</h3>
+      <h3 className="abschnitt">
+        Beweismitteltasche ({inhalt.length}/{TASCHE_MAX})
+      </h3>
 
-      {gefunden.length === 0 ? (
+      {inhalt.length === 0 ? (
         <p className="leise">
-          Die Taschen sind leer. Wimpy sollte sich an den Orten umsehen.
+          Die Tasche ist leer. Wimpy sollte sich an den Orten umsehen - und
+          beim nächsten Fund entscheiden, ob er ihn mitnimmt.
         </p>
       ) : (
-        <div className="inventar">
-          {gefunden.map((item) => (
-            <button
-              key={item.id}
-              className="beweis"
-              data-offen={offen === item.id}
-              onClick={() => setOffen(offen === item.id ? null : item.id)}
-            >
-              <div className="beweis-bild">
-                <Bild src={item.bild} alt={item.name} platzhalter={item.name} />
+        <>
+          <p className="leise klein">
+            Nur was hier liegt, kannst du am Ende vor Gericht vorlegen. Alles
+            andere steht im Notizbuch.
+          </p>
+
+          <div className="inventar">
+            {inhalt.map((mittel) => (
+              <div
+                key={mittel.id}
+                className="beweis"
+                data-offen={offen === mittel.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setOffen(offen === mittel.id ? null : mittel.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setOffen(offen === mittel.id ? null : mittel.id);
+                  }
+                }}
+              >
+                <div className="beweis-bild">
+                  <Bild src={mittel.bild} alt={mittel.name} platzhalter={mittel.name} />
+                </div>
+                <strong>{mittel.name}</strong>
+                {mittel.herkunft && (
+                  <span className="leise klein">{mittel.herkunft}</span>
+                )}
+                {offen === mittel.id && (
+                  <div className="beweis-text einblenden">
+                    <p>{mittel.beobachtung}</p>
+                    <button
+                      className="knopf klein"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          window.confirm(
+                            `„${mittel.name}“ wirklich wegwerfen? Vor Gericht fehlt es dann.`,
+                          )
+                        ) {
+                          onWegwerfen(mittel.id);
+                          setOffen(null);
+                        }
+                      }}
+                    >
+                      Wegwerfen
+                    </button>
+                  </div>
+                )}
               </div>
-              <strong>{item.name}</strong>
-              {offen === item.id && (
-                <p className="beweis-text einblenden">{fundNotiz(item)}</p>
-              )}
-            </button>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

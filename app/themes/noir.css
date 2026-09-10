@@ -2857,3 +2857,60 @@
   border-radius: 0;
   border-color: var(--linie);
 }
+
+/* --- Die Anhörung ----------------------------------------------------
+   Im Noir ist der Chat ein Untertitel: Der letzte Zug steht groß und
+   mittig. Im Gerichtssaal wäre das falsch - dort ist der Verlauf ein
+   Protokoll, in dem drei Stimmen abwechselnd sprechen. Also zurück zur
+   Zeile. */
+[data-theme="noir"] .anhoerung .blase:nth-last-of-type(2) {
+  border-top: 1px solid var(--linie);
+  padding: 12px 0;
+  max-width: none;
+  margin: 0;
+  font-size: 15px;
+  text-align: left;
+  text-shadow: none;
+  color: var(--text);
+}
+
+[data-theme="noir"] .anhoerung .blase.vorsitz {
+  background: none;
+  border: none;
+  border-top: 1px solid var(--linie);
+  color: var(--akzent);
+}
+
+[data-theme="noir"] .anhoerung .blase.eigen::before {
+  content: "— ";
+}
+
+/* Im Saal ist der Platz knapp: Vorschläge stehen als Reihe, nicht als
+   Liste - der Verlauf der Verhandlung braucht den Bildschirm. */
+[data-theme="noir"] .anhoerung .vorschlaege {
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 0 4px;
+}
+
+[data-theme="noir"] .anhoerung .vorschlag {
+  flex: none;
+  width: auto;
+  padding: 9px 14px;
+  border: 1px solid var(--linie);
+  border-top: 1px solid var(--linie);
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+[data-theme="noir"] .anhoerung .anhoerung-leiste .knopf {
+  font-size: 12px;
+}
+
+/* Im Protokoll steht die Frage klein - groß hat sie auf dem Bildschirm
+   davor gestanden, hier scrollt sie ohnehin gleich weg. */
+[data-theme="noir"] .anhoerung .saal-frage {
+  font-size: 22px;
+  line-height: 1.05;
+}

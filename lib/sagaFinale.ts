@@ -119,11 +119,21 @@ export type Verhandlung = {
   richterId: string;
   /** Womit Öhö eröffnet. */
   anklage: string;
-  /** Alles, was Wimpy vorlegen kann - Tragendes und Fehlschlüsse gemischt. */
+  /**
+   * Die Aktenlage, wie sie bei der Erzeugung entstanden ist.
+   *
+   * Vorgelegt wird sie nicht mehr: Im Saal zählt seit der Beweismitteltasche
+   * ausschließlich, was der Spieler selbst mitgenommen hat. Erzeugt und
+   * gespeichert wird sie trotzdem weiter - sie ist das verlässliche Zeichen
+   * dafür, dass diese Saga überhaupt eine vollständige Verhandlung hat
+   * (siehe sagaMitVerhandlung). Eine Saga ohne sie ist beim Erzeugen
+   * steckengeblieben und springt beim Spielen vom Erzählertext in den
+   * Epilog - das darf nie wieder passieren.
+   */
   beweise: Beweisstueck[];
-  /** Wie viele tragende Stücke es braucht. */
+  /** Wie viele tragende Stücke es braucht. Aus der Zeit der Beweisführung. */
   noetig: number;
-  /** Wie viele Fehlgriffe die Verhandlung verträgt. */
+  /** Wie viele Fehlgriffe die Verhandlung verträgt. Ebenfalls von damals. */
   fehlgriffe: number;
   /**
    * Wen man anklagen kann - alle Tiere, die in der Saga aufgetreten sind.
@@ -228,7 +238,11 @@ export const noetigeBeweise = (traegtAnzahl: number): number =>
   Math.max(1, Math.min(3, traegtAnzahl));
 
 /**
- * Der Stand einer laufenden Verhandlung.
+ * Der Stand einer laufenden Beweisführung - aus der Zeit vor der Anhörung.
+ *
+ * Der Saal verhandelt heute im Gespräch (siehe lib/anhoerung.ts). Das hier
+ * bleibt, weil ältere Sagas dieselben Zahlen tragen und der Admin-Bereich
+ * sie anzeigt.
  *
  * Liegt nur im Bildschirm, nicht in der Datenbank: Wer die Verhandlung
  * verlässt, fängt sie neu an - eine halbe Beweisführung wäre keine.
@@ -265,8 +279,6 @@ export function verhandlungsErgebnis(
 export function saalTexte(art: FinaleArt): {
   titel: string;
   vorlegen: string;
-  /** Über der Beweisliste. */
-  regal: string;
   gewonnen: string;
   verloren: string;
 } {
@@ -274,7 +286,6 @@ export function saalTexte(art: FinaleArt): {
     return {
       titel: "Die Verhandlung",
       vorlegen: "Vorlegen",
-      regal: "Was du zusammengetragen hast",
       gewonnen: "Freispruch",
       verloren: "Der Saal glaubt es nicht",
     };
@@ -283,7 +294,6 @@ export function saalTexte(art: FinaleArt): {
     return {
       titel: "Die Verhandlung",
       vorlegen: "Gegen mich vorlegen",
-      regal: "Was gegen dich spricht",
       gewonnen: "Schuldig",
       verloren: "Das Verfahren platzt",
     };
@@ -291,7 +301,6 @@ export function saalTexte(art: FinaleArt): {
   return {
     titel: "Die Verhandlung",
     vorlegen: "Vorlegen",
-    regal: "Deine Beweise",
     gewonnen: "Schuldig",
     verloren: "Das Verfahren platzt",
   };

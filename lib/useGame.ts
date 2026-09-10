@@ -36,6 +36,17 @@ export type Fund = {
     bild: string | null;
     beobachtung: string;
     vermutung: string | null;
+    /**
+     * Wo es lag - für die Karte in der Beweismitteltasche. Ältere Fälle
+     * liefern es nicht, dann steht dort nur das Kapitel.
+     */
+    herkunft?: string;
+    /**
+     * Der versiegelte Kern: Was der Fund wirklich beweist. Nur der Server
+     * liest ihn, und nur mit ihm trägt das Stück später vor Gericht. Fehlt
+     * er (älterer Fall), lässt sich das Stück trotzdem mitnehmen.
+     */
+    siegel?: string;
   } | null;
   text: string;
 };
@@ -101,6 +112,15 @@ export function useGame() {
   const [fehler, setFehler] = useState<string | null>(null);
   /** Woran gerade gebaut wird - der Fall entsteht in drei Schritten. */
   const [schritt, setSchritt] = useState<string | null>(null);
+  /**
+   * Der letzte Fund aus einem Gespräch.
+   *
+   * Am Schauplatz gehört der Fundmoment zum Ort; stößt Wimpy dagegen im
+   * Gespräch auf etwas, hat der Chat keinen Platz dafür. Also liegt er hier,
+   * und der Bildschirm holt ihn ab - sonst käme ein Fund aus dem Gespräch
+   * nie in die Beweismitteltasche.
+   */
+  const [gespraechsFund, setGespraechsFund] = useState<Fund | null>(null);
   const standRef = useRef(stand);
   standRef.current = stand;
 
@@ -349,6 +369,26 @@ export function useGame() {
             },
           };
         });
+        /*
+         * Hat das Gespräch auf etwas gestoßen, bekommt der Fund seinen
+         * Moment - dieselbe Karte wie am Schauplatz, samt der Frage, ob er
+         * in die Beweismitteltasche wandert.
+         */
+        if (daten.gefundeneSpur && !jetzt.gefundeneSpuren.includes(daten.gefundeneSpur.itemId)) {
+          const gefunden = daten.gefundeneSpur;
+          setGespraechsFund({
+            spur: {
+              itemId: gefunden.itemId,
+              name: gefunden.name,
+              bild: gefunden.bild,
+              beobachtung: gefunden.beobachtung,
+              vermutung: gefunden.vermutung,
+              herkunft: gefunden.herkunft,
+              siegel: gefunden.siegel,
+            },
+            text: `${gefunden.name}: ${gefunden.beobachtung}`,
+          });
+        }
       } catch (error) {
         setFehler(error instanceof Error ? error.message : "Unbekannter Fehler");
         // Die eigene Frage zurücknehmen, damit man sie erneut stellen kann.
@@ -428,7 +468,11 @@ export function useGame() {
 
   const aufgeben = useCallback(() => {
     setStand(LEER);
+    setGespraechsFund(null);
   }, []);
+
+  /** Der Fundmoment aus dem Gespräch ist gesehen und entschieden. */
+  const fundAbholen = useCallback(() => setGespraechsFund(null), []);
 
   return {
     stand,
@@ -446,6 +490,9 @@ export function useGame() {
     umsehen,
     abdrueckeNehmen,
     sprich,
+    /** Der Fund aus dem letzten Gespräch - null, sobald er abgeholt wurde. */
+    gespraechsFund,
+    fundAbholen,
     beschuldige,
     extraBeschuldigung,
     aufgeben,

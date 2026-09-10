@@ -6,6 +6,7 @@ import { FundMoment } from "./FundMoment";
 import { Wetter, lageFuer } from "./Wetter";
 import { useAdmin } from "@/lib/adminStore";
 import { findeOrt } from "@/lib/locations";
+import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import type { Character, PublicCase, Wetterlage } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
 
@@ -17,6 +18,9 @@ export function OrtScreen({
   onUmsehen,
   suchtGerade,
   wetter,
+  tasche,
+  kapitel,
+  onAufnehmen,
 }: {
   fall: PublicCase;
   ortId: string;
@@ -29,6 +33,14 @@ export function OrtScreen({
    * Angabe gilt, was im Admin-Menü steht.
    */
   wetter?: Wetterlage;
+  /** Was in der Beweismitteltasche liegt - für die Frage beim Fund. */
+  tasche: Beweismittel[];
+  /**
+   * Das laufende Kapitel (1-basiert), 0 fürs Finale. Null heißt: kein
+   * Saga-Fall, dann steht in der Herkunft nur der Ort.
+   */
+  kapitel?: number | null;
+  onAufnehmen: (mittel: Beweismittel, statt?: string) => void;
 }) {
   const [fundText, setFundText] = useState<string | null>(null);
   /** Der kurze Moment über dem Ort, wenn wirklich etwas gefunden wurde. */
@@ -117,6 +129,11 @@ export function OrtScreen({
       {moment && (
         <FundMoment
           fund={moment}
+          /* Woher es stammt, sagt der Server - mit geschärftem Spürsinn
+             liegt der Fund nämlich manchmal an einem anderen Ort. */
+          herkunft={herkunftsZeile(moment.spur?.herkunft || ort?.name || "", kapitel)}
+          inhalt={tasche}
+          onAufnehmen={onAufnehmen}
           onFertig={() => {
             setFundText(moment.text);
             setMoment(null);
