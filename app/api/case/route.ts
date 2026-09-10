@@ -5,7 +5,15 @@ import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { idOderStandard, passendeId } from "@/lib/zuordnen";
 import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
-import { fernwirkungPruefen, repariereFall } from "@/lib/fallReparieren";
+import {
+  ZIEL_EINZELFALL,
+  ZIEL_KAPITEL,
+  fernwirkungPruefen,
+  repariereFall,
+  spurenKappen,
+  verteilungMangel,
+  type SpurenZiel,
+} from "@/lib/fallReparieren";
 import { LOCATIONS, findeOrt, waehleSchauplaetze } from "@/lib/locations";
 import {
   buildGeruestPrompt,
@@ -550,7 +558,7 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
 /* --- Schritt 3: die Spuren ----------------------------------------- */
 
 /** Ein Anlauf für die Spuren - beim zweiten Mal mit geschärfter Ansage. */
-async function spurenHolen(entwurf: Entwurf, nachfassen: boolean) {
+async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel, nachfassen: boolean) {
   return getAnthropic().messages.create(
     modellOptionen(
       weltVon(entwurf),
@@ -565,10 +573,13 @@ async function spurenHolen(entwurf: Entwurf, nachfassen: boolean) {
           entwurf.items,
           entwurf.sagaSpur,
           nachfassen,
+          ziel,
         ),
         entwurf.sagaBriefing,
       ),
-      zodOutputFormat(makeSpurenSchema(entwurf.besetzung, entwurf.orte, entwurf.items)),
+      zodOutputFormat(
+        makeSpurenSchema(entwurf.besetzung, entwurf.orte, entwurf.items, ziel),
+      ),
       4096,
       "low",
     ),
@@ -581,7 +592,15 @@ async function spurenSchritt(entwurf: Entwurf) {
   const charakterIds = entwurf.besetzung.map((c) => c.id);
   const itemIds = entwurf.items.map((i) => i.id);
 
-  const aufbereiten = (roh: SpurenDraft) =>
+  /*
+   * Wie viele Spuren dieser Fall haben soll.
+   *
+   * Ein Kapitel einer Saga darf etwas mehr, weil dort die Stücke mit
+   * Fernwirkung dazukommen - die lösen den Fall ja nicht.
+   */
+  const ziel: SpurenZiel = entwurf.sagaSpur ? ZIEL_KAPITEL : ZIEL_EINZELFALL;
+
+  const aufbereiten = (roh: SpurenDraft): CaseClue[] =>
     (roh.spuren ?? [])
       .map((s) => ({
         ...s,
@@ -595,62 +614,104 @@ async function spurenSchritt(entwurf: Entwurf) {
       }))
       .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
 
-  const response = await spurenHolen(entwurf, false);
-  const antwort = ergebnisAus<SpurenDraft>(response, "api/case:spuren");
-  if ("fehler" in antwort) {
-    return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
+  /**
+   * Einen Entwurf durchsehen: reparieren, kappen, zählen, verteilen.
+   *
+   * Gibt zurück, was daraus geworden ist - und was daran noch fehlt. Nur
+   * wenn hier etwas fehlt, lohnt sich ein zweiter Anlauf.
+   */
+  const bewerten = (roh: SpurenDraft) => {
+    let spuren = aufbereiten(roh);
+    const maengel: string[] = [];
+    const notizen: string[] = [];
+
+    // Zuerst das Stück, das über den Fall hinausweist - ohne es steht Wimpy
+    // im Finale mit leeren Händen im Saal.
+    if (entwurf.sagaSpur) {
+      const kur = fernwirkungPruefen(spuren, entwurf.sagaSpur.drahtzieherId);
+      spuren = kur.spuren;
+      if (kur.aenderung) notizen.push(kur.aenderung);
+      if (kur.fehlt) maengel.push("keine Spur mit Fernwirkung");
+    }
+
+    // Dann die Lösbarkeit: doppelte Gegenstände, Widersprüche, ein Täter,
+    // der nicht im Zentrum steht.
+    const kur = repariereFall({
+      spuren,
+      verdaechtige: entwurf.verdaechtige,
+      besetzung: entwurf.besetzung,
+      taeterId: entwurf.taeterId,
+      ortIds,
+      itemIds,
+    });
+    notizen.push(...kur.aenderungen);
+    if (kur.fehler) maengel.push(kur.fehler);
+
+    // Und zuletzt die Menge: Überzähliges fliegt raus, Fehlendes wird
+    // gemeldet.
+    const gekappt = spurenKappen(kur.spuren, ziel.max, entwurf.taeterId);
+    notizen.push(...gekappt.aenderungen);
+    if (!kur.fehler && gekappt.spuren.length < ziel.min) {
+      maengel.push(`nur ${gekappt.spuren.length} Spuren statt ${ziel.min}`);
+    }
+    const verteilung = verteilungMangel(gekappt.spuren, ortIds);
+    if (verteilung) maengel.push(verteilung);
+
+    return {
+      spuren: gekappt.spuren,
+      verdaechtige: kur.verdaechtige,
+      fehler: kur.fehler,
+      maengel,
+      notizen,
+    };
+  };
+
+  const erste = ergebnisAus<SpurenDraft>(
+    await spurenHolen(entwurf, ziel, false),
+    "api/case:spuren",
+  );
+  if ("fehler" in erste) {
+    return NextResponse.json({ fehler: erste.fehler }, { status: erste.status });
   }
 
-  let spuren: CaseClue[] = aufbereiten(antwort.daten);
+  let ergebnis = bewerten(erste.daten);
 
   /*
-   * Die Fernwirkung: Ein Kapitel muss etwas hinterlassen, das über sich
-   * hinausweist - sonst steht Wimpy im Finale mit leeren Händen im Saal.
+   * Der zweite Anlauf.
    *
-   * Fehlt sie, ist ein zweiter Anlauf das Geld wert: Er kostet einen Aufruf,
-   * ihr Fehlen kostet die halbe Verhandlung. Bleibt sie auch dann aus, wird
-   * der Fall trotzdem ausgeliefert - er ist für sich vollständig, und ein
-   * verworfenes Kapitel wäre der teurere Schaden.
+   * Er kostet einen Aufruf und wird nur genommen, wenn wirklich etwas fehlt:
+   * zu wenige Spuren, alles an einem Ort, nichts für das Finale. Genau
+   * einmal - danach wird genommen, was besser ist. Das ist billiger als ein
+   * verworfener Fall, der den Spieler drei Aufrufe kostet.
    */
-  if (entwurf.sagaSpur) {
-    let kur = fernwirkungPruefen(spuren, entwurf.sagaSpur.drahtzieherId);
-    if (kur.fehlt) {
-      console.warn("[api/case:spuren] Keine Spur mit Fernwirkung - zweiter Anlauf.");
-      const zweite = ergebnisAus<SpurenDraft>(
-        await spurenHolen(entwurf, true),
-        "api/case:spuren",
-      );
-      if (!("fehler" in zweite)) {
-        const neue = aufbereiten(zweite.daten);
-        const zweiteKur = fernwirkungPruefen(neue, entwurf.sagaSpur.drahtzieherId);
-        if (!zweiteKur.fehlt) kur = zweiteKur;
-      }
+  if (ergebnis.fehler || ergebnis.maengel.length) {
+    console.warn(
+      "[api/case:spuren] Zweiter Anlauf wegen:",
+      [ergebnis.fehler, ...ergebnis.maengel].filter(Boolean).join(" · "),
+    );
+    const zweite = ergebnisAus<SpurenDraft>(
+      await spurenHolen(entwurf, ziel, true),
+      "api/case:spuren",
+    );
+    if (!("fehler" in zweite)) {
+      const neu = bewerten(zweite.daten);
+      // Besser ist: erst gar kein Fehler, dann weniger Mängel.
+      const besser =
+        (ergebnis.fehler && !neu.fehler) ||
+        (Boolean(ergebnis.fehler) === Boolean(neu.fehler) &&
+          neu.maengel.length < ergebnis.maengel.length);
+      if (besser) ergebnis = neu;
     }
-    if (kur.aenderung) console.warn("[api/case:spuren]", kur.aenderung);
-    if (kur.fehlt) {
-      console.error(
-        "[api/case:spuren] Dieses Kapitel hinterlässt nichts für das Finale.",
-      );
-    }
-    spuren = kur.spuren;
   }
 
-  // Letzte Instanz vor dem Ausliefern: Der Fall muss lösbar sein. Ein
-  // einziger Ausrutscher des Modells - zwei Spuren auf demselben Gegenstand,
-  // eine falsche Fährte auf den Täter - macht ihn sonst unspielbar.
-  const kur = repariereFall({
-    spuren,
-    verdaechtige: entwurf.verdaechtige,
-    besetzung: entwurf.besetzung,
-    taeterId: entwurf.taeterId,
-    ortIds,
-    itemIds,
-  });
-  if (kur.aenderungen.length) {
-    console.warn("[api/case:spuren] Fall nachgebessert:", kur.aenderungen.join(" "));
+  if (ergebnis.notizen.length) {
+    console.warn("[api/case:spuren] Fall nachgebessert:", ergebnis.notizen.join(" "));
   }
-  if (kur.fehler) {
-    console.error("[api/case:spuren] Fall unlösbar:", kur.fehler);
+  if (ergebnis.maengel.length) {
+    console.warn("[api/case:spuren] Bleibt bestehen:", ergebnis.maengel.join(" · "));
+  }
+  if (ergebnis.fehler) {
+    console.error("[api/case:spuren] Fall unlösbar:", ergebnis.fehler);
     return NextResponse.json(
       {
         fehler:
@@ -659,6 +720,8 @@ async function spurenSchritt(entwurf: Entwurf) {
       { status: 502 },
     );
   }
+
+  const kur = { spuren: ergebnis.spuren, verdaechtige: ergebnis.verdaechtige };
 
   // Vorgaben und Saga-Briefing braucht nur die Erzeugung. Sie fliegen hier
   // raus, damit das Siegel klein bleibt - der Browser schickt es bei jeder

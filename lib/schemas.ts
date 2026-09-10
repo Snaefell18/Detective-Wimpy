@@ -75,6 +75,15 @@ export function makeSpurenSchema(
   besetzung: Character[],
   orte: Location[],
   items: Item[] = ITEMS,
+  /**
+   * Wie viele Spuren der Fall haben soll.
+   *
+   * Die Grenzen stehen im Schema und nicht nur im Prompt: Was hier steht,
+   * hält die Antwort ein - eine Bitte im Text ist dagegen nur eine Bitte.
+   * Zu wenige machen einen Fall dünn, zu viele ziehen das Umsehen in die
+   * Länge, und in die Beweismitteltasche passen ohnehin nur sechs Stücke.
+   */
+  grenzen: { min: number; max: number } = { min: 4, max: 6 },
 ) {
   const { characterId, locationId } = idListen(besetzung, orte);
   const itemId = ausListe(
@@ -109,7 +118,9 @@ export function makeSpurenSchema(
             "true nur bei den Stücken, die über diesen Fall hinaus auf den Kopf hinter der ganzen Saga zeigen. In einem einzelnen Fall immer false.",
           ),
       }),
-    ),
+    )
+      .min(grenzen.min)
+      .max(grenzen.max),
   });
 }
 

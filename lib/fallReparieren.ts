@@ -296,3 +296,99 @@ export function fernwirkungPruefen(
     aenderung: `„${ersatz.itemId}“ zeigt auf den Drahtzieher und gilt jetzt als Stück mit Fernwirkung.`,
   };
 }
+
+/* --- Wie viele Spuren ein Fall haben soll --------------------------- */
+
+/**
+ * Die Spanne, in der ein Fall gut spielbar ist.
+ *
+ * Zu wenige, und man findet nach dem zweiten Ort nichts mehr; zu viele, und
+ * das Umsehen zieht sich, während die Beweismitteltasche mit sechs Plätzen
+ * ohnehin nicht alles fassen kann. Ein Kapitel einer Saga darf etwas mehr
+ * haben - dort kommen die Stücke mit Fernwirkung dazu, die den Fall selbst
+ * nicht lösen.
+ */
+export type SpurenZiel = { min: number; max: number };
+
+export const ZIEL_EINZELFALL: SpurenZiel = { min: 4, max: 6 };
+export const ZIEL_KAPITEL: SpurenZiel = { min: 5, max: 7 };
+
+/**
+ * Überzählige Spuren streichen.
+ *
+ * Gestrichen wird von hinten und in dieser Reihenfolge: erst falsche
+ * Fährten (eine bleibt immer stehen), dann Beiwerk, das auf niemanden
+ * Wichtigen zeigt, und zuletzt eine Spur auf den Täter - aber nie unter
+ * zwei. Stücke mit Fernwirkung bleiben unangetastet: Sie sind der Grund,
+ * warum es das Kapitel gibt.
+ */
+export function spurenKappen(
+  spuren: CaseClue[],
+  max: number,
+  taeterId: string,
+): { spuren: CaseClue[]; aenderungen: string[] } {
+  const aenderungen: string[] = [];
+  let rest = [...spuren];
+
+  const streichbar = (): number => {
+    const irre = rest.filter((s) => s.fuehrtInDieIrre && !s.fernwirkung);
+    if (irre.length > 1) return rest.lastIndexOf(irre[irre.length - 1]);
+
+    const beiwerk = rest.filter(
+      (s) => !s.fernwirkung && !s.fuehrtInDieIrre && s.zeigtAufCharakterId !== taeterId,
+    );
+    if (beiwerk.length > 0) return rest.lastIndexOf(beiwerk[beiwerk.length - 1]);
+
+    const aufTaeter = rest.filter((s) => !s.fernwirkung && s.zeigtAufCharakterId === taeterId);
+    if (aufTaeter.length > 2) return rest.lastIndexOf(aufTaeter[aufTaeter.length - 1]);
+
+    return -1;
+  };
+
+  while (rest.length > max) {
+    const index = streichbar();
+    if (index < 0) break;
+    aenderungen.push(`Spur „${rest[index].itemId}“ gestrichen - der Fall hatte zu viele.`);
+    rest = rest.filter((_, i) => i !== index);
+  }
+
+  return { spuren: rest, aenderungen };
+}
+
+/**
+ * Liegen die Spuren brauchbar über die Orte verteilt?
+ *
+ * Wer an einem Schauplatz steht und sich umsieht, soll dort auch etwas
+ * finden können. Liegt alles an einem Ort, laufen die anderen leer - und
+ * umgekehrt findet man am selben Ort fünfmal hintereinander etwas, was das
+ * Umsehen zur Fließbandarbeit macht.
+ *
+ * Zurechtgebogen wird hier nichts: Der Text einer Spur beschreibt oft genau
+ * den Ort, an dem sie liegt ("auf dem Notenpult"). Umgelegt passte er nicht
+ * mehr. Gemeldet wird es trotzdem - dann lohnt sich ein zweiter Anlauf.
+ */
+export function verteilungMangel(spuren: CaseClue[], ortIds: string[]): string | null {
+  if (spuren.length < 2 || ortIds.length < 2) return null;
+
+  const proOrt = new Map<string, number>();
+  for (const s of spuren) proOrt.set(s.ortId, (proOrt.get(s.ortId) ?? 0) + 1);
+
+  const belegt = [...proOrt.keys()].filter((id) => ortIds.includes(id)).length;
+  const noetig = Math.min(ortIds.length, 3);
+  if (belegt < noetig) {
+    return `Die Spuren liegen an nur ${belegt} von ${ortIds.length} Orten - an den anderen findet man nie etwas.`;
+  }
+
+  /*
+   * Zwei an einem Ort sind in Ordnung, drei sind ein Haufen - erst bei
+   * wirklich vielen Spuren darf ein Ort auch drei tragen. Genau das steht
+   * auch in der Bestellung ("höchstens zwei").
+   */
+  const groesster = Math.max(...proOrt.values());
+  const erlaubt = Math.max(2, Math.ceil(spuren.length / 3));
+  if (groesster > erlaubt) {
+    return `An einem Ort liegen ${groesster} von ${spuren.length} Spuren - das ist zu viel auf einem Haufen.`;
+  }
+
+  return null;
+}

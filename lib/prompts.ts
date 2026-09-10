@@ -303,6 +303,11 @@ export function buildSpurenPrompt(
    * Forderung noch einmal ganz oben - freundlich, aber unübersehbar.
    */
   nachfassen = false,
+  /**
+   * Wie viele Spuren gebraucht werden. Dieselben Zahlen stehen im Schema -
+   * hier stehen sie, damit das Modell weiß, worauf es hinschreibt.
+   */
+  ziel: { min: number; max: number } = { min: 4, max: 6 },
 ): string {
   const name = (id: string) => besetzung.find((c) => c.id === id)?.name ?? id;
 
@@ -311,6 +316,12 @@ export function buildSpurenPrompt(
       ? `
 
 ACHTUNG: Im letzten Anlauf fehlte die Spur mit Fernwirkung. Dieses Mal muss mindestens eine dabei sein - siehe unten.`
+      : ""
+  }${
+    !saga && nachfassen
+      ? `
+
+ACHTUNG: Der letzte Anlauf war nicht brauchbar - zu wenige Spuren, oder alle an einem Ort. Halte dich dieses Mal genau an die Anzahl und verteile sie.`
       : ""
   }
 
@@ -322,7 +333,8 @@ DIE VERDÄCHTIGEN
 ${verdaechtige.map((v) => `- ${name(v.charakterId)} [${v.charakterId}], jetzt bei [${v.aufenthaltsort}], behauptet: ${v.alibi}`).join("\n")}
 
 Anforderungen:
-- ${saga ? "5 bis 7" : "4 bis 6"} Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort.
+- ${ziel.min} bis ${ziel.max} Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Nicht mehr und nicht weniger.
+- Verteile sie über die Orte: An einem Ort liegen höchstens zwei, und mindestens drei verschiedene Orte haben etwas (bei weniger Orten eben alle). Wer sich irgendwo umsieht, soll dort auch etwas finden können.
 - Mindestens zwei Spuren zeigen auf den Täter dieses Falls, mindestens eine führt in die Irre.${
     saga ? "\n- Dazu kommen ein bis zwei Stücke mit Fernwirkung (siehe unten). Sie zählen nicht zu den Spuren auf den Täter dieses Falls." : ""
   }

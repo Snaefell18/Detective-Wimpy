@@ -35,10 +35,10 @@ const verdaechtige = [
 ];
 const items = [{ id: "lupe", name: "Lupe" }, { id: "zettel", name: "Zettel" }];
 
-const bauen = (saga, nachfassen = false) =>
+const bauen = (saga, nachfassen = false, ziel = saga ? { min: 5, max: 7 } : { min: 4, max: 6 }) =>
   buildSpurenPrompt(
     besetzung, "nala", "Der Fall", "So war es", verdaechtige, null, items,
-    saga, nachfassen,
+    saga, nachfassen, ziel,
   );
 
 const sagaVorgabe = {
@@ -52,6 +52,7 @@ console.log("\n1. Ein einzelner Fall bleibt, wie er war");
 {
   const p = bauen(null);
   pruefe("vier bis sechs Spuren", p.includes("4 bis 6 Spuren"));
+  pruefe("und sie werden verteilt", p.includes("höchstens zwei"));
   pruefe("keine Fernwirkung bestellt", !p.includes("FERNWIRKUNG"));
   pruefe("zwei auf den Täter, eine in die Irre", p.includes("Mindestens zwei Spuren zeigen auf den Täter"));
 }
