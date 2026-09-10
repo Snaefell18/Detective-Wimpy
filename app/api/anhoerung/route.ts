@@ -104,6 +104,30 @@ export async function POST(request: Request) {
       undefined;
     const detektiv = bogen.besetzung.find((c) => c.istDetektiv);
 
+    /*
+     * Sitzt da noch das Tier - oder schon die Gestalt?
+     *
+     * Nach der Verwandlung wechselt der Angeklagte, und mit ihm die Stimme:
+     * Was aus einem Wirt gebrochen ist, redet nicht wie der Nachbar von
+     * gegenüber. Verglichen wird mit dem Siegel, nicht mit dem, was der
+     * Browser behauptet.
+     */
+    const besessenheit =
+      bogen.finale?.wahrheit?.verwandlung ??
+      (bogen.vorgaben?.besessenheit?.daemonId
+        ? {
+            wirtId: bogen.vorgaben.besessenheit.wirtId,
+            daemonId: bogen.vorgaben.besessenheit.daemonId,
+          }
+        : undefined);
+    const alsGestalt =
+      besessenheit?.daemonId && angeklagter?.id === besessenheit.daemonId
+        ? {
+            wirtName:
+              bogen.besetzung.find((c) => c.id === besessenheit.wirtId)?.name ?? "",
+          }
+        : null;
+
     const response = await getAnthropic().messages.create(
       {
         model: MODEL_GESPRAECH,
@@ -118,6 +142,7 @@ export async function POST(request: Request) {
               angeklagter,
               richter: richter ?? undefined,
               detektiv,
+              alsGestalt,
               mittel,
               verlauf: (body.verlauf ?? []).slice(-12),
               nachricht: nachricht.slice(0, 500),

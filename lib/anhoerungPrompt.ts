@@ -1,6 +1,7 @@
 import { GEDULD, MIT_BEWEIS_MAX, OHNE_BEWEIS_MAX, UEBERZEUGT, type AnhoerungZug } from "./anhoerung";
 import { characterBrief } from "./characters";
 import type { BeweismittelKern } from "./beweismittel";
+import { gestaltRegeln } from "./gestaltStimme";
 import type { Bogen } from "./sagaBogen";
 import { falscheFaehrteVon } from "./sagaTypen";
 import type { FinaleArt } from "./sagaFinale";
@@ -49,6 +50,11 @@ export function buildAnhoerungPrompt(args: {
   richter: Character | undefined;
   /** Der Detektiv - er stellt die Fragen. */
   detektiv: Character | undefined;
+  /**
+   * Sitzt auf der Bank die Gestalt, die aus einem Tier gebrochen ist? Dann
+   * steht hier der Name ihres Wirts - und sie bekommt ihre eigene Stimme.
+   */
+  alsGestalt?: { wirtName: string } | null;
   /** Alles, was Wimpy in der Tasche hat. */
   mittel: SaalMittel[];
   verlauf: AnhoerungZug[];
@@ -67,6 +73,7 @@ export function buildAnhoerungPrompt(args: {
     nachricht,
     ueberzeugung,
     geduld,
+    alsGestalt,
   } = args;
 
   const jetzt = mittel.find((m) => m.jetzt);
@@ -115,6 +122,10 @@ Fragt: ${name(detektiv, "Detective Wimpy")}${detektiv ? ` - ${characterBrief(det
 ${angeklagter?.sprachstil?.trim() ? `\nSO REDET DER ANGEKLAGTE (wichtiger als alles andere)\n${angeklagter.sprachstil.trim()}\n` : ""}${
     richter?.sprachstil?.trim()
       ? `\nSO REDET DER VORSITZ (wichtiger als alles andere)\n${richter.sprachstil.trim()}\n`
+      : ""
+  }${
+    alsGestalt && !eigeneSache
+      ? `${gestaltRegeln(bankName, alsGestalt.wirtName)}\n`
       : ""
   }
 WORUM ES GEHT

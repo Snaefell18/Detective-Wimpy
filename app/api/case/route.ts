@@ -235,6 +235,27 @@ function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undef
  * Das Finale selbst (kapitelNr 0) braucht nichts davon: Danach kommt nichts
  * mehr, in das etwas hineinreichen könnte.
  */
+/**
+ * Die Gestalt in dieser Besetzung - oder nichts.
+ *
+ * Sie kommt nur im Finale vor: Bis dahin läuft der Wirt herum, und was in
+ * ihm steckt, kennt niemand. Steht er nicht mehr in der Besetzung und die
+ * Gestalt dafür schon, ist die Verwandlung gelaufen.
+ */
+function gestaltIn(
+  bogen: Bogen | undefined,
+  besetzung: { id: string }[],
+): { id: string; wirtName: string } | undefined {
+  const b = bogen ? besessen(bogen.vorgaben) : null;
+  if (!b?.daemonId || !bogen) return undefined;
+  if (!besetzung.some((c) => c.id === b.daemonId)) return undefined;
+  if (besetzung.some((c) => c.id === b.wirtId)) return undefined;
+  return {
+    id: b.daemonId,
+    wirtName: bogen.besetzung.find((c) => c.id === b.wirtId)?.name ?? "",
+  };
+}
+
 function faehrteVon(bogen: Bogen): { name: string; was: string } | undefined {
   const faehrte = falscheFaehrteVon(bogen.vorgaben, bogen.besetzung);
   return faehrte ? { name: faehrte.charakter.name, was: faehrte.was } : undefined;
@@ -436,6 +457,12 @@ async function geruestSchritt(body: Record<string, unknown>) {
     tathergang: "",
     verdaechtige: [],
     spuren: [],
+    /*
+     * Steht in diesem Fall die Gestalt statt ihres Wirts? Dann soll sie auch
+     * so reden - im Finalfall spricht der Spieler ja mit ihr, nicht mit dem
+     * Tier, das sie getragen hat.
+     */
+    gestalt: gestaltIn(saga?.bogen, spielendeBesetzung),
     erstelltAm: Date.now(),
     vorgaben,
     sagaBriefing: saga ? briefingVon(saga.bogen, saga.kapitel) : undefined,

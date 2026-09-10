@@ -12,6 +12,7 @@ import {
   buildVerhandlungPrompt,
   verwandlungsRegeln,
 } from "../lib/sagaPrompts.ts";
+import { buildTalkPrompt } from "../lib/prompts.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -96,6 +97,55 @@ console.log("\n5. Ein Spruch überlebt das Schema");
     "ein leerer Spruch ist auch in Ordnung",
     VerhandlungSaalSchema.safeParse({ ...antwort, verwandlungSpruch: "" }).success,
   );
+}
+
+console.log("\n6. Auch im Gespräch redet die Gestalt wie eine Gestalt");
+{
+  const tier = (id, name, extra = {}) => ({
+    id, nummer: 1, name, tierart: "Schatten", alter: 400,
+    stats: { charisma: 5, freundlichkeit: 5, fitness: 5, zauberkraft: 5,
+      schelmischkeit: 5, kriminalitaetslevel: 5, intelligenz: 5 },
+    beschreibung: "kurz", bild: "", istDetektiv: false, ...extra,
+  });
+  const besetzung = [
+    tier("wimpy", "Wimpy", { istDetektiv: true }),
+    tier("schatten", "Der Schatten"),
+    tier("nala", "Nala", { tierart: "Katze" }),
+  ];
+  const fall = {
+    id: "f", besetzung, items: [{ id: "lupe", name: "Lupe", beschreibung: "", bild: "" }],
+    ton: "kindgerecht", reifegrad: "kindgerecht", absurditaet: "verspielt",
+    stadt: "Venedig",
+    orte: [{ id: "o1", stadt: "Venedig", stadtId: "v", name: "Hafen", atmosphaere: "", beschreibung: "", bild: "" }],
+    introText: "", schlagworte: [], titel: "T", tatbeschreibung: "t", tatort: "o1",
+    taeterId: "schatten", motiv: "m", tathergang: "h",
+    verdaechtige: [
+      { charakterId: "schatten", aufenthaltsort: "o1", alibi: "a", geheimnis: "g", alibiIstGelogen: true },
+      { charakterId: "nala", aufenthaltsort: "o1", alibi: "a", geheimnis: "g", alibiIstGelogen: false },
+    ],
+    spuren: [], erstelltAm: 1,
+    gestalt: { id: "schatten", wirtName: "Bella" },
+  };
+
+  const mit = buildTalkPrompt({
+    fall, charakterId: "schatten", ortId: "o1", modus: "befragen",
+    nachricht: "Wo waren Sie?", verlauf: [], gefundeneSpuren: [],
+  });
+  pruefe("die Gestalt bekommt ihre Stimme", mit.includes("SO SPRICHT DER SCHATTEN"));
+  pruefe("und weiß, in wem sie steckte", mit.includes("Von Bella spricht sie"));
+  pruefe("im Gespräch ohne Saal", mit.includes("das ist die Gestalt, die in einem Tier gesteckt hat"));
+
+  const anderes = buildTalkPrompt({
+    fall, charakterId: "nala", ortId: "o1", modus: "reden",
+    nachricht: "Hallo", verlauf: [], gefundeneSpuren: [],
+  });
+  pruefe("ein anderes Tier nicht", !anderes.includes("SO SPRICHT"));
+
+  const ohne = buildTalkPrompt({
+    fall: { ...fall, gestalt: undefined }, charakterId: "schatten", ortId: "o1",
+    modus: "reden", nachricht: "Hallo", verlauf: [], gefundeneSpuren: [],
+  });
+  pruefe("und ohne Besessenheit auch nicht", !ohne.includes("SO SPRICHT"));
 }
 
 console.log(fehlgeschlagen ? `\n${fehlgeschlagen} Prüfung(en) fehlgeschlagen.` : "\nAlles gut.");

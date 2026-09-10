@@ -211,6 +211,15 @@ export type CaseFile = {
   verdaechtige: SuspectBrief[];
   /** Gegenstände, die im Spiel gefunden werden können. */
   spuren: CaseClue[];
+  /**
+   * Steht in diesem Fall eine Gestalt, die aus einem Tier gebrochen ist?
+   *
+   * Nur im Finalfall einer Saga mit Besessenheit: Der Wirt ist dann nicht
+   * mehr dabei, an seiner Stelle steht das, was in ihm war - und das redet
+   * anders als der Nachbar von gegenüber. Steht ausschließlich im Siegel;
+   * der Browser erfährt davon nichts.
+   */
+  gestalt?: { id: string; wirtName: string };
   erstelltAm: number;
 };
 

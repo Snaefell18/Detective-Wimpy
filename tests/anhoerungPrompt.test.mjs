@@ -150,6 +150,44 @@ console.log("\n4. Klagt Wimpy sich selbst an, spricht nur der Vorsitz");
   pruefe("sonst gibt es den Zusatz", normal.includes("wirklich zugibt, was er getan hat"));
 }
 
+console.log("\n4b. Auf der Bank sitzt die Gestalt - dann redet auch sie");
+{
+  const daemon = tier("schatten", "Der Schatten", { tierart: "Schatten", alter: 400 });
+  const p = bauen({
+    art: "gericht-daemon",
+    angeklagter: daemon,
+    alsGestalt: { wirtName: "Herr Hut" },
+  });
+  pruefe("die eigene Stimme steht drin", p.includes("SO SPRICHT DER SCHATTEN"));
+  pruefe("sie hat Zeit", p.includes("Sie ist alt und hat Zeit"));
+  pruefe("kein Gebrüll", p.includes("kein Gebrüll"));
+  pruefe("der Wirt wird in der dritten Person genannt", p.includes("Von Herr Hut spricht sie in der dritten Person"));
+  pruefe("ihre Höflichkeit ist unangenehm", p.includes("Höflichkeit ist unangenehmer"));
+  pruefe("sie dreht Worte um", p.includes("dreht Worte um"));
+  pruefe("ihre Bilder sind kalt", p.includes("Winter, Keller, Uhren, Staub"));
+  pruefe("keine Hölle, kein Feuer", p.includes("Keine Hölle, kein Feuer"));
+  pruefe("ein Treffer macht sie kürzer", p.includes("wird kürzer, genauer"));
+  pruefe("gestanden wird erst am Ende", p.includes("Zugegeben wird erst ganz am Schluss"));
+  pruefe("und es bleibt kindgerecht", p.includes("Unheimlich durch Ruhe"));
+
+  const gewoehnlich = bauen();
+  pruefe("ein gewöhnlicher Angeklagter bekommt das nicht", !gewoehnlich.includes("SO SPRICHT"));
+
+  // Klagt Wimpy sich selbst an, spricht der Angeklagte gar nicht - dann
+  // hätte eine eigene Stimme auch nichts zu sagen.
+  const selbst = bauen({ art: "wimpy", angeklagter: wimpy, alsGestalt: { wirtName: "Wimpy" } });
+  pruefe("bei „Wimpy selbst“ bleibt es aus", !selbst.includes("SO SPRICHT"));
+
+  // Der eigene Sprachstil aus den Stammdaten steht davor und gewinnt.
+  const mitStil = bauen({
+    art: "gericht-daemon",
+    angeklagter: { ...daemon, sprachstil: "zischt jedes S" },
+    alsGestalt: { wirtName: "Herr Hut" },
+  });
+  pruefe("ein eigener Sprachstil steht darüber", mitStil.indexOf("zischt jedes S") < mitStil.indexOf("SO SPRICHT"));
+  pruefe("und ist wichtiger als alles andere", mitStil.includes("wichtiger als alles andere"));
+}
+
 console.log("\n5. Jede Finale-Art bringt ihr eigenes Ziel mit");
 {
   for (const art of FINALE_ARTEN) {

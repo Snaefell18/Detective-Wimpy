@@ -1,4 +1,5 @@
 import { characterBrief } from "./characters";
+import { gestaltRegeln } from "./gestaltStimme";
 import { ITEMS } from "./items";
 import type { Item } from "./types";
 import { findeOrt } from "./locations";
@@ -446,6 +447,12 @@ ${
 }${
   charakter.sprachstil?.trim()
     ? `\nSO REDEST UND BENIMMST DU DICH (wichtiger als alles andere in deiner Antwort)\n${charakter.sprachstil.trim()}\n`
+    : ""
+}${
+  // Im Finalfall einer Besessenheit steht nicht mehr das Tier da, sondern
+  // das, was in ihm war. Also redet es auch so.
+  fall.gestalt?.id === charakterId
+    ? `\n${gestaltRegeln(charakter.name, fall.gestalt.wirtName, "gespraech")}\n`
     : ""
 }${
   beziehungsText(charakter, fall.besetzung)

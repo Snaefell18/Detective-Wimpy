@@ -320,6 +320,10 @@ export const CaseFileSchema = z.object({
       }),
     )
     .max(20),
+  /** Siehe CaseFile.gestalt - fehlt in älteren Akten. */
+  gestalt: z
+    .object({ id: z.string().max(40), wirtName: z.string().max(60) })
+    .optional(),
   erstelltAm: z.number(),
 });
 
