@@ -4,8 +4,8 @@ import type { Character, Item, Location } from "./types";
 import { STIMMUNGEN } from "./zuordnen";
 import { AUFTRITTS_ARTEN } from "./sagaTypen";
 import { FINALE_ARTEN } from "./sagaFinale";
-import { WETTERLAGEN } from "./types";
-import type { Wetterlage } from "./types";
+import { DAEMON_HAEUFIGKEITEN, WETTERLAGEN } from "./types";
+import type { DaemonHaeufigkeit, Wetterlage } from "./types";
 
 /**
  * Wichtig: Feste Auswahllisten werden vom Modell nur *beschrieben*, nicht
@@ -153,6 +153,11 @@ export const AccuseSchema = z.object({
   richtig: z.boolean(),
   aufloesung: z.string(),
   reaktion: z.string(),
+  /**
+   * Nur wenn im Täter eine Gestalt steckt: ihre ersten Worte, sobald sie aus
+   * ihm herausgebrochen ist. Sonst leer.
+   */
+  verwandlungSpruch: z.string().optional(),
 });
 
 /** Prüft die Charaktere, die der Client aus dem Admin-Menü mitschickt. */
@@ -177,6 +182,8 @@ export const CharacterSchema = z.object({
   beschreibung: z.string().max(1000),
   bild: z.string().max(300),
   istDetektiv: z.boolean(),
+  /** Dämonenform - siehe Character.istDaemon. */
+  istDaemon: z.boolean().optional(),
   beruf: z.string().max(200).optional(),
   sprachstil: z.string().max(800).optional(),
   auftrittTon: z.string().max(200).optional(),
@@ -324,6 +331,10 @@ export const CaseFileSchema = z.object({
   gestalt: z
     .object({ id: z.string().max(40), wirtName: z.string().max(60) })
     .optional(),
+  /** Siehe CaseFile.besessenheit - die Gestalt, die im Täter steckt. */
+  besessenheit: z
+    .object({ wirtId: z.string().max(40), daemon: CharacterSchema })
+    .optional(),
   erstelltAm: z.number(),
 });
 
@@ -441,6 +452,15 @@ export const EinstellungenSchema = z.object({
     "zufall",
     ...WETTERLAGEN.map((w) => w.id),
   ]).default("aus"),
+  /*
+   * Nachsichtig: Steht hier etwas Unbekanntes - aus einer älteren Fassung
+   * oder von Hand hineingeschrieben -, gilt "aus". Ohne das würde die ganze
+   * Einstellungsprüfung scheitern und sämtliche Einstellungen fielen auf
+   * ihre Voreinstellung zurück.
+   */
+  daemonEnthuellung: ausAuswahl<DaemonHaeufigkeit>(DAEMON_HAEUFIGKEITEN.map((h) => h.id))
+    .catch("aus")
+    .default("aus"),
 });
 
 /* --- Neue Stammdaten erfinden lassen -------------------------------- */

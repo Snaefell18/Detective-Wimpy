@@ -97,6 +97,12 @@ export default function Home() {
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
   /** Die Reaktion des Beschuldigten - steht zwischen Beschuldigung und Urteil. */
   const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
+  /**
+   * Der überführte Täter entpuppt sich - steht zwischen seiner Reaktion und
+   * der Auflösung. Bis zu diesem Moment weiß der Browser nicht einmal, dass
+   * in ihm etwas steckte.
+   */
+  const [enthuellung, setEnthuellung] = useState(false);
   /** Die Verwandlung vor dem Finale - läuft, sobald sie gesetzt ist. */
   const [verwandlung, setVerwandlung] = useState(false);
   /**
@@ -1077,6 +1083,27 @@ export default function Home() {
     );
   }
 
+  /*
+   * Und dann bricht es aus ihm heraus.
+   *
+   * Erst sein letzter Satz als er selbst (die Reaktion oben), dann die
+   * Gestalt - und erst danach die Auflösung, die beides erklärt.
+   */
+  if (enthuellung && !reaktion && stand.ergebnis?.verwandlung?.daemon) {
+    const wandel = stand.ergebnis.verwandlung;
+    return (
+      <main className="app">
+        <Verwandlung
+          wirt={wandel.wirt ?? undefined}
+          daemon={wandel.daemon}
+          ton={admin.einstellungen.neuzugangTon}
+          spruch={wandel.spruch}
+          onFertig={() => setEnthuellung(false)}
+        />
+      </main>
+    );
+  }
+
   // 2. Fall vorbei - Auflösung.
   if (stand.status === "beendet" && stand.ergebnis) {
     return (
@@ -1337,6 +1364,8 @@ export default function Home() {
             setBeschuldigenOffen(false);
             // Erst das Gesicht und der Satz - das Urteil kommt danach.
             if (ergebnis.reaktion) setReaktion({ charakterId: id, text: ergebnis.reaktion });
+            // Und wenn in ihm etwas steckte, kommt es jetzt heraus.
+            if (ergebnis.verwandlung?.daemon) setEnthuellung(true);
           }}
           onSchliessen={() => {
             setFehler(null);

@@ -1,3 +1,4 @@
+import { besessenheitsRegeln } from "./gestaltStimme";
 import { characterBrief } from "./characters";
 import type { FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
@@ -22,24 +23,6 @@ DER TWIST - DAS WICHTIGSTE AN DIESER SAGA
 - Die Hinweise auf ihn gibt es trotzdem, ganz normal und von Anfang an - aber immer über Eigenschaften statt über einen Namen: eine Handschrift, ein Geruch, eine Fellfarbe an der falschen Stelle, ein Siegel, ein wiederkehrender Satz, ein Fahrzeug, ein bezahlter Auftrag.
 - Andere Tiere dürfen von ihm erzählen, ohne ihn zu kennen: "der mit dem Hut", "der immer nachts kommt", "der, den keiner je gesehen hat".
 - Nenne seinen Namen in keinem Kapiteltext. Erst im Finale steht er da.`;
-
-/**
- * Die Spur der Besessenheit - dieselben Regeln für Kapitel, Fälle und Finale.
- *
- * Der Sinn ist die Dosis: In jedem Kapitel genau ein Detail, das nicht ins
- * Bild passt und das niemand erklären kann. Zusammengenommen ergibt sich ein
- * Muster, einzeln bleibt jedes für sich harmlos. Erklärt wird nichts, benannt
- * schon gar nichts - sonst wäre die Verwandlung vor dem Finale entwertet.
- */
-function besessenheitsRegeln(wirtName: string, daemonName: string): string {
-  return `
-ETWAS ÜBLES GEHT VOR (streng geheim)
-- ${wirtName} ist besessen, weiß es aber nicht. ${daemonName} ist die Gestalt darin und kommt vor dem Finale nirgends vor - weder als Person noch beim Namen.
-- Bau genau EIN kleines Zeichen ein, das nicht ins Bild passt und mit ${wirtName} zu tun hat: eine Stunde, die er nicht erinnert; Erde unter den Krallen, obwohl er zu Hause war; ein Kratzer zu hoch an der Wand; Kälte in einem warmen Raum; ein Satz in einer Sprache, die er nicht spricht; eine Spiegelung, die einen Herzschlag zu spät folgt.
-- Niemand erklärt es, niemand nennt Dämon, Fluch oder Magie. Ein Tier wundert sich höchstens kurz und redet weiter.
-- Es darf den Fall nicht lösen und nicht in die Irre führen: Der Täter dieses Kapitels bleibt der, der es ist.`;
-}
-
 
 /**
  * Was die gewählte Finale-Art für die ganze Saga bedeutet.

@@ -39,12 +39,15 @@ import type { Bogen } from "@/lib/sagaBogen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
 import { besessen, besetzungFuerKapitel, falscheFaehrteVon } from "@/lib/sagaTypen";
+import { waehleDaemonform } from "@/lib/daemonEnthuellung";
+import { besessenheitsRegeln } from "@/lib/gestaltStimme";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
   type CaseClue,
   type CaseFile,
   type Character,
+  type Einstellungen,
   type Item,
   type Location,
   type PublicCase,
@@ -86,7 +89,14 @@ function besetzungAus(roh: unknown): Character[] {
   }
   if (!gut.length) return CHARACTERS;
 
-  const besetzung = gut.slice(0, MAX_CHARAKTERE);
+  /*
+   * Dämonenformen laufen nicht in der Stadt herum.
+   *
+   * Sie sind die Gestalt, die in jemandem steckt - als Nachbarin mit Alibi
+   * wären sie ein Fremdkörper und würden nebenbei verraten, dass es so etwas
+   * überhaupt gibt. Eingesetzt werden sie nur dort, wo sie gemeint sind.
+   */
+  const besetzung = gut.filter((c) => !c.istDaemon).slice(0, MAX_CHARAKTERE);
   const detektive = besetzung.filter((c) => c.istDetektiv);
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
   // Ohne genau einen Detektiv und mindestens zwei Verdächtige ist kein Fall spielbar.
@@ -242,6 +252,25 @@ function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undef
  * ihm steckt, kennt niemand. Steht er nicht mehr in der Besetzung und die
  * Gestalt dafür schon, ist die Verwandlung gelaufen.
  */
+/**
+ * Die Gestalt, die im Täter steckt - oder nichts.
+ *
+ * Gebraucht werden zwei Dinge: eine Einstellung, die es zulässt, und
+ * mindestens eine Dämonenform unter den Tieren. Fehlt eins davon, passiert
+ * schlicht nichts - kein Fehler, kein Hinweis, der Fall läuft wie immer.
+ */
+function wuerfleBesessenheit(
+  wie: Einstellungen["daemonEnthuellung"],
+  rohCharaktere: unknown,
+  taeterId: string,
+): { wirtId: string; daemon: Character } | undefined {
+  // Die Dämonenformen stehen im Rohmaterial aus dem Menü, nicht in der
+  // Besetzung des Falls - dort sind sie ja gerade herausgefiltert.
+  const { gut } = einzelnGeprueft<Character>(CharacterSchema, rohCharaktere);
+  const daemon = waehleDaemonform(gut, wie, taeterId);
+  return daemon ? { wirtId: taeterId, daemon } : undefined;
+}
+
 function gestaltIn(
   bogen: Bogen | undefined,
   besetzung: { id: string }[],
@@ -412,6 +441,23 @@ async function geruestSchritt(body: Record<string, unknown>) {
   const taeter =
     gewuenschterTaeter ?? verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
+  /*
+   * Entpuppt sich der Täter am Ende als etwas ganz anderes?
+   *
+   * Gewürfelt wird hier, auf dem Server, und das Ergebnis wandert ins Siegel
+   * - im Browser darf davon nichts stehen. In einer Saga passiert das nie:
+   * Dort steht die Besessenheit im Bogen und gehört zum großen Bogen, nicht
+   * zu einer einzelnen Runde.
+   */
+  const besessenheit = saga
+    ? undefined
+    : wuerfleBesessenheit(einstellungen.daemonEnthuellung, body?.charaktere, taeter.id);
+  if (besessenheit) {
+    console.warn(
+      `[api/case] Verwandlung vorbereitet: ${taeter.name} -> ${besessenheit.daemon.name}`,
+    );
+  }
+
   const fallItems = wuerfleItems(itemsAus(body?.items), vorgaben?.items ?? []);
 
   const alleOrte = orteAus(body?.orte);
@@ -463,9 +509,19 @@ async function geruestSchritt(body: Record<string, unknown>) {
      * Tier, das sie getragen hat.
      */
     gestalt: gestaltIn(saga?.bogen, spielendeBesetzung),
+    besessenheit,
     erstelltAm: Date.now(),
     vorgaben,
-    sagaBriefing: saga ? briefingVon(saga.bogen, saga.kapitel) : undefined,
+    /*
+     * Was das Modell über den großen Bogen wissen muss - oder, in einem
+     * gewöhnlichen Fall, über die Gestalt im Täter. Beides gehört ins
+     * Siegel und niemals in den Browser.
+     */
+    sagaBriefing: saga
+      ? briefingVon(saga.bogen, saga.kapitel)
+      : besessenheit
+        ? besessenheitsRegeln(taeter.name, besessenheit.daemon.name, "beschuldigung")
+        : undefined,
     sagaSpur: saga ? fernwirkungVon(saga.bogen, saga.kapitel) : undefined,
   };
 

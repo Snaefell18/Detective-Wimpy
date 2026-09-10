@@ -12,6 +12,7 @@ import {
   STANDARD_EINSTELLUNGEN,
   WETTERLAGEN,
   type Einstellungen,
+  DAEMON_HAEUFIGKEITEN,
   type Wetterlage,
 } from "@/lib/types";
 import type { BereichProps } from "./typen";
@@ -138,6 +139,33 @@ export function SpielBereich({ onMeldung }: BereichProps) {
           >
             <strong>{w.label}</strong>
             <span className="leise klein">{w.hinweis}</span>
+          </button>
+        ))}
+      </div>
+
+      <h2 className="abschnitt">Wenn sich jemand entpuppt</h2>
+      <p className="leise">
+        In einem gewöhnlichen Fall kann sich der Täter als etwas ganz anderes
+        herausstellen: Bis zur Beschuldigung ist davon nichts zu sehen - nur
+        eine Kleinigkeit, die niemand erklärt. Liegt Wimpy richtig, bricht die
+        Gestalt aus ihm heraus, sagt etwas, und erst danach kommt die
+        Auflösung.
+      </p>
+      <p className="leise klein">
+        Dafür braucht es mindestens ein Tier, das unter „Tiere“ als
+        Dämonenform markiert ist. Gibt es keins, passiert schlicht nichts.
+        Sagas sind davon unberührt - dort steht die Besessenheit im Bogen.
+      </p>
+      <div className="wahl-reihe">
+        {DAEMON_HAEUFIGKEITEN.map((h) => (
+          <button
+            key={h.id}
+            className="wahl-chip"
+            data-aktiv={(e.daemonEnthuellung ?? "aus") === h.id}
+            onClick={() => aendern({ einstellungen: { ...e, daemonEnthuellung: h.id } })}
+          >
+            <strong>{h.label}</strong>
+            <span className="leise klein">{h.hinweis}</span>
           </button>
         ))}
       </div>

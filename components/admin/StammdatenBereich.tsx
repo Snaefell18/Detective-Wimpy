@@ -765,6 +765,18 @@ function CharakterFormular({
         <span>Ist der Detektiv (die Spielfigur)</span>
       </label>
 
+      {/* Eine Dämonenform läuft nicht in der Stadt herum: Sie wird in keine
+          Besetzung gewürfelt und tritt nur dort auf, wo sie gemeint ist -
+          als Gestalt, die aus jemandem herausbricht. */}
+      <label className="schalter">
+        <input
+          type="checkbox"
+          checked={entwurf.istDaemon === true}
+          onChange={(e) => aendern({ istDaemon: e.target.checked })}
+        />
+        <span>Ist eine Dämonenform · tritt nur bei einer Verwandlung auf</span>
+      </label>
+
       <label className="feld">
         <span className="leise">Beschreibung</span>
         <textarea

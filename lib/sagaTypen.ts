@@ -446,24 +446,36 @@ export type SagaLauf = {
  * Bleiben am Ende weniger als drei Verdächtige übrig, spielt die ganze
  * Besetzung: Ein Fall braucht Auswahl.
  */
-export function besetzungFuerSaga<T extends { id: string; istDetektiv: boolean }>(
+export function besetzungFuerSaga<
+  T extends { id: string; istDetektiv: boolean; istDaemon?: boolean },
+>(
   besetzung: T[],
   vorgaben: Pick<SagaVorgaben, "charaktere" | "drahtzieherId" | "besessenheit">,
 ): T[] {
   const gewaehlt = vorgaben.charaktere ?? [];
-  if (gewaehlt.length < 2) return besetzung;
 
-  const gefiltert = besetzung.filter(
-    (c) =>
-      c.istDetektiv ||
-      gewaehlt.includes(c.id) ||
-      (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId) ||
-      // Wirt und Dämonenform gehören immer dazu - ohne sie gibt es die
-      // Verwandlung nicht, und der Schuldige fehlte ganz.
-      c.id === vorgaben.besessenheit?.wirtId ||
-      c.id === vorgaben.besessenheit?.daemonId,
-  );
-  return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : besetzung;
+  /**
+   * Ausdrücklich gemeint - dann gilt auch eine Dämonenform.
+   *
+   * Ohne diese Ausnahme fiele die Gestalt aus jeder Besetzung heraus, und
+   * die Verwandlung hätte niemanden, in den sie hineinbrechen könnte.
+   */
+  const gemeint = (c: T) =>
+    gewaehlt.includes(c.id) ||
+    (Boolean(vorgaben.drahtzieherId) && c.id === vorgaben.drahtzieherId) ||
+    c.id === vorgaben.besessenheit?.wirtId ||
+    c.id === vorgaben.besessenheit?.daemonId;
+
+  /*
+   * Dämonenformen gehören in keine Besetzung, die einfach alle nimmt: Sie
+   * sind das, was in jemandem steckt, und nicht die Nachbarin von gegenüber.
+   */
+  const ohneGestalten = besetzung.filter((c) => !c.istDaemon || gemeint(c));
+
+  if (gewaehlt.length < 2) return ohneGestalten;
+
+  const gefiltert = ohneGestalten.filter((c) => c.istDetektiv || gemeint(c));
+  return gefiltert.filter((c) => !c.istDetektiv).length >= 3 ? gefiltert : ohneGestalten;
 }
 
 /**

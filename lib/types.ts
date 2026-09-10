@@ -38,6 +38,15 @@ export type Character = {
   bild: string;
   istDetektiv: boolean;
   /**
+   * Eine Dämonenform: die Gestalt, die in einem anderen Tier steckt.
+   *
+   * Sie läuft nicht in der Stadt herum und gehört in keine gewöhnliche
+   * Besetzung - man begegnet ihr nur, wenn sie aus jemandem herausbricht.
+   * Deshalb wird sie beim Würfeln der Besetzung übersprungen und nur dort
+   * eingesetzt, wo sie ausdrücklich gemeint ist.
+   */
+  istDaemon?: boolean;
+  /**
    * Was dieses Tier beruflich macht - freier Text ("Bäckerin", "Nachtwächter
    * am Hafen"). Färbt Alibis, Spuren und Gesprächsthemen. Leer heißt: das
    * Modell denkt sich etwas Passendes aus.
@@ -129,7 +138,44 @@ export type Einstellungen = {
   neuzugangTon: string;
   /** Wetter und Tageszeit über dem Schauplatz. */
   wetter: Wetterlage;
+  /**
+   * Wie oft sich der Täter eines gewöhnlichen Falls als Dämon entpuppt.
+   *
+   * Bis zur Beschuldigung ist davon nichts zu sehen - nur eine Kleinigkeit
+   * je Fall, die niemand erklärt. Erst wenn Wimpy richtig liegt, bricht die
+   * Gestalt heraus, sagt etwas, und dann erst kommt die Auflösung.
+   *
+   * Braucht mindestens eine Dämonenform unter den Tieren; gibt es keine,
+   * passiert schlicht nichts.
+   */
+  daemonEnthuellung: DaemonHaeufigkeit;
 };
+
+/**
+ * Wie oft ein gewöhnlicher Fall mit einer Verwandlung endet.
+ *
+ * "aus" ist die Voreinstellung: Wer nichts einstellt, spielt wie bisher.
+ * Alles andere ist ein Würfelwurf je Fall - "immer" heißt wirklich immer,
+ * und das ist eher zum Ausprobieren gedacht als zum Spielen.
+ */
+export type DaemonHaeufigkeit = "aus" | "selten" | "manchmal" | "immer";
+
+export const DAEMON_HAEUFIGKEITEN: {
+  id: DaemonHaeufigkeit;
+  label: string;
+  hinweis: string;
+  /** Wie wahrscheinlich es je Fall ist. */
+  wahrscheinlichkeit: number;
+}[] = [
+  { id: "aus", label: "Nie", hinweis: "wie bisher", wahrscheinlichkeit: 0 },
+  { id: "selten", label: "Selten", hinweis: "etwa jeder sechste Fall", wahrscheinlichkeit: 0.15 },
+  { id: "manchmal", label: "Manchmal", hinweis: "etwa jeder dritte Fall", wahrscheinlichkeit: 0.35 },
+  { id: "immer", label: "Immer", hinweis: "jeder Fall - zum Ausprobieren", wahrscheinlichkeit: 1 },
+];
+
+/** Wie wahrscheinlich eine Enthüllung bei dieser Einstellung ist. */
+export const daemonWahrscheinlichkeit = (wie: DaemonHaeufigkeit | undefined): number =>
+  DAEMON_HAEUFIGKEITEN.find((h) => h.id === (wie ?? "aus"))?.wahrscheinlichkeit ?? 0;
 
 /**
  * Was über dem Ortsbild liegt - reines CSS, keine zusätzlichen Dateien.
@@ -171,6 +217,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   neuzugangTon: "",
   wetter: "aus",
   musik: "",
+  daemonEnthuellung: "aus",
 };
 
 /** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */
@@ -220,6 +267,16 @@ export type CaseFile = {
    * der Browser erfährt davon nichts.
    */
   gestalt?: { id: string; wirtName: string };
+  /**
+   * Eine Gestalt, die im Täter dieses Falls steckt - und erst herausbricht,
+   * wenn Wimpy ihn richtig beschuldigt.
+   *
+   * Das ganze Tier steht hier, nicht nur seine Id: Es gehört nicht zur
+   * Besetzung des Falls, und im Moment der Verwandlung braucht der
+   * Bildschirm sein Bild. Liegt ausschließlich im Siegel - vorher darf
+   * niemand wissen, dass es sie gibt.
+   */
+  besessenheit?: { wirtId: string; daemon: Character };
   erstelltAm: number;
 };
 
@@ -326,6 +383,16 @@ export type AccuseResult = {
   richtig: boolean;
   aufloesung: string;
   reaktion: string;
+  /**
+   * Nur wenn im überführten Täter eine Gestalt steckte: Wirt, Gestalt und
+   * ihre ersten Worte. Sie kommt hier zum ersten Mal im Browser an - vorher
+   * durfte niemand wissen, dass es sie gibt.
+   */
+  verwandlung?: {
+    wirt: Character | null;
+    daemon: Character;
+    spruch: string;
+  } | null;
 };
 
 /** Der Teil des Falls, den der Browser sehen darf (ohne Täter, Motiv, Alibis). */

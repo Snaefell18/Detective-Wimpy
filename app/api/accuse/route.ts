@@ -80,11 +80,29 @@ export async function POST(request: Request) {
 
     // Wer der Täter ist, entscheidet der Server - nicht das Modell.
     const richtig = body.charakterId === fall.taeterId;
+
+    /*
+     * Steckte in ihm etwas, kommt es jetzt heraus - aber nur, wenn Wimpy
+     * richtig lag. Bei einer falschen Beschuldigung erfährt niemand davon;
+     * das Siegel behält es für den nächsten Versuch.
+     */
+    const gestalt = richtig ? fall.besessenheit : undefined;
+    const wirt = gestalt
+      ? (fall.besetzung.find((c) => c.id === gestalt.wirtId) ?? null)
+      : null;
+
     const ergebnis: AccuseResult & { taeterId: string } = {
       richtig,
       aufloesung: sauberText(aufloesung.aufloesung),
       reaktion: sauberText(aufloesung.reaktion),
       taeterId: fall.taeterId,
+      verwandlung: gestalt
+        ? {
+            wirt,
+            daemon: gestalt.daemon,
+            spruch: sauberText(aufloesung.verwandlungSpruch ?? ""),
+          }
+        : null,
     };
 
     return NextResponse.json(ergebnis);

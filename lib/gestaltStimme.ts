@@ -31,3 +31,30 @@ SO SPRICHT ${daemon.toUpperCase()} (${
 - Zugegeben wird erst ganz am Schluss, wenn nichts mehr zu halten ist: knapp, ohne Reue, fast erleichtert, dass endlich jemand hingesehen hat.
 - Unheimlich durch Ruhe, nicht durch Grausamkeit: kein Blut, keine Qual, nichts, was einem Kind den Abend verdirbt.`;
 }
+
+/**
+ * Die Spur der Besessenheit - dieselben Regeln für Kapitel, Fälle und Finale.
+ *
+ * Der Sinn ist die Dosis: In jedem Kapitel genau ein Detail, das nicht ins
+ * Bild passt und das niemand erklären kann. Zusammengenommen ergibt sich ein
+ * Muster, einzeln bleibt jedes für sich harmlos. Erklärt wird nichts, benannt
+ * schon gar nichts - sonst wäre die Verwandlung entwertet, bevor sie stattfindet.
+ */
+export function besessenheitsRegeln(
+  wirtName: string,
+  daemonName: string,
+  /**
+   * Wann die Gestalt herausbricht. In einer Saga ist das das Finale; in
+   * einem gewöhnlichen Fall der Moment, in dem Wimpy richtig beschuldigt.
+   */
+  wann: "finale" | "beschuldigung" = "finale",
+): string {
+  const bis = wann === "finale" ? "vor dem Finale" : "vor der Beschuldigung";
+  return `
+ETWAS ÜBLES GEHT VOR (streng geheim)
+- ${wirtName} ist besessen, weiß es aber nicht. ${daemonName} ist die Gestalt darin und kommt ${bis} nirgends vor - weder als Person noch beim Namen.
+- Bau genau EIN kleines Zeichen ein, das nicht ins Bild passt und mit ${wirtName} zu tun hat: eine Stunde, die er nicht erinnert; Erde unter den Krallen, obwohl er zu Hause war; ein Kratzer zu hoch an der Wand; Kälte in einem warmen Raum; ein Satz in einer Sprache, die er nicht spricht; eine Spiegelung, die einen Herzschlag zu spät folgt.
+- Niemand erklärt es, niemand nennt Dämon, Fluch oder Magie. Ein Tier wundert sich höchstens kurz und redet weiter.
+- Es darf den Fall nicht lösen und nicht in die Irre führen: Der Täter bleibt der, der er ist.
+- Und es bleibt bei diesem einen Zeichen. Zwei wären ein Muster, drei eine Ankündigung - dann ist die Verwandlung verbraucht, bevor sie stattfindet.`;
+}

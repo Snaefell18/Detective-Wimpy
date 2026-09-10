@@ -6,6 +6,7 @@ import { useAdmin } from "./adminStore";
 import { erzeugeFall } from "./fallErzeugen";
 import { useStammdaten } from "./stammdaten";
 import type {
+  AccuseResult,
   ChatTurn,
   Kampagne,
   NotebookEntry,
@@ -22,6 +23,11 @@ export type Ergebnis = {
   reaktion: string;
   taeterId: string;
   beschuldigtId: string;
+  /**
+   * Steckte im Täter eine Gestalt, steht sie hier - samt ihrer ersten Worte.
+   * Der Bildschirm zeigt sie zwischen der Reaktion und der Auflösung.
+   */
+  verwandlung?: AccuseResult["verwandlung"];
 };
 
 /**

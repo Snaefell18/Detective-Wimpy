@@ -525,6 +525,14 @@ export function buildAccusePrompt(args: {
   const taeter = fall.besetzung.find((c) => c.id === fall.taeterId);
   const richtig = charakterId === fall.taeterId;
 
+  /*
+   * Steckt im Täter eine Gestalt, ist die richtige Beschuldigung nicht das
+   * Ende, sondern der Bruch: Sie kommt heraus, sagt etwas, und erst danach
+   * wird aufgelöst. Bei einer falschen Beschuldigung passiert nichts - dann
+   * bleibt sie, wo sie ist, und niemand erfährt davon.
+   */
+  const gestalt = richtig && fall.besessenheit ? fall.besessenheit.daemon : null;
+
   return `Wimpy stellt seine finale Beschuldigung.
 
 Beschuldigt wird: ${beschuldigt?.name ?? charakterId} [${charakterId}]
@@ -553,5 +561,15 @@ Schreibe:
 - reaktion: Was der Beschuldigte in diesem Moment sagt, 1-2 Sätze wörtliche Rede, passend zu seinem Charakter.
 Setze richtig auf ${richtig}.
 
-- Kein Urteil und keine Strafe: Ein einzelner Fall endet damit, dass klar ist, was war. Was daraus folgt, entscheidet später ein Gericht - hier nicht.`;
+- Kein Urteil und keine Strafe: Ein einzelner Fall endet damit, dass klar ist, was war. Was daraus folgt, entscheidet später ein Gericht - hier nicht.${
+    gestalt
+      ? `
+
+DIE VERWANDLUNG - DAS EIGENTLICHE ENDE DIESES FALLS
+- In ${taeter?.name ?? "dem Täter"} steckte die ganze Zeit ${gestalt.name}. Jetzt, wo er überführt ist, bricht sie aus ihm heraus.
+- reaktion: die letzten Worte von ${taeter?.name ?? "dem Täter"}, noch als er selbst - erschrocken, weil er nicht weiß, was gerade mit ihm geschieht. Ein bis zwei Sätze.
+- verwandlungSpruch: die ersten Worte von ${gestalt.name}, sobald sie dasteht. Zwei bis vier Sätze wörtliche Rede, ruhig und kalt, ohne Namensprefix. Sie spricht von ${taeter?.name ?? "dem Tier"} in der dritten Person, bedauert nichts und droht niemandem. Kein Gebrüll, kein Blut, nichts, was einem Kind den Abend verdirbt.
+- aufloesung: erklärt am Ende beides - was im Fall geschah UND dass ${taeter?.name ?? "der Täter"} dabei nicht Herr seiner selbst war. Sie sagt auch, was aus ihm wird: Er kommt zu sich, erinnert sich an nichts und braucht jetzt vor allem jemanden, der bei ihm bleibt.`
+      : "\n- verwandlungSpruch bleibt leer: Hier verwandelt sich niemand."
+  }`;
 }
