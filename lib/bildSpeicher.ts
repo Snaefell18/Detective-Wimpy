@@ -5,7 +5,14 @@ import { adminToken } from "./akte";
 import { postJson } from "./api";
 import { istZugriffVerweigert, ladeBilddatei, speichereBilddatei } from "./db";
 import { groesse, verkleinereDataUrl } from "./bildUpload";
-import { FORMAT, FREIGESTELLT, bildAuftrag, type BildArt, type BildEintrag } from "./bildPrompt";
+import {
+  FORMAT,
+  FREIGESTELLT,
+  bildAuftrag,
+  type BildArt,
+  type BildEintrag,
+  type BildStil,
+} from "./bildPrompt";
 
 /**
  * Erzeugte Bilder - derselbe Weg wie bei den gesprochenen Texten.
@@ -114,6 +121,9 @@ async function vorlageVorbereiten(quelle: string): Promise<string> {
  * Mit `vorlage` wird aus dem Malen ein Umzeichnen: Dieselbe Figur, neu
  * eingekleidet. Das ursprüngliche Bild wird dabei nur gelesen; gespeichert
  * wird ein neues unter einer neuen Id.
+ *
+ * `stil` entscheidet über die Handschrift - naiv wie bisher oder erwachsener,
+ * aber weiterhin gezeichnet.
  */
 export async function bildErzeugen(
   art: BildArt,
@@ -121,13 +131,14 @@ export async function bildErzeugen(
   wunsch: string,
   /** Pfad oder data:-URL des Bildes, das als Vorlage dient. */
   vorlage?: string,
+  stil: BildStil = "naiv",
 ): Promise<{ wert: string; daten: string }> {
   const mitVorlage = vorlage ? await vorlageVorbereiten(vorlage) : "";
 
   const antwort = await postJson<{ bild: string }>(
     "/api/bild",
     {
-      auftrag: bildAuftrag(art, eintrag, wunsch, Boolean(mitVorlage)),
+      auftrag: bildAuftrag(art, eintrag, wunsch, Boolean(mitVorlage), stil),
       format: FORMAT[art],
       freigestellt: FREIGESTELLT[art],
       vorlage: mitVorlage,

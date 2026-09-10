@@ -68,11 +68,26 @@ export function StammdatenBereich({
   const [erfunden, setErfunden] = useState<Item | null>(null);
   /** Läuft gerade ein Erfinden-Aufruf? */
   const [erfindet, setErfindet] = useState(false);
+  /**
+   * Tierart, auf die das nächste erfundene Ding hindeuten soll.
+   *
+   * Leer heißt: auf keine. Steht etwas drin, bekommt der Gegenstand eine
+   * Eigenheit, die zu dieser Art gehört - ohne sie beim Namen zu nennen. Der
+   * Spieler soll selbst darauf kommen.
+   */
+  const [dingTier, setDingTier] = useState("");
   /** Der Bildschirm für eine ganze Stadt. */
   const [stadtOffen, setStadtOffen] = useState(false);
   /** Bilder, die schon im Laden hängen - sie sind nicht frei. */
   const [ladenBilder, setLadenBilder] = useState<string[]>([]);
   const [alleZeigen, setAlleZeigen] = useState(false);
+
+  /** Die Tierarten, die es schon gibt - als Vorschlagsliste beim Erfinden. */
+  const tierarten = [
+    ...new Set(
+      stammdaten.charaktere.map((c) => (c.tierart ?? "").trim()).filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "de"));
 
   const eintraege: (Character | Location | Item)[] =
     art === "charaktere"
@@ -150,6 +165,7 @@ export function StammdatenBereich({
       const vorschlag = await erfindeDing(
         stammdaten.items.map((i) => i.name),
         "",
+        dingTier.trim(),
       );
       setNeu(false);
       setAusBild(null);
@@ -254,6 +270,31 @@ export function StammdatenBereich({
           </button>
         )}
       </div>
+
+      {art === "items" && (
+        <label className="feld">
+          <span className="leise">
+            Soll das Ding auf ein Tier hindeuten? (leer = auf keines)
+          </span>
+          <input
+            list="tierarten"
+            value={dingTier}
+            onChange={(e) => setDingTier(e.target.value)}
+            placeholder="z.B. Igel, Reiher, Dachs"
+            maxLength={60}
+          />
+          <datalist id="tierarten">
+            {tierarten.map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
+          <span className="leise klein">
+            Der Gegenstand bekommt dann eine Eigenheit, die zu so einem Tier
+            passt - die Tierart selbst steht nirgends. Das muss der Spieler
+            selbst herausfinden.
+          </span>
+        </label>
+      )}
 
       {stadtOffen && art === "orte" && (
         <StadtErfinden

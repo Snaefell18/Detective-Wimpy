@@ -17,8 +17,17 @@ export function buildDingPrompt(args: {
   wunsch?: string;
   reifegrad?: Reifegrad;
   absurditaet?: Absurditaet;
+  /**
+   * Auf welche Tierart das Ding hindeuten soll - leer heißt: auf keine.
+   *
+   * Gemeint ist ein stummer Hinweis, kein Schild: Das Ding trägt eine
+   * Eigenheit, die zu dieser Art gehört, und der Name der Art fällt nirgends.
+   * So bleibt es im Spiel eine Spur, über die man nachdenken muss.
+   */
+  tier?: string;
 }): string {
   const { vorhanden, wunsch } = args;
+  const tier = args.tier?.trim() ?? "";
 
   return `Erfinde einen einzelnen Gegenstand für ein Detektivspiel.
 
@@ -35,6 +44,16 @@ ANFORDERUNGEN
 - Nichts Modernes, das aus der Zeit fällt (keine Handys, keine Computer), und nichts Gefährliches: keine Waffen, kein Blut, nichts Verletzendes.
 - Kein Name eines Tieres, keiner Marke, keiner echten Person.
 ${
+  tier
+    ? `\nDEUTET AUF: ${tier}
+Der Gegenstand soll auf diese Tierart hindeuten - stumm, nicht auf einem Schild.
+- Er trägt genau eine Eigenheit, die zu einem solchen Tier passt und zu kaum einem anderen: ein Maß, eine Form, eine Abnutzung, ein Rest, ein Geruch, eine Öffnung an ungewöhnlicher Stelle.
+- Diese Eigenheit steht in der Beschreibung, als bloße Beobachtung. Nicht erklären, was sie bedeutet, und nicht schreiben, wem das Ding gehört.
+- Das Wort "${tier}" darf weder im Namen noch in der Beschreibung vorkommen, auch nicht als Teil eines anderen Wortes und auch nicht als verwandtes Wort. Wer die Beschreibung liest, muss selbst darauf kommen.
+- Das Ding bleibt trotzdem ein gewöhnlicher Gegenstand, den auch jemand anders in die Hand nehmen könnte.
+`
+    : ""
+}${
   vorhanden.length
     ? `\nDAS GIBT ES SCHON - erfinde etwas anderes:\n${vorhanden.slice(0, 120).join(", ")}`
     : ""

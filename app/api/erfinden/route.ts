@@ -27,6 +27,8 @@ type Body = {
   vorhanden?: string[];
   /** Freier Wunsch aus dem Menü. */
   wunsch?: string;
+  /** Nur bei "ding": Tierart, auf die das Ding stumm hindeuten soll. */
+  tier?: string;
   /** Nur bei "stadt": Wunschname und wie viele Orte. */
   stadt?: string;
   anzahl?: number;
@@ -108,7 +110,11 @@ export async function POST(request: Request) {
     }
 
     const antwort = await getAnthropic().messages.create(
-      optionen(buildDingPrompt({ vorhanden, wunsch }), zodOutputFormat(DingSchema), 3000),
+      optionen(
+        buildDingPrompt({ vorhanden, wunsch, tier: String(body.tier ?? "").slice(0, 60) }),
+        zodOutputFormat(DingSchema),
+        3000,
+      ),
       budget(30, 1),
     );
 

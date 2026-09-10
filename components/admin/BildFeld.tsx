@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bild } from "@/components/Bild";
-import { auftragReicht, FREIGESTELLT, type BildArt, type BildEintrag } from "@/lib/bildPrompt";
+import {
+  auftragReicht,
+  BILD_STILE,
+  FREIGESTELLT,
+  istBildStil,
+  type BildArt,
+  type BildEintrag,
+  type BildStil,
+} from "@/lib/bildPrompt";
 import { bildErzeugen, istGespeichertesBild } from "@/lib/bildSpeicher";
 import { pruefeFreistellung } from "@/lib/bildPruefung";
 
@@ -10,13 +18,38 @@ import { pruefeFreistellung } from "@/lib/bildPruefung";
  * Das Bild eines Eintrags: von Hand hinterlegen oder erzeugen lassen.
  *
  * Erzeugt wird aus dem, was oben im Formular steht, plus einem freien Feld
- * für Wünsche ans Aussehen. Der Stil liegt fest (lib/bildPrompt.ts), damit
- * alles zusammenpasst; Format und Größe stimmen von selbst. Das fertige Bild
- * landet in der Datenbank, der Eintrag merkt sich nur "bild:<id>".
+ * für Wünsche ans Aussehen. Die Handschrift wird gewählt - naiv wie im
+ * Kinderbuch oder erwachsener, aber weiterhin gezeichnet (lib/bildPrompt.ts);
+ * Format und Größe stimmen von selbst. Das fertige Bild landet in der
+ * Datenbank, der Eintrag merkt sich nur "bild:<id>".
+ *
+ * Die zuletzt gewählte Handschrift bleibt gemerkt. Wer eine ganze Stadt
+ * durchzeichnet, will sie nicht bei jedem Bild neu anklicken - und ein
+ * gemischter Stapel sähe zusammengewürfelt aus.
  *
  * Ohne eingerichteten Schlüssel ändert sich nichts: Der Knopf sagt, was
  * fehlt, und der Pfad lässt sich weiterhin von Hand eintragen.
  */
+/** Wo die zuletzt gewählte Handschrift liegt - nur auf diesem Gerät. */
+const STIL_KEY = "wimpy.bildstil";
+
+const gemerkterStil = (): BildStil => {
+  try {
+    const roh = window.localStorage.getItem(STIL_KEY);
+    return istBildStil(roh) ? roh : "naiv";
+  } catch {
+    return "naiv";
+  }
+};
+
+const stilMerken = (stil: BildStil): void => {
+  try {
+    window.localStorage.setItem(STIL_KEY, stil);
+  } catch {
+    // Ohne Speicher steht beim nächsten Mal wieder der Stil des Hauses da.
+  }
+};
+
 export function BildFeld({
   wert,
   vorschlag,
@@ -38,12 +71,22 @@ export function BildFeld({
   vorlage?: { quelle: string; name: string };
 }) {
   const [wunsch, setWunsch] = useState("");
+  const [stil, setStil] = useState<BildStil>("naiv");
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [frisch, setFrisch] = useState<string | null>(null);
   const [warnung, setWarnung] = useState<string | null>(null);
   /** Vorlage benutzen? Bei einer Version ist das der Sinn der Sache. */
   const [mitVorlage, setMitVorlage] = useState(true);
+
+  // Erst nach dem ersten Rendern lesen: Auf dem Server gibt es keinen Speicher,
+  // und ein Unterschied zwischen beiden Seiten würde React zu Recht bemängeln.
+  useEffect(() => setStil(gemerkterStil()), []);
+
+  const waehleStil = (neu: BildStil) => {
+    setStil(neu);
+    stilMerken(neu);
+  };
 
   const reicht = auftragReicht(art, eintrag, wunsch);
   const benutzt = vorlage?.quelle && mitVorlage ? vorlage.quelle : undefined;
@@ -53,7 +96,13 @@ export function BildFeld({
     setFehler(null);
     setWarnung(null);
     try {
-      const { wert: neu, daten } = await bildErzeugen(art, eintrag, wunsch.trim(), benutzt);
+      const { wert: neu, daten } = await bildErzeugen(
+        art,
+        eintrag,
+        wunsch.trim(),
+        benutzt,
+        stil,
+      );
       onAendern(neu);
       setFrisch(daten);
 
@@ -109,11 +158,29 @@ export function BildFeld({
         </>
       )}
 
+      <div className="feld">
+        <span className="leise">Handschrift</span>
+        <div className="wahl-reihe">
+          {BILD_STILE.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="wahl-chip"
+              data-aktiv={stil === s.id}
+              onClick={() => waehleStil(s.id)}
+            >
+              <strong>{s.label}</strong>
+              <span className="leise klein">{s.hinweis}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <label className="feld">
         <span className="leise">
           {benutzt
             ? "Was ist anders? (der Rest bleibt wie auf der Vorlage)"
-            : "Wie soll es aussehen? (Farben, Kleidung, Licht, Details - der Comicstil steht fest)"}
+            : "Wie soll es aussehen? (Farben, Kleidung, Licht, Details - gezeichnet bleibt es in jedem Fall)"}
         </span>
         <textarea
           rows={2}

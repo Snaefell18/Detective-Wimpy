@@ -3,11 +3,13 @@
  * müssen ankommen, und leere Felder dürfen keine leeren Zeilen hinterlassen.
  */
 import {
+  BILD_STILE,
   FORMAT,
   FREIGESTELLT,
   STIL,
   auftragReicht,
   bildAuftrag,
+  istBildStil,
 } from "../lib/bildPrompt.ts";
 
 let fehlgeschlagen = 0;
@@ -104,6 +106,42 @@ console.log("\n7. Eine Version desselben Tiers");
   pruefe("der Wunsch bleibt trotzdem stehen", mit.includes("Zusätzliche Wünsche: als Dämon"));
   pruefe("der Vorlagensatz kommt vor dem Wunsch",
     mit.indexOf("Vorlage ist die mitgeschickte") < mit.indexOf("Zusätzliche Wünsche"));
+}
+
+console.log("\n8. Die zweite Handschrift");
+{
+  pruefe("es gibt beide zur Auswahl", BILD_STILE.map((s) => s.id).join(",") === "naiv,erwachsen");
+  pruefe("jede hat einen Namen", BILD_STILE.every((s) => s.label && s.hinweis));
+  pruefe("bekannte Stile werden erkannt", istBildStil("erwachsen") && istBildStil("naiv"));
+  pruefe("erfundene nicht", !istBildStil("fotorealistisch") && !istBildStil(null));
+
+  const naiv = bildAuftrag("charaktere", { name: "Mikkeli" }, "", false, "naiv");
+  const erwachsen = bildAuftrag("charaktere", { name: "Mikkeli" }, "", false, "erwachsen");
+  pruefe("ohne Angabe bleibt es der Stil des Hauses",
+    bildAuftrag("charaktere", { name: "Mikkeli" }) === naiv);
+  pruefe("naiv ist der alte Stil", naiv.startsWith(STIL));
+  pruefe("erwachsen ist ein anderer", !erwachsen.startsWith(STIL));
+  pruefe("und steht ganz oben", erwachsen.startsWith("Erwachsene Illustration"));
+
+  // Der Sinn der Sache: ernster, aber weiterhin gezeichnet und nicht düster.
+  pruefe("von Hand gezeichnet", /von Hand gezeichnet/.test(erwachsen));
+  pruefe("kein Foto", /Keine Fotorealistik/.test(erwachsen));
+  pruefe("kein 3D", /kein 3D-Rendering/.test(erwachsen));
+  pruefe("nicht düster oder blutig", /niemals düster/.test(erwachsen));
+  pruefe("und keine Schrift", /keine Schrift/i.test(erwachsen));
+
+  // Der Nachklang gehört zum Stil - sonst zöge der Wunsch am Ende dagegen.
+  pruefe("der Nachklang passt zum Stil", erwachsen.trimEnd().endsWith("geht allen anderen Angaben vor."));
+  pruefe("und nennt die erwachsene Handschrift", /erwachsenen Illustration/.test(erwachsen));
+  pruefe("der naive Nachklang taucht dort nicht auf", !/naiven Comicstil/.test(erwachsen));
+
+  // Alles andere bleibt, wie es war.
+  const ort = bildAuftrag("orte", { name: "Hafen", stadt: "Muschelbach" }, "Regen", false, "erwachsen");
+  pruefe("der Rahmen bleibt", /Ein Schauplatz ohne Figuren/.test(ort));
+  pruefe("die Felder bleiben", ort.includes("Stadt: Muschelbach"));
+  pruefe("der Wunsch bleibt", ort.includes("Zusätzliche Wünsche: Regen"));
+  const ding = bildAuftrag("items", { name: "Zimtdose" }, "", false, "erwachsen");
+  pruefe("Freistellung gilt weiter", /vollständig durchsichtig/.test(ding));
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

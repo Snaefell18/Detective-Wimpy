@@ -17,11 +17,16 @@ export type StadtVorschlag = {
   orte: { name: string; atmosphaere: string; beschreibung: string }[];
 };
 
-/** Ein einzelner Gegenstand. `vorhanden` verhindert Wiederholungen. */
-export const erfindeDing = (vorhanden: string[], wunsch: string) =>
+/**
+ * Ein einzelner Gegenstand. `vorhanden` verhindert Wiederholungen.
+ *
+ * `tier` ist freiwillig: Steht dort eine Tierart, trägt das Ding eine
+ * Eigenheit, die zu ihr gehört - ohne sie beim Namen zu nennen.
+ */
+export const erfindeDing = (vorhanden: string[], wunsch: string, tier = "") =>
   postJson<DingVorschlag>(
     "/api/erfinden",
-    { art: "ding", vorhanden, wunsch },
+    { art: "ding", vorhanden, wunsch, tier },
     60,
     { "x-admin-token": adminToken() },
   );

@@ -48,6 +48,36 @@ console.log("\n1. Ein Ding bestellen");
   pruefe("der Anfang ist dabei", viele.includes("Ding 0"));
 }
 
+console.log("\n1b. Ein Ding, das auf ein Tier hindeutet");
+{
+  const ohne = buildDingPrompt({ vorhanden: [], wunsch: "" });
+  pruefe("ohne Angabe kein Hinweis", !ohne.includes("DEUTET AUF"));
+
+  const p = buildDingPrompt({ vorhanden: [], wunsch: "", tier: "Igel" });
+  pruefe("die Tierart steht drin", p.includes("DEUTET AUF: Igel"));
+  pruefe("aber stumm", p.includes("stumm, nicht auf einem Schild"));
+  pruefe("genau eine Eigenheit", p.includes("genau eine Eigenheit"));
+  pruefe("als bloße Beobachtung", p.includes("als bloße Beobachtung"));
+  pruefe("ohne Erklärung", p.includes("Nicht erklären, was sie bedeutet"));
+  pruefe("und ohne Besitzer", p.includes("nicht schreiben, wem das Ding gehört"));
+  pruefe("das Wort selbst ist verboten", p.includes('Das Wort "Igel" darf weder im Namen'));
+  pruefe("auch als Wortteil nicht", p.includes("auch nicht als Teil eines anderen Wortes"));
+  pruefe("der Spieler kommt selbst darauf", p.includes("muss selbst darauf kommen"));
+  pruefe("es bleibt ein gewöhnlicher Gegenstand", p.includes("gewöhnlicher Gegenstand"));
+
+  // Leerzeichen sind keine Angabe.
+  pruefe("nur Leerzeichen zählen nicht",
+    !buildDingPrompt({ vorhanden: [], wunsch: "", tier: "   " }).includes("DEUTET AUF"));
+
+  // Der Rest der Bestellung bleibt unangetastet.
+  const mit = buildDingPrompt({ vorhanden: ["Lupe"], wunsch: "aus der Bäckerei", tier: "Reiher" });
+  pruefe("Vorhandenes bleibt", mit.includes("Lupe"));
+  pruefe("der Wunsch bleibt", mit.includes("aus der Bäckerei"));
+  pruefe("die Grundregeln bleiben", mit.includes("Ein Ding, kein Lebewesen"));
+  pruefe("der Hinweis kommt vor dem Bestand",
+    mit.indexOf("DEUTET AUF") < mit.indexOf("DAS GIBT ES SCHON"));
+}
+
 console.log("\n2. Eine Stadt bestellen");
 {
   const p = buildStadtPrompt({ stadt: "Muschelbach", anzahl: 5, vorhanden: ["Venedig"], wunsch: "" });

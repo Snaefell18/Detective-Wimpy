@@ -10,18 +10,50 @@
 export type BildArt = "charaktere" | "orte" | "items";
 
 /**
- * Der Stil, der über allem steht - naiv, comichaft, warm.
+ * Zwei Handschriften, unter denen ein Bild entstehen kann.
  *
- * Er wird bewusst nicht aus dem Formular gefüttert: Ein Spiel, in dem jedes
- * Tier aus einer anderen Welt stammt, sieht zusammengewürfelt aus.
+ * "naiv" ist der Stil des Hauses: weich, warm, wie ein Kinderbuch. "erwachsen"
+ * ist derselbe Gedanke eine Etage tiefer - gezeichnet bleibt gezeichnet, aber
+ * ernster: feinere Linien, gedämpfte Farben, Schatten, die etwas verbergen.
+ * Kein Fotorealismus, kein 3D, nichts Grausames; es ist immer noch dieselbe
+ * Stadt, nur später am Abend.
+ *
+ * Gewählt wird beim Erzeugen. Wer nichts wählt, bekommt den Stil des Hauses -
+ * ein Spiel, in dem jedes Tier aus einer anderen Welt stammt, sieht
+ * zusammengewürfelt aus.
  */
-export const STIL =
-  "Naiver Comicstil, kindlich-freundliche Buchillustration: weiche runde Formen, " +
-  "kräftige klare Konturlinien von gleichmäßiger Stärke, flächige warme Farben mit " +
-  "sanften Verläufen, große ausdrucksvolle Augen, freundliche Gesichter, " +
-  "leichte Textur wie von Buntstift. Keine Fotorealistik, kein 3D-Rendering, " +
-  "keine harten Schlagschatten, keine Schrift, keine Buchstaben, keine Zahlen, " +
-  "keine Sprechblasen, keine Rahmen und keine Bildunterschrift.";
+export type BildStil = "naiv" | "erwachsen";
+
+export const BILD_STILE: { id: BildStil; label: string; hinweis: string }[] = [
+  { id: "naiv", label: "Naiv", hinweis: "warm, rund, wie ein Kinderbuch" },
+  { id: "erwachsen", label: "Erwachsener", hinweis: "gezeichnet, aber ernster" },
+];
+
+/** Ist das ein Stil, den es gibt? Für das, was aus dem Speicher zurückkommt. */
+export const istBildStil = (wert: unknown): wert is BildStil =>
+  BILD_STILE.some((s) => s.id === wert);
+
+const STIL_TEXT: Record<BildStil, string> = {
+  naiv:
+    "Naiver Comicstil, kindlich-freundliche Buchillustration: weiche runde Formen, " +
+    "kräftige klare Konturlinien von gleichmäßiger Stärke, flächige warme Farben mit " +
+    "sanften Verläufen, große ausdrucksvolle Augen, freundliche Gesichter, " +
+    "leichte Textur wie von Buntstift. Keine Fotorealistik, kein 3D-Rendering, " +
+    "keine harten Schlagschatten, keine Schrift, keine Buchstaben, keine Zahlen, " +
+    "keine Sprechblasen, keine Rahmen und keine Bildunterschrift.",
+  erwachsen:
+    "Erwachsene Illustration, von Hand gezeichnet: feine, ungleichmäßige Tuschelinien, " +
+    "sparsame Schraffuren, gedämpfte, entsättigte Farben in wenigen Tönen, weiches " +
+    "Licht aus einer Richtung und ruhige, tiefe Schatten. Genauer und ernster als ein " +
+    "Kinderbuch - erzählerisch wie eine gute Graphic Novel, aber niemals düster, " +
+    "blutig oder bedrohlich. Die Figuren bleiben Tiere mit Charakter, keine Fratzen. " +
+    "Keine Fotorealistik, kein 3D-Rendering, keine Airbrush-Optik, keine Schrift, " +
+    "keine Buchstaben, keine Zahlen, keine Sprechblasen, keine Rahmen und keine " +
+    "Bildunterschrift.",
+};
+
+/** Der Stil des Hauses - bleibt der Standard überall dort, wo nichts gewählt wird. */
+export const STIL = STIL_TEXT.naiv;
 
 /**
  * Dieselbe Ansage noch einmal, kurz, ganz am Schluss.
@@ -31,10 +63,18 @@ export const STIL =
  * und das Tier fiele aus dem Spiel heraus. Deshalb hat der Stil das letzte
  * Wort, egal was dazwischen steht.
  */
-export const STIL_NACHKLANG =
-  "Das alles im oben beschriebenen naiven Comicstil: weiche Formen, klare " +
-  "Konturen, flächige warme Farben. Der Stil gilt unbedingt und geht allen " +
-  "anderen Angaben vor.";
+const NACHKLANG_TEXT: Record<BildStil, string> = {
+  naiv:
+    "Das alles im oben beschriebenen naiven Comicstil: weiche Formen, klare " +
+    "Konturen, flächige warme Farben. Der Stil gilt unbedingt und geht allen " +
+    "anderen Angaben vor.",
+  erwachsen:
+    "Das alles in der oben beschriebenen erwachsenen Illustration: feine " +
+    "Tuschelinien, gedämpfte Farben, ruhige Schatten - gezeichnet, nicht " +
+    "fotografiert. Der Stil gilt unbedingt und geht allen anderen Angaben vor.",
+};
+
+export const STIL_NACHKLANG = NACHKLANG_TEXT.naiv;
 
 /** Der Nachsatz für alles, was ohne Hintergrund auskommen muss. */
 export const FREISTELL_NACHKLANG =
@@ -121,6 +161,8 @@ export function bildAuftrag(
   wunsch = "",
   /** true, wenn ein vorhandenes Bild als Vorlage mitgeschickt wird. */
   variante = false,
+  /** Die Handschrift - ohne Angabe der Stil des Hauses. */
+  stil: BildStil = "naiv",
 ): string {
   const teile =
     art === "charaktere"
@@ -141,7 +183,7 @@ export function bildAuftrag(
         : [zeile("Gegenstand", eintrag.name), zeile("Beschreibung", eintrag.beschreibung)];
 
   return [
-    STIL,
+    STIL_TEXT[stil] ?? STIL_TEXT.naiv,
     RAHMEN[art],
     variante ? VARIANTE : "",
     ...teile.filter(Boolean),
@@ -149,7 +191,7 @@ export function bildAuftrag(
     // Der Stil und die Freistellung stehen bewusst noch einmal ganz unten -
     // das Ende einer Beschreibung wiegt schwerer als ihre Mitte.
     FREIGESTELLT[art] ? FREISTELL_NACHKLANG : "",
-    STIL_NACHKLANG,
+    NACHKLANG_TEXT[stil] ?? NACHKLANG_TEXT.naiv,
   ]
     .filter(Boolean)
     .join("\n");
