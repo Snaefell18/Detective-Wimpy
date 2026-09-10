@@ -78,8 +78,16 @@ export async function POST(request: Request) {
     }
     const aufloesung = modellAntwort.daten;
 
-    // Wer der Täter ist, entscheidet der Server - nicht das Modell.
-    const richtig = body.charakterId === fall.taeterId;
+    /*
+     * Wer der Täter ist, entscheidet der Server - nicht das Modell. Und bei
+     * zwei Tätern liegt richtig, wer einen von beiden benennt: Es ist
+     * dieselbe Tat, und die Auflösung nennt ohnehin beide.
+     */
+    const mittaeterId =
+      fall.mittaeterId && fall.mittaeterId !== fall.taeterId ? fall.mittaeterId : "";
+    const richtig =
+      body.charakterId === fall.taeterId ||
+      (Boolean(mittaeterId) && body.charakterId === mittaeterId);
 
     /*
      * Steckte in ihm etwas, kommt es jetzt heraus - aber nur, wenn Wimpy
@@ -96,6 +104,7 @@ export async function POST(request: Request) {
       aufloesung: sauberText(aufloesung.aufloesung),
       reaktion: sauberText(aufloesung.reaktion),
       taeterId: fall.taeterId,
+      mittaeterId: mittaeterId || undefined,
       verwandlung: gestalt
         ? {
             wirt,

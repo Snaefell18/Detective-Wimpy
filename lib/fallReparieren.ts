@@ -47,11 +47,11 @@ const zaehle = (spuren: CaseClue[]) => {
 };
 
 /** Der stärkste Verdacht neben dem Täter - auf den läuft der Spieler sonst zu. */
-function groessterRivale(spuren: CaseClue[], taeterId: string) {
+function groessterRivale(spuren: CaseClue[], taeterIds: string[]) {
   let id: string | null = null;
   let anzahl = 0;
   for (const [wer, wieviele] of zaehle(spuren)) {
-    if (wer === taeterId) continue;
+    if (taeterIds.includes(wer)) continue;
     if (wieviele > anzahl) {
       id = wer;
       anzahl = wieviele;
@@ -65,11 +65,25 @@ export function repariereFall(args: {
   verdaechtige: SuspectBrief[];
   besetzung: Character[];
   taeterId: string;
+  /** Ein zweiter Täter derselben Tat - er zählt überall wie der erste. */
+  mittaeterId?: string;
   ortIds: string[];
   itemIds: string[];
 }): Reparatur {
   const { besetzung, taeterId, ortIds, itemIds } = args;
   const aenderungen: string[] = [];
+
+  /*
+   * Zwei Täter zählen als einer.
+   *
+   * Für die Lösbarkeit ist es dieselbe Tat: Eine Spur auf den einen ist
+   * genauso ein Treffer wie eine auf den anderen, und der stärkste Verdacht
+   * muss auf dem Paar liegen, nicht auf einem Dritten.
+   */
+  const mittaeterId =
+    args.mittaeterId && args.mittaeterId !== taeterId ? args.mittaeterId : "";
+  const taeterIds = [taeterId, ...(mittaeterId ? [mittaeterId] : [])];
+  const istTaeter = (id: string) => taeterIds.includes(id);
 
   const verdaechtigenIds = besetzung.filter((c) => !c.istDetektiv).map((c) => c.id);
   const taeterName = besetzung.find((c) => c.id === taeterId)?.name ?? taeterId;
@@ -133,7 +147,7 @@ export function repariereFall(args: {
   /* --- 3. Widerspruch: irreführend, zeigt aber auf den Täter --------- */
 
   spuren = spuren.map((s) => {
-    if (s.fuehrtInDieIrre && s.zeigtAufCharakterId === taeterId) {
+    if (s.fuehrtInDieIrre && istTaeter(s.zeigtAufCharakterId)) {
       aenderungen.push(
         `Spur „${s.itemId}“ zeigt auf den Täter und galt trotzdem als falsche Fährte - jetzt echt.`,
       );
@@ -157,7 +171,7 @@ export function repariereFall(args: {
   // genau eine Spur, und für den strikten Vorsprung aus Schritt 5 müssten
   // alle anderen bei null liegen - dann bliebe ein Fall mit einer einzigen
   // Spur. Zeigt nichts auf den Täter, ist der Entwurf verdorben.
-  if (!spuren.some((s) => s.zeigtAufCharakterId === taeterId)) {
+  if (!spuren.some((s) => istTaeter(s.zeigtAufCharakterId))) {
     return {
       spuren,
       verdaechtige,
@@ -173,8 +187,8 @@ export function repariereFall(args: {
   // allein nicht zu entscheiden.
   let schutz = spuren.length + 1;
   while (schutz-- > 0) {
-    const taeterSpuren = zaehle(spuren).get(taeterId) ?? 0;
-    const rivale = groessterRivale(spuren, taeterId);
+    const taeterSpuren = spuren.filter((s) => istTaeter(s.zeigtAufCharakterId)).length;
+    const rivale = groessterRivale(spuren, taeterIds);
     if (!rivale.id || rivale.anzahl < taeterSpuren) break;
 
     // Zuerst die falschen Fährten des Rivalen - dafür sind sie da, und
@@ -193,8 +207,8 @@ export function repariereFall(args: {
     spuren = spuren.filter((_, i) => i !== index);
   }
 
-  const taeterSpuren = zaehle(spuren).get(taeterId) ?? 0;
-  const rivale = groessterRivale(spuren, taeterId);
+  const taeterSpuren = spuren.filter((s) => istTaeter(s.zeigtAufCharakterId)).length;
+  const rivale = groessterRivale(spuren, taeterIds);
   if (taeterSpuren === 0 || (rivale.id !== null && rivale.anzahl >= taeterSpuren)) {
     return {
       spuren,
@@ -226,10 +240,17 @@ export function pruefeLoesbarkeit(args: {
   spuren: CaseClue[];
   besetzung: Character[];
   taeterId: string;
+  /** Ein zweiter Täter derselben Tat - er zählt wie der erste. */
+  mittaeterId?: string;
 }): string[] {
   const { spuren, besetzung, taeterId } = args;
   const probleme: string[] = [];
   const name = (id: string) => besetzung.find((c) => c.id === id)?.name ?? id;
+  const mittaeterId =
+    args.mittaeterId && args.mittaeterId !== taeterId ? args.mittaeterId : "";
+  const taeterIds = [taeterId, ...(mittaeterId ? [mittaeterId] : [])];
+  const istTaeter = (id: string) => taeterIds.includes(id);
+  const beide = mittaeterId ? `${name(taeterId)} und ${name(mittaeterId)}` : name(taeterId);
 
   const doppelt = spuren
     .map((s) => s.itemId)
@@ -239,23 +260,21 @@ export function pruefeLoesbarkeit(args: {
   }
 
   for (const s of spuren) {
-    if (s.fuehrtInDieIrre && s.zeigtAufCharakterId === taeterId) {
+    if (s.fuehrtInDieIrre && istTaeter(s.zeigtAufCharakterId)) {
       probleme.push(
         `„${s.itemId}“ zeigt auf den Täter, gilt aber als falsche Fährte - das bestraft richtiges Kombinieren.`,
       );
     }
   }
 
-  const taeterSpuren = zaehle(spuren).get(taeterId) ?? 0;
+  const taeterSpuren = spuren.filter((s) => istTaeter(s.zeigtAufCharakterId)).length;
   if (taeterSpuren === 0) {
-    probleme.push(`Keine Spur zeigt auf ${name(taeterId)} - der Fall ist nicht lösbar.`);
+    probleme.push(`Keine Spur zeigt auf ${beide} - der Fall ist nicht lösbar.`);
   } else {
-    const rivale = groessterRivale(spuren, taeterId);
+    const rivale = groessterRivale(spuren, taeterIds);
     if (rivale.id && rivale.anzahl >= taeterSpuren) {
       probleme.push(
-        `Auf ${name(rivale.id)} zeigen genauso viele Spuren wie auf ${name(
-          taeterId,
-        )} - auf Indizien allein ist der Fall nicht zu entscheiden.`,
+        `Auf ${name(rivale.id)} zeigen genauso viele Spuren wie auf ${beide} - auf Indizien allein ist der Fall nicht zu entscheiden.`,
       );
     }
   }

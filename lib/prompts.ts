@@ -169,19 +169,43 @@ function regeln(vorgaben?: Vorgaben | null): string {
  *
  * Schritt 1: Das Gerüst - was ist passiert, wo, warum.
  */
+/**
+ * Zwei Täter, eine Tat.
+ *
+ * Der Block steht in allen drei Schritten der Fallerzeugung: Ein zweiter
+ * Schuldiger ändert Motiv, Alibis und Spuren gleichermaßen - stünde er nur
+ * in einem davon, entstünde ein Fall, in dem einer von beiden grundlos
+ * danebensteht.
+ */
+export function mittaeterRegeln(erster: string, zweiter: string): string {
+  return `
+ZWEI TÄTER - SIE HABEN ES ZUSAMMEN GETAN
+- ${erster} und ${zweiter} waren beide dabei. Es ist EINE Tat, kein Täter und kein Helfer: Ohne den einen hätte der andere es nicht geschafft.
+- Beide haben etwas davon, und ihr Motiv hängt zusammen - eine gemeinsame Not, eine alte Abmachung, eine Sache, die sie beide betrifft.
+- Beide lügen. Ihre Alibis stützen sich gegenseitig und passen fast zu gut zusammen: dieselbe Uhrzeit, dieselbe Formulierung, ein Detail, das beide gleich falsch erinnern.
+- Keiner verrät den anderen von sich aus. Unter Druck deckt jeder zuerst den anderen - das ist der Riss, an dem man ansetzen kann.
+- Die Spuren zeigen auf beide, nicht nur auf einen: Was am Tatort liegt, gehört mal dem einen, mal dem anderen.
+- Aufgelöst wird die Sache, sobald einer von beiden benannt ist - dann kommt der andere mit heraus.`;
+}
+
 export function buildGeruestPrompt(
   besetzung: Character[],
   stadt: string,
   taeterId: string,
   vorgaben?: Vorgaben | null,
+  /** Ein zweiter Täter derselben Tat - leer heißt: einer allein. */
+  mittaeterId = "",
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
+  const zweiter = besetzung.find((c) => c.id === mittaeterId && c.id !== taeterId);
 
   return `Erfinde das Gerüst eines neuen Falls für Detective Wimpy - er spielt in ${stadt}.
 
 DER TÄTER STEHT BEREITS FEST: ${taeter.name} [${taeter.id}].
-Baue den Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv und Vorgehen.
+Baue den Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv und Vorgehen.${
+    zweiter ? `\n${mittaeterRegeln(taeter.name, zweiter.name)}` : ""
+  }
 
 Anforderungen:
 - Ein Tatort aus der Schauplatzliste.
@@ -189,7 +213,9 @@ Anforderungen:
 - titel: kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
 - tatbeschreibung: zwei bis vier Sätze, die der Spieler zu Beginn liest. Sie verraten den Täter nicht.
 - tathergang: was wirklich geschah, Schritt für Schritt. Das sieht nur der Server.
-- motiv: warum ${taeter.name} es getan hat - nachvollziehbar, nicht "böse".
+- motiv: warum ${
+    zweiter ? `${taeter.name} und ${zweiter.name} es getan haben` : `${taeter.name} es getan hat`
+  } - nachvollziehbar, nicht "böse".
 - schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
 - introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Kein "Kapitel", keine Anrede, nur Atmosphäre.
 ${regeln(vorgaben)}
@@ -207,20 +233,28 @@ export function buildVerdaechtigePrompt(
   titel: string,
   tathergang: string,
   vorgaben?: Vorgaben | null,
+  mittaeterId = "",
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
+  const zweiter = besetzung.find((c) => c.id === mittaeterId && c.id !== taeterId);
   const verdaechtige = besetzung.filter((c) => !c.istDetektiv);
 
   return `Der Fall steht schon fest. Fülle jetzt die Verdächtigen aus.
 
 FALL: ${titel}
 WAS WIRKLICH GESCHAH: ${tathergang}
-TÄTER: ${taeter?.name} [${taeterId}]
+TÄTER: ${taeter?.name} [${taeterId}]${
+    zweiter
+      ? `\nZWEITER TÄTER: ${zweiter.name} [${zweiter.id}]\n${mittaeterRegeln(taeter?.name ?? "", zweiter.name)}`
+      : ""
+  }
 
 Anforderungen:
 - Für jeden dieser Verdächtigen genau einen Eintrag: ${verdaechtige.map((c) => `${c.name} [${c.id}]`).join(", ")}.
 - Jeder hat ein Alibi, ein kleines Geheimnis (auch die Unschuldigen!) und einen Aufenthaltsort aus der Schauplatzliste. Verteile sie auf verschiedene Schauplätze.
-- Das Alibi des Täters ist gelogen. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
+- Das Alibi des Täters ist gelogen${
+    zweiter ? `, das von ${zweiter.name} ebenfalls - und beide stützen einander` : ""
+  }. Ein bis zwei Unschuldige dürfen ebenfalls flunkern, weil sie ihr Geheimnis schützen.
 - Die Geheimnisse der Unschuldigen haben nichts mit der Tat zu tun, machen sie aber verdächtig.
 - Alibi und Geheimnis passen zu den Werten des Tieres.
 - Beziehungen wirken mit: Wer einen besten Freund unter den Verdächtigen hat, baut ihn ins eigene Alibi ein oder deckt ihn. Wer einen Erzfeind hat, hat auffällig oft eine Geschichte parat, die gegen diesen spricht.
@@ -309,6 +343,8 @@ export function buildSpurenPrompt(
    * hier stehen sie, damit das Modell weiß, worauf es hinschreibt.
    */
   ziel: { min: number; max: number } = { min: 4, max: 6 },
+  /** Ein zweiter Täter derselben Tat - leer heißt: einer allein. */
+  mittaeterId = "",
 ): string {
   const name = (id: string) => besetzung.find((c) => c.id === id)?.name ?? id;
 
@@ -328,7 +364,11 @@ ACHTUNG: Der letzte Anlauf war nicht brauchbar - zu wenige Spuren, oder alle an 
 
 FALL: ${titel}
 WAS WIRKLICH GESCHAH: ${tathergang}
-TÄTER: ${name(taeterId)} [${taeterId}]
+TÄTER: ${name(taeterId)} [${taeterId}]${
+    mittaeterId && mittaeterId !== taeterId
+      ? `\nZWEITER TÄTER: ${name(mittaeterId)} [${mittaeterId}]\n${mittaeterRegeln(name(taeterId), name(mittaeterId))}`
+      : ""
+  }
 
 DIE VERDÄCHTIGEN
 ${verdaechtige.map((v) => `- ${name(v.charakterId)} [${v.charakterId}], jetzt bei [${v.aufenthaltsort}], behauptet: ${v.alibi}`).join("\n")}
@@ -336,7 +376,11 @@ ${verdaechtige.map((v) => `- ${name(v.charakterId)} [${v.charakterId}], jetzt be
 Anforderungen:
 - ${ziel.min} bis ${ziel.max} Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort. Nicht mehr und nicht weniger.
 - Verteile sie über die Orte: An einem Ort liegen höchstens zwei, und mindestens drei verschiedene Orte haben etwas (bei weniger Orten eben alle). Wer sich irgendwo umsieht, soll dort auch etwas finden können.
-- Mindestens zwei Spuren zeigen auf den Täter dieses Falls, mindestens eine führt in die Irre.${
+- Mindestens zwei Spuren zeigen auf ${
+    mittaeterId && mittaeterId !== taeterId
+      ? `die beiden Täter - mindestens eine auf jeden von ihnen`
+      : "den Täter dieses Falls"
+  }, mindestens eine führt in die Irre.${
     saga ? "\n- Dazu kommen ein bis zwei Stücke mit Fernwirkung (siehe unten). Sie zählen nicht zu den Spuren auf den Täter dieses Falls." : ""
   }
 - ${SCHWIERIGKEIT_TEXT[vorgaben?.schwierigkeit ?? "mittel"]}
@@ -394,7 +438,17 @@ export function buildTalkPrompt(args: {
   if (!charakter) throw new Error(`Unbekannter Charakter: ${charakterId}`);
 
   const brief = fall.verdaechtige.find((v) => v.charakterId === charakterId);
-  const istTaeter = fall.taeterId === charakterId;
+  const istTaeter =
+    fall.taeterId === charakterId ||
+    (Boolean(fall.mittaeterId) && fall.mittaeterId === charakterId);
+  /** Der andere von beiden - ihn deckt man, so lange es geht. */
+  const komplize = istTaeter
+    ? fall.besetzung.find(
+        (c) =>
+          c.id !== charakterId &&
+          (c.id === fall.taeterId || c.id === fall.mittaeterId),
+      )
+    : undefined;
   const ort = findeOrt(fall.orte, ortId);
 
   const spurenHier = fall.spuren.filter(
@@ -465,7 +519,11 @@ Tat: ${fall.tatbeschreibung}
 Tatort: ${findeOrt(fall.orte, fall.tatort)?.name ?? fall.tatort} in ${fall.stadt}
 ${
   istTaeter
-    ? `DU BIST DER TÄTER. Motiv: ${fall.motiv}. Hergang: ${fall.tathergang}. Du gibst es niemals von selbst zu und lenkst geschickt ab - aber du verhedderst dich in Details, wenn Wimpy dich mit passenden Spuren konfrontiert.`
+    ? `DU BIST DER TÄTER. Motiv: ${fall.motiv}. Hergang: ${fall.tathergang}. Du gibst es niemals von selbst zu und lenkst geschickt ab - aber du verhedderst dich in Details, wenn Wimpy dich mit passenden Spuren konfrontiert.${
+        komplize
+          ? ` IHR WART ZU ZWEIT: ${komplize.name} war dabei und hat mitgemacht. Ihr habt euch abgesprochen, und du deckst ${komplize.name} noch vor dir selbst - lieber nimmst du etwas auf dich, als ihn zu nennen. Erst wenn Wimpy euch beide in der Hand hat, bricht das auf.`
+          : ""
+      }`
     : `Du bist unschuldig, weißt aber nicht, wer es war. Du hast einen vagen Verdacht und schützt vor allem dein eigenes Geheimnis.`
 }
 Dein Alibi: ${brief?.alibi ?? "keins"}${brief?.alibiIstGelogen ? " (gelogen!)" : ""}
@@ -523,7 +581,10 @@ export function buildAccusePrompt(args: {
   const { fall, charakterId, begruendung, gefundeneSpuren } = args;
   const beschuldigt = fall.besetzung.find((c) => c.id === charakterId);
   const taeter = fall.besetzung.find((c) => c.id === fall.taeterId);
-  const richtig = charakterId === fall.taeterId;
+  // Zwei Täter, eine Tat: Wer einen von beiden benennt, liegt richtig.
+  const richtig =
+    charakterId === fall.taeterId ||
+    (Boolean(fall.mittaeterId) && charakterId === fall.mittaeterId);
 
   /*
    * Steckt im Täter eine Gestalt, ist die richtige Beschuldigung nicht das
@@ -532,11 +593,20 @@ export function buildAccusePrompt(args: {
    * bleibt sie, wo sie ist, und niemand erfährt davon.
    */
   const gestalt = richtig && fall.besessenheit ? fall.besessenheit.daemon : null;
+  /** Der zweite Täter - er kommt mit heraus, sobald einer benannt ist. */
+  const zweiter = fall.mittaeterId
+    ? fall.besetzung.find((c) => c.id === fall.mittaeterId && c.id !== fall.taeterId)
+    : undefined;
 
   return `Wimpy stellt seine finale Beschuldigung.
 
 Beschuldigt wird: ${beschuldigt?.name ?? charakterId} [${charakterId}]
-Der echte Täter ist: ${taeter?.name ?? fall.taeterId} [${fall.taeterId}]
+Der echte Täter ist: ${taeter?.name ?? fall.taeterId} [${fall.taeterId}]${
+    zweiter
+      ? `
+UND ${zweiter.name} [${zweiter.id}] war dabei - die beiden haben es zusammen getan. Wer einen von ihnen benennt, hat recht.`
+      : ""
+  }
 Die Beschuldigung ist damit ${richtig ? "RICHTIG" : "FALSCH"}.
 
 Fall: ${fall.titel} - ${fall.tatbeschreibung}
@@ -557,7 +627,11 @@ ${
 Wimpys Begründung: ${begruendung || "(keine)"}
 
 Schreibe:
-- aufloesung: Wie Wimpy den Fall auflöst - was wirklich passiert ist, in 3-5 Sätzen, spannend erzählt. Greife dabei die gefundenen Spuren beim Namen auf und sage endlich, was sie bewiesen haben - darauf hat der Spieler die ganze Zeit hingearbeitet. Bei einer falschen Beschuldigung erklärst du, wie der echte Täter davonkommt bzw. entlarvt wird.
+- aufloesung: Wie Wimpy den Fall auflöst - was wirklich passiert ist, in 3-5 Sätzen, spannend erzählt. Greife dabei die gefundenen Spuren beim Namen auf und sage endlich, was sie bewiesen haben - darauf hat der Spieler die ganze Zeit hingearbeitet. Bei einer falschen Beschuldigung erklärst du, wie der echte Täter davonkommt bzw. entlarvt wird.${
+    zweiter
+      ? `\n- ZWEI TÄTER: Die Auflösung nennt beide und sagt, wer was getan hat und warum sie es zusammen taten. Wer nur einen von ihnen beschuldigt hat, liegt trotzdem richtig - der andere kommt hier mit heraus, und das ist der Aha-Moment.`
+      : ""
+  }
 - reaktion: Was der Beschuldigte in diesem Moment sagt, 1-2 Sätze wörtliche Rede, passend zu seinem Charakter.
 Setze richtig auf ${richtig}.
 

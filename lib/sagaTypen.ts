@@ -110,6 +110,24 @@ export type SagaVorgaben = {
    */
   kapitelMusik: string[];
   /**
+   * Verwandlung je Kapitel: die Id einer Dämonenform, leer heißt "keine".
+   *
+   * Steht hier eine, entpuppt sich der Täter dieses Kapitels am Ende als
+   * genau diese Gestalt - nicht gewürfelt, sondern so gewollt. Bis zur
+   * richtigen Beschuldigung ist davon nichts zu sehen außer einer
+   * Kleinigkeit, die niemand erklärt.
+   *
+   * Nur für die Kapitel: Im Finale gilt die Besessenheit der Saga.
+   */
+  kapitelDaemon: string[];
+  /**
+   * Ein zweiter Täter je Kapitel: die Id eines Tiers, leer heißt "einer".
+   *
+   * Die beiden haben die Tat gemeinsam begangen. Beide zu beschuldigen ist
+   * richtig; die Auflösung nennt ohnehin beide.
+   */
+  kapitelMittaeter: string[];
+  /**
    * Wetter je Kapitel: eine Lage, "zufall" oder leer für die Einstellung im
    * Admin-Menü. Das Finale steht an letzter Stelle.
    *
@@ -220,6 +238,8 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelVideos: [],
   kapitelGeschenke: [],
   kapitelMusik: [],
+  kapitelDaemon: [],
+  kapitelMittaeter: [],
   kapitelWetter: [],
   stadt: "zufall",
   staedteWechseln: true,
@@ -243,6 +263,23 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   ortsAnzahl: 5,
   beschuldigungen: 2,
 };
+
+/**
+ * Die Dämonenform für Kapitel `nummer` (1-basiert) - oder leer.
+ *
+ * Das Finale hat keine: Dort gilt die Besessenheit der ganzen Saga, die
+ * ihren eigenen Auftritt vor dem Finale hat.
+ */
+export const daemonFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelDaemon"> | undefined,
+  nummer: number,
+): string => (nummer >= 1 ? (vorgaben?.kapitelDaemon?.[nummer - 1] ?? "").trim() : "");
+
+/** Der zweite Täter für Kapitel `nummer` (1-basiert) - oder leer. */
+export const mittaeterFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelMittaeter"> | undefined,
+  nummer: number,
+): string => (nummer >= 1 ? (vorgaben?.kapitelMittaeter?.[nummer - 1] ?? "").trim() : "");
 
 /**
  * Die durchgehende falsche Fährte dieser Saga - oder null.

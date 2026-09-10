@@ -55,7 +55,11 @@ export function pruefeFall(fall: CaseFile): string[] {
 
   const spuren = fall.spuren ?? [];
   if (spuren.length < 1) fehler.push("Der Fall braucht mindestens eine Spur.");
-  if (!spuren.some((s) => s.zeigtAufCharakterId === fall.taeterId && !s.fuehrtInDieIrre))
+  // Bei zwei Tätern zählt eine Spur auf jeden von beiden - es ist dieselbe Tat.
+  const taeterIds = [fall.taeterId, ...(fall.mittaeterId ? [fall.mittaeterId] : [])];
+  if (
+    !spuren.some((s) => taeterIds.includes(s.zeigtAufCharakterId) && !s.fuehrtInDieIrre)
+  )
     fehler.push("Mindestens eine echte Spur muss auf den Täter zeigen - sonst ist der Fall nicht lösbar.");
 
   const gesehen = new Set<string>();
@@ -80,6 +84,7 @@ export function pruefeFall(fall: CaseFile): string[] {
     spuren,
     besetzung: fall.besetzung ?? [],
     taeterId: fall.taeterId,
+    mittaeterId: fall.mittaeterId,
   })) {
     if (!fehler.includes(problem) && !problem.includes("genauso viele")) {
       fehler.push(problem);
@@ -101,6 +106,7 @@ export function hinweiseZumFall(fall: CaseFile): string[] {
     spuren: fall.spuren ?? [],
     besetzung: fall.besetzung ?? [],
     taeterId: fall.taeterId,
+    mittaeterId: fall.mittaeterId,
   })) {
     if (problem.includes("genauso viele")) hinweise.push(problem);
   }

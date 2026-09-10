@@ -27,6 +27,16 @@ export function ErgebnisScreen({
 }) {
   const taeter = besetzung.find((c) => c.id === ergebnis.taeterId);
   const beschuldigt = besetzung.find((c) => c.id === ergebnis.beschuldigtId);
+  /*
+   * Waren es zwei, stehen auch beide da - und zwar der Beschuldigte zuerst,
+   * wenn er einer von ihnen war. Wer gerade jemanden gestellt hat, will
+   * seinen Namen lesen und nicht den des anderen.
+   */
+  const mittaeter = besetzung.find(
+    (c) => c.id === ergebnis.mittaeterId && c.id !== ergebnis.taeterId,
+  );
+  const beide =
+    mittaeter && beschuldigt?.id === mittaeter.id ? [mittaeter, taeter] : [taeter, mittaeter];
 
   // Blockiert der Browser den Ton trotz Freigabe, kommt hier ein Knopf.
   const [tonBlockiert, setTonBlockiert] = useState(false);
@@ -61,7 +71,17 @@ export function ErgebnisScreen({
           </h1>
 
           <p className="ergebnis-name">
-            Der Täter war <strong>{taeter?.name}</strong> ({taeter?.tierart})
+            {mittaeter ? (
+              <>
+                Sie waren zu zweit: <strong>{beide[0]?.name}</strong> (
+                {beide[0]?.tierart}) und <strong>{beide[1]?.name}</strong> (
+                {beide[1]?.tierart})
+              </>
+            ) : (
+              <>
+                Der Täter war <strong>{taeter?.name}</strong> ({taeter?.tierart})
+              </>
+            )}
           </p>
 
           {tonBlockiert && !laeuft("jubel") && (

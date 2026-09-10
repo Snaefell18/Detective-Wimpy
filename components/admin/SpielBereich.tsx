@@ -13,6 +13,7 @@ import {
   WETTERLAGEN,
   type Einstellungen,
   DAEMON_HAEUFIGKEITEN,
+  MITTAETER_HAEUFIGKEITEN,
   type Wetterlage,
 } from "@/lib/types";
 import type { BereichProps } from "./typen";
@@ -163,6 +164,31 @@ export function SpielBereich({ onMeldung }: BereichProps) {
             className="wahl-chip"
             data-aktiv={(e.daemonEnthuellung ?? "aus") === h.id}
             onClick={() => aendern({ einstellungen: { ...e, daemonEnthuellung: h.id } })}
+          >
+            <strong>{h.label}</strong>
+            <span className="leise klein">{h.hinweis}</span>
+          </button>
+        ))}
+      </div>
+
+      <h2 className="abschnitt">Zwei Täter</h2>
+      <p className="leise">
+        Manchmal war es nicht einer, sondern zwei - dieselbe Tat, zusammen
+        begangen. Beide lügen, ihre Alibis stützen sich gegenseitig, und die
+        Spuren zeigen auf beide. Wer einen von ihnen beschuldigt, hat den Fall
+        gelöst; die Auflösung nennt dann ohnehin beide.
+      </p>
+      <p className="leise klein">
+        Gilt für einzelne Fälle. In einer Saga steht es je Kapitel in den
+        Vorgaben - dort ist es eine Entscheidung und kein Würfelwurf.
+      </p>
+      <div className="wahl-reihe">
+        {MITTAETER_HAEUFIGKEITEN.map((h) => (
+          <button
+            key={h.id}
+            className="wahl-chip"
+            data-aktiv={(e.mittaeter ?? "aus") === h.id}
+            onClick={() => aendern({ einstellungen: { ...e, mittaeter: h.id } })}
           >
             <strong>{h.label}</strong>
             <span className="leise klein">{h.hinweis}</span>

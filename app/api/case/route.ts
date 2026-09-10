@@ -38,8 +38,14 @@ import {
 import type { Bogen } from "@/lib/sagaBogen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
-import { besessen, besetzungFuerKapitel, falscheFaehrteVon } from "@/lib/sagaTypen";
-import { waehleDaemonform } from "@/lib/daemonEnthuellung";
+import {
+  besessen,
+  besetzungFuerKapitel,
+  daemonFuerKapitel,
+  falscheFaehrteVon,
+  mittaeterFuerKapitel,
+} from "@/lib/sagaTypen";
+import { waehleDaemonform, waehleMittaeter } from "@/lib/daemonEnthuellung";
 import { besessenheitsRegeln } from "@/lib/gestaltStimme";
 import { seal, unseal } from "@/lib/seal";
 import {
@@ -259,6 +265,28 @@ function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undef
  * mindestens eine Dämonenform unter den Tieren. Fehlt eins davon, passiert
  * schlicht nichts - kein Fehler, kein Hinweis, der Fall läuft wie immer.
  */
+/**
+ * Die Gestalt, die für dieses Kapitel vorgesehen ist.
+ *
+ * Anders als im gewöhnlichen Fall wird hier nicht gewürfelt: Wer beim
+ * Erstellen der Saga eine Dämonenform in ein Kapitel geschrieben hat, will
+ * genau die - und zwar dort und nirgends sonst. Das Finale bleibt außen vor,
+ * dort hat die Saga ihre eigene Besessenheit.
+ */
+function gewaehlteBesessenheit(
+  bogen: Bogen,
+  kapitel: number,
+  rohCharaktere: unknown,
+  taeterId: string,
+): { wirtId: string; daemon: Character } | undefined {
+  const id = daemonFuerKapitel(bogen.vorgaben, kapitel);
+  if (!id || id === taeterId) return undefined;
+
+  const { gut } = einzelnGeprueft<Character>(CharacterSchema, rohCharaktere);
+  const daemon = gut.find((c) => c.id === id && !c.istDetektiv);
+  return daemon ? { wirtId: taeterId, daemon } : undefined;
+}
+
 function wuerfleBesessenheit(
   wie: Einstellungen["daemonEnthuellung"],
   rohCharaktere: unknown,
@@ -442,6 +470,24 @@ async function geruestSchritt(body: Record<string, unknown>) {
     gewuenschterTaeter ?? verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
   /*
+   * Hat noch jemand mitgemacht?
+   *
+   * In einer Saga steht es in den Vorgaben - dort ist es eine Entscheidung,
+   * kein Zufall. In einem gewöhnlichen Fall wird gewürfelt, so oft wie
+   * eingestellt. Der Zweite ist genauso schuldig wie der Erste.
+   */
+  const sagaMittaeterId = saga
+    ? mittaeterFuerKapitel(saga.bogen.vorgaben, saga.kapitel)
+    : "";
+  const mittaeter =
+    (sagaMittaeterId
+      ? verdaechtige.find((c) => c.id === sagaMittaeterId && c.id !== taeter.id)
+      : undefined) ??
+    (saga
+      ? null
+      : waehleMittaeter(verdaechtige, einstellungen.mittaeter, taeter.id));
+
+  /*
    * Entpuppt sich der Täter am Ende als etwas ganz anderes?
    *
    * Gewürfelt wird hier, auf dem Server, und das Ergebnis wandert ins Siegel
@@ -450,7 +496,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
    * zu einer einzelnen Runde.
    */
   const besessenheit = saga
-    ? undefined
+    ? gewaehlteBesessenheit(saga.bogen, saga.kapitel, body?.charaktere, taeter.id)
     : wuerfleBesessenheit(einstellungen.daemonEnthuellung, body?.charaktere, taeter.id);
   if (besessenheit) {
     console.warn(
@@ -499,6 +545,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
     schlagworte: [],
     tatort: schauplatz.orte[0].id,
     taeterId: taeter.id,
+    mittaeterId: mittaeter?.id,
     motiv: "",
     tathergang: "",
     verdaechtige: [],
@@ -529,7 +576,13 @@ async function geruestSchritt(body: Record<string, unknown>) {
     modellOptionen(
       weltVon(roh),
       mitBriefing(
-        buildGeruestPrompt(spielendeBesetzung, roh.stadt, taeter.id, vorgaben),
+        buildGeruestPrompt(
+          spielendeBesetzung,
+          roh.stadt,
+          taeter.id,
+          vorgaben,
+          mittaeter?.id ?? "",
+        ),
         roh.sagaBriefing,
       ),
       zodOutputFormat(makeGeruestSchema(spielendeBesetzung, schauplatz.orte)),
@@ -589,6 +642,7 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
           entwurf.titel,
           entwurf.tathergang,
           entwurf.vorgaben,
+          entwurf.mittaeterId ?? "",
         ),
         entwurf.sagaBriefing,
       ),
@@ -657,6 +711,7 @@ async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel, nachfassen: boole
           entwurf.sagaSpur,
           nachfassen,
           ziel,
+          entwurf.mittaeterId ?? "",
         ),
         entwurf.sagaBriefing,
       ),
@@ -724,6 +779,7 @@ async function spurenSchritt(entwurf: Entwurf) {
       verdaechtige: entwurf.verdaechtige,
       besetzung: entwurf.besetzung,
       taeterId: entwurf.taeterId,
+      mittaeterId: entwurf.mittaeterId,
       ortIds,
       itemIds,
     });

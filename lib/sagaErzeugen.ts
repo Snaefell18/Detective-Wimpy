@@ -220,8 +220,9 @@ export async function erzeugeSaga(
     neuzugangTon: "",
     musik: "",
     wetter: "aus",
-    // In einer Saga steht die Verwandlung im Bogen - gewürfelt wird hier nichts.
+    // In einer Saga steht beides im Bogen - gewürfelt wird hier nichts.
     daemonEnthuellung: "aus",
+    mittaeter: "aus",
   };
 
   const fallFuer = (kapitel: number, was: string) =>

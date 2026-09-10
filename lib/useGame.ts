@@ -22,6 +22,8 @@ export type Ergebnis = {
   aufloesung: string;
   reaktion: string;
   taeterId: string;
+  /** Der zweite Täter, falls zwei es zusammen getan haben. */
+  mittaeterId?: string;
   beschuldigtId: string;
   /**
    * Steckte im Täter eine Gestalt, steht sie hier - samt ihrer ersten Worte.

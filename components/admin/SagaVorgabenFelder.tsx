@@ -64,7 +64,23 @@ export function SagaVorgabenFelder({
 }) {
   const stammdaten = useStammdaten();
   const staedte = alsStaedte(stammdaten.orte);
-  const verdaechtige = stammdaten.charaktere.filter((c) => !c.istDetektiv);
+  const verdaechtige = stammdaten.charaktere.filter(
+    (c) => !c.istDetektiv && !c.istDaemon,
+  );
+  /**
+   * Die Dämonenformen - sie spielen nicht mit, sondern brechen aus jemandem
+   * heraus. Deshalb stehen sie nur dort zur Wahl, wo eine Verwandlung
+   * gemeint ist, und nicht in der Besetzung.
+   */
+  const gestalten = stammdaten.charaktere.filter((c) => c.istDaemon && !c.istDetektiv);
+  /**
+   * Alle, die als Schuldige infrage kommen - auch die Gestalten.
+   *
+   * Beim Gerichtsfinale mit Dämon ist die Gestalt selbst der Drahtzieher,
+   * und im Feld "Dämonenform" ist sie ohnehin gemeint. Nur in der Besetzung,
+   * beim Wirt und bei der falschen Fährte hat sie nichts verloren.
+   */
+  const mitGestalten = [...verdaechtige, ...gestalten];
   // Nur wer in dieser Saga vorkommt - leere Auswahl heißt: alle.
   const mitspieler =
     vorgaben.charaktere.length >= 2
@@ -193,6 +209,14 @@ export function SagaVorgabenFelder({
   const geschenkSetzen = (i: number, id: string) =>
     onAendern({ kapitelGeschenke: anStelle(vorgaben.kapitelGeschenke, i, id, "") });
 
+  /** Die Dämonenform, als die sich der Täter dieses Kapitels entpuppt. */
+  const daemonSetzen = (i: number, id: string) =>
+    onAendern({ kapitelDaemon: anStelle(vorgaben.kapitelDaemon, i, id, "") });
+
+  /** Ein zweiter Täter für dieses Kapitel. */
+  const mittaeterSetzen = (i: number, id: string) =>
+    onAendern({ kapitelMittaeter: anStelle(vorgaben.kapitelMittaeter, i, id, "") });
+
   /** Wetter je Kapitel; der letzte Eintrag gehört zum Finale. */
   const wetterSetzen = (i: number, lage: Wetterlage | "") =>
     onAendern({
@@ -301,9 +325,81 @@ export function SagaVorgabenFelder({
               </>
             )}
 
+            {!istFinale && (
+              <>
+                {/* Zwei, die es zusammen getan haben. Beide zu beschuldigen
+                    ist richtig; die Auflösung nennt ohnehin beide. */}
+                <span className="leise klein">
+                  Zweiter Täter · sie haben es gemeinsam getan
+                </span>
+                <div className="marken-reihe">
+                  <button
+                    className="marke-knopf"
+                    data-aktiv={!(vorgaben.kapitelMittaeter?.[i] ?? "")}
+                    onClick={() => mittaeterSetzen(i, "")}
+                  >
+                    Keiner
+                  </button>
+                  {mitspieler
+                    .filter((c) => c.id !== vorgaben.drahtzieherId)
+                    .filter((c) => c.id !== (vorgaben.kapitelTaeter?.[i] ?? ""))
+                    .filter(
+                      (c) =>
+                        auftrittVon({
+                          charakterId: c.id,
+                          vorgaben,
+                          drahtzieherId: vorgaben.drahtzieherId,
+                        }) <=
+                        i + 1,
+                    )
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        className="marke-knopf"
+                        data-aktiv={vorgaben.kapitelMittaeter?.[i] === c.id}
+                        onClick={() => mittaeterSetzen(i, c.id)}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                </div>
+
+                {/* Und die Gestalt, die am Ende aus dem Täter bricht. */}
+                <span className="leise klein">
+                  Verwandlung am Ende · der Täter entpuppt sich
+                </span>
+                <div className="marken-reihe">
+                  <button
+                    className="marke-knopf"
+                    data-aktiv={!(vorgaben.kapitelDaemon?.[i] ?? "")}
+                    onClick={() => daemonSetzen(i, "")}
+                  >
+                    Keine
+                  </button>
+                  {gestalten.map((c) => (
+                    <button
+                      key={c.id}
+                      className="marke-knopf"
+                      data-aktiv={vorgaben.kapitelDaemon?.[i] === c.id}
+                      onClick={() => daemonSetzen(i, c.id)}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+                {gestalten.length === 0 && (
+                  <p className="leise klein">
+                    Noch keine Dämonenform angelegt - unter „Tiere“ ein Tier
+                    als Dämonenform markieren, dann steht es hier zur Wahl.
+                  </p>
+                )}
+              </>
+            )}
+
             {istFinale && (
               <p className="leise klein">
-                Im Finale ist der Drahtzieher der Täter - das steht oben.
+                Im Finale ist der Drahtzieher der Täter - das steht oben. Eine
+                Verwandlung gehört dort zur Besessenheit der ganzen Saga.
               </p>
             )}
 
@@ -500,7 +596,7 @@ export function SagaVorgabenFelder({
         >
           Zufällig
         </button>
-        {verdaechtige.map((c) => (
+        {mitGestalten.map((c) => (
           <button
             key={c.id}
             className="marke-knopf"
@@ -787,7 +883,7 @@ export function SagaVorgabenFelder({
         <>
           <span className="leise klein">Was in Wimpy steckte</span>
           <div className="marken-reihe">
-            {verdaechtige.map((c) => (
+            {mitGestalten.map((c) => (
               <button
                 key={c.id}
                 className="marke-knopf"
@@ -887,7 +983,7 @@ export function SagaVorgabenFelder({
         <>
           <span className="leise klein">Seine Dämonenform</span>
           <div className="marken-reihe">
-            {verdaechtige
+            {mitGestalten
               .filter((c) => c.id !== vorgaben.besessenheit?.wirtId)
               .map((c) => (
                 <button

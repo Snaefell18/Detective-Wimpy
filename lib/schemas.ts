@@ -4,8 +4,8 @@ import type { Character, Item, Location } from "./types";
 import { STIMMUNGEN } from "./zuordnen";
 import { AUFTRITTS_ARTEN } from "./sagaTypen";
 import { FINALE_ARTEN } from "./sagaFinale";
-import { DAEMON_HAEUFIGKEITEN, WETTERLAGEN } from "./types";
-import type { DaemonHaeufigkeit, Wetterlage } from "./types";
+import { DAEMON_HAEUFIGKEITEN, MITTAETER_HAEUFIGKEITEN, WETTERLAGEN } from "./types";
+import type { Haeufigkeit, Wetterlage } from "./types";
 
 /**
  * Wichtig: Feste Auswahllisten werden vom Modell nur *beschrieben*, nicht
@@ -291,6 +291,8 @@ export const CaseFileSchema = z.object({
   tatbeschreibung: z.string().max(4000),
   tatort: z.string().max(80),
   taeterId: z.string().max(40),
+  /** Siehe CaseFile.mittaeterId - der zweite Täter derselben Tat. */
+  mittaeterId: z.string().max(40).optional(),
   motiv: z.string().max(2000),
   tathergang: z.string().max(4000),
   verdaechtige: z
@@ -387,6 +389,8 @@ export const SagaVorgabenSchema = z.object({
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
   kapitelGeschenke: luecken(z.string().max(40), "").max(9).default([]),
   kapitelMusik: luecken(z.string().max(200), "").max(9).default([]),
+  kapitelDaemon: luecken(z.string().max(40), "").max(8).default([]),
+  kapitelMittaeter: luecken(z.string().max(40), "").max(8).default([]),
   kapitelWetter: luecken(
     // "" heißt "wie im Admin-Menü", "aus" heißt ausdrücklich kein Wetter.
     ausAuswahl(WETTER_WAHL),
@@ -458,7 +462,10 @@ export const EinstellungenSchema = z.object({
    * Einstellungsprüfung scheitern und sämtliche Einstellungen fielen auf
    * ihre Voreinstellung zurück.
    */
-  daemonEnthuellung: ausAuswahl<DaemonHaeufigkeit>(DAEMON_HAEUFIGKEITEN.map((h) => h.id))
+  daemonEnthuellung: ausAuswahl<Haeufigkeit>(DAEMON_HAEUFIGKEITEN.map((h) => h.id))
+    .catch("aus")
+    .default("aus"),
+  mittaeter: ausAuswahl<Haeufigkeit>(MITTAETER_HAEUFIGKEITEN.map((h) => h.id))
     .catch("aus")
     .default("aus"),
 });

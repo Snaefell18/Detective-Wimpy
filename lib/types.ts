@@ -148,7 +148,14 @@ export type Einstellungen = {
    * Braucht mindestens eine Dämonenform unter den Tieren; gibt es keine,
    * passiert schlicht nichts.
    */
-  daemonEnthuellung: DaemonHaeufigkeit;
+  daemonEnthuellung: Haeufigkeit;
+  /**
+   * Wie oft zwei Tiere die Tat gemeinsam begangen haben.
+   *
+   * Beide sind schuldig, beide lügen, und beide zu beschuldigen ist richtig.
+   * "aus" ist die Voreinstellung - dann bleibt es beim einen Täter.
+   */
+  mittaeter: Haeufigkeit;
 };
 
 /**
@@ -158,10 +165,13 @@ export type Einstellungen = {
  * Alles andere ist ein Würfelwurf je Fall - "immer" heißt wirklich immer,
  * und das ist eher zum Ausprobieren gedacht als zum Spielen.
  */
-export type DaemonHaeufigkeit = "aus" | "selten" | "manchmal" | "immer";
+export type Haeufigkeit = "aus" | "selten" | "manchmal" | "immer";
+
+/** Alter Name, solange noch etwas darauf zeigt. */
+export type DaemonHaeufigkeit = Haeufigkeit;
 
 export const DAEMON_HAEUFIGKEITEN: {
-  id: DaemonHaeufigkeit;
+  id: Haeufigkeit;
   label: string;
   hinweis: string;
   /** Wie wahrscheinlich es je Fall ist. */
@@ -174,8 +184,32 @@ export const DAEMON_HAEUFIGKEITEN: {
 ];
 
 /** Wie wahrscheinlich eine Enthüllung bei dieser Einstellung ist. */
-export const daemonWahrscheinlichkeit = (wie: DaemonHaeufigkeit | undefined): number =>
+export const daemonWahrscheinlichkeit = (wie: Haeufigkeit | undefined): number =>
   DAEMON_HAEUFIGKEITEN.find((h) => h.id === (wie ?? "aus"))?.wahrscheinlichkeit ?? 0;
+
+/**
+ * Wie oft zwei Tiere die Tat gemeinsam begangen haben.
+ *
+ * Dieselben Stufen wie bei der Verwandlung, aber eine ganz andere Sache:
+ * Hier gibt es zwei Schuldige, und beide zu beschuldigen ist richtig. Wer
+ * einen von beiden stellt, hat den Fall gelöst - die Auflösung nennt dann
+ * ohnehin beide.
+ */
+export const MITTAETER_HAEUFIGKEITEN: {
+  id: Haeufigkeit;
+  label: string;
+  hinweis: string;
+  wahrscheinlichkeit: number;
+}[] = [
+  { id: "aus", label: "Nie", hinweis: "immer ein Täter", wahrscheinlichkeit: 0 },
+  { id: "selten", label: "Selten", hinweis: "etwa jeder sechste Fall", wahrscheinlichkeit: 0.15 },
+  { id: "manchmal", label: "Manchmal", hinweis: "etwa jeder dritte Fall", wahrscheinlichkeit: 0.35 },
+  { id: "immer", label: "Immer", hinweis: "jeder Fall - zum Ausprobieren", wahrscheinlichkeit: 1 },
+];
+
+/** Wie wahrscheinlich ein zweiter Täter bei dieser Einstellung ist. */
+export const mittaeterWahrscheinlichkeit = (wie: Haeufigkeit | undefined): number =>
+  MITTAETER_HAEUFIGKEITEN.find((h) => h.id === (wie ?? "aus"))?.wahrscheinlichkeit ?? 0;
 
 /**
  * Was über dem Ortsbild liegt - reines CSS, keine zusätzlichen Dateien.
@@ -218,6 +252,7 @@ export const STANDARD_EINSTELLUNGEN: Einstellungen = {
   wetter: "aus",
   musik: "",
   daemonEnthuellung: "aus",
+  mittaeter: "aus",
 };
 
 /** Für wen der Fall gedacht ist - steuert, wie hart er erzählt werden darf. */
@@ -252,6 +287,14 @@ export type CaseFile = {
   tatort: string; // Location-Id
   /** Wird zufällig gezogen - der Spieler darf das nie zu sehen bekommen. */
   taeterId: string;
+  /**
+   * Ein zweiter Täter, der dieselbe Tat mitbegangen hat.
+   *
+   * Die beiden waren zusammen dort, haben es zusammen getan und decken sich
+   * gegenseitig. Wer einen von ihnen beschuldigt, hat den Fall gelöst - die
+   * Auflösung nennt dann beide. Leer heißt: ein einzelner Täter, wie immer.
+   */
+  mittaeterId?: string;
   motiv: string;
   tathergang: string;
   /** Pro Verdächtigem: Alibi, Geheimnis und wo er/sie gerade ist. */
@@ -383,6 +426,8 @@ export type AccuseResult = {
   richtig: boolean;
   aufloesung: string;
   reaktion: string;
+  /** Der zweite Täter, falls es einen gab - für die Auflösung. */
+  mittaeterId?: string;
   /**
    * Nur wenn im überführten Täter eine Gestalt steckte: Wirt, Gestalt und
    * ihre ersten Worte. Sie kommt hier zum ersten Mal im Browser an - vorher
