@@ -1,6 +1,12 @@
 "use client";
 
 import { postJson } from "./api";
+import {
+  entwurfKennung,
+  leererEntwurf,
+  speichereEntwurf,
+  type SagaEntwurf,
+} from "./sagaEntwurf";
 import { erzeugeFall } from "./fallErzeugen";
 import { mitVerhandlung, type Verhandlung } from "./sagaFinale";
 import { mitWiederholung } from "./wiederholen";
@@ -81,26 +87,51 @@ const bei = <T>(
 export async function erzeugeSaga(
   eingaben: SagaEingaben,
   onSchritt?: (text: string) => void,
+  /**
+   * Ein angefangener Stand vom letzten Anlauf. Passt sein Fingerabdruck zu
+   * dieser Bestellung, wird dort weitergemacht, wo es aufgehört hat.
+   */
+  weiter?: SagaEntwurf | null,
 ): Promise<Saga> {
   const anzahl = eingaben.vorgaben.kapitelAnzahl;
+  const kennung = entwurfKennung(eingaben);
+
+  /*
+   * Der Zwischenstand.
+   *
+   * Nach jedem bezahlten Schritt wandert er aufs Gerät. Bricht etwas ab,
+   * setzt der nächste Anlauf hier an - und was schon fertig war, wird nicht
+   * noch einmal bestellt.
+   */
+  let entwurf: SagaEntwurf =
+    weiter && weiter.kennung === kennung
+      ? weiter
+      : leererEntwurf(kennung, eingaben.vorgaben);
+  const halte = (teil: Partial<SagaEntwurf>) => {
+    entwurf = speichereEntwurf({ ...entwurf, ...teil });
+  };
 
   // 1. Der Kern: worum es überhaupt geht.
-  onSchritt?.("Das Überthema entsteht …");
-  const kern = await bei(
-    "Beim Überthema",
-    () =>
-      postJson<KernAntwort>("/api/saga", {
-        charaktere: eingaben.charaktere,
-        orte: eingaben.orte,
-        vorgaben: eingaben.vorgaben,
-      }),
-    () => onSchritt?.("Das Überthema entsteht … (noch einmal)"),
-  );
+  let kern = entwurf.kern;
+  if (!kern) {
+    onSchritt?.("Das Überthema entsteht …");
+    kern = await bei(
+      "Beim Überthema",
+      () =>
+        postJson<KernAntwort>("/api/saga", {
+          charaktere: eingaben.charaktere,
+          orte: eingaben.orte,
+          vorgaben: eingaben.vorgaben,
+        }),
+      () => onSchritt?.("Das Überthema entsteht … (noch einmal)"),
+    );
+    halte({ kern, name: kern.name, siegel: kern.bogenSiegel });
+  }
 
   // 2. Die Kapitel - eines nach dem anderen, jedes kennt die vorherigen.
-  let siegel = kern.bogenSiegel;
-  const entwuerfe: KapitelAntwort["kapitel"][] = [];
-  for (let nummer = 1; nummer <= anzahl; nummer++) {
+  let siegel = entwurf.siegel || kern.bogenSiegel;
+  const entwuerfe: KapitelAntwort["kapitel"][] = [...entwurf.kapitel];
+  for (let nummer = entwuerfe.length + 1; nummer <= anzahl; nummer++) {
     onSchritt?.(`Kapitel ${nummer} von ${anzahl} wird ersonnen …`);
     const antwort = await bei(
       `Bei Kapitel ${nummer} von ${anzahl}`,
@@ -115,22 +146,37 @@ export async function erzeugeSaga(
     );
     siegel = antwort.bogenSiegel;
     entwuerfe.push(antwort.kapitel);
+    halte({ siegel, kapitel: [...entwuerfe] });
   }
 
   // 3. Das Finale.
-  onSchritt?.("Das Finale wird geschmiedet …");
-  const finaleBogen = await bei(
-    "Beim Finale",
-    () =>
-      postJson<FinaleAntwort>("/api/saga", {
-        schritt: "finale",
-        bogenSiegel: siegel,
-        orte: eingaben.orte,
-      }),
-    () => onSchritt?.("Das Finale wird geschmiedet … (noch einmal)"),
-    2,
-  );
-  siegel = finaleBogen.bogenSiegel;
+  let finaleTexte = entwurf.finale;
+  let verhandlung = entwurf.verhandlung;
+  let beweiseFehlen = !entwurf.beweiseFertig;
+  if (!finaleTexte) {
+    onSchritt?.("Das Finale wird geschmiedet …");
+    const finaleBogen = await bei(
+      "Beim Finale",
+      () =>
+        postJson<FinaleAntwort>("/api/saga", {
+          schritt: "finale",
+          bogenSiegel: siegel,
+          orte: eingaben.orte,
+        }),
+      () => onSchritt?.("Das Finale wird geschmiedet … (noch einmal)"),
+      2,
+    );
+    siegel = finaleBogen.bogenSiegel;
+    finaleTexte = finaleBogen.finale;
+    verhandlung = finaleBogen.verhandlung ?? null;
+    beweiseFehlen = finaleBogen.weiter === "beweise";
+    halte({
+      siegel,
+      finale: finaleTexte,
+      verhandlung,
+      beweiseFertig: !beweiseFehlen,
+    });
+  }
 
   /*
    * Die Verhandlung kommt in zwei Teilen: erst der Saal, dann die
@@ -138,8 +184,7 @@ export async function erzeugeSaga(
    * als eine Serverfunktion darf - und ein Abbruch an dieser Stelle wirft
    * alles weg, was vorher schon bezahlt wurde.
    */
-  let verhandlung = finaleBogen.verhandlung ?? null;
-  if (finaleBogen.weiter === "beweise") {
+  if (beweiseFehlen) {
     onSchritt?.("Die Beweisstücke werden zusammengetragen …");
     const beweisBogen = await bei(
       "Bei den Beweisstücken",
@@ -160,6 +205,7 @@ export async function erzeugeSaga(
         noetig: beweisBogen.noetig,
       };
     }
+    halte({ siegel, verhandlung, beweiseFertig: true });
   }
 
   // 4. Jetzt die eigentlichen Fälle - jeder wieder in drei Schritten.
@@ -193,10 +239,15 @@ export async function erzeugeSaga(
 
   const kapitel = [];
   for (const k of entwuerfe) {
-    const gebaut: { fall: PublicCase; siegel: string } = await fallFuer(
-      k.nummer,
-      `Fall ${k.nummer} von ${anzahl}`,
-    );
+    /*
+     * Ein Fall, der beim letzten Anlauf schon gebaut wurde, wird nicht noch
+     * einmal bestellt. Er steht mit seinem Siegel im Zwischenstand und ist
+     * genau derselbe, den es damals gab.
+     */
+    const gebaut: { fall: PublicCase; siegel: string } =
+      entwurf.faelle[String(k.nummer)] ??
+      (await fallFuer(k.nummer, `Fall ${k.nummer} von ${anzahl}`));
+    halte({ faelle: { ...entwurf.faelle, [String(k.nummer)]: gebaut } });
     kapitel.push({
       nummer: k.nummer,
       name: k.name,
@@ -232,10 +283,11 @@ export async function erzeugeSaga(
       "Die Verhandlung ist unvollständig zurückgekommen (keine Beweisstücke). Bitte noch einmal erzeugen - gespeichert wurde nichts.",
     );
   }
-  if (!saalStattFall) onSchritt?.("Der Finalfall wird gebaut …");
-  const finale = saalStattFall
-    ? { fall: null, siegel: null }
-    : await fallFuer(0, "Finalfall");
+  if (!saalStattFall && !entwurf.finaleFall) onSchritt?.("Der Finalfall wird gebaut …");
+  const finale =
+    entwurf.finaleFall ??
+    (saalStattFall ? { fall: null, siegel: null } : await fallFuer(0, "Finalfall"));
+  halte({ finaleFall: finale });
 
   return {
     id: kern.id,
@@ -251,12 +303,12 @@ export async function erzeugeSaga(
     kapitel,
     finale: {
       erzaehler: {
-        text: finaleBogen.finale.erzaehlerText,
+        text: finaleTexte.erzaehlerText,
         audio: "",
         video: videoFuerKapitel(eingaben.vorgaben, eingaben.vorgaben.kapitelAnzahl),
       },
-      frage: finaleBogen.finale.frage,
-      epilog: { text: finaleBogen.finale.epilogText, audio: "" },
+      frage: finaleTexte.frage,
+      epilog: { text: finaleTexte.epilogText, audio: "" },
       fall: finale.fall,
       siegel: finale.siegel,
       verhandlung,

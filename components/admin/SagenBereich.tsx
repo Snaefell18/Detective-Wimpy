@@ -10,6 +10,12 @@ import { postJson } from "@/lib/api";
 import { ladeSagas, loescheSaga, speichereSaga } from "@/lib/db";
 import { mitVerhandlung, type Verhandlung } from "@/lib/sagaFinale";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
+import {
+  entwurfStand,
+  ladeEntwurf,
+  verwirfEntwurf,
+  type SagaEntwurf,
+} from "@/lib/sagaEntwurf";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import {
   STANDARD_SAGA_VORGABEN,
@@ -48,6 +54,14 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const [vorgaben, setVorgaben] = useState<SagaVorgaben>(STANDARD_SAGA_VORGABEN);
   const [laeuft, setLaeuft] = useState(false);
   const [schritt, setSchritt] = useState<string | null>(null);
+  /**
+   * Ein angefangener Entwurf vom letzten Anlauf.
+   *
+   * Er liegt auf dem Gerät und überlebt einen Abbruch, ein Neuladen und einen
+   * zugeklappten Deckel. Solange er da ist, muss niemand für dieselben
+   * Schritte zweimal zahlen.
+   */
+  const [entwurf, setEntwurf] = useState<SagaEntwurf | null>(null);
   /** Woran es zuletzt gescheitert ist - steht am Knopf, nicht nur oben. */
   const [abbruch, setAbbruch] = useState<{ text: string; schritt: string | null } | null>(
     null,
@@ -89,6 +103,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
 
   useEffect(() => {
     void laden();
+    // Liegt vom letzten Mal ein halb erzeugter Bogen herum, soll man ihn
+    // gleich sehen - und nicht aus Versehen noch einmal von vorn bezahlen.
+    setEntwurf(ladeEntwurf());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -106,8 +123,15 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
     zubehoerIds: regal.map((z) => z.id),
   });
 
-  const erzeugen = async () => {
-    if (probleme.length) return;
+  /**
+   * Eine Saga erzeugen - von vorn oder da, wo es abgebrochen ist.
+   *
+   * `weiter` ist der Stand vom letzten Anlauf. Passt sein Fingerabdruck zu
+   * dieser Bestellung, wird nur noch geholt, was fehlt.
+   */
+  const erzeugen = async (weiter?: SagaEntwurf | null) => {
+    const gilt = weiter?.vorgaben ?? vorgaben;
+    if (!weiter && probleme.length) return;
     setLaeuft(true);
     setAbbruch(null);
     onFehler(null);
@@ -117,9 +141,10 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           charaktere: stammdaten.charaktere,
           orte: stammdaten.orte,
           items: stammdaten.items,
-          vorgaben,
+          vorgaben: gilt,
         },
         setSchritt,
+        weiter,
       );
       // Ab hier ist alles bezahlt - die Saga wird festgehalten, bevor das
       // Speichern versucht wird.
@@ -127,6 +152,10 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       setSchritt("Wird gespeichert …");
       await speichereSaga(saga);
       setGerettet(null);
+      // Erst wenn sie wirklich in der Datenbank steht, ist der Zwischenstand
+      // entbehrlich.
+      verwirfEntwurf();
+      setEntwurf(null);
       await laden();
       onMeldung(`Saga „${saga.name}“ gespeichert - ${saga.kapitel.length} Kapitel und Finale.`);
     } catch (fehler) {
@@ -138,6 +167,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         fehler instanceof Error ? fehler.message : "Die Saga konnte nicht erzeugt werden.";
       setAbbruch({ text, schritt });
       onFehler(text);
+      // Was bis hierher fertig war, liegt auf dem Gerät - der nächste Anlauf
+      // setzt dort an.
+      setEntwurf(ladeEntwurf());
     } finally {
       setLaeuft(false);
       setSchritt(null);
@@ -653,6 +685,43 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         </div>
       )}
 
+      {/* Ein angefangener Bogen vom letzten Anlauf. Was darin steht, ist
+          bezahlt - deshalb steht er hier oben und nicht in einer Fußnote. */}
+      {entwurf && !laeuft && (
+        <div className="pruefung" style={{ marginTop: 16 }}>
+          <strong>Angefangen: „{entwurf.name}“</strong>
+          <p className="leise klein">
+            Fertig sind {entwurfStand(entwurf).text} - das ist bezahlt und
+            bleibt erhalten. „Weitermachen“ holt nur noch, was fehlt;
+            „Verwerfen“ wirft es weg und fängt von vorn an.
+          </p>
+          <div className="knopf-reihe">
+            <button
+              className="knopf klein aktion"
+              disabled={!admin}
+              onClick={() => {
+                // Die Vorgaben von damals gelten weiter - sonst passt der
+                // Stand nicht mehr zu dem, was gleich bestellt wird.
+                setVorgaben(entwurf.vorgaben);
+                void erzeugen(entwurf);
+              }}
+            >
+              Weitermachen
+            </button>
+            <button
+              className="knopf klein"
+              onClick={() => {
+                if (!window.confirm("Den angefangenen Bogen wirklich verwerfen?")) return;
+                verwirfEntwurf();
+                setEntwurf(null);
+              }}
+            >
+              Verwerfen
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         className="knopf aktion"
         style={{ marginTop: 16 }}
@@ -678,8 +747,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
             </>
           ) : (
             <p className="leise klein">
-              Es ist nichts gespeichert worden - noch einmal auf „Saga erzeugen“
-              tippen fängt von vorn an.
+              {entwurf
+                ? `Nichts ist verloren: ${entwurfStand(entwurf).text} liegen fertig auf dem Gerät. „Weitermachen“ oben setzt genau dort an - bezahlt wird nur, was noch fehlt.`
+                : "Es ist nichts gespeichert worden - noch einmal auf „Saga erzeugen“ tippen fängt von vorn an."}
             </p>
           )}
         </div>
@@ -690,7 +760,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           {schritt ?? "Es geht gleich los …"}
           <br />
           Das dauert je nach Länge mehrere Minuten. Bitte den Bildschirm
-          anlassen - sperrt sich das Handy, bricht die Verbindung ab.
+          anlassen - sperrt sich das Handy, bricht die Verbindung ab. Was
+          fertig ist, wird nach jedem Schritt festgehalten: Ein Abbruch kostet
+          höchstens den einen Schritt, an dem es hing.
         </p>
       )}
 

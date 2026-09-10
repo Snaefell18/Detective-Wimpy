@@ -280,7 +280,7 @@ ${
     saga.falscheFaehrteName
       ? `- Und genau ein Stück zeigt auf ${saga.falscheFaehrteName}: Es sieht belastend aus, beweist aber nichts. fuehrtInDieIrre true, fernwirkung false. ${saga.falscheFaehrteName} ist unschuldig - hier wie in jedem Kapitel.\n`
       : ""
-  }- Ihre Vermutung ist Wimpys leiser Wink: Er stutzt, weil das Stück nicht zu diesem Fall passt ("Das gehört hier gar nicht her." / "Damit hat der Fall nichts zu tun. Trotzdem."). Er sagt nicht, worauf es zeigt - nur, dass es woanders hingehört.${
+  }- Ihre Vermutung klingt wie jede andere: ein Gedanke zum Stück selbst, mehr nicht. Sie verrät NICHT, dass es nicht zu diesem Fall gehört - kein "das gehört hier nicht her", kein "damit hat der Fall nichts zu tun", kein Stutzen. Ob ein Fund für diesen Fall zählt, für die große Sache oder für gar nichts, muss der Spieler selbst herausfinden.${
     saga.vorGericht
       ? `
 - Diese Saga endet vor Gericht. Der Spieler kann höchstens sechs Stücke über die ganze Saga hinweg mitnehmen, und NUR damit kann er dort etwas beweisen. Ohne Stücke mit Fernwirkung ist die Verhandlung nicht zu gewinnen - sie sind kein Beiwerk, sondern der Grund, warum es dieses Kapitel gibt.`
@@ -334,6 +334,7 @@ JEDE SPUR HAT DREI TEXTE - HALTE SIE STRIKT AUSEINANDER
   Gut: "Auf dem letzten Bild der Kamera steht jemand mit hellem Fell vor der Hintertür. Zeitstempel 22:41."
   Falsch: "Die Kamera zeigt, dass Mikkeli um 22:41 da war - sein Alibi stimmt also nicht."
 - "vermutung" ist Wimpys erster Gedanke, höchstens ein kurzer Satz, hörbar als Vermutung. Er nennt keinen Verdächtigen beim Namen, löst nichts auf und darf danebenliegen. Leer lassen, wenn nichts Gutes einfällt.
+  Und er ordnet den Fund nicht ein: kein Wort darüber, ob das Stück zu diesem Fall gehört, zu etwas Größerem oder zu gar nichts. Alle Vermutungen klingen gleich - ob ein Fund wichtig ist, sagt allein, was darauf zu sehen ist.
   Gut: "Helles Fell haben hier einige. Trotzdem, 22:41 ist spät."
 - "bedeutung" ist die Auflösung dieser Spur, mit Namen und Schlussfolgerung. Sie bleibt im Verschlossenen und wird dem Spieler nie gezeigt - schreibe hier also ruhig deutlich, was der Fund beweist.
 - Prüfe zum Schluss: Wer nur die Beobachtungen aller Spuren liest, muss den Täter erschließen können. Fehlt dafür eine Einzelheit, gehört sie in die Beobachtung - nicht in die Bedeutung.

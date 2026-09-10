@@ -71,7 +71,12 @@ console.log("\n2. Ein Kapitel einer Saga bestellt mehr");
   pruefe("das Häkchen wird verlangt", p.includes("fernwirkung auf true"));
   pruefe("die Enthüllung hängt daran", p.includes("Jemand hat einen Schlüssel nachmachen lassen"));
   pruefe("der Kapitelfall bleibt ohne sie lösbar", p.includes("bleibt trotzdem ohne sie lösbar"));
-  pruefe("Wimpy stutzt hörbar", p.includes("leiser Wink"));
+  pruefe("die Vermutung verrät nichts", p.includes("Sie verrät NICHT"));
+  pruefe("kein Stutzen", p.includes("kein Stutzen"));
+  pruefe(
+    "der Spieler findet es selbst heraus",
+    p.includes("muss der Spieler selbst herausfinden"),
+  );
   pruefe("das Gericht wird benannt", p.includes("höchstens sechs Stücke"));
 }
 

@@ -94,7 +94,7 @@ export function makeSpurenSchema(
         vermutung: z
           .string()
           .describe(
-            "Wimpys erster Gedanke: höchstens ein kurzer Satz, klar als Vermutung. Nennt keinen Verdächtigen beim Namen, löst nichts auf und darf ruhig danebenliegen. Leerer String, wenn ihm nichts einfällt.",
+            "Wimpys erster Gedanke: höchstens ein kurzer Satz, klar als Vermutung. Nennt keinen Verdächtigen beim Namen, löst nichts auf und darf ruhig danebenliegen. Sagt nie, ob der Fund zu diesem Fall gehört, zu etwas Größerem oder zu gar nichts - alle Vermutungen klingen gleich. Leerer String, wenn ihm nichts einfällt.",
           ),
         bedeutung: z
           .string()
