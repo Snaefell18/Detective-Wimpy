@@ -103,6 +103,11 @@ export function makeSpurenSchema(
           ),
         zeigtAufCharakterId: characterId,
         fuehrtInDieIrre: z.boolean(),
+        fernwirkung: z
+          .boolean()
+          .describe(
+            "true nur bei den Stücken, die über diesen Fall hinaus auf den Kopf hinter der ganzen Saga zeigen. In einem einzelnen Fall immer false.",
+          ),
       }),
     ),
   });

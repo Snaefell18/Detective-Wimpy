@@ -88,6 +88,10 @@ export function buildAnhoerungPrompt(args: {
               m.kern.fuehrtInDieIrre
                 ? "\n  ACHTUNG: Dieses Stück führt in die Irre. Es sieht belastend aus, beweist aber nichts."
                 : ""
+            }${
+              m.kern.fernwirkung
+                ? "\n  Dieses Stück reicht über sein Kapitel hinaus: Es zeigt auf den, um den es heute geht. Vorgelegt und richtig erklärt, wiegt es schwer."
+                : ""
             }`,
         )
         .join("\n")

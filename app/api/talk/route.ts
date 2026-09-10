@@ -125,6 +125,7 @@ export async function POST(request: Request) {
             bedeutung: spur.bedeutung,
             zeigtAufCharakterId: spur.zeigtAufCharakterId,
             fuehrtInDieIrre: spur.fuehrtInDieIrre === true,
+            fernwirkung: spur.fernwirkung === true,
             herkunft: [spurOrt, fall.titel].filter(Boolean).join(" · "),
           }
         : null;

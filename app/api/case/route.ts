@@ -5,11 +5,12 @@ import { ergebnisAus, fehlerText, istZeitueberschreitung } from "@/lib/antwort";
 import { idOderStandard, passendeId } from "@/lib/zuordnen";
 import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { CHARACTERS } from "@/lib/characters";
-import { repariereFall } from "@/lib/fallReparieren";
+import { fernwirkungPruefen, repariereFall } from "@/lib/fallReparieren";
 import { LOCATIONS, findeOrt, waehleSchauplaetze } from "@/lib/locations";
 import {
   buildGeruestPrompt,
   buildSpurenPrompt,
+  type FernwirkungsVorgabe,
   buildVerdaechtigePrompt,
   buildWorldPrompt,
 } from "@/lib/prompts";
@@ -27,11 +28,13 @@ import {
   makeVerdaechtigeSchema,
 } from "@/lib/schemas";
 import type { Bogen } from "@/lib/sagaBogen";
+import { mitVerhandlung } from "@/lib/sagaFinale";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
 import { besessen, besetzungFuerKapitel } from "@/lib/sagaTypen";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
+  type CaseClue,
   type CaseFile,
   type Character,
   type Item,
@@ -146,6 +149,11 @@ type Entwurf = CaseFile & {
    * Steht ausschließlich hier im Siegel, damit der Browser nichts davon sieht.
    */
   sagaBriefing?: string;
+  /**
+   * Ebenfalls nur bei Sagas: Was dieses Kapitel über sich hinaus hinterlassen
+   * muss, damit im Finale überhaupt etwas vorzulegen ist.
+   */
+  sagaSpur?: FernwirkungsVorgabe | null;
 };
 
 const modellOptionen = (
@@ -209,6 +217,35 @@ function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undef
 }
 
 /** Baut aus dem Bogen den Text, den die Fallerzeugung braucht. */
+/**
+ * Was dieses Kapitel für später hinterlassen muss.
+ *
+ * Der Name des Drahtziehers steht nur da, wo er ohnehin kein Geheimnis ist.
+ * Bei "Kein Täter" und "Wimpy selbst" wäre er die Lösung - dort zeigen die
+ * Stücke auf die Sache dahinter statt auf jemanden.
+ *
+ * Das Finale selbst (kapitelNr 0) braucht nichts davon: Danach kommt nichts
+ * mehr, in das etwas hineinreichen könnte.
+ */
+function fernwirkungVon(bogen: Bogen, kapitelNr: number): FernwirkungsVorgabe | null {
+  if (kapitelNr === 0) return null;
+  const art = bogen.vorgaben.finaleArt ?? "klassisch";
+  /*
+   * Wo der Schuldige das Geheimnis der Saga ist, fällt weder Name noch Id:
+   * Ohne Namen bestellt der Prompt Stücke, die auf die Sache dahinter
+   * zeigen - und ohne Id hakt die Prüfung hinterher nichts falsch ab. Bei
+   * "Kein Täter" wäre das sonst ausgerechnet eine Spur gegen den
+   * Unschuldigen.
+   */
+  const geheim = art === "ohne-taeter" || art === "wimpy";
+  return {
+    drahtzieherName: geheim ? "" : bogen.drahtzieherName,
+    drahtzieherId: geheim ? "" : bogen.drahtzieherId,
+    enthuellung: bogen.kapitel.find((k) => k.nummer === kapitelNr)?.enthuellung ?? "",
+    vorGericht: mitVerhandlung(art),
+  };
+}
+
 function briefingVon(bogen: Bogen, kapitelNr: number): string {
   const istFinale = kapitelNr === 0;
   const kapitel = bogen.kapitel.find((k) => k.nummer === kapitelNr);
@@ -387,6 +424,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
     erstelltAm: Date.now(),
     vorgaben,
     sagaBriefing: saga ? briefingVon(saga.bogen, saga.kapitel) : undefined,
+    sagaSpur: saga ? fernwirkungVon(saga.bogen, saga.kapitel) : undefined,
   };
 
   const response = await getAnthropic().messages.create(
@@ -504,8 +542,9 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
 
 /* --- Schritt 3: die Spuren ----------------------------------------- */
 
-async function spurenSchritt(entwurf: Entwurf) {
-  const response = await getAnthropic().messages.create(
+/** Ein Anlauf für die Spuren - beim zweiten Mal mit geschärfter Ansage. */
+async function spurenHolen(entwurf: Entwurf, nachfassen: boolean) {
+  return getAnthropic().messages.create(
     modellOptionen(
       weltVon(entwurf),
       mitBriefing(
@@ -517,6 +556,8 @@ async function spurenSchritt(entwurf: Entwurf) {
           entwurf.verdaechtige,
           entwurf.vorgaben,
           entwurf.items,
+          entwurf.sagaSpur,
+          nachfassen,
         ),
         entwurf.sagaBriefing,
       ),
@@ -526,28 +567,66 @@ async function spurenSchritt(entwurf: Entwurf) {
     ),
     budget(45),
   );
+}
 
+async function spurenSchritt(entwurf: Entwurf) {
+  const ortIds = entwurf.orte.map((o) => o.id);
+  const charakterIds = entwurf.besetzung.map((c) => c.id);
+  const itemIds = entwurf.items.map((i) => i.id);
+
+  const aufbereiten = (roh: SpurenDraft) =>
+    (roh.spuren ?? [])
+      .map((s) => ({
+        ...s,
+        itemId: passendeId(s.itemId, itemIds),
+        ortId: idOderStandard(s.ortId, ortIds, ortIds[0]),
+        zeigtAufCharakterId: idOderStandard(
+          s.zeigtAufCharakterId,
+          charakterIds,
+          entwurf.taeterId,
+        ),
+      }))
+      .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
+
+  const response = await spurenHolen(entwurf, false);
   const antwort = ergebnisAus<SpurenDraft>(response, "api/case:spuren");
   if ("fehler" in antwort) {
     return NextResponse.json({ fehler: antwort.fehler }, { status: antwort.status });
   }
 
-  const ortIds = entwurf.orte.map((o) => o.id);
-  const charakterIds = entwurf.besetzung.map((c) => c.id);
-  const itemIds = entwurf.items.map((i) => i.id);
+  let spuren: CaseClue[] = aufbereiten(antwort.daten);
 
-  const spuren = (antwort.daten.spuren ?? [])
-    .map((s) => ({
-      ...s,
-      itemId: passendeId(s.itemId, itemIds),
-      ortId: idOderStandard(s.ortId, ortIds, ortIds[0]),
-      zeigtAufCharakterId: idOderStandard(
-        s.zeigtAufCharakterId,
-        charakterIds,
-        entwurf.taeterId,
-      ),
-    }))
-    .filter((s): s is typeof s & { itemId: string } => Boolean(s.itemId));
+  /*
+   * Die Fernwirkung: Ein Kapitel muss etwas hinterlassen, das über sich
+   * hinausweist - sonst steht Wimpy im Finale mit leeren Händen im Saal.
+   *
+   * Fehlt sie, ist ein zweiter Anlauf das Geld wert: Er kostet einen Aufruf,
+   * ihr Fehlen kostet die halbe Verhandlung. Bleibt sie auch dann aus, wird
+   * der Fall trotzdem ausgeliefert - er ist für sich vollständig, und ein
+   * verworfenes Kapitel wäre der teurere Schaden.
+   */
+  if (entwurf.sagaSpur) {
+    let kur = fernwirkungPruefen(spuren, entwurf.sagaSpur.drahtzieherId);
+    if (kur.fehlt) {
+      console.warn("[api/case:spuren] Keine Spur mit Fernwirkung - zweiter Anlauf.");
+      const zweite = ergebnisAus<SpurenDraft>(
+        await spurenHolen(entwurf, true),
+        "api/case:spuren",
+      );
+      if (!("fehler" in zweite)) {
+        const neue = aufbereiten(zweite.daten);
+        const zweiteKur = fernwirkungPruefen(neue, entwurf.sagaSpur.drahtzieherId);
+        if (!zweiteKur.fehlt) kur = zweiteKur;
+      }
+    }
+    if (kur.aenderung) console.warn("[api/case:spuren]", kur.aenderung);
+    if (kur.fehlt) {
+      console.error(
+        "[api/case:spuren] Dieses Kapitel hinterlässt nichts für das Finale.",
+      );
+    }
+    spuren = kur.spuren;
+  }
 
   // Letzte Instanz vor dem Ausliefern: Der Fall muss lösbar sein. Ein
   // einziger Ausrutscher des Modells - zwei Spuren auf demselben Gegenstand,

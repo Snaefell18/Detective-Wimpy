@@ -227,6 +227,58 @@ ${regeln(vorgaben)}`;
 }
 
 /** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
+/**
+ * Was ein Kapitel einer Saga über sich hinaus hinterlassen muss.
+ *
+ * Ohne diese Ansage entsteht ein Kapitelfall, der in sich stimmt und nichts
+ * für später übrig lässt - und genau davon lebt die Beweismitteltasche: Was
+ * am Ende vor Gericht zählt, wurde unterwegs eingesammelt. Fehlt es in den
+ * Kapiteln, steht Wimpy im Saal mit leeren Händen.
+ */
+export type FernwirkungsVorgabe = {
+  /**
+   * Der Name des Drahtziehers - leer, wo er das Geheimnis der Saga wäre
+   * ("Kein Täter", "Wimpy selbst"). Dann zeigen die Stücke auf die Sache
+   * dahinter statt auf eine Person.
+   */
+  drahtzieherName: string;
+  /**
+   * Seine Id. Im Prompt taucht sie nie auf - sie ist für die Prüfung
+   * danach da: Fehlt das Häkchen, gilt eine ehrliche Spur auf ihn als
+   * Fernwirkung (siehe fernwirkungPruefen).
+   */
+  drahtzieherId: string;
+  /** Was dieses Kapitel preisgeben soll. */
+  enthuellung: string;
+  /** Läuft die Saga in eine Verhandlung? Dann ist es kein Beiwerk, sondern Pflicht. */
+  vorGericht: boolean;
+};
+
+function fernwirkungsRegeln(saga: FernwirkungsVorgabe): string {
+  const ziel = saga.drahtzieherName
+    ? `auf ${saga.drahtzieherName}, den Kopf hinter der ganzen Serie`
+    : "auf die Sache, die hinter der ganzen Serie steckt";
+
+  return `
+
+STÜCKE MIT FERNWIRKUNG (PFLICHT - der wichtigste Teil dieser Bestellung)
+- Ein bis zwei der Spuren lösen diesen Fall NICHT. Sie zeigen über ihn hinaus ${ziel}.
+- Es müssen Gegenstände sein, die man einstecken und Wochen später auf einen Tisch legen kann: ein Zettel mit Handschrift, eine Quittung mit Uhrzeit, ein Abdruck, ein Schlüssel, eine Fotoplatte, ein Stück Stoff. Kein Gerücht, keine Bemerkung, kein Gefühl.
+- Ihre Beobachtung enthält die harte Einzelheit - Uhrzeit, Handschrift, Zeichen, Geruch, Material - und nennt ${
+    saga.drahtzieherName ? `${saga.drahtzieherName} nicht beim Namen` : "niemanden beim Namen"
+  }.
+- Ihre Bedeutung sagt dagegen klar und mit Namen, was das Stück ${ziel} beweist.
+- Setze bei genau diesen Stücken fernwirkung auf true, bei allen anderen auf false.
+- Was dieses Kapitel preisgeben soll, hängt an ihnen: ${saga.enthuellung || "(steht im Briefing)"}
+- Der Fall dieses Kapitels bleibt trotzdem ohne sie lösbar: Wer sie liegen lässt, löst den Fall - und hat später nichts in der Hand.
+- Ihre Vermutung ist Wimpys leiser Wink: Er stutzt, weil das Stück nicht zu diesem Fall passt ("Das gehört hier gar nicht her." / "Damit hat der Fall nichts zu tun. Trotzdem."). Er sagt nicht, worauf es zeigt - nur, dass es woanders hingehört.${
+    saga.vorGericht
+      ? `
+- Diese Saga endet vor Gericht. Der Spieler kann höchstens sechs Stücke über die ganze Saga hinweg mitnehmen, und NUR damit kann er dort etwas beweisen. Ohne Stücke mit Fernwirkung ist die Verhandlung nicht zu gewinnen - sie sind kein Beiwerk, sondern der Grund, warum es dieses Kapitel gibt.`
+      : ""
+  }`;
+}
+
 export function buildSpurenPrompt(
   besetzung: Character[],
   taeterId: string,
@@ -235,10 +287,23 @@ export function buildSpurenPrompt(
   verdaechtige: { charakterId: string; aufenthaltsort: string; alibi: string }[],
   vorgaben?: Vorgaben | null,
   items: { id: string; name: string }[] = ITEMS,
+  /** Nur bei einem Kapitel einer Saga - siehe FernwirkungsVorgabe. */
+  saga?: FernwirkungsVorgabe | null,
+  /**
+   * Zweiter Anlauf: Beim ersten Mal fehlte die Fernwirkung. Dann steht die
+   * Forderung noch einmal ganz oben - freundlich, aber unübersehbar.
+   */
+  nachfassen = false,
 ): string {
   const name = (id: string) => besetzung.find((c) => c.id === id)?.name ?? id;
 
-  return `Der Fall und die Verdächtigen stehen fest. Lege jetzt die Spuren aus.
+  return `Der Fall und die Verdächtigen stehen fest. Lege jetzt die Spuren aus.${
+    saga && nachfassen
+      ? `
+
+ACHTUNG: Im letzten Anlauf fehlte die Spur mit Fernwirkung. Dieses Mal muss mindestens eine dabei sein - siehe unten.`
+      : ""
+  }
 
 FALL: ${titel}
 WAS WIRKLICH GESCHAH: ${tathergang}
@@ -248,8 +313,10 @@ DIE VERDÄCHTIGEN
 ${verdaechtige.map((v) => `- ${name(v.charakterId)} [${v.charakterId}], jetzt bei [${v.aufenthaltsort}], behauptet: ${v.alibi}`).join("\n")}
 
 Anforderungen:
-- 4 bis 6 Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort.
-- Mindestens zwei Spuren zeigen auf den Täter, mindestens eine führt in die Irre.
+- ${saga ? "5 bis 7" : "4 bis 6"} Spuren: je ein Gegenstand aus der Gegenstandsliste an einem Ort.
+- Mindestens zwei Spuren zeigen auf den Täter dieses Falls, mindestens eine führt in die Irre.${
+    saga ? "\n- Dazu kommen ein bis zwei Stücke mit Fernwirkung (siehe unten). Sie zählen nicht zu den Spuren auf den Täter dieses Falls." : ""
+  }
 - ${SCHWIERIGKEIT_TEXT[vorgaben?.schwierigkeit ?? "mittel"]}
 - Jeder Gegenstand kommt höchstens einmal vor, und jede Spur muss etwas Konkretes bedeuten: Wer war wo, wer hat was angefasst, was passt nicht zusammen. Ein Fundstück ohne Aussage gehört nicht in den Fall.
 
@@ -272,7 +339,7 @@ ${
         .join(", ")}`
     : ""
 }
-${regeln(vorgaben)}`.trim();
+${regeln(vorgaben)}${saga ? fernwirkungsRegeln(saga) : ""}`.trim();
 }
 
 /** Prompt für ein Gespräch mit einem Charakter. */

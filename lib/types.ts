@@ -248,6 +248,15 @@ export type CaseClue = {
   /** Auf wen der Hinweis zeigt (kann in die Irre führen). */
   zeigtAufCharakterId: string;
   fuehrtInDieIrre: boolean;
+  /**
+   * Fernwirkung: Dieses Stück löst nicht den Fall, in dem es liegt, sondern
+   * zeigt über ihn hinaus - auf den, der hinter der ganzen Saga steckt.
+   *
+   * Solche Stücke sind der Grund, warum die Beweismitteltasche über eine
+   * ganze Saga gilt: Sie sind es, die am Ende vor Gericht etwas wert sind.
+   * In einem einzelnen Fall gibt es sie nicht.
+   */
+  fernwirkung?: boolean;
 };
 
 export type Notebook = {

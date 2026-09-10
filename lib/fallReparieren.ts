@@ -262,3 +262,37 @@ export function pruefeLoesbarkeit(args: {
 
   return probleme;
 }
+
+/**
+ * Hat dieses Kapitel etwas hinterlassen, das über sich hinausweist?
+ *
+ * Die Beweismitteltasche lebt davon: Was am Ende vor Gericht zählt, wurde
+ * unterwegs eingesammelt. Ein Kapitel, das nur sich selbst löst, schickt
+ * Wimpy mit leeren Händen in den Saal.
+ *
+ * Gefunden wird in zwei Stufen. Hat das Modell selbst etwas als Fernwirkung
+ * ausgezeichnet, ist alles gut. Hat es das vergessen, aber eine ehrliche Spur
+ * auf den Drahtzieher gelegt, gilt sie als solche - das ist dieselbe Sache,
+ * nur ohne Häkchen. Erst wenn beides fehlt, meldet sich `fehlt`.
+ */
+export function fernwirkungPruefen(
+  spuren: CaseClue[],
+  /** Der Kopf hinter der Saga - leer, wo es ihn nicht gibt ("Kein Täter"). */
+  drahtzieherId: string,
+): { spuren: CaseClue[]; fehlt: boolean; aenderung: string | null } {
+  if (spuren.some((s) => s.fernwirkung)) {
+    return { spuren, fehlt: false, aenderung: null };
+  }
+
+  const ersatz = drahtzieherId
+    ? spuren.find((s) => s.zeigtAufCharakterId === drahtzieherId && !s.fuehrtInDieIrre)
+    : undefined;
+
+  if (!ersatz) return { spuren, fehlt: true, aenderung: null };
+
+  return {
+    spuren: spuren.map((s) => (s === ersatz ? { ...s, fernwirkung: true } : s)),
+    fehlt: false,
+    aenderung: `„${ersatz.itemId}“ zeigt auf den Drahtzieher und gilt jetzt als Stück mit Fernwirkung.`,
+  };
+}

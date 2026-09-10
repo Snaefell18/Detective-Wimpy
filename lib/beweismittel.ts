@@ -59,6 +59,12 @@ export type BeweismittelKern = {
   /** Auf wen er zeigt - kann in die Irre führen. */
   zeigtAufCharakterId: string;
   fuehrtInDieIrre: boolean;
+  /**
+   * Zeigt dieses Stück über sein Kapitel hinaus auf den, um den es am Ende
+   * geht? Genau davon lebt die Tasche - und im Saal wiegt so ein Stück
+   * entsprechend schwer.
+   */
+  fernwirkung?: boolean;
   /** Ort und Fall, aus dem er stammt. */
   herkunft: string;
 };
