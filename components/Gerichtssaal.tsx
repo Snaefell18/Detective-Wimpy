@@ -36,7 +36,13 @@ type AnklageAntwort = {
   richtig: boolean;
   text: string;
   angeklagter?: Character | null;
-  verwandlung?: { wirt: Character | null; daemon: Character | null; ton: string } | null;
+  verwandlung?: {
+    wirt: Character | null;
+    daemon: Character | null;
+    ton: string;
+    /** Was die Gestalt sagt, sobald sie dasteht. */
+    spruch?: string;
+  } | null;
 };
 
 export function Gerichtssaal({
@@ -246,6 +252,7 @@ export function Gerichtssaal({
         wirt={wandelt.wirt ?? undefined}
         daemon={wandelt.daemon ?? undefined}
         ton={wandelt.ton}
+        spruch={wandelt.spruch ?? ""}
         onFertig={() => {
           if (wandelt.daemon) setBank(wandelt.daemon);
           setWandelt(null);

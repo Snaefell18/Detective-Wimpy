@@ -68,6 +68,11 @@ export const FinaleSchema = z.object({
   auftrag: z.string().describe("Worum es im Finalfall geht"),
   erzaehlerText: z.string().describe("Erzählertext vor dem Finale, vier bis sechs Zeilen"),
   epilogText: z.string().describe("Erzählertext nach dem gelösten Finale, drei bis fünf Zeilen"),
+  verwandlungSpruch: z
+    .string()
+    .describe(
+      "Nur wenn ein Tier besessen ist: die ersten Worte der Gestalt, sobald sie aus ihrem Wirt gebrochen ist. Zwei bis vier Sätze wörtliche Rede in ihrer eigenen Stimme. Ohne Besessenheit leer lassen.",
+    ),
 });
 
 export type FinaleDraft = z.infer<typeof FinaleSchema>;
@@ -136,6 +141,11 @@ export const VerhandlungSaalSchema = z.object({
     .string()
     .describe(
       "Was der Richter sagt, wenn die Beweisführung scheitert: drei bis fünf Sätze, bitter statt versöhnlich. Wird dabei jemand verurteilt, nennt der letzte Satz die Tage Schrankhaft.",
+    ),
+  verwandlungSpruch: z
+    .string()
+    .describe(
+      "Nur wenn ein Tier besessen ist: die ersten Worte der Gestalt, sobald sie aus ihrem Wirt gebrochen ist. Zwei bis vier Sätze wörtliche Rede in ihrer eigenen Stimme. Ohne Besessenheit leer lassen.",
     ),
 });
 

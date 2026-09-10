@@ -33,6 +33,7 @@ import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { useAdmin } from "@/lib/adminStore";
+import { postJson } from "@/lib/api";
 import { arcAbspann, type Arc } from "@/lib/arcTypen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
@@ -98,6 +99,15 @@ export default function Home() {
   const [reaktion, setReaktion] = useState<{ charakterId: string; text: string } | null>(null);
   /** Die Verwandlung vor dem Finale - läuft, sobald sie gesetzt ist. */
   const [verwandlung, setVerwandlung] = useState(false);
+  /**
+   * Was die Gestalt sagt, wenn sie dasteht.
+   *
+   * Sie steht im versiegelten Bogen, nicht offen in der Saga - sonst könnte
+   * man in der Datenbank nachlesen, wer da gleich herausbricht. Geholt wird
+   * sie deshalb erst, wenn die Verwandlung wirklich losgeht, und ohne
+   * Modellaufruf: Der Text steht seit der Erzeugung fest.
+   */
+  const [verwandlungSpruch, setVerwandlungSpruch] = useState("");
   /**
    * Was an dieser Saga fehlt - steht statt eines stillen Weiterblätterns da.
    * Lieber ein ehrlicher Satz als ein verschlucktes Finale.
@@ -433,6 +443,15 @@ export default function Home() {
       // Lohn für die richtige Anklage und gehört in den Saal, nicht davor.
       const besessenheit = besessen(saga.stand.saga.vorgaben);
       if (finale && besessenheit && saal?.art !== "gericht-daemon") {
+        setVerwandlungSpruch("");
+        // Nebenher: Kommt nichts zurück, bleibt der Moment eben stumm.
+        void postJson<{ spruch: string }>("/api/saga", {
+          schritt: "verwandlung",
+          bogenSiegel: saga.stand.saga.bogenSiegel,
+          orte: [],
+        })
+          .then(({ spruch }) => setVerwandlungSpruch(spruch ?? ""))
+          .catch(() => setVerwandlungSpruch(""));
         setVerwandlung(true);
         return;
       }
@@ -676,8 +695,10 @@ export default function Home() {
           wirt={finde(besessenheit?.wirtId ?? "")}
           daemon={finde(besessenheit?.daemonId ?? "")}
           ton={besessenheit?.ton ?? ""}
+          spruch={verwandlungSpruch}
           onFertig={() => {
             setVerwandlung(false);
+            setVerwandlungSpruch("");
             sagaFallStarten(true, true);
           }}
         />

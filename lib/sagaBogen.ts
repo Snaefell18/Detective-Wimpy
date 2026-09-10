@@ -44,6 +44,15 @@ export type Bogen = {
     epilogText: string;
     stadt: string;
     /**
+     * Was die Dämonengestalt sagt, sobald sie aus ihrem Wirt gebrochen ist.
+     *
+     * Sie steht im Siegel und nicht offen in der Saga: Bei "Gericht & Dämon"
+     * darf bis zur Anklage nicht einmal feststehen, dass es sie gibt. Bei
+     * allen anderen Besessenheiten holt der Browser sie erst in dem Moment
+     * ab, in dem die Verwandlung läuft.
+     */
+    verwandlungSpruch?: string;
+    /**
      * Nur bei einer Verhandlung: welche Beweise tragen, was der Angeklagte
      * darauf erwidert und wie Öhö urteilt. Steht hier und nirgends sonst -
      * der offene Teil der Saga kennt bloß die Stücke.

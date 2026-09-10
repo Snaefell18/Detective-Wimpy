@@ -7954,3 +7954,23 @@ a.zurueck {
   font-size: 14.5px;
   color: var(--text-leise);
 }
+
+/* Die ersten Worte der Gestalt.
+ *
+ * Sie stehen unter dem Namen und warten auf einen Tipp - deshalb dürfen sie
+ * Platz nehmen: Ruhe, Zeilenluft, ein Anführungsstrich links wie bei einer
+ * Aussage im Saal. */
+.verwandlung-spruch {
+  max-width: 30ch;
+  margin: 16px auto 0;
+  padding-left: 14px;
+  border-left: 2px solid rgba(255, 120, 120, 0.55);
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: none;
+  color: #f3e6e6;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+  animation: einblenden 700ms ease-out both;
+  animation-delay: 400ms;
+}

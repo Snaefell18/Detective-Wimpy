@@ -42,12 +42,21 @@ export function Verwandlung({
   wirt,
   daemon,
   ton = "",
+  spruch = "",
   onFertig,
 }: {
   wirt: Character | undefined;
   daemon: Character | undefined;
   /** Pfad oder "stimme:<id>" - leer heißt: feste Dauer. */
   ton?: string;
+  /**
+   * Was die Gestalt sagt, sobald sie dasteht.
+   *
+   * Steht hier etwas, wartet der Bildschirm: Man liest es, tippt weiter, und
+   * erst dann geht es in den Saal. Leer heißt: stumm und nach kurzem
+   * Nachhall von allein weiter - so wie es bei älteren Sagas bleibt.
+   */
+  spruch?: string;
   onFertig: () => void;
 }) {
   const [fortschritt, setFortschritt] = useState(0);
@@ -138,12 +147,17 @@ export function Verwandlung({
     };
   }, [ton]);
 
-  // Steht die Gestalt, bleibt sie kurz - dann geht es ins Finale.
+  /*
+   * Steht die Gestalt, bleibt sie kurz - dann geht es ins Finale.
+   *
+   * Es sei denn, sie sagt etwas: Dann wartet der Bildschirm auf einen Tipp.
+   * Wer gerade liest, soll nicht mitten im Satz in den Saal geschoben werden.
+   */
   useEffect(() => {
-    if (!fertig) return;
+    if (!fertig || spruch.trim()) return;
     const id = window.setTimeout(() => fertigRef.current(), NACHHALL);
     return () => window.clearTimeout(id);
-  }, [fertig]);
+  }, [fertig, spruch]);
 
   useEffect(() => {
     if (!wirt || !daemon) fertigRef.current();
@@ -206,6 +220,12 @@ export function Verwandlung({
                 <p className="leise verwandlung-zeile">
                   {[daemon.beruf, daemon.tierart].filter(Boolean).join(" · ")}
                 </p>
+              )}
+              {/* Und dann sagt sie etwas. Erst wenn sie ausgeredet hat,
+                  geht es weiter - deshalb steht der Text hier und nicht in
+                  einer Einblendung, die von allein verschwindet. */}
+              {fertig && spruch.trim() && (
+                <p className="verwandlung-spruch">{spruch.trim()}</p>
               )}
             </>
           ) : (

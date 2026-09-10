@@ -87,7 +87,7 @@ export const maxDuration = 60;
  * Zwischen den Schritten wandert der halbfertige Bogen verschlüsselt durch
  * den Browser: Drahtzieher, Wahrheit und Enthüllungen bleiben geheim.
  */
-type Schritt = "kern" | "kapitel" | "finale" | "beweise";
+type Schritt = "kern" | "kapitel" | "finale" | "beweise" | "verwandlung";
 
 const modellOptionen = (
   system: string,
@@ -136,7 +136,9 @@ const stadtName = (id: string, staedte: City[]) =>
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const schritt: Schritt = ["kapitel", "finale", "beweise"].includes(body?.schritt)
+    const schritt: Schritt = ["kapitel", "finale", "beweise", "verwandlung"].includes(
+      body?.schritt,
+    )
       ? body.schritt
       : "kern";
 
@@ -161,6 +163,21 @@ export async function POST(request: Request) {
 
     if (schritt === "kapitel") {
       return await kapitelSchritt(bogen, orte, staedte, Number(body?.nummer ?? 1));
+    }
+
+    /*
+     * Die ersten Worte der Gestalt - ohne Modellaufruf, sie stehen seit der
+     * Erzeugung fest.
+     *
+     * Bei "Gericht & Dämon" gibt es sie hier nicht: Dort darf bis zur
+     * Anklage nicht einmal feststehen, DASS jemand besessen ist. Sie kommen
+     * dann mit der Antwort auf die Anklage (siehe api/verhandlung).
+     */
+    if (schritt === "verwandlung") {
+      const geheim = (bogen.vorgaben.finaleArt ?? "klassisch") === "gericht-daemon";
+      return NextResponse.json({
+        spruch: geheim ? "" : (bogen.finale?.verwandlungSpruch ?? ""),
+      });
     }
     return schritt === "beweise"
       ? await beweiseSchritt(bogen, orte, staedte)
@@ -582,6 +599,7 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
       erzaehlerText: d.erzaehlerText ?? "",
       epilogText: d.epilogText ?? "",
       stadt: stadtFuer(bogen.vorgaben, 0, staedte),
+      verwandlungSpruch: (d.verwandlungSpruch ?? "").trim().slice(0, 700),
     },
   };
 
@@ -775,6 +793,14 @@ async function verhandlungsSchritt(
         detektivName: detektiv?.name ?? "Wimpy",
         motiv: bogen.drahtzieherMotiv,
         kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
+        // Ist jemand besessen, wird hier gleich bestellt, was die Gestalt
+        // sagt, wenn sie aus ihm herausbricht.
+        besessenheit: besessenheit
+          ? {
+              wirt: bogen.besetzung.find((c) => c.id === besessenheit.wirtId)?.name ?? "",
+              daemon: bogen.besetzung.find((c) => c.id === besessenheit.daemonId)?.name ?? "",
+            }
+          : undefined,
       }),
       zodOutputFormat(VerhandlungSaalSchema),
       4000,
@@ -813,6 +839,10 @@ async function verhandlungsSchritt(
             wirtId: besessenheit.wirtId,
             daemonId: besessenheit.daemonId,
             ton: besessenheit.ton ?? "",
+            // Was die Gestalt sagt, wenn sie dasteht. Sie steht im Siegel,
+            // weil bei "Gericht & Dämon" bis zur Anklage nicht einmal
+            // feststehen darf, DASS es sie gibt.
+            spruch: kurz(d.verwandlungSpruch, 700),
           }
         : undefined,
   };
@@ -840,6 +870,7 @@ async function verhandlungsSchritt(
       erzaehlerText: ohneVerrat(kurz(d.erzaehlerText, 2000)),
       epilogText: kurz(d.epilogText, 2000),
       stadt: stadtFuer(bogen.vorgaben, 0, staedte),
+      verwandlungSpruch: kurz(d.verwandlungSpruch ?? "", 700),
       wahrheit,
     },
   };

@@ -2914,3 +2914,12 @@
   font-size: 22px;
   line-height: 1.05;
 }
+
+/* Was die Gestalt sagt, ist ein Zitat - im Noir also die Schrift des Hauses
+   und die Farbe des Akzents. */
+[data-theme="noir"] .verwandlung-spruch {
+  border-left-color: var(--linie-akzent);
+  font-family: var(--f-text);
+  font-size: 16.5px;
+  color: var(--text-2);
+}

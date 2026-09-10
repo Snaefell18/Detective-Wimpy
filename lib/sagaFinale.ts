@@ -185,7 +185,17 @@ export type VerhandlungWahrheit = {
    * Nur bei "Gericht & Dämon": Wer da wirklich in wem steckt. Ausgelöst wird
    * die Verwandlung erst durch die richtige Anklage.
    */
-  verwandlung?: { wirtId: string; daemonId: string; ton: string };
+  verwandlung?: {
+    wirtId: string;
+    daemonId: string;
+    ton: string;
+    /**
+     * Was die Gestalt sagt, sobald sie dasteht - zwei bis vier Sätze in
+     * ihrer eigenen Stimme. Leer bei älteren Sagas; dann bleibt der Moment
+     * stumm wie bisher.
+     */
+    spruch?: string;
+  };
 };
 
 /**

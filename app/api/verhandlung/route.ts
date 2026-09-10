@@ -93,6 +93,9 @@ export async function POST(request: Request) {
                 wirt: figur(verwandlung.wirtId),
                 daemon: figur(verwandlung.daemonId),
                 ton: verwandlung.ton ?? "",
+                // Was sie sagt, wenn sie dasteht. Ältere Sagas haben nichts
+                // hinterlegt - dann bleibt der Moment stumm wie bisher.
+                spruch: verwandlung.spruch ?? "",
               }
             : null,
       });

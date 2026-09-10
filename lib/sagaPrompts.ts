@@ -183,6 +183,23 @@ DIE FALSCHE FÄHRTE DER GANZEN SAGA: ${name}
   }`;
 }
 
+/**
+ * Die ersten Worte der Gestalt.
+ *
+ * Der Moment, in dem sie aus ihrem Wirt bricht, ist das größte Bild der
+ * ganzen Saga - und bisher war er stumm. Was sie sagt, steht deshalb schon
+ * bei der Erzeugung fest: gesprochen, kurz, in ihrer eigenen Stimme.
+ */
+export function verwandlungsRegeln(wirt: string, daemon: string): string {
+  return `
+DIE ERSTEN WORTE DER GESTALT (Feld verwandlungSpruch)
+- ${daemon} ist eben aus ${wirt} herausgebrochen und steht zum ersten Mal selbst da.
+- Zwei bis vier Sätze wörtliche Rede, ohne Namensprefix, ohne Anführungszeichen, ohne Regieanweisung.
+- Sie klingen nach etwas Altem, das lange still war: ruhig, kalt, ein wenig belustigt - kein Gebrüll, keine Drohung gegen Kinder, nichts Blutiges.
+- Sie sagt, wie lange sie gewartet hat, wie wenig ${wirt} davon wusste, oder wie klein der Saal ihr vorkommt. Sie gesteht nichts und nennt keine Tat beim Namen.
+- Sie darf ${wirt} bedauern oder verspotten - aber niemals verraten, was gleich zu beweisen ist.`;
+}
+
 /** Schritt 1: Worum es in der ganzen Saga geht. */
 export function buildKernPrompt(
   besetzung: Character[],
@@ -415,7 +432,8 @@ ${
       ? `
 - BESESSENHEIT: ${besessenheit.daemon} ist die Gestalt, die die ganze Zeit in ${besessenheit.wirt} steckte. Der Erzählertext vor dem Finale erzählt, dass mit ${besessenheit.wirt} etwas nicht stimmt - er zittert, er weicht aus, er wirkt wie zwei Wesen in einem -, nennt aber weder Dämon noch ${besessenheit.daemon}.
 - Im Finalfall ist ${besessenheit.wirt} nicht mehr dabei: An seiner Stelle steht ${besessenheit.daemon}. Der Auftrag darf das voraussetzen.
-- Der Epilog erklärt endlich alles: seit wann, warum ausgerechnet ${besessenheit.wirt}, und was aus ihm wird.`
+- Der Epilog erklärt endlich alles: seit wann, warum ausgerechnet ${besessenheit.wirt}, und was aus ihm wird.
+${verwandlungsRegeln(besessenheit.wirt, besessenheit.daemon)}`
       : ""
   }
 - Der Epilog kommt nach dem gelösten Fall und darf alles aussprechen.${
@@ -517,8 +535,10 @@ export function buildVerhandlungPrompt(args: {
   detektivName: string;
   motiv: string;
   kapitel: { name: string; enthuellung: string }[];
+  /** Wirt und Gestalt, wenn ein Tier besessen ist - für die ersten Worte. */
+  besessenheit?: { wirt: string; daemon: string };
 }): string {
-  const { art, angeklagter, richter, detektivName } = args;
+  const { art, angeklagter, richter, detektivName, besessenheit } = args;
   const ziel = verhandlungsZiel(args);
 
   return `${kopf(args, ziel)}
@@ -542,7 +562,11 @@ WEITERES
   }
 - Das Urteil beim Scheitern lässt ${art === "ohne-taeter" ? "den Falschen verurteilt zurück" : art === "wimpy" ? "die Sache ungeklärt und " + detektivName + " mit seinem Wissen allein" : angeklagter + " gehen - freundlich, mit einem letzten Satz, der wehtut"}.
 - Der Epilog kommt nach dem Urteil und darf alles aussprechen.
-- Alles auf Deutsch.
+- Alles auf Deutsch.${
+    besessenheit
+      ? `\n${verwandlungsRegeln(besessenheit.wirt, besessenheit.daemon)}`
+      : "\n- verwandlungSpruch bleibt leer: In dieser Saga ist niemand besessen."
+  }
 
 DIE ANKLAGE
 ${
