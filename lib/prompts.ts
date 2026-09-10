@@ -252,6 +252,11 @@ export type FernwirkungsVorgabe = {
   enthuellung: string;
   /** Läuft die Saga in eine Verhandlung? Dann ist es kein Beiwerk, sondern Pflicht. */
   vorGericht: boolean;
+  /**
+   * Das Tier, auf das die ganze Saga über fälschlich alles zeigt - leer
+   * heißt: Es gibt keine durchgehende Fährte.
+   */
+  falscheFaehrteName?: string;
 };
 
 function fernwirkungsRegeln(saga: FernwirkungsVorgabe): string {
@@ -271,7 +276,11 @@ STÜCKE MIT FERNWIRKUNG (PFLICHT - der wichtigste Teil dieser Bestellung)
 - Setze bei genau diesen Stücken fernwirkung auf true, bei allen anderen auf false.
 - Was dieses Kapitel preisgeben soll, hängt an ihnen: ${saga.enthuellung || "(steht im Briefing)"}
 - Der Fall dieses Kapitels bleibt trotzdem ohne sie lösbar: Wer sie liegen lässt, löst den Fall - und hat später nichts in der Hand.
-- Ihre Vermutung ist Wimpys leiser Wink: Er stutzt, weil das Stück nicht zu diesem Fall passt ("Das gehört hier gar nicht her." / "Damit hat der Fall nichts zu tun. Trotzdem."). Er sagt nicht, worauf es zeigt - nur, dass es woanders hingehört.${
+${
+    saga.falscheFaehrteName
+      ? `- Und genau ein Stück zeigt auf ${saga.falscheFaehrteName}: Es sieht belastend aus, beweist aber nichts. fuehrtInDieIrre true, fernwirkung false. ${saga.falscheFaehrteName} ist unschuldig - hier wie in jedem Kapitel.\n`
+      : ""
+  }- Ihre Vermutung ist Wimpys leiser Wink: Er stutzt, weil das Stück nicht zu diesem Fall passt ("Das gehört hier gar nicht her." / "Damit hat der Fall nichts zu tun. Trotzdem."). Er sagt nicht, worauf es zeigt - nur, dass es woanders hingehört.${
     saga.vorGericht
       ? `
 - Diese Saga endet vor Gericht. Der Spieler kann höchstens sechs Stücke über die ganze Saga hinweg mitnehmen, und NUR damit kann er dort etwas beweisen. Ohne Stücke mit Fernwirkung ist die Verhandlung nicht zu gewinnen - sie sind kein Beiwerk, sondern der Grund, warum es dieses Kapitel gibt.`

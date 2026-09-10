@@ -2,6 +2,7 @@ import { GEDULD, MIT_BEWEIS_MAX, OHNE_BEWEIS_MAX, UEBERZEUGT, type AnhoerungZug 
 import { characterBrief } from "./characters";
 import type { BeweismittelKern } from "./beweismittel";
 import type { Bogen } from "./sagaBogen";
+import { falscheFaehrteVon } from "./sagaTypen";
 import type { FinaleArt } from "./sagaFinale";
 import { URTEILS_REGEL } from "./urteil";
 import type { Character } from "./types";
@@ -69,6 +70,14 @@ export function buildAnhoerungPrompt(args: {
   } = args;
 
   const jetzt = mittel.find((m) => m.jetzt);
+  /*
+   * Die falsche Fährte der Saga.
+   *
+   * Sie muss hier stehen, sonst nimmt der Saal am Ende ausgerechnet die
+   * Stücke an, die fünf Kapitel lang in die Irre geführt haben - und
+   * verurteilt den Falschen.
+   */
+  const faehrte = falscheFaehrteVon(bogen.vorgaben, bogen.besetzung);
   const wahrheit = bogen.finale?.wahrheit;
   /** Klagt der Detektiv sich selbst an, spricht der Angeklagte nicht extra. */
   const eigeneSache = Boolean(angeklagter?.istDetektiv);
@@ -130,7 +139,11 @@ WIE DER SAAL SEIN GEWICHT VERTEILT
 - Ein Stück, das in die Irre führt, oder ein Vorhalt, der nicht passt: ueberzeugungPlus negativ (bis -15). Öhö sagt dann freundlich, warum das nichts trägt.
 - Bringt ein Zug gar nichts - Geplauder, Wiederholung, Beleidigung -, setze ueberzeugungPlus auf 0 und geduldMinus auf 1.
 - ${jetzt ? `Wimpy legt gerade "${jetzt.kern.name}" vor. Der Angeklagte MUSS darauf eingehen.` : "Wimpy legt in diesem Zug nichts vor - er redet nur."}
-- Dasselbe Stück ein zweites Mal bringt nichts Neues: ueberzeugungPlus 0.
+- Dasselbe Stück ein zweites Mal bringt nichts Neues: ueberzeugungPlus 0.${
+    faehrte && faehrte.charakter.id !== angeklagter?.id
+      ? `\n- ${faehrte.charakter.name} stand die ganze Saga über unter Verdacht und ist unschuldig. Alles, was auf ihn zeigt, trägt hier nicht: ueberzeugungPlus 0 oder negativ, und der Vorsitz sagt freundlich, dass Verdacht kein Beweis ist.`
+      : ""
+  }
 
 WIE DIE ZWEI STIMMEN KLINGEN
 ${

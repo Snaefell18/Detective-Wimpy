@@ -513,6 +513,67 @@ export function SagaVorgabenFelder({
       </div>
 
       <h3 className="unter-abschnitt">
+        Falsche Fährte{" "}
+        <span className="leise">· ein Verdacht, der die ganze Saga über mitläuft</span>
+      </h3>
+      <p className="leise klein">
+        Optional. Auf dieses Tier zeigt in jedem Kapitel etwas - und es ist
+        unschuldig. Es erklärt sich schlecht, weil es etwas anderes verbirgt,
+        etwas Harmloses. Vor Gericht trägt nichts davon: Wer der Fährte
+        nachjagt, sammelt eine Tasche voller Stücke, die nichts beweisen.
+      </p>
+      <div className="marken-reihe">
+        <button
+          className="marke-knopf"
+          data-aktiv={!vorgaben.falscheFaehrte?.charakterId}
+          onClick={() => setzen({ falscheFaehrte: { charakterId: "", was: "" } })}
+        >
+          Keine
+        </button>
+        {verdaechtige
+          .filter((c) => c.id !== vorgaben.drahtzieherId)
+          .map((c) => (
+            <button
+              key={c.id}
+              className="marke-knopf"
+              data-aktiv={vorgaben.falscheFaehrte?.charakterId === c.id}
+              onClick={() =>
+                setzen({
+                  falscheFaehrte: {
+                    charakterId: c.id,
+                    was: vorgaben.falscheFaehrte?.was ?? "",
+                  },
+                })
+              }
+            >
+              {c.name}
+            </button>
+          ))}
+      </div>
+      {vorgaben.falscheFaehrte?.charakterId && (
+        <label className="feld">
+          <span className="leise">
+            Warum es immer wieder so aussieht · leer heißt: das Modell denkt
+            sich etwas aus
+          </span>
+          <textarea
+            rows={2}
+            value={vorgaben.falscheFaehrte?.was ?? ""}
+            onChange={(e) =>
+              setzen({
+                falscheFaehrte: {
+                  charakterId: vorgaben.falscheFaehrte?.charakterId ?? "",
+                  was: e.target.value,
+                },
+              })
+            }
+            placeholder="z.B. Er ist jede Nacht am Hafen unterwegs und sagt nie, warum."
+            maxLength={600}
+          />
+        </label>
+      )}
+
+      <h3 className="unter-abschnitt">
         Twist <span className="leise">· der Drahtzieher bleibt bis zum Finale unsichtbar</span>
         {arcHinweis("twist")}
       </h3>

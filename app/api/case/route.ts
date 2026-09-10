@@ -30,7 +30,7 @@ import {
 import type { Bogen } from "@/lib/sagaBogen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { buildSagaBriefing } from "@/lib/sagaPrompts";
-import { besessen, besetzungFuerKapitel } from "@/lib/sagaTypen";
+import { besessen, besetzungFuerKapitel, falscheFaehrteVon } from "@/lib/sagaTypen";
 import { seal, unseal } from "@/lib/seal";
 import {
   STANDARD_EINSTELLUNGEN,
@@ -227,6 +227,11 @@ function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undef
  * Das Finale selbst (kapitelNr 0) braucht nichts davon: Danach kommt nichts
  * mehr, in das etwas hineinreichen könnte.
  */
+function faehrteVon(bogen: Bogen): { name: string; was: string } | undefined {
+  const faehrte = falscheFaehrteVon(bogen.vorgaben, bogen.besetzung);
+  return faehrte ? { name: faehrte.charakter.name, was: faehrte.was } : undefined;
+}
+
 function fernwirkungVon(bogen: Bogen, kapitelNr: number): FernwirkungsVorgabe | null {
   if (kapitelNr === 0) return null;
   const art = bogen.vorgaben.finaleArt ?? "klassisch";
@@ -243,6 +248,7 @@ function fernwirkungVon(bogen: Bogen, kapitelNr: number): FernwirkungsVorgabe | 
     drahtzieherId: geheim ? "" : bogen.drahtzieherId,
     enthuellung: bogen.kapitel.find((k) => k.nummer === kapitelNr)?.enthuellung ?? "",
     vorGericht: mitVerhandlung(art),
+    falscheFaehrteName: faehrteVon(bogen)?.name ?? "",
   };
 }
 
@@ -266,6 +272,7 @@ function briefingVon(bogen: Bogen, kapitelNr: number): string {
     enthuellung: kapitel?.enthuellung ?? "",
     vorherigeEnthuellungen: vorher,
     istFinale,
+    falscheFaehrte: faehrteVon(bogen),
   });
 }
 

@@ -138,6 +138,18 @@ export type SagaVorgaben = {
    */
   besessenheit: Besessenheit;
   /**
+   * Eine falsche Fährte, die durch die ganze Saga läuft.
+   *
+   * Ein Tier, auf das in jedem Kapitel etwas zeigt - und das unschuldig ist.
+   * Nicht der Fehlgriff eines einzelnen Falls, sondern ein Verdacht, der
+   * mitwächst: Wer ihn verfolgt, sammelt fünf Kapitel lang Stücke, die vor
+   * Gericht nichts wert sind.
+   *
+   * Leere Id heißt: keine durchgehende Fährte. `was` ist der Grund, warum es
+   * immer wieder so aussieht - leer heißt: das Modell denkt sich etwas aus.
+   */
+  falscheFaehrte: { charakterId: string; was: string };
+  /**
    * Twist: Der Drahtzieher tritt in den Kapiteln überhaupt nicht auf - man
    * begegnet ihm nie, spricht nie mit ihm. Die Spuren führen trotzdem zu
    * ihm, nur eben über Eigenschaften statt über einen Namen. Erst im Finale
@@ -215,6 +227,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   items: [],
   drahtzieherId: "",
   besessenheit: { wirtId: "", daemonId: "", ton: "" },
+  falscheFaehrte: { charakterId: "", was: "" },
   twist: false,
   neuzugaenge: {},
   abwesenheiten: {},
@@ -229,6 +242,23 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   gerichtTon: "",
   ortsAnzahl: 5,
   beschuldigungen: 2,
+};
+
+/**
+ * Die durchgehende falsche Fährte dieser Saga - oder null.
+ *
+ * Sie gilt nur, wenn das Tier wirklich in der Besetzung steht und weder der
+ * Drahtzieher noch der Detektiv ist: Ein Verdacht gegen den Schuldigen wäre
+ * keine falsche Fährte, sondern die Lösung.
+ */
+export const falscheFaehrteVon = (
+  vorgaben: Pick<SagaVorgaben, "falscheFaehrte" | "drahtzieherId"> | undefined,
+  besetzung: Character[],
+): { charakter: Character; was: string } | null => {
+  const id = vorgaben?.falscheFaehrte?.charakterId?.trim() ?? "";
+  if (!id || id === vorgaben?.drahtzieherId) return null;
+  const charakter = besetzung.find((c) => c.id === id && !c.istDetektiv);
+  return charakter ? { charakter, was: vorgaben?.falscheFaehrte?.was?.trim() ?? "" } : null;
 };
 
 /**

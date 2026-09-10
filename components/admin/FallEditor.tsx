@@ -581,6 +581,18 @@ export function FallEditor({
             <span>Führt in die Irre</span>
           </label>
 
+          {/* Das Stück, das über seinen Fall hinausweist. Es löst nicht
+              diesen Fall, sondern zeigt auf den Kopf hinter der Saga - und
+              genau so eines braucht der Spieler später vor Gericht. */}
+          <label className="schalter">
+            <input
+              type="checkbox"
+              checked={spur.fernwirkung === true}
+              onChange={(e) => spurAendern(i, { fernwirkung: e.target.checked })}
+            />
+            <span>Fernwirkung · zeigt auf den Drahtzieher der Saga</span>
+          </label>
+
           <button className="knopf klein" onClick={() => spurLoeschen(i)}>
             Spur entfernen
           </button>

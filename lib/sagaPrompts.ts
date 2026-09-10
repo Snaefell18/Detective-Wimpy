@@ -2,7 +2,7 @@ import { characterBrief } from "./characters";
 import type { FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
 import { URTEILS_REGEL } from "./urteil";
-import { besessen, type SagaVorgaben } from "./sagaTypen";
+import { besessen, falscheFaehrteVon, type SagaVorgaben } from "./sagaTypen";
 import type { Character, City } from "./types";
 
 /**
@@ -147,6 +147,42 @@ DER DETEKTIV IST DER SCHULDIGE (streng geheim, das größte Geheimnis dieser Sag
   return "";
 }
 
+/**
+ * Die falsche Fährte, die durch die ganze Saga läuft.
+ *
+ * Sie ist etwas anderes als der Fehlgriff eines einzelnen Falls: Hier wächst
+ * ein Verdacht über Kapitel hinweg mit, und er führt trotzdem nirgendwohin.
+ * Damit das trägt, muss jede Station dasselbe Tier streifen - und keine
+ * einzige es entlasten.
+ */
+export function falscheFaehrteRegeln(args: {
+  name: string;
+  /** Warum es immer wieder so aussieht - leer heißt: das Modell erfindet es. */
+  was: string;
+  /** Im Kern steht die Ansage ausführlicher als in einem Kapitel. */
+  ausfuehrlich?: boolean;
+}): string {
+  const { name, was, ausfuehrlich } = args;
+  if (!name) return "";
+
+  return `
+DIE FALSCHE FÄHRTE DER GANZEN SAGA: ${name}
+- ${name} ist unschuldig. An allem. Er ist weder der Kopf hinter der Serie noch der Täter irgendeines Kapitels.
+- Trotzdem zeigt in JEDEM Kapitel etwas auf ihn: ${
+    was ||
+    "eine Angewohnheit, ein Weg, den er jeden Abend nimmt, ein Gegenstand, der ihm gehört, eine Uhrzeit, zu der niemand weiß, wo er war"
+  }.
+- Er erklärt sich schlecht. Er weicht aus, wird knapp, widerspricht sich in Kleinigkeiten - weil er etwas ganz anderes verbirgt: etwas Harmloses, das ihm nur peinlich ist.
+- Niemand behauptet, dass er es war, und niemand entlastet ihn. Der Verdacht wächst von allein.
+- Was auf ihn zeigt, ist immer eine falsche Fährte: fuehrtInDieIrre true, fernwirkung false. Es beweist nichts und trägt vor Gericht nicht.${
+    ausfuehrlich
+      ? `
+- Im Klappentext, im Überthema und im Auftakt kommt er nicht als Verdächtiger vor - der Verdacht entsteht erst beim Spielen.
+- Am Ende löst sich die Sache auf: Was er verbarg, hatte mit den Taten nie etwas zu tun.`
+      : ""
+  }`;
+}
+
 /** Schritt 1: Worum es in der ganzen Saga geht. */
 export function buildKernPrompt(
   besetzung: Character[],
@@ -182,13 +218,23 @@ export function buildKernPrompt(
     ausfuehrlich: true,
   });
 
+  // Ein Verdacht, der die ganze Saga über mitwächst und nirgendwohin führt.
+  const faehrte = falscheFaehrteVon(vorgaben, besetzung);
+  const faehrtenRegeln = faehrte
+    ? falscheFaehrteRegeln({
+        name: faehrte.charakter.name,
+        was: faehrte.was,
+        ausfuehrlich: true,
+      })
+    : "";
+
   return `Entwirf den Kern einer Saga für Detective Wimpy: ${vorgaben.kapitelAnzahl} Fälle hintereinander, die ein gemeinsames Überthema haben, und danach ein Finale. Die einzelnen Kapitel kommen später - hier geht es nur um den großen Bogen.
 
 DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
 Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
 NIRGENDS VOR DEM FINALE BENENNEN: In Titel, Überthema, Klappentext und Auftakt darf ${drahtzieher.name} nicht als der Verantwortliche dastehen - kein "dahinter steckt", kein "zieht die Fäden", kein "hinter allem". Andeuten ist ausdrücklich erwünscht: eine Handschrift, ein Geruch, ein Satz, der zweimal fällt. Nur der Schluss gehört dem Spieler.
-${artRegeln ? `${artRegeln}\n` : ""}${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
+${artRegeln ? `${artRegeln}\n` : ""}${faehrtenRegeln ? `${faehrtenRegeln}\n` : ""}${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
     wirt
       ? `
 BESESSENHEIT - DAS GEHEIMNIS DIESER SAGA
@@ -249,6 +295,8 @@ export function buildKapitelPrompt(args: {
   besessenheit?: { wirt: string; daemon: string };
   /** Worauf die Saga zuläuft - schon hier, nicht erst im Finale. */
   finaleRegeln?: string;
+  /** Die durchgehende falsche Fährte - fertig formuliert. */
+  faehrtenRegeln?: string;
 }): string {
   const {
     nummer,
@@ -267,6 +315,7 @@ export function buildKapitelPrompt(args: {
     nochNichtDaTiere = [],
     besessenheit,
     finaleRegeln = "",
+    faehrtenRegeln = "",
   } = args;
 
   const vorher = bisher.length
@@ -285,7 +334,7 @@ DER DRAHTZIEHER: ${drahtzieherName} [${drahtzieherId}] - darf in diesem Kapitel 
     twist
       ? " und ist hier gar nicht anwesend."
       : " und wirkt höchstens beiläufig harmlos."
-  }${twist ? `\n${TWIST_REGELN}` : ""}${finaleRegeln}${
+  }${twist ? `\n${TWIST_REGELN}` : ""}${finaleRegeln}${faehrtenRegeln}${
     besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
   }${vorher}
 
@@ -536,6 +585,8 @@ export function buildSagaBriefing(args: {
   besessenheit?: { wirt: string; daemon: string };
   /** Worauf die Saga zuläuft - damit auch die Spuren dazu passen. */
   finaleRegeln?: string;
+  /** Das Tier, auf das die ganze Saga über fälschlich alles zeigt. */
+  falscheFaehrte?: { name: string; was: string };
 }): string {
   const {
     thema,
@@ -550,6 +601,7 @@ export function buildSagaBriefing(args: {
     twist,
     besessenheit,
     finaleRegeln = "",
+    falscheFaehrte,
   } = args;
 
   const bisher = vorherigeEnthuellungen.length
@@ -573,6 +625,10 @@ Zusätzlich:
         : ""
     }
 - Die Tatbeschreibung darf ruhig groß klingen - es ist der Schlusspunkt.${
+      falscheFaehrte?.name
+        ? `\n- ${falscheFaehrte.name} stand die ganze Saga über unter Verdacht und ist unschuldig. Hier löst sich das auf: Was er verbarg, hatte mit den Taten nie etwas zu tun. Keine Spur dieses Falls belastet ihn.`
+        : ""
+    }${
       besessenheit
         ? `\n- ${besessenheit.daemon} ist die Gestalt, die bis eben in ${besessenheit.wirt} steckte. ${besessenheit.wirt} gehört nicht mehr zur Besetzung. Die Tatbeschreibung greift auf, was in den Kapiteln unerklärlich blieb - die fehlenden Stunden, die Kälte, die Spuren, die zu niemandem passten -, und löst es auf.`
         : ""
@@ -592,6 +648,10 @@ Zusätzlich:
 - Der Fall ist für sich abgeschlossen und lösbar, ohne die anderen Kapitel zu kennen.
 - Genau die oben genannte Enthüllung muss sich aus dem Fall ergeben - als Randnotiz, gefundener Gegenstand oder Bemerkung eines Tieres. Nicht mehr.
 - Der Drahtzieher wird höchstens beiläufig gestreift und wirkt dabei harmlos.${finaleRegeln}${
+    falscheFaehrte?.name
+      ? falscheFaehrteRegeln({ name: falscheFaehrte.name, was: falscheFaehrte.was })
+      : ""
+  }${
     besessenheit ? besessenheitsRegeln(besessenheit.wirt, besessenheit.daemon) : ""
   }${
     twist

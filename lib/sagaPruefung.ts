@@ -64,6 +64,42 @@ export function pruefeVorgaben(args: {
     probleme.push(`${name(vorgaben.drahtzieherId)} ist als Drahtzieher gewählt, spielt aber nicht mit.`);
   }
 
+  /*
+   * Die durchgehende falsche Fährte.
+   *
+   * Sie lebt davon, dass sie ins Leere läuft. Zeigt sie auf den Schuldigen,
+   * auf den Wirt einer Besessenheit oder auf den Täter eines Kapitels, ist
+   * sie keine Fährte mehr, sondern die Lösung - und der Spieler wird dafür
+   * bestraft, dass er richtig kombiniert hat.
+   */
+  const faehrteId = vorgaben.falscheFaehrte?.charakterId ?? "";
+  if (faehrteId) {
+    if (!dabei(faehrteId)) {
+      probleme.push(
+        `${name(faehrteId)} ist als falsche Fährte gewählt, spielt aber nicht mit.`,
+      );
+    }
+    if (faehrteId === vorgaben.drahtzieherId) {
+      probleme.push(
+        `${name(faehrteId)} kann nicht zugleich Drahtzieher und falsche Fährte sein - dann wäre der Verdacht ja berechtigt.`,
+      );
+    }
+    if (faehrteId === vorgaben.besessenheit?.wirtId) {
+      probleme.push(
+        `${name(faehrteId)} ist der Wirt der Besessenheit und taugt nicht als falsche Fährte - in ihm steckt der Schuldige.`,
+      );
+    }
+    if (charaktere.find((c) => c.id === faehrteId)?.istDetektiv) {
+      probleme.push("Der Detektiv kann nicht die falsche Fährte sein.");
+    }
+    const alsTaeter = (vorgaben.kapitelTaeter ?? []).findIndex((id) => id === faehrteId);
+    if (alsTaeter >= 0) {
+      probleme.push(
+        `${name(faehrteId)} ist Täter von Kapitel ${alsTaeter + 1} und kann nicht die falsche Fährte der Saga sein.`,
+      );
+    }
+  }
+
   // Besessenheit: halb eingerichtet ist schlimmer als gar nicht.
   const b = vorgaben.besessenheit;
   if (b?.wirtId && !b.daemonId) {

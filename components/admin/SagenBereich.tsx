@@ -22,6 +22,7 @@ import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
+import { BeweisUebersicht } from "./BeweisUebersicht";
 import { FallEditor } from "./FallEditor";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
 import { TonFeld } from "./TonFeld";
@@ -62,6 +63,8 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const [gerettet, setGerettet] = useState<Saga | null>(null);
   const [offen, setOffen] = useState<string | null>(null);
   /** Geöffneter Kapitelfall: welche Saga, welches Kapitel (-1 = Finale). */
+  /** Die Beweisübersicht einer Saga - alle Akten nebeneinander. */
+  const [beweiseVon, setBeweiseVon] = useState<Saga | null>(null);
   const [akte, setAkte] = useState<
     { saga: Saga; index: number; fall: CaseFile } | null
   >(null);
@@ -258,19 +261,27 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
     }
   };
 
+  /**
+   * Eine geänderte Akte zurück in ihre Saga - unabhängig davon, über welchen
+   * Bildschirm sie geöffnet wurde. Index unter 0 heißt Finalfall.
+   */
+  const akteZurueck = async (saga: Saga, index: number, fall: CaseFile) => {
+    const versiegelt = await akteSchreiben(fall);
+    const kopie: Saga = JSON.parse(JSON.stringify(saga));
+    const ziel: { fall: PublicCase | null; siegel: string | null } =
+      index < 0 ? kopie.finale : kopie.kapitel[index];
+    ziel.fall = versiegelt.fall;
+    ziel.siegel = versiegelt.siegel;
+    await speichereSaga(kopie);
+    await laden();
+  };
+
   const akteSpeichern = async (fall: CaseFile) => {
     if (!akte) return;
     setSpeichert(true);
     onFehler(null);
     try {
-      const versiegelt = await akteSchreiben(fall);
-      const kopie: Saga = JSON.parse(JSON.stringify(akte.saga));
-      const ziel: { fall: PublicCase | null; siegel: string | null } =
-        akte.index < 0 ? kopie.finale : kopie.kapitel[akte.index];
-      ziel.fall = versiegelt.fall;
-      ziel.siegel = versiegelt.siegel;
-      await speichereSaga(kopie);
-      await laden();
+      await akteZurueck(akte.saga, akte.index, fall);
       setAkte(null);
       onMeldung("Akte gespeichert.");
     } catch (fehler) {
@@ -427,6 +438,21 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       setSpeichert(false);
     }
   };
+
+  // Die Beweisübersicht legt sich über alles andere - sie öffnet ihre Akten
+  // selbst und gibt sie über akteZurueck wieder ab.
+  if (beweiseVon) {
+    const frisch = sagas?.find((s) => s.id === beweiseVon.id) ?? beweiseVon;
+    return (
+      <BeweisUebersicht
+        saga={frisch}
+        onSpeichern={(index, fall) => akteZurueck(frisch, index, fall)}
+        onSchliessen={() => setBeweiseVon(null)}
+        onFehler={onFehler}
+        onMeldung={onMeldung}
+      />
+    );
+  }
 
   if (akte) {
     const titel =
@@ -715,6 +741,12 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
               <div className="knopf-reihe">
                 <button className="knopf klein" onClick={() => void bogenOeffnen(saga)}>
                   Bogen bearbeiten
+                </button>
+                {/* Alles, was der Spieler unterwegs finden kann, nebeneinander -
+                    samt der Frage, ob am Ende genug für das Gericht übrig
+                    bleibt. */}
+                <button className="knopf klein" onClick={() => setBeweiseVon(saga)}>
+                  Beweise ansehen
                 </button>
               </div>
 

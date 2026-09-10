@@ -291,9 +291,21 @@ export const CaseFileSchema = z.object({
       z.object({
         itemId: z.string().max(80),
         ortId: z.string().max(80),
+        /*
+         * Beobachtung und Vermutung gehören hier hinein, obwohl sie beim
+         * Prüfen niemanden interessieren: Was das Schema nicht kennt, wirft
+         * zod beim Speichern weg. Sie fehlten - und damit verlor jede über
+         * das Admin-Menü gespeicherte Akte den einzigen Text, den der
+         * Spieler beim Fund zu lesen bekommt. Danach stand dort die
+         * Bedeutung: die Lösung, im Klartext, als Fundtext.
+         */
+        beobachtung: z.string().max(1000).optional(),
+        vermutung: z.string().max(300).optional(),
         bedeutung: z.string().max(1000),
         zeigtAufCharakterId: z.string().max(40),
         fuehrtInDieIrre: z.boolean(),
+        /** Zeigt über sein Kapitel hinaus - siehe CaseClue.fernwirkung. */
+        fernwirkung: z.boolean().optional(),
       }),
     )
     .max(20),
@@ -368,6 +380,12 @@ export const SagaVorgabenSchema = z.object({
       ton: z.string().max(200),
     })
     .default({ wirtId: "", daemonId: "", ton: "" }),
+  falscheFaehrte: z
+    .object({
+      charakterId: z.string().max(40),
+      was: z.string().max(600),
+    })
+    .default({ charakterId: "", was: "" }),
   twist: z.boolean().default(false),
   neuzugaenge: z.record(z.string().max(40), z.number()).default({}),
   abwesenheiten: z

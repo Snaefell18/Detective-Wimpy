@@ -14,6 +14,7 @@ import {
   buildKapitelPrompt,
   buildKernPrompt,
   buildVerhandlungPrompt,
+  falscheFaehrteRegeln,
   finaleArtRegeln,
 } from "@/lib/sagaPrompts";
 import type {
@@ -47,6 +48,7 @@ import {
   besetzungFuerKapitel,
   besessen,
   besetzungFuerSaga,
+  falscheFaehrteVon,
   kapitelTaeterFuer,
   neuInKapitel,
   type SagaVorgaben,
@@ -437,6 +439,7 @@ async function kapitelSchritt(
         twist: bogen.vorgaben.twist === true,
         besessenheit: besessenheitVon(bogen.besetzung, bogen.vorgaben),
         finaleRegeln: kapitelRegeln(bogen),
+        faehrtenRegeln: faehrtenVon(bogen),
         neueTiere: neue.map((c) => c.name),
         wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
         nochNichtDaTiere: zuFrueh,
@@ -506,6 +509,20 @@ async function kapitelSchritt(
  * Bei "Wimpy selbst" bleibt es leer: Dort steht dieselbe Ansage schon in den
  * Besessenheitsregeln, und zweimal dasselbe macht Prompts nicht besser.
  */
+/**
+ * Die durchgehende falsche Fährte - fertig formuliert fürs Kapitel.
+ *
+ * Sie steht schon beim Entwurf des Kapitels da und nicht erst bei den
+ * Spuren: Ein Verdacht, der mitwachsen soll, muss in Auftrag und Enthüllung
+ * angelegt sein, sonst klebt er später nur an einem Fundstück.
+ */
+function faehrtenVon(bogen: Bogen): string {
+  const faehrte = falscheFaehrteVon(bogen.vorgaben, bogen.besetzung);
+  return faehrte
+    ? falscheFaehrteRegeln({ name: faehrte.charakter.name, was: faehrte.was })
+    : "";
+}
+
 function kapitelRegeln(bogen: Bogen): string {
   const art: FinaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
   if (art === "klassisch" || art === "wimpy") return "";
