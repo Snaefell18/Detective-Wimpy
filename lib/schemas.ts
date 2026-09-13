@@ -398,6 +398,22 @@ export const SagaVorgabenSchema = z.object({
   )
     .max(9)
     .default([]),
+  versammlungen: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        nachKapitel: z.number().min(1).max(7),
+        name: z.string().min(1).max(120),
+        anlass: z.string().min(1).max(500),
+        thema: z.string().min(1).max(1200),
+        vorsitzId: z.string().min(1).max(40),
+        teilnehmerIds: z.array(z.string().max(40)).min(2).max(16),
+        beobachterIds: z.array(z.string().max(40)).max(16),
+        undercoverId: z.string().max(40).default(""),
+      }),
+    )
+    .max(7)
+    .default([]),
   stadt: z.string().max(60),
   staedteWechseln: z.boolean(),
   charaktere: z.array(z.string().max(40)).max(24),

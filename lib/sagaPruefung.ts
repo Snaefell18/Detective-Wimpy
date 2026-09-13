@@ -44,6 +44,51 @@ export function pruefeVorgaben(args: {
     probleme.push("Die Kapitelzahl muss zwischen 2 und 8 liegen.");
   }
 
+  /*
+   * Versammlungen dürfen bewusst Tiere außerhalb der Fallbesetzung holen.
+   * Geprüft wird deshalb gegen alle Stammdaten, nicht gegen `besetzung`.
+   */
+  const bekannteTiere = new Set(
+    charaktere.filter((c) => !c.istDetektiv && !c.istDaemon).map((c) => c.id),
+  );
+  const belegteLuecken = new Set<number>();
+  for (const rat of vorgaben.versammlungen ?? []) {
+    if (rat.nachKapitel < 1 || rat.nachKapitel >= vorgaben.kapitelAnzahl) {
+      probleme.push(
+        `Die Versammlung „${rat.name || "ohne Namen"}“ liegt nicht zwischen zwei Kapiteln.`,
+      );
+    }
+    if (belegteLuecken.has(rat.nachKapitel)) {
+      probleme.push(`Nach Kapitel ${rat.nachKapitel} kann nur eine Versammlung stattfinden.`);
+    }
+    belegteLuecken.add(rat.nachKapitel);
+
+    const teilnehmer = [...new Set(rat.teilnehmerIds ?? [])];
+    const beobachter = [...new Set(rat.beobachterIds ?? [])];
+    if (teilnehmer.length < 2) {
+      probleme.push(`Die Versammlung „${rat.name || "ohne Namen"}“ braucht mindestens zwei Teilnehmer.`);
+    }
+    for (const id of [...teilnehmer, ...beobachter]) {
+      if (!bekannteTiere.has(id)) {
+        probleme.push(`${name(id)} ist für die Versammlung gewählt, aber kein bekanntes Tier.`);
+      }
+    }
+    if (!teilnehmer.includes(rat.vorsitzId)) {
+      probleme.push(`Der Vorsitz von „${rat.name || "der Versammlung"}“ muss teilnehmen.`);
+    }
+    const doppelt = beobachter.find((id) => teilnehmer.includes(id));
+    if (doppelt) {
+      probleme.push(`${name(doppelt)} kann nicht zugleich teilnehmen und nur beobachten.`);
+    }
+    if (
+      rat.undercoverId &&
+      !teilnehmer.includes(rat.undercoverId) &&
+      !beobachter.includes(rat.undercoverId)
+    ) {
+      probleme.push(`Das Undercover-Tier von „${rat.name || "der Versammlung"}“ ist gar nicht dabei.`);
+    }
+  }
+
   // Städte: Jeder Fall braucht so viele Schauplätze, wie eingestellt sind.
   const staedte = alsStaedte(orte).filter((s) => s.orte.length >= vorgaben.ortsAnzahl);
   if (staedte.length === 0) {
