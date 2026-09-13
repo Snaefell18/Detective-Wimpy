@@ -8041,3 +8041,613 @@ a.zurueck {
   text-align: center;
   background: rgba(0, 0, 0, 0.78);
 }
+
+/* --- Versammlung zwischen Saga-Kapiteln ---------------------------- */
+
+/* Der Editor bleibt lesbar, obwohl die Szene selbst völlig entgleist. */
+.rat-editor {
+  margin: 26px 0 8px;
+  padding: 1px 0;
+}
+
+.rat-editor-block {
+  margin: 10px 0;
+  border: 1px solid rgba(124, 196, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.rat-editor-block[data-aktiv="true"] {
+  border-color: rgba(255, 210, 74, 0.34);
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(121, 65, 255, 0.12), transparent 72%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.rat-editor-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+}
+
+.rat-editor-inhalt {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 14px;
+}
+
+/* Die Bühne übernimmt den ganzen App-Rahmen. Hinter dem bedienbaren Inhalt
+   drehen nur langsame, weiche Flächen - keine grellen Blitze. */
+.versammlung {
+  --resonanz: 0;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 126px minmax(0, 1fr);
+  overflow: hidden;
+  color: #fff8ef;
+  background:
+    radial-gradient(90% 65% at 8% 8%, rgba(255, 49, 154, 0.36), transparent 68%),
+    radial-gradient(80% 70% at 94% 18%, rgba(54, 234, 255, 0.28), transparent 66%),
+    radial-gradient(100% 80% at 50% 110%, rgba(172, 255, 70, 0.15), transparent 62%),
+    linear-gradient(155deg, #09031d 0%, #100421 36%, #020b1b 72%, #050207 100%);
+  isolation: isolate;
+}
+
+.versammlung::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: -45%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 8%,
+    rgba(255, 58, 164, 0.15) 13%,
+    transparent 21% 35%,
+    rgba(45, 225, 255, 0.13) 43%,
+    transparent 51% 70%,
+    rgba(255, 220, 70, 0.11) 78%,
+    transparent 88%
+  );
+  filter: blur(18px) saturate(1.5);
+  animation: rat-kosmos-dreht 38s linear infinite;
+}
+
+.versammlung::after {
+  content: "";
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(97deg, transparent 0 19px, rgba(255, 255, 255, 0.018) 20px),
+    radial-gradient(75% 38% at 50% 48%, transparent 45%, rgba(0, 0, 0, 0.52) 100%);
+  mix-blend-mode: screen;
+}
+
+@keyframes rat-kosmos-dreht {
+  to { transform: rotate(360deg) scale(1.04); }
+}
+
+.rat-kosmos {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 680px;
+}
+
+.rat-sonne {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 178px;
+  height: 178px;
+  margin: -89px;
+  border-radius: 43% 57% 62% 38% / 46% 35% 65% 54%;
+  background:
+    radial-gradient(circle at 33% 29%, #fffbd4 0 4%, #ffdc49 7%, transparent 23%),
+    conic-gradient(from 25deg, #ff2e8b, #7028ff, #21dfff, #c6ff41, #ffdc49, #ff2e8b);
+  opacity: calc(0.15 + var(--resonanz) * 0.42);
+  filter: blur(calc(9px - var(--resonanz) * 5px));
+  box-shadow:
+    0 0 calc(40px + var(--resonanz) * 90px) rgba(255, 65, 170, 0.7),
+    inset 0 0 45px rgba(255, 255, 255, 0.68);
+  animation: rat-form 9s ease-in-out infinite alternate;
+}
+
+@keyframes rat-form {
+  0% { transform: rotate(-8deg) scale(0.88); border-radius: 43% 57% 62% 38% / 46% 35% 65% 54%; }
+  100% { transform: rotate(13deg) scale(1.08); border-radius: 63% 37% 39% 61% / 35% 62% 38% 65%; }
+}
+
+.rat-orbit {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(83, 227, 255, 0.16), inset 0 0 15px rgba(255, 80, 188, 0.1);
+}
+
+.rat-orbit::before,
+.rat-orbit::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff6af;
+  box-shadow: 0 0 16px 5px rgba(255, 225, 90, 0.5);
+}
+
+.rat-orbit::before { left: 12%; top: 11%; }
+.rat-orbit::after { right: 8%; bottom: 18%; background: #5ef5ff; }
+
+.rat-orbit-eins {
+  width: 270px;
+  height: 104px;
+  margin: -52px -135px;
+  transform: rotate(12deg);
+  animation: rat-orbit-eins 15s ease-in-out infinite alternate;
+}
+.rat-orbit-zwei {
+  width: 350px;
+  height: 128px;
+  margin: -64px -175px;
+  transform: rotate(-19deg);
+  animation: rat-orbit-zwei 19s ease-in-out infinite alternate;
+}
+.rat-orbit-drei {
+  width: 212px;
+  height: 260px;
+  margin: -130px -106px;
+  transform: rotate(29deg);
+  animation: rat-orbit-drei 21s ease-in-out infinite alternate;
+}
+
+@keyframes rat-orbit-eins { to { transform: rotate(27deg) scale(1.08); } }
+@keyframes rat-orbit-zwei { to { transform: rotate(-38deg) scale(0.94); } }
+@keyframes rat-orbit-drei { to { transform: rotate(47deg) scale(1.04); } }
+
+.rat-augenmond {
+  position: absolute;
+  right: -42px;
+  top: 11%;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: radial-gradient(circle at 38% 35%, #fffbda 0 6%, #cbb7ff 7% 20%, #4e287f 48%, #130626 72%);
+  box-shadow: 0 0 50px rgba(155, 105, 255, 0.38);
+  animation: rat-mond 11s ease-in-out infinite alternate;
+}
+
+.rat-augenmond span {
+  position: absolute;
+  left: 29%;
+  top: 36%;
+  width: 42%;
+  height: 27%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #07020e 0 19%, #f6dc42 22% 42%, #fff 45% 64%, transparent 67%);
+  transform: rotate(-13deg);
+}
+
+@keyframes rat-mond { to { transform: translate(-12px, 18px) rotate(9deg); } }
+
+.rat-partikel i {
+  position: absolute;
+  border-radius: 50% 10% 50% 30%;
+  background: hsl(calc(var(--i) * 31deg) 100% 72%);
+  box-shadow: 0 0 10px currentColor;
+  animation-name: rat-partikel;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes rat-partikel {
+  to { transform: translate(var(--dx), -42px) rotate(180deg) scale(1.6); }
+}
+
+.rat-kopf {
+  position: relative;
+  z-index: 5;
+  padding: calc(var(--safe-top) + 13px) 18px 8px;
+  text-align: center;
+}
+
+.rat-kopf h1 {
+  max-width: 16ch;
+  margin: 3px auto;
+  font-size: clamp(25px, 8vw, 38px);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  background: linear-gradient(100deg, #fff8cf 8%, #ff6ac3 42%, #62edff 72%, #fff8cf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 5px 18px rgba(247, 60, 180, 0.38));
+}
+
+.rat-kopf p {
+  display: -webkit-box;
+  max-width: 42ch;
+  margin: 5px auto 0;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: rgba(238, 244, 255, 0.8);
+  font-size: 12px;
+}
+
+.rat-siegel {
+  display: block;
+  max-width: 86%;
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ffe778;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.rat-figuren {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  padding: 4px 13px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rat-figuren::-webkit-scrollbar { display: none; }
+
+.rat-figur {
+  position: relative;
+  flex: 0 0 65px;
+  text-align: center;
+  transform: translateY(var(--offset));
+  animation-name: rat-figur-schwebt;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.rat-figur:nth-child(even) { animation-direction: alternate-reverse; }
+
+@keyframes rat-figur-schwebt {
+  to { transform: translateY(calc(var(--offset) - 8px)) rotate(var(--tilt)); }
+}
+
+.rat-figur-bild {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  margin: auto;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 42% 58% 54% 46% / 48% 39% 61% 52%;
+  background: rgba(2, 5, 20, 0.82);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.48), 0 0 17px rgba(75, 220, 255, 0.18);
+}
+
+.rat-figur[data-vorsitz="true"] .rat-figur-bild {
+  border-color: #ffe05e;
+  box-shadow: 0 0 24px rgba(255, 220, 60, 0.55), 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.rat-figur[data-beobachter="true"] { opacity: 0.64; filter: saturate(0.55); }
+.rat-figur > span {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.rat-figur > b {
+  display: block;
+  color: #ffe57d;
+  font-size: 7px;
+  letter-spacing: 0.12em;
+}
+
+.rat-resonanz {
+  position: absolute;
+  z-index: 6;
+  right: 14px;
+  top: calc(var(--safe-top) + 102px);
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  transform: scale(calc(0.86 + var(--resonanz) * 0.3));
+  background: conic-gradient(from 40deg, #ff3f9d, #7b42ff, #42e9ff, #d8ff4e, #ff3f9d);
+  box-shadow: 0 0 calc(9px + var(--resonanz) * 28px) rgba(117, 232, 255, 0.75);
+  animation: rat-resonanz 7s ease-in-out infinite alternate;
+}
+
+.rat-resonanz::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #080316;
+}
+.rat-resonanz-kern { position: relative; z-index: 1; font-weight: 900; color: #fff1a9; }
+.rat-resonanz i {
+  position: absolute;
+  inset: -9px;
+  border: 1px dashed rgba(255, 255, 255, calc(0.22 + var(--resonanz) * 0.5));
+  border-radius: 44% 56% 39% 61%;
+  animation: rat-kosmos-dreht calc(15s - var(--resonanz) * 6s) linear infinite reverse;
+}
+@keyframes rat-resonanz { to { transform: scale(calc(0.92 + var(--resonanz) * 0.34)) rotate(9deg); } }
+
+.rat-chat {
+  position: relative;
+  z-index: 8;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  margin: 0 9px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 25px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(24, 8, 48, 0.76), rgba(2, 17, 34, 0.82)),
+    rgba(3, 4, 17, 0.78);
+  box-shadow:
+    0 -8px 38px rgba(245, 61, 176, 0.12),
+    0 18px 50px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.rat-verlauf {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 13px 11px 22px;
+  overscroll-behavior: contain;
+}
+
+.rat-wartet {
+  margin: 26px auto;
+  max-width: 28ch;
+  color: rgba(227, 234, 255, 0.62);
+  text-align: center;
+  font-style: italic;
+}
+
+.rat-beitrag {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin: 8px 0;
+  animation: rat-wort-landet 430ms cubic-bezier(0.18, 1.32, 0.38, 1) both;
+}
+.rat-beitrag[data-spieler="true"] { justify-content: flex-end; }
+
+@keyframes rat-wort-landet {
+  from { opacity: 0; transform: translateY(14px) rotate(-1.5deg) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.rat-beitrag-bild {
+  position: relative;
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: #0b0820;
+}
+
+.rat-blase {
+  max-width: min(82%, 390px);
+  padding: 8px 11px 9px;
+  border: 1px solid rgba(101, 229, 255, 0.16);
+  border-radius: 16px 16px 16px 4px;
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(76, 219, 255, 0.14), transparent 65%),
+    rgba(255, 255, 255, 0.07);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.22);
+}
+.rat-beitrag[data-spieler="true"] .rat-blase {
+  border-radius: 16px 16px 4px 16px;
+  border-color: rgba(255, 96, 186, 0.28);
+  background: linear-gradient(135deg, rgba(154, 40, 171, 0.65), rgba(23, 98, 149, 0.62));
+}
+.rat-blase > span {
+  display: block;
+  margin-bottom: 2px;
+  color: #77eaff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rat-beitrag[data-spieler="true"] .rat-blase > span { color: #ffe17a; }
+.rat-blase p { margin: 0; font-size: 14px; line-height: 1.38; }
+
+.rat-system {
+  margin: 16px 4px;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 229, 91, 0.44);
+  border-radius: 50% 12px 50% 12px;
+  color: #fff3a8;
+  background: rgba(129, 61, 8, 0.3);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 26px rgba(255, 202, 54, 0.16);
+  animation: rat-system 1.1s ease-out both;
+}
+@keyframes rat-system {
+  from { opacity: 0; transform: scale(0.7) rotate(-5deg); filter: blur(8px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+.rat-denkt .rat-blase { display: flex; gap: 5px; padding: 13px 16px; }
+.rat-denkt i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #71eaff;
+  animation: rat-denkt 1.15s ease-in-out infinite alternate;
+}
+.rat-denkt i:nth-child(2) { animation-delay: 0.18s; background: #ff62bb; }
+.rat-denkt i:nth-child(3) { animation-delay: 0.36s; background: #ffe26d; }
+@keyframes rat-denkt { to { transform: translateY(-5px) scale(1.3); } }
+
+.rat-eingabe-zone,
+.rat-schluss {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px 10px calc(var(--safe-bottom) + 9px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(3, 4, 17, 0.74);
+}
+
+.rat-vorschlaege {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rat-vorschlaege::-webkit-scrollbar { display: none; }
+.rat-vorschlaege button {
+  flex: none;
+  max-width: 210px;
+  padding: 6px 9px;
+  border: 1px solid rgba(111, 226, 255, 0.22);
+  border-radius: 999px;
+  color: rgba(240, 247, 255, 0.82);
+  background: rgba(77, 49, 126, 0.28);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.rat-eingabe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 7px;
+}
+.rat-eingabe input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.075);
+}
+.rat-eingabe input:focus {
+  border-color: rgba(82, 232, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(82, 232, 255, 0.08);
+}
+.rat-eingabe button {
+  border-radius: 14px;
+  color: #13051f;
+  background: linear-gradient(145deg, #ffe55a, #ff5db2 72%);
+  font-weight: 900;
+  box-shadow: 0 5px 18px rgba(255, 72, 171, 0.3);
+}
+.rat-eingabe button:disabled,
+.rat-vorschlaege button:disabled { opacity: 0.42; }
+
+.rat-beenden {
+  display: block;
+  margin: 7px auto 0;
+  padding: 2px 8px;
+  color: rgba(226, 232, 246, 0.58);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rat-beenden:disabled { opacity: 0.35; }
+
+.rat-schluss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rat-schluss span { color: rgba(233, 240, 255, 0.68); font-size: 11px; }
+.rat-schluss .knopf { flex: none; }
+.rat-fehler { margin: 10px; }
+
+.versammlungs-fund {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+}
+.versammlungs-fund::before,
+.versammlungs-fund::after {
+  content: "";
+  position: absolute;
+  z-index: 41;
+  left: 50%;
+  top: 46%;
+  width: 14px;
+  height: 130vh;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, #fff8ac 42%, #55edff 50%, #ff4db3 58%, transparent);
+  filter: blur(2px) drop-shadow(0 0 18px #7aeaff);
+  transform: translate(-50%, -50%) rotate(17deg) scaleY(0);
+  animation: rat-riss 1.15s cubic-bezier(0.15, 0.8, 0.35, 1) both;
+}
+.versammlungs-fund::after {
+  width: 4px;
+  transform: translate(-50%, -50%) rotate(-11deg) scaleY(0);
+  animation-delay: 0.12s;
+}
+@keyframes rat-riss {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(17deg) scaleY(0); }
+  36% { opacity: 1; transform: translate(-50%, -50%) rotate(17deg) scaleY(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(21deg) scaleY(1.08); }
+}
+
+@media (max-height: 760px) {
+  .versammlung { grid-template-rows: auto 88px minmax(0, 1fr); }
+  .rat-kopf p { display: none; }
+  .rat-figur { flex-basis: 52px; }
+  .rat-figur-bild { width: 46px; height: 46px; }
+  .rat-resonanz { top: calc(var(--safe-top) + 72px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .versammlung::before,
+  .rat-sonne,
+  .rat-orbit,
+  .rat-augenmond,
+  .rat-partikel i,
+  .rat-figur,
+  .rat-resonanz,
+  .rat-resonanz i,
+  .rat-denkt i,
+  .versammlungs-fund::before,
+  .versammlungs-fund::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
