@@ -111,7 +111,7 @@ DIESE SAGA HAT KEINEN SCHULDIGEN (streng geheim)
     }`;
   }
 
-  if (art === "wimpy") {
+  if (art === "wimpy" || art === "gericht-wimpy") {
     return `
 DER DETEKTIV IST DER SCHULDIGE (streng geheim, das größte Geheimnis dieser Saga)
 - ${detektivName} war die ganze Zeit besessen${daemonName ? ` - von ${daemonName}` : ""}. Was er nachts tut, weiß er am Morgen nicht mehr. Er ermittelt gegen sich selbst, ohne es zu ahnen.
@@ -470,6 +470,8 @@ function verhandlungsZiel(args: {
   const { art, angeklagter, detektivName } = args;
   return art === "gericht-daemon"
     ? `${angeklagter} sitzt auf der Anklagebank - so, wie ihn alle kennen. Was in ihm steckt, kommt erst heraus, wenn ${detektivName} ihn wirklich benennt. Danach führt ${detektivName} den Beweis gegen das, was dann dasteht.`
+    : art === "gericht-wimpy"
+      ? `${detektivName} ist unter den möglichen Angeklagten. Erst wenn der Spieler ihn vor Gericht wirklich benennt, bricht die Gestalt aus ihm heraus. Danach führt der Spieler den Beweis gegen das, was dann auf der Bank sitzt.`
     : art === "ohne-taeter"
       ? `${angeklagter} sitzt auf der Anklagebank, obwohl er nichts getan hat. ${detektivName} muss belegen, dass hinter der ganzen Serie überhaupt kein Tier steckt - und was stattdessen. Am Ende steht ein Freispruch.`
       : art === "wimpy"
@@ -531,7 +533,7 @@ Entwirf, was in diesem Saal GESPROCHEN wird. Die Beweisstücke kommen in einem z
 WEITERES
 - Die Frage steht groß über dem Saal (z.B. "Reicht das, was du hast?").
 - Der Erzählertext davor führt in den Saal: kurze Zeilen, Atmosphäre, keine Anrede. Er verrät nicht, wie es ausgeht.${
-    art === "gericht" || art === "gericht-daemon"
+    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy"
       ? `\n- WICHTIG: Weder die Frage noch der Erzählertext noch die Eröffnung nennen ${angeklagter} beim Namen oder umschreiben ihn erkennbar. ${detektivName} muss selbst benennen, wen er anklagt - stünde der Name schon vorher da, wäre das ganze Finale entwertet. Erst die Texte NACH der Anklage dürfen ihn nennen.`
       : ""
   }
@@ -553,7 +555,7 @@ WEITERES
 
 DIE ANKLAGE
 ${
-    art === "gericht" || art === "gericht-daemon"
+    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy"
       ? `- ${detektivName} muss zu Beginn selbst benennen, wen er anklagt. Trifft er es, wird der Saal still (anklageRichtig). Trifft er daneben, weist ${richter} die Anklage ab - freundlich, ohne Spott, und ohne zu verraten, wer es stattdessen war (anklageFalsch).`
       : `- Hier klagt niemand jemanden an; die beiden Anklagetexte bleiben kurz und allgemein.`
   }

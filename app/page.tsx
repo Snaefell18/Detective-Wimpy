@@ -448,7 +448,12 @@ export default function Home() {
       // Nicht so beim Finale "Gericht & Dämon": Dort ist die Verwandlung der
       // Lohn für die richtige Anklage und gehört in den Saal, nicht davor.
       const besessenheit = besessen(saga.stand.saga.vorgaben);
-      if (finale && besessenheit && saal?.art !== "gericht-daemon") {
+      if (
+        finale &&
+        besessenheit &&
+        saal?.art !== "gericht-daemon" &&
+        saal?.art !== "gericht-wimpy"
+      ) {
         setVerwandlungSpruch("");
         // Nebenher: Kommt nichts zurück, bleibt der Moment eben stumm.
         void postJson<{ spruch: string }>("/api/saga", {

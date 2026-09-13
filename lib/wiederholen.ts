@@ -13,7 +13,7 @@
 
 /** Fehler, bei denen ein zweiter Versuch Aussicht auf Erfolg hat. */
 const VERGEHT_WIEDER =
-  /abgeschnitten|nicht lesbar|zu lange|überlastet|overload|rate.?limit|Status 5\d\d|nicht erreichbar|Verbindung|timeout|ECONNRESET|fetch failed/i;
+  /abgeschnitten|nicht lesbar|zu lange|überlastet|overload|rate.?limit|Status 5\d\d|nicht erreichbar|Verbindung|timeout|ECONNRESET|fetch failed|nicht lösbar/i;
 
 export const lohntWiederholung = (fehler: unknown): boolean =>
   fehler instanceof Error && VERGEHT_WIEDER.test(fehler.message);
