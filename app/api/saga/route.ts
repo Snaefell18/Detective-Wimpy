@@ -311,15 +311,21 @@ async function kernSchritt(body: Record<string, unknown>) {
     verdaechtige.find((c) => c.id === vorgaben.drahtzieherId) ??
     verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
-  // Beim Finale "Wimpy selbst" ist der Detektiv der Wirt: Die Dämonenform
-  // steckt die ganze Saga über in ihm. Damit gelten für die Kapitel dieselben
-  // Regeln wie bei jeder anderen Besessenheit - eine Zeile pro Kapitel, nie
-  // benannt -, und vor der Verhandlung läuft die Verwandlung.
+  // Bei beiden Wimpy-Finales ist der Detektiv der Wirt. Die im Formular
+  // ausgewählte Dämonenform darf dabei NICHT durch einen zufällig gezogenen
+  // Drahtzieher ersetzt werden: Sonst konnte eine teuer erzeugte Saga mit
+  // einem anderen Wesen enden als dem, das im Admin-Menü gewählt wurde.
+  // Fehlt sie bei einer alten Bestellung, bleibt der Drahtzieher der
+  // verträgliche Rückfall; die Vorabprüfung weist neue unvollständige
+  // Bestellungen ohnehin ab.
   const detektiv = spielendeBesetzung.find((c) => c.istDetektiv);
-  if (vorgaben.finaleArt === "wimpy" && detektiv) {
+  if (
+    (vorgaben.finaleArt === "wimpy" || vorgaben.finaleArt === "gericht-wimpy") &&
+    detektiv
+  ) {
     vorgaben.besessenheit = {
       wirtId: detektiv.id,
-      daemonId: drahtzieher.id,
+      daemonId: vorgaben.besessenheit?.daemonId || drahtzieher.id,
       ton: vorgaben.besessenheit?.ton ?? "",
     };
   }

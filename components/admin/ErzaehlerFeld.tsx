@@ -62,7 +62,14 @@ export function ErzaehlerFeld({
         <textarea
           rows={4}
           value={teil.text}
-          onChange={(e) => onAendern({ text: e.target.value })}
+          onChange={(e) =>
+            // Eine erzeugte Stimme spricht exakt den Text, aus dem sie
+            // entstanden ist. Wird der Text später geändert, darf nicht
+            // unbemerkt die alte Aufnahme zum neuen Wortlaut weiterlaufen.
+            // Eigene Audiodateien bleiben dagegen bestehen: Deren Inhalt
+            // kennt die Anwendung nicht.
+            onAendern(gesprochen ? { text: e.target.value, audio: "" } : { text: e.target.value })
+          }
           maxLength={2000}
         />
       </label>

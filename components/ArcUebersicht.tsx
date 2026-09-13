@@ -73,7 +73,8 @@ export function ArcUebersicht({
 
   // Endet der Arc mit einem Video, heißt sein Schluss auch so.
   const abspann = arc.finale.art === "video";
-  const schluss = abspann ? "Abspann" : "Finale";
+  const credits = arc.finale.art === "credits";
+  const schluss = credits ? "Credits" : abspann ? "Abspann" : "Finale";
 
   return (
     <div className="overlay einblenden arc-uebersicht">
@@ -163,12 +164,14 @@ export function ArcUebersicht({
                 {finale
                   ? abspann
                     ? "Zurücklehnen - der Rest ist Kino"
+                    : credits
+                      ? "Besetzung und Abspann"
                     : "Alles läuft zusammen"
                   : "Erst, wenn alle Sagen durch sind"}
               </span>
               {finale && (
                 <button className="knopf klein aktion" onClick={onFinale}>
-                  {abspann ? "Abspann ansehen" : "Zum Finale"}
+                  {credits ? "Credits ansehen" : abspann ? "Abspann ansehen" : "Zum Finale"}
                 </button>
               )}
             </div>

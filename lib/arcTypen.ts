@@ -36,8 +36,9 @@ export type ArcTeil = {
  *                           nachgereicht werden - bis dahin endet der Arc mit
  *                           einer Karte, die das sagt.
  *   "gerichtsverhandlung" - noch nicht gebaut, läuft vorerst als Text.
+ *   "credits"             - Abspanntext, exakt so lang wie der gewählte Song.
  */
-export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung";
+export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung" | "credits";
 
 /**
  * Das Video zum Abschluss eines Arcs - sofern es schon hinterlegt ist.
@@ -110,6 +111,8 @@ export type Arc = {
     art: ArcFinaleArt;
     /** Der Abschluss nach der letzten Saga. */
     erzaehler: Erzaehlerteil;
+    /** Nur bei Credits: Der Song bestimmt ihre exakte Laufzeit. */
+    creditsSong?: string;
   };
   erstelltAm: number;
 };
@@ -264,3 +267,11 @@ export function teilStand(arc: Arc, geschafft: number[], index: number): TeilSta
 /** Das Finale steht erst offen, wenn jede Station durch ist. */
 export const finaleOffen = (arc: Arc, geschafft: number[]): boolean =>
   arc.teile.every((t) => geschafft.includes(t.nummer));
+
+/**
+ * Nach der letzten Saga beginnen Credits sofort. Die anderen Finale-Arten
+ * bleiben wie bisher über die Übersicht erreichbar, damit der Spieler vor
+ * einem langen Text oder Video noch einmal Luft holen kann.
+ */
+export const phaseNachSaga = (arc: Arc, geschafft: number[]): ArcLauf["phase"] =>
+  finaleOffen(arc, geschafft) && arc.finale.art === "credits" ? "finale" : "uebersicht";

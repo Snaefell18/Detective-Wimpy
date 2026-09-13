@@ -89,7 +89,14 @@ service cloud.firestore {
         && textLimit('name', 120)
         && textLimit('klappentext', 2000)
         && textLimit('ziel', 2000)
-        && textLimit('themeSong', 200);
+        && textLimit('themeSong', 200)
+        && (
+          !('creditsSong' in request.resource.data.finale)
+          || (
+            request.resource.data.finale.creditsSong is string
+            && request.resource.data.finale.creditsSong.size() <= 200
+          )
+        );
       allow delete: if angemeldet();
     }
 

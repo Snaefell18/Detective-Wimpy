@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { naechsterTeil, type Arc, type ArcLauf } from "./arcTypen";
+import { naechsterTeil, phaseNachSaga, type Arc, type ArcLauf } from "./arcTypen";
 
 /**
  * Der Fortschritt in einem Arc - liegt nur auf dem Gerät.
@@ -103,7 +103,7 @@ export function useArcLauf() {
           ...alt.lauf,
           geschafft,
           teil: naechsterTeil(alt.arc, geschafft) ?? alt.lauf.teil,
-          phase: "uebersicht",
+          phase: phaseNachSaga(alt.arc, geschafft),
           sagaId: null,
         },
       };
