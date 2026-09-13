@@ -129,9 +129,12 @@ export function SagaVorgabenFelder({
      * von selbst, und dann stünde man vor einer Meldung, die man gar nicht
      * verursacht hat.
      */
-    const ohneTwist = neu === "gericht" || neu === "gericht-daemon" ? { twist: false } : {};
+    const ohneTwist =
+      neu === "gericht" || neu === "gericht-daemon" || neu === "gericht-wimpy"
+        ? { twist: false }
+        : {};
 
-    if (neu === "wimpy") {
+    if (neu === "wimpy" || neu === "gericht-wimpy") {
       onAendern({
         ...ohneTwist,
         finaleArt: neu,
@@ -155,7 +158,8 @@ export function SagaVorgabenFelder({
   };
 
   /** Vor Gericht gibt es keinen Twist - dann bleibt die Wahl auch gesperrt. */
-  const twistGesperrt = art === "gericht" || art === "gericht-daemon";
+  const twistGesperrt =
+    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy";
 
   const namenVon = (id: string) =>
     stammdaten.charaktere.find((c) => c.id === id)?.name ?? id;
@@ -254,7 +258,7 @@ export function SagaVorgabenFelder({
 
       <h3 className="unter-abschnitt">Kapitel</h3>
       <div className="wahl-reihe">
-        {[2, 3, 4, 5, 6].map((n) => (
+        {[2, 3, 4, 5, 6, 7, 8].map((n) => (
           <button
             key={n}
             className="wahl-chip"
@@ -879,7 +883,7 @@ export function SagaVorgabenFelder({
       </div>
       <p className="hinweis">{FINALE_ARTEN.find((e) => e.id === art)?.lang}</p>
 
-      {art === "wimpy" && (
+      {(art === "wimpy" || art === "gericht-wimpy") && (
         <>
           <span className="leise klein">Was in Wimpy steckte</span>
           <div className="marken-reihe">
@@ -898,8 +902,9 @@ export function SagaVorgabenFelder({
             <>
               <p className="hinweis">
                 {namenVon(vorgaben.besessenheit.daemonId)} steckte die ganze Saga
-                über in Wimpy. Vor der Verhandlung bricht es aus ihm heraus - und
-                im Saal sitzt Wimpy selbst auf der Anklagebank.
+                über in Wimpy. {art === "gericht-wimpy"
+                  ? "Im Saal muss Wimpy erst angeklagt werden; dann bricht es aus ihm heraus."
+                  : "Vor der Verhandlung bricht es aus ihm heraus - und im Saal sitzt Wimpy selbst auf der Anklagebank."}
               </p>
               <span className="leise klein">Ton zur Verwandlung</span>
               <TonFeld
@@ -935,7 +940,7 @@ export function SagaVorgabenFelder({
         </>
       )}
 
-      {art !== "wimpy" && (
+      {art !== "wimpy" && art !== "gericht-wimpy" && (
       <>
       <h3 className="unter-abschnitt">
         Besessenheit{" "}

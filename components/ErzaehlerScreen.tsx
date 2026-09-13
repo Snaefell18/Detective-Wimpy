@@ -5,6 +5,7 @@ import { Szene } from "./Bild";
 import { VideoSzene } from "./VideoSzene";
 import { spiele, stoppe, type Stueck } from "@/lib/introAudio";
 import { tonQuelle } from "@/lib/stimme";
+import { sichtbareErzaehlerZeilen } from "@/lib/erzaehlerTiming";
 import { videoVon, type Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
@@ -78,26 +79,24 @@ export function ErzaehlerScreen({
   const [karteLaeuft, setKarteLaeuft] = useState(Boolean(karte));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startRef = useRef(performance.now());
-  /**
-   * Läuft die gesprochene Fassung wirklich? Dann bleibt der Text vom
-   * Bildschirm - man hört ihn ja. Klappt es nicht (kein Ton hinterlegt, oder
-   * der Browser verweigert ihn), steht er wie bisher da; niemand soll vor
-   * einer leeren Fläche sitzen.
-   */
-  const [spricht, setSpricht] = useState(false);
-
-  // Folgt im selben Bildschirm ein anderer Erzählerteil, fängt sein Video von
-  // vorn an - React behält sonst den Zustand des vorherigen.
-  useEffect(() => {
-    setVideoLaeuft(Boolean(video));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [video, teil.text]);
-
   // Absichtlich an den Texten der Karte statt am Objekt: Der Aufrufer baut es
-  // bei jedem Renderdurchgang neu, und ein Wecker, der ständig neu gestellt
-  // wird, klingelt nie.
+  // bei jedem Renderdurchgang neu, und ein Effekt mit dem Objekt als
+  // Abhängigkeit würde bei jedem Rendern neu beginnen.
   const karteMarke = karte?.marke;
   const karteName = karte?.name;
+
+  // Folgt im selben Bildschirm ein anderer Erzählerteil, müssen Video,
+  // Titelkarte UND Textuhr von vorn anfangen. Das ist besonders bei Arcs
+  // wichtig: React behält dort dieselbe Komponente zwischen zwei Stationen.
+  // Früher wechselte zwar der sichtbare Text, während Uhr und Audio noch zum
+  // vorherigen Teil gehörten - dadurch waren Schrift und Sprecher völlig
+  // auseinander.
+  useEffect(() => {
+    setVideoLaeuft(Boolean(video));
+    setKarteLaeuft(Boolean(karteMarke || karteName));
+    setFortschritt(0);
+  }, [video, teil.text, teil.audio, karteMarke, karteName]);
+
   useEffect(() => {
     // Erst das Video, dann die Karte - sonst wäre sie vorbei, bevor man sie
     // zu sehen bekommt.
@@ -109,9 +108,8 @@ export function ErzaehlerScreen({
   useEffect(() => {
     if (videoLaeuft || karteLaeuft) return;
     let laeuftNoch = true;
+    let wartetAufAudio = Boolean(teil.audio);
     startRef.current = performance.now();
-
-    setSpricht(false);
 
     if (teil.audio) {
       /*
@@ -123,21 +121,46 @@ export function ErzaehlerScreen({
       stoppe();
 
       // Eine gesprochene Fassung kann in der Datenbank liegen ("stimme:…").
-      // Das Nachschlagen dauert einen Moment; bis dahin läuft der Text schon.
-      void tonQuelle(teil.audio).then((quelle) => {
-        if (!laeuftNoch || !quelle) return;
-        const audio = new Audio(quelle);
-        audioRef.current = audio;
-        void audio
-          .play()
-          .then(() => {
-            if (laeuftNoch) setSpricht(true);
-          })
-          .catch(() => {
-            // Blockiert der Browser den Ton, läuft die Szene stumm weiter -
-            // und der Text erscheint wie früher zeilenweise.
+      // Das Nachschlagen dauert einen Moment. Bis dahin wartet auch die
+      // Textuhr, damit die erste Zeile nicht längst weitergelaufen ist, wenn
+      // die Stimme beginnt.
+      void tonQuelle(teil.audio)
+        .then((quelle) => {
+          if (!laeuftNoch) return;
+          if (!quelle) {
+            wartetAufAudio = false;
+            startRef.current = performance.now();
+            return;
+          }
+          const audio = new Audio(quelle);
+          audioRef.current = audio;
+          audio.addEventListener("ended", () => {
+            if (laeuftNoch) setFortschritt(1);
           });
-      });
+          void audio
+            .play()
+            .then(() => {
+              // Die Textuhr beginnt mit der Stimme, nicht schon während die
+              // Aufnahme aus der Datenbank geladen wird.
+              if (laeuftNoch) {
+                wartetAufAudio = false;
+                startRef.current = performance.now();
+              }
+            })
+            .catch(() => {
+              // Blockiert der Browser den Ton, läuft die Szene stumm weiter -
+              // und der Text erscheint wie früher zeilenweise.
+              audioRef.current = null;
+              wartetAufAudio = false;
+              startRef.current = performance.now();
+            });
+        })
+        .catch(() => {
+          // Auch eine nicht abrufbare Datenbankaufnahme lässt den Text nicht
+          // für immer auf der ersten Zeile stehen.
+          wartetAufAudio = false;
+          startRef.current = performance.now();
+        });
     } else if (musik) {
       void spiele(musik);
     }
@@ -145,14 +168,16 @@ export function ErzaehlerScreen({
     const tick = () => {
       if (!laeuftNoch) return;
       const audio = audioRef.current;
-      const dauer =
-        audio && Number.isFinite(audio.duration) && audio.duration > 1
-          ? audio.duration
-          : STUMME_DAUER;
-      const zeit =
-        audio && audio.currentTime > 0
-          ? audio.currentTime
-          : (performance.now() - startRef.current) / 1000;
+      if (wartetAufAudio) {
+        setFortschritt(0);
+        requestAnimationFrame(tick);
+        return;
+      }
+      const hatAudio = Boolean(audio && Number.isFinite(audio.duration) && audio.duration > 1);
+      const dauer = hatAudio && audio ? audio.duration : STUMME_DAUER;
+      const zeit = hatAudio && audio
+        ? audio.currentTime
+        : (performance.now() - startRef.current) / 1000;
       setFortschritt(Math.min(1, zeit / dauer));
       requestAnimationFrame(tick);
     };
@@ -165,9 +190,9 @@ export function ErzaehlerScreen({
       audioRef.current = null;
       if (musik) stoppe(musik);
     };
-  }, [teil.audio, musik, karteLaeuft, videoLaeuft]);
+  }, [teil.audio, teil.text, musik, karteLaeuft, videoLaeuft]);
 
-  const sichtbar = Math.min(zeilen.length, Math.floor(fortschritt * zeilen.length) + 1);
+  const sichtbar = sichtbareErzaehlerZeilen(zeilen, fortschritt);
 
   if (videoLaeuft && video) {
     return <VideoSzene quelle={video} onFertig={() => setVideoLaeuft(false)} />;
@@ -196,17 +221,17 @@ export function ErzaehlerScreen({
       <div className="prolog-text">
         {titel && <p className="erzaehler-titel">{titel}</p>}
 
-        {/* Wird vorgelesen, bleibt der Text weg - zuhören statt mitlesen. */}
-        {!spricht &&
-          zeilen.slice(0, sichtbar).map((zeile, i) => (
-            <p
-              key={i}
-              className="prolog-zeile"
-              data-letzte={i === sichtbar - 1 ? "true" : undefined}
-            >
-              {zeile}
-            </p>
-          ))}
+        {/* Schrift und Aufnahme laufen parallel. Die Audio-Uhr bestimmt,
+            welche Zeile gerade sichtbar wird. */}
+        {zeilen.slice(0, sichtbar).map((zeile, i) => (
+          <p
+            key={i}
+            className="prolog-zeile"
+            data-letzte={i === sichtbar - 1 ? "true" : undefined}
+          >
+            {zeile}
+          </p>
+        ))}
       </div>
 
       {/* Tippen geht überall - der Knopf darf den Tipp nicht doppelt zählen. */}

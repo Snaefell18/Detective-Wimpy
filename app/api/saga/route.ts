@@ -73,6 +73,14 @@ import type { Character, City, Location } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/*
+ * Ten seconds remain for cancelling a slow model request and returning a
+ * useful JSON error before the platform's 60-second limit intervenes.  The
+ * previous 45-second ceiling was unnecessarily tight for otherwise valid
+ * structured answers, especially for the court steps of a saga.
+ */
+const MODELL_ZEITBUDGET = 50;
+
 /**
  * Der Bogen einer Saga - in vielen kleinen Aufrufen.
  *
@@ -94,6 +102,7 @@ const modellOptionen = (
   frage: string,
   format: ReturnType<typeof zodOutputFormat>,
   maxTokens: number,
+  effort: "low" | "medium" = "low",
 ) =>
   ({
     model: MODEL,
@@ -102,7 +111,9 @@ const modellOptionen = (
       { type: "text" as const, text: system, cache_control: { type: "ephemeral" as const } },
     ],
     thinking: { type: "adaptive" as const },
-    output_config: { effort: "medium", format },
+    // Saga steps are deliberately small. Low effort prevents the model from
+    // spending most of the request budget thinking about a short JSON draft.
+    output_config: { effort, format },
     messages: [{ role: "user" as const, content: frage }],
   }) as MessageCreateParamsNonStreaming;
 
@@ -174,7 +185,8 @@ export async function POST(request: Request) {
      * dann mit der Antwort auf die Anklage (siehe api/verhandlung).
      */
     if (schritt === "verwandlung") {
-      const geheim = (bogen.vorgaben.finaleArt ?? "klassisch") === "gericht-daemon";
+      const finaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
+      const geheim = finaleArt === "gericht-daemon" || finaleArt === "gericht-wimpy";
       return NextResponse.json({
         spruch: geheim ? "" : (bogen.finale?.verwandlungSpruch ?? ""),
       });
@@ -299,15 +311,21 @@ async function kernSchritt(body: Record<string, unknown>) {
     verdaechtige.find((c) => c.id === vorgaben.drahtzieherId) ??
     verdaechtige[Math.floor(Math.random() * verdaechtige.length)];
 
-  // Beim Finale "Wimpy selbst" ist der Detektiv der Wirt: Die Dämonenform
-  // steckt die ganze Saga über in ihm. Damit gelten für die Kapitel dieselben
-  // Regeln wie bei jeder anderen Besessenheit - eine Zeile pro Kapitel, nie
-  // benannt -, und vor der Verhandlung läuft die Verwandlung.
+  // Bei beiden Wimpy-Finales ist der Detektiv der Wirt. Die im Formular
+  // ausgewählte Dämonenform darf dabei NICHT durch einen zufällig gezogenen
+  // Drahtzieher ersetzt werden: Sonst konnte eine teuer erzeugte Saga mit
+  // einem anderen Wesen enden als dem, das im Admin-Menü gewählt wurde.
+  // Fehlt sie bei einer alten Bestellung, bleibt der Drahtzieher der
+  // verträgliche Rückfall; die Vorabprüfung weist neue unvollständige
+  // Bestellungen ohnehin ab.
   const detektiv = spielendeBesetzung.find((c) => c.istDetektiv);
-  if (vorgaben.finaleArt === "wimpy" && detektiv) {
+  if (
+    (vorgaben.finaleArt === "wimpy" || vorgaben.finaleArt === "gericht-wimpy") &&
+    detektiv
+  ) {
     vorgaben.besessenheit = {
       wirtId: detektiv.id,
-      daemonId: drahtzieher.id,
+      daemonId: vorgaben.besessenheit?.daemonId || drahtzieher.id,
       ton: vorgaben.besessenheit?.ton ?? "",
     };
   }
@@ -327,9 +345,9 @@ async function kernSchritt(body: Record<string, unknown>) {
       welt(spielendeBesetzung, orte, staedte, vorgaben),
       buildKernPrompt(spielendeBesetzung, staedte, drahtzieher, vorgaben),
       zodOutputFormat(KernSchema),
-      3000,
+      1800,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<KernDraft>(response, "api/saga:kern");
@@ -462,9 +480,9 @@ async function kapitelSchritt(
         nochNichtDaTiere: zuFrueh,
       }),
       zodOutputFormat(makeKapitelSchema(dabei)),
-      3000,
+      1600,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<KapitelDraft>(response, "api/saga:kapitel");
@@ -580,9 +598,9 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         }).map((c) => c.name),
       }),
       zodOutputFormat(FinaleSchema),
-      3000,
+      1800,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<FinaleDraft>(response, "api/saga:finale");
@@ -667,9 +685,9 @@ async function beweiseSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
       }),
       zodOutputFormat(BeweiseSchema),
-      6000,
+      3200,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<BeweiseDraft>(response, "api/saga:beweise");
@@ -730,10 +748,11 @@ async function beweiseSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
  */
 function anklagbar(bogen: Bogen, richterId: string, angeklagterId: string): string[] {
   const daemonId = besessen(bogen.vorgaben)?.daemonId ?? "";
+  const wimpyAnklagbar = (bogen.vorgaben.finaleArt ?? "klassisch") === "gericht-wimpy";
   const ids = bogen.besetzung
     .filter(
       (c) =>
-        !c.istDetektiv &&
+        (wimpyAnklagbar || !c.istDetektiv) &&
         c.id !== richterId &&
         (c.id === angeklagterId || c.id !== daemonId),
     )
@@ -803,9 +822,9 @@ async function verhandlungsSchritt(
           : undefined,
       }),
       zodOutputFormat(VerhandlungSaalSchema),
-      4000,
+      2600,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<VerhandlungSaalDraft>(response, "api/saga:verhandlung");
@@ -834,7 +853,7 @@ async function verhandlungsSchritt(
     // Bei "Gericht & Dämon" bricht die Gestalt erst bei der richtigen Anklage
     // hervor - vorher weiß der Browser nicht einmal, dass es sie gibt.
     verwandlung:
-      art === "gericht-daemon" && besessenheit
+      (art === "gericht-daemon" || art === "gericht-wimpy") && besessenheit
         ? {
             wirtId: besessenheit.wirtId,
             daemonId: besessenheit.daemonId,

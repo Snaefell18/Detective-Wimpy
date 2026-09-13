@@ -63,6 +63,18 @@ console.log("\n3. Echter Unsinn wird weiterhin abgelehnt");
   pruefe("unbekanntes Wetter", SagaVorgabenSchema.safeParse(falscheLage).success === false);
 }
 
+console.log("\n3b. Große Sagas bleiben eine gültige Bestellung");
+{
+  const gross = uebertragen({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitelAnzahl: 8,
+    charaktere: Array.from({ length: 15 }, (_, i) => `tier-${i + 1}`),
+  });
+  const geprueft = SagaVorgabenSchema.safeParse(gross);
+  pruefe("acht Kapitel werden angenommen", geprueft.success, geprueft.error?.issues[0]?.message);
+  pruefe("fünfzehn Tiere werden angenommen", geprueft.success && geprueft.data.charaktere.length === 15);
+}
+
 console.log("\n4. Jede Auswahl aus dem Admin-Menü kommt durch");
 {
   /*

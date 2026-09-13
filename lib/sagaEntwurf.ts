@@ -3,6 +3,7 @@
 import type { Verhandlung } from "./sagaFinale";
 import type { SagaVorgaben } from "./sagaTypen";
 import type { PublicCase } from "./types";
+import type { FallEntwurf } from "./fallErzeugen";
 
 /**
  * Der Zwischenstand einer laufenden Saga-Erzeugung.
@@ -69,6 +70,12 @@ export type SagaEntwurf = {
   beweiseFertig: boolean;
   /** Fertige Kapitelfälle, nach Kapitelnummer. */
   faelle: Record<string, { fall: PublicCase; siegel: string }>;
+  /**
+   * Der bereits bezahlte, aber noch nicht vollständige Fall. So geht bei
+   * einem Abbruch in den Verdächtigen oder Spuren nicht das ganze Kapitel
+   * verloren.
+   */
+  fallEntwurf: (FallEntwurf & { kapitel: number }) | null;
   /** Der Finalfall - bei einer Verhandlung leer, aber gesetzt. */
   finaleFall: { fall: PublicCase | null; siegel: string | null } | null;
   begonnen: number;
@@ -124,6 +131,7 @@ export function leererEntwurf(kennung: string, vorgaben: SagaVorgaben): SagaEntw
     verhandlung: null,
     beweiseFertig: false,
     faelle: {},
+    fallEntwurf: null,
     finaleFall: null,
     begonnen: Date.now(),
     zuletzt: Date.now(),
@@ -141,6 +149,14 @@ export function ladeEntwurf(): SagaEntwurf | null {
       ...daten,
       kapitel: Array.isArray(daten.kapitel) ? daten.kapitel : [],
       faelle: daten.faelle ?? {},
+      fallEntwurf:
+        daten.fallEntwurf &&
+        typeof daten.fallEntwurf === "object" &&
+        typeof daten.fallEntwurf.kapitel === "number" &&
+        (daten.fallEntwurf.schritt === "verdaechtige" || daten.fallEntwurf.schritt === "spuren") &&
+        typeof daten.fallEntwurf.siegel === "string"
+          ? daten.fallEntwurf
+          : null,
     };
   } catch {
     return null;
@@ -191,6 +207,13 @@ export function entwurfStand(entwurf: SagaEntwurf): {
   if (entwurf.kapitel.length) teile.push(`${entwurf.kapitel.length} von ${anzahl} Kapiteln`);
   if (entwurf.finale) teile.push("Finale");
   if (faelle) teile.push(`${faelle} von ${anzahl} Fällen`);
+  if (entwurf.fallEntwurf) {
+    teile.push(
+      `Fall ${entwurf.fallEntwurf.kapitel}: ${
+        entwurf.fallEntwurf.schritt === "verdaechtige" ? "Gerüst" : "Gerüst und Verdächtige"
+      }`,
+    );
+  }
   if (entwurf.finaleFall) teile.push("Finalfall");
 
   /*

@@ -11,6 +11,7 @@ import {
   leererArc,
   mitAnzahl,
   naechsteLuecke,
+  phaseNachSaga,
   sagaVon,
   spielbar,
 } from "../lib/arcTypen.ts";
@@ -137,6 +138,24 @@ console.log("\nAbspann statt Finale");
   pruefe("Videofinale ohne Datei bleibt leer", arcAbspann(mit("video", "")) === "");
   pruefe("Leerzeichen zählen nicht", arcAbspann(mit("video", "  ")) === "");
   pruefe("gar kein Arc", arcAbspann(undefined) === "");
+}
+
+console.log("\nCredits nach der letzten Saga");
+{
+  const arc = {
+    ...leererArc(),
+    finale: {
+      art: "credits",
+      creditsSong: "/audio/credits.mp3",
+      erzaehler: { text: "Idee\nWimpy", audio: "" },
+    },
+  };
+  pruefe("vor der letzten Saga bleibt die Übersicht", phaseNachSaga(arc, [1, 2]) === "uebersicht");
+  pruefe("nach der letzten Saga beginnen die Credits", phaseNachSaga(arc, [1, 2, 3]) === "finale");
+  pruefe(
+    "andere Finale-Arten warten weiterhin in der Übersicht",
+    phaseNachSaga({ ...arc, finale: { ...arc.finale, art: "text" } }, [1, 2, 3]) === "uebersicht",
+  );
 }
 
 console.log(

@@ -111,6 +111,11 @@ const FINALE_ARTEN: { id: ArcFinaleArt; label: string; hinweis: string }[] = [
     label: "Gerichtsverhandlung",
     hinweis: "noch nicht gebaut - läuft vorerst als Text",
   },
+  {
+    id: "credits",
+    label: "Credits",
+    hinweis: "Abspann genau so lang wie der Credits-Song",
+  },
 ];
 
 /**
@@ -588,6 +593,26 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                   Karte, die sagt, dass der Abspann noch kommt. Nachtragen kannst
                   du ihn jederzeit unten im Videofeld.
                 </p>
+              )}
+
+              {arc.finale.art === "credits" && (
+                <>
+                  <p className="leise klein">
+                    Jede nichtleere Zeile des Abschlusstexts erscheint als eigene
+                    Credit-Zeile. Der Abspann endet automatisch exakt mit dem Song.
+                  </p>
+                  <SongFeld
+                    wert={arc.finale.creditsSong ?? ""}
+                    beschriftung="Credits-Song"
+                    leerText="Noch keinen Credits-Song gewählt"
+                    onAendern={(creditsSong) =>
+                      void sichern({
+                        ...arc,
+                        finale: { ...arc.finale, creditsSong },
+                      })
+                    }
+                  />
+                </>
               )}
 
               <ErzaehlerFeld

@@ -104,6 +104,29 @@ let ohneAbbruch;
   pruefe("der Finalfall ist gebaut", ohneAbbruch.finale.siegel !== null);
 }
 
+console.log("\n1b. Schon vor dem ersten Modellaufruf liegt ein Entwurf vor");
+{
+  speicher.clear();
+  verwirfEntwurf();
+
+  // Gerade der erste Aufruf kann in ein Zeitlimit laufen. Auch dann muss die
+  // Bestellung samt Vorgaben sichtbar bleiben, damit "Weitermachen" möglich
+  // ist - vorher wurde der Entwurf erst nach einer erfolgreichen Kernantwort
+  // gespeichert.
+  serverAufsetzen("saga:kern");
+  let gescheitert = false;
+  try {
+    await erzeugeSaga(eingaben, () => {}, ladeEntwurf());
+  } catch {
+    gescheitert = true;
+  }
+  const stand = ladeEntwurf();
+  pruefe("der erste Aufruf bricht ab", gescheitert);
+  pruefe("der leere Entwurf bleibt erhalten", Boolean(stand));
+  pruefe("seine Vorgaben bleiben erhalten", stand?.vorgaben.name === eingaben.vorgaben.name);
+  pruefe("der Kern ist noch nicht als fertig markiert", stand?.kern === null);
+}
+
 console.log("\n2. Abbruch im letzten Fall - der zweite Anlauf holt nur den Rest");
 {
   speicher.clear();
@@ -142,6 +165,33 @@ console.log("\n2. Abbruch im letzten Fall - der zweite Anlauf holt nur den Rest"
   pruefe("denselben Kapiteltexten", saga.kapitel[1].name === ohneAbbruch.kapitel[1].name);
   pruefe("demselben Bogen", saga.bogenSiegel === ohneAbbruch.bogenSiegel);
   pruefe("und derselben Finalfrage", saga.finale.frage === ohneAbbruch.finale.frage);
+}
+
+console.log("\n2b. Innerhalb eines Falls bleiben bereits bezahlte Schritte erhalten");
+{
+  speicher.clear();
+  verwirfEntwurf();
+
+  // Das Gerüst und die Verdächtigen von Kapitel 1 sind schon da; erst die
+  // Spuren brechen ab. Beim nächsten Lauf darf deshalb nur noch der letzte
+  // API-Schritt dieses Falls bestellt werden.
+  serverAufsetzen("case:spuren:v:g:1");
+  let gescheitert = false;
+  try {
+    await erzeugeSaga(eingaben, () => {}, ladeEntwurf());
+  } catch {
+    gescheitert = true;
+  }
+  const stand = ladeEntwurf();
+  pruefe("der Lauf bricht bei den Spuren ab", gescheitert);
+  pruefe("der Fall-Zwischenstand ist gesichert", stand?.fallEntwurf?.kapitel === 1);
+  pruefe("nur die Spuren fehlen noch", stand?.fallEntwurf?.schritt === "spuren");
+
+  const zweiteRufe = serverAufsetzen(null);
+  await erzeugeSaga(eingaben, () => {}, ladeEntwurf());
+  pruefe("das Gerüst wird nicht neu bestellt", !zweiteRufe.includes("case:geruest:1"));
+  pruefe("die Verdächtigen werden nicht neu bestellt", !zweiteRufe.includes("case:verdaechtige:g:1"));
+  pruefe("nur die fehlenden Spuren werden fortgesetzt", zweiteRufe.includes("case:spuren:v:g:1"));
 }
 
 console.log("\n3. Ein Stand einer anderen Bestellung wird nicht angefasst");

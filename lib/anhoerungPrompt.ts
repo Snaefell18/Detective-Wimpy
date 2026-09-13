@@ -37,6 +37,8 @@ const ZIELE: Record<FinaleArt, string> = {
     "Alle ahnen, dass der Angeklagte es war - beweisen konnte es niemand. Wimpy soll ihn so weit bringen, dass er sich selbst verrät.",
   "gericht-daemon":
     "Auf der Bank sitzt nicht mehr das Tier, das alle kannten, sondern das Wesen, das in ihm steckte. Es ist älter, kälter und spielt mit dem Saal. Wimpy soll es festnageln.",
+  "gericht-wimpy":
+    "Auf der Bank sitzt das Wesen, das die ganze Zeit in Wimpy steckte. Es ist älter, kälter und spielt mit dem Saal. Wimpy soll es festnageln.",
   "ohne-taeter":
     "Es gibt keinen Täter. Der Angeklagte ist unschuldig, und Wimpy muss dem Gericht zeigen, dass hinter allem etwas anderes steckt - keine Schuld, sondern eine Verkettung. Der Angeklagte hilft ihm dabei, so gut er kann.",
   wimpy:

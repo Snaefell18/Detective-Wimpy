@@ -192,6 +192,10 @@ export async function speichereArc(arc: Arc): Promise<void> {
       klappentext: kuerze(arc.klappentext, 2000),
       ziel: kuerze(arc.ziel, 2000),
       themeSong: kuerze(arc.themeSong, 200),
+      finale: {
+        ...arc.finale,
+        creditsSong: kuerze(arc.finale.creditsSong ?? "", 200),
+      },
     }),
   );
 }

@@ -26,6 +26,14 @@ export type FallEingaben = {
   kapitel?: number;
 };
 
+/** Ein bereits bezahlter Zwischenstand innerhalb eines einzelnen Falls. */
+export type FallEntwurf = {
+  /** Der nächste noch fehlende Schritt. */
+  schritt: "verdaechtige" | "spuren";
+  /** Das Siegel aus dem unmittelbar vorherigen API-Schritt. */
+  siegel: string;
+};
+
 /** Was in der Oberfläche steht, während gebaut wird. */
 export const SCHRITT_TEXT = [
   "Wimpy heckt einen Fall aus …",
@@ -36,6 +44,10 @@ export const SCHRITT_TEXT = [
 export async function erzeugeFall(
   eingaben: FallEingaben,
   onSchritt?: (text: string, nummer: number) => void,
+  /** Bei einer Saga kann ein schon bezahlter Fall-Schritt fortgesetzt werden. */
+  weiter?: FallEntwurf | null,
+  /** Sichert das Siegel nach jedem erfolgreichen API-Schritt. */
+  onZwischenstand?: (stand: FallEntwurf) => void,
 ): Promise<{ fall: PublicCase; siegel: string }> {
   /**
    * Jeder Schritt darf einmal danebengehen.
@@ -49,24 +61,38 @@ export async function erzeugeFall(
       onSchritt?.(`${SCHRITT_TEXT[nummer - 1]} (noch einmal)`, nummer),
     );
 
-  onSchritt?.(SCHRITT_TEXT[0], 1);
-  const geruest = await schritt("Beim Gerüst des Falls", 1, () =>
-    postJson<{ siegel: string }>("/api/case", { ...eingaben, schritt: "geruest" }),
-  );
+  let fallEntwurf = weiter ?? null;
+  if (!fallEntwurf) {
+    onSchritt?.(SCHRITT_TEXT[0], 1);
+    const geruest = await schritt("Beim Gerüst des Falls", 1, () =>
+      postJson<{ siegel: string }>("/api/case", { ...eingaben, schritt: "geruest" }),
+    );
+    fallEntwurf = { schritt: "verdaechtige", siegel: geruest.siegel };
+    onZwischenstand?.(fallEntwurf);
+  }
 
-  onSchritt?.(SCHRITT_TEXT[1], 2);
-  const mitVerdaechtigen = await schritt("Bei den Verdächtigen", 2, () =>
-    postJson<{ siegel: string }>("/api/case", {
-      schritt: "verdaechtige",
-      siegel: geruest.siegel,
-    }),
-  );
+  if (fallEntwurf.schritt === "verdaechtige") {
+    const geruestSiegel = fallEntwurf.siegel;
+    onSchritt?.(SCHRITT_TEXT[1], 2);
+    const mitVerdaechtigen = await schritt("Bei den Verdächtigen", 2, () =>
+      postJson<{ siegel: string }>("/api/case", {
+        schritt: "verdaechtige",
+        siegel: geruestSiegel,
+      }),
+    );
+    fallEntwurf = { schritt: "spuren", siegel: mitVerdaechtigen.siegel };
+    onZwischenstand?.(fallEntwurf);
+  }
 
   onSchritt?.(SCHRITT_TEXT[2], 3);
+  // Nach Gerüst und Verdächtigen liegt immer ein Siegel für die Spuren vor.
+  // Der Rückfall schützt nur den Typschutz gegen einen künftig geänderten
+  // Zwischenstand.
+  if (!fallEntwurf) throw new Error("Der Zwischenstand des Falls fehlt.");
   return schritt("Bei den Spuren", 3, () =>
     postJson<{ fall: PublicCase; siegel: string }>("/api/case", {
       schritt: "spuren",
-      siegel: mitVerdaechtigen.siegel,
+      siegel: fallEntwurf.siegel,
     }),
   );
 }

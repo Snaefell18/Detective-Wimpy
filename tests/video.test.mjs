@@ -9,6 +9,7 @@ import {
   videoFuerKapitel,
   videoVon,
 } from "../lib/sagaTypen.ts";
+import { sichtbareErzaehlerZeilen } from "../lib/erzaehlerTiming.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -40,6 +41,15 @@ console.log("\n2. Mit Eintrag");
     videoFuerKapitel({ kapitelVideos: ["  /video/a.mp4 "] }, 0) === "/video/a.mp4",
   );
   pruefe("und im Erzählerteil auch nicht", videoVon({ text: "", audio: "", video: " /video/a.mp4 " }) === "/video/a.mp4");
+}
+
+console.log("\n3. Erzählertext folgt der gesprochenen Länge");
+{
+  const zeilen = ["Eine sehr lange erste Zeile, die viel Zeit zum Sprechen braucht.", "Kurz."];
+  pruefe("am Anfang steht die erste Zeile", sichtbareErzaehlerZeilen(zeilen, 0) === 1);
+  pruefe("nach der Hälfte noch immer", sichtbareErzaehlerZeilen(zeilen, 0.5) === 1);
+  pruefe("am Ende stehen alle Zeilen", sichtbareErzaehlerZeilen(zeilen, 1) === 2);
+  pruefe("ein leerer Text bleibt leer", sichtbareErzaehlerZeilen([], 0.5) === 0);
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles gut.\n" : `\n${fehlgeschlagen} Fehler.\n`);

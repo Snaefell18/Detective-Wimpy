@@ -5,6 +5,7 @@ import { AbdruckSchau } from "@/components/AbdruckSchau";
 import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
+import { ArcCredits } from "@/components/ArcCredits";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
@@ -448,7 +449,12 @@ export default function Home() {
       // Nicht so beim Finale "Gericht & Dämon": Dort ist die Verwandlung der
       // Lohn für die richtige Anklage und gehört in den Saal, nicht davor.
       const besessenheit = besessen(saga.stand.saga.vorgaben);
-      if (finale && besessenheit && saal?.art !== "gericht-daemon") {
+      if (
+        finale &&
+        besessenheit &&
+        saal?.art !== "gericht-daemon" &&
+        saal?.art !== "gericht-wimpy"
+      ) {
         setVerwandlungSpruch("");
         // Nebenher: Kommt nichts zurück, bleibt der Moment eben stumm.
         void postJson<{ spruch: string }>("/api/saga", {
@@ -799,6 +805,19 @@ export default function Home() {
     }
 
     if (lauf.phase === "finale") {
+      if (arcDaten.finale.art === "credits") {
+        return (
+          <main className="app">
+            <ArcCredits
+              titel={arcDaten.name}
+              text={arcDaten.finale.erzaehler.text}
+              song={arcDaten.finale.creditsSong ?? ""}
+              onFertig={arc.beenden}
+            />
+          </main>
+        );
+      }
+
       // Endet der Arc mit einem Abspann, läuft das Video bildschirmfüllend -
       // und danach ist Schluss, ohne Erzählertext.
       const abspann = arcAbspann(arcDaten);
