@@ -14,6 +14,7 @@ import {
 import { useStammdaten } from "@/lib/stammdaten";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
+import type { VersammlungVorgabe } from "@/lib/versammlung";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
 
@@ -226,6 +227,67 @@ export function SagaVorgabenFelder({
     onAendern({
       kapitelWetter: anStelle<Wetterlage | "">(vorgaben.kapitelWetter, i, lage, ""),
     });
+
+  const ratNach = (nachKapitel: number) =>
+    (vorgaben.versammlungen ?? []).find((v) => v.nachKapitel === nachKapitel);
+
+  const ratAendern = (nachKapitel: number, teil: Partial<VersammlungVorgabe>) =>
+    onAendern({
+      versammlungen: (vorgaben.versammlungen ?? []).map((v) =>
+        v.nachKapitel === nachKapitel ? { ...v, ...teil } : v,
+      ),
+    });
+
+  const ratUmschalten = (nachKapitel: number) => {
+    const bisher = vorgaben.versammlungen ?? [];
+    if (bisher.some((v) => v.nachKapitel === nachKapitel)) {
+      onAendern({ versammlungen: bisher.filter((v) => v.nachKapitel !== nachKapitel) });
+      return;
+    }
+    const start = mitspieler.slice(0, Math.min(4, mitspieler.length)).map((c) => c.id);
+    const neu: VersammlungVorgabe = {
+      id: `rat-nach-${nachKapitel}`,
+      nachKapitel,
+      name: `Der Rat nach Kapitel ${nachKapitel}`,
+      anlass: "Die jüngsten Ereignisse verlangen eine gemeinsame Aussprache.",
+      thema: vorgaben.kapitelWuensche?.[nachKapitel] || vorgaben.thema,
+      vorsitzId: start[0] ?? "",
+      teilnehmerIds: start,
+      beobachterIds: [],
+      undercoverId: "",
+    };
+    onAendern({ versammlungen: [...bisher, neu].sort((a, b) => a.nachKapitel - b.nachKapitel) });
+  };
+
+  const ratRolle = (
+    rat: VersammlungVorgabe,
+    id: string,
+    rolle: "teilnehmer" | "beobachter",
+  ) => {
+    const inTeilnehmern = rat.teilnehmerIds.includes(id);
+    const inBeobachtern = rat.beobachterIds.includes(id);
+    const teilnehmerIds =
+      rolle === "teilnehmer"
+        ? inTeilnehmern
+          ? rat.teilnehmerIds.filter((x) => x !== id)
+          : [...rat.teilnehmerIds, id]
+        : rat.teilnehmerIds.filter((x) => x !== id);
+    const beobachterIds =
+      rolle === "beobachter"
+        ? inBeobachtern
+          ? rat.beobachterIds.filter((x) => x !== id)
+          : [...rat.beobachterIds, id]
+        : rat.beobachterIds.filter((x) => x !== id);
+    ratAendern(rat.nachKapitel, {
+      teilnehmerIds,
+      beobachterIds,
+      vorsitzId: teilnehmerIds.includes(rat.vorsitzId) ? rat.vorsitzId : "",
+      undercoverId:
+        teilnehmerIds.includes(rat.undercoverId) || beobachterIds.includes(rat.undercoverId)
+          ? rat.undercoverId
+          : "",
+    });
+  };
 
   /** Steht dieses Feld schon durch den Arc fest? */
   const arcHinweis = (feld: keyof SagaVorgaben) =>
@@ -529,6 +591,149 @@ export function SagaVorgabenFelder({
           </div>
         );
       })}
+
+      {/* Versammlungen sind ein eigener Reiz der Arc-Sagas. Einzelne Sagas
+          bleiben schlank; im Arc-Formular ist dagegen jede echte Lücke
+          zwischen zwei Kapiteln frei bespielbar. */}
+      {vomArc && (
+        <section className="rat-editor">
+          <h3 className="unter-abschnitt">
+            Versammlungen <span className="leise">· zwischen den Kapiteln</span>
+          </h3>
+          <p className="leise klein">
+            Optional. Der Rat läuft als freies Gruppengespräch: Viele Tiere
+            reden miteinander, Wimpy kann jederzeit fragen oder widersprechen.
+            Im Hintergrund verdichtet sich die Diskussion zu einem zusätzlichen
+            Beweis. Tiere am Rand müssen im angrenzenden Fall nicht mitspielen.
+          </p>
+
+          {Array.from({ length: Math.max(0, vorgaben.kapitelAnzahl - 1) }, (_, i) => i + 1).map(
+            (nachKapitel) => {
+              const rat = ratNach(nachKapitel);
+              const dabei = rat
+                ? [...rat.teilnehmerIds, ...rat.beobachterIds]
+                : [];
+              return (
+                <div className="rat-editor-block" key={nachKapitel} data-aktiv={Boolean(rat)}>
+                  <div className="rat-editor-kopf">
+                    <div>
+                      <strong>Nach Kapitel {nachKapitel}</strong>
+                      <span className="leise klein">
+                        {rat ? ` · ${rat.name}` : " · keine Versammlung"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="knopf klein"
+                      onClick={() => ratUmschalten(nachKapitel)}
+                    >
+                      {rat ? "Entfernen" : "Versammlung einrichten"}
+                    </button>
+                  </div>
+
+                  {rat && (
+                    <div className="rat-editor-inhalt">
+                      <label className="feld">
+                        <span className="leise">Name der Versammlung</span>
+                        <input
+                          value={rat.name}
+                          onChange={(e) => ratAendern(nachKapitel, { name: e.target.value })}
+                          placeholder="Rat der sieben Schnurrhaare"
+                          maxLength={120}
+                        />
+                      </label>
+                      <label className="feld">
+                        <span className="leise">Anlass · warum alle zusammenkommen</span>
+                        <textarea
+                          rows={2}
+                          value={rat.anlass}
+                          onChange={(e) => ratAendern(nachKapitel, { anlass: e.target.value })}
+                          placeholder="Nach dem Vorfall am Hafen verlangt die Stadt Antworten."
+                          maxLength={500}
+                        />
+                      </label>
+                      <label className="feld">
+                        <span className="leise">Was erörtert werden soll</span>
+                        <textarea
+                          rows={3}
+                          value={rat.thema}
+                          onChange={(e) => ratAendern(nachKapitel, { thema: e.target.value })}
+                          placeholder="Wer profitiert davon, dass alle Uhren dieselbe falsche Zeit zeigen?"
+                          maxLength={1200}
+                        />
+                      </label>
+
+                      <span className="leise klein">Teilnehmer · reden regelmäßig mit</span>
+                      <div className="marken-reihe">
+                        {verdaechtige.map((c) => (
+                          <button
+                            type="button"
+                            key={c.id}
+                            className="marke-knopf"
+                            data-aktiv={rat.teilnehmerIds.includes(c.id)}
+                            onClick={() => ratRolle(rat, c.id, "teilnehmer")}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+
+                      <span className="leise klein">
+                        Tiere am Rand · hören zu, dürfen sich überraschend einmischen
+                      </span>
+                      <div className="marken-reihe">
+                        {verdaechtige.map((c) => (
+                          <button
+                            type="button"
+                            key={c.id}
+                            className="marke-knopf"
+                            data-aktiv={rat.beobachterIds.includes(c.id)}
+                            onClick={() => ratRolle(rat, c.id, "beobachter")}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+
+                      <label className="feld">
+                        <span className="leise">Vorsitz · beendet die Runde irgendwann selbst</span>
+                        <select
+                          value={rat.vorsitzId}
+                          onChange={(e) => ratAendern(nachKapitel, { vorsitzId: e.target.value })}
+                        >
+                          <option value="">Vorsitz wählen …</option>
+                          {rat.teilnehmerIds.map((id) => (
+                            <option key={id} value={id}>
+                              {namenVon(id)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="feld">
+                        <span className="leise">
+                          Undercover dabei · bleibt für Spieler und Rat vollständig geheim
+                        </span>
+                        <select
+                          value={rat.undercoverId}
+                          onChange={(e) => ratAendern(nachKapitel, { undercoverId: e.target.value })}
+                        >
+                          <option value="">Niemand</option>
+                          {dabei.map((id) => (
+                            <option key={id} value={id}>
+                              {namenVon(id)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              );
+            },
+          )}
+        </section>
+      )}
 
       <h3 className="unter-abschnitt">
         Stadt <span className="leise">· gilt, wo oben „Wie eingestellt“ steht</span>
