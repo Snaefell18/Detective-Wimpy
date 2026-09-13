@@ -64,6 +64,11 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// Keep a clear margin for turning a model timeout into a JSON response. This
+// route is used for every chapter of a saga, so a needlessly short limit here
+// made a long saga fail even though its individual requests were split up.
+const MODELL_ZEITBUDGET = 50;
+
 /** Höchstens so viele Charaktere bzw. Orte - schützt vor riesigen Prompts. */
 /**
  * Wie viele Tiere höchstens in EINEN Fall kommen. Die Liste aus der
@@ -589,7 +594,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
       4096,
       "medium",
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<Geruest>(response, "api/case:geruest");
@@ -650,7 +655,7 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
       4096,
       "low",
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<VerdaechtigeDraft>(response, "api/case:verdaechtige");
@@ -721,7 +726,7 @@ async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel, nachfassen: boole
       4096,
       "low",
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 }
 

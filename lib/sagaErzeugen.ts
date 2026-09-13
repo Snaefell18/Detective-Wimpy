@@ -70,18 +70,19 @@ export type SagaEingaben = {
  *
  * Der zweite Versuch ist hier bares Geld: Eine Saga besteht aus zwanzig und
  * mehr Aufrufen hintereinander, und ohne ihn kostete ein einzelner Aussetzer
- * alles, was schon gebaut war.
+ * alles, was schon gebaut war. Zwei Nachversuche senken das Risiko über die
+ * vielen unabhängigen Schritte deutlich; der Zwischenstand verhindert dabei
+ * doppelte Arbeit in bereits fertigen Schritten.
  */
 const bei = <T>(
   was: string,
   arbeit: () => Promise<T>,
-  onErneut?: () => void,
+  onErneut?: (versuch: number) => void,
   /**
-   * Wie oft nachgefasst wird. Einmal reicht fast überall - am Schluss steht
-   * aber die ganze bezahlte Saga auf dem Spiel, deshalb gibt es dort einen
-   * Versuch mehr.
+   * Wie oft nachgefasst wird. Die Saga besteht aus vielen aufeinander
+   * folgenden Anfragen, daher bekommt jeder Schritt zwei weitere Chancen.
    */
-  versuche = 1,
+  versuche = 2,
 ) => mitWiederholung(was, arbeit, versuche, onErneut);
 
 export async function erzeugeSaga(
@@ -123,7 +124,7 @@ export async function erzeugeSaga(
           orte: eingaben.orte,
           vorgaben: eingaben.vorgaben,
         }),
-      () => onSchritt?.("Das Überthema entsteht … (noch einmal)"),
+      (versuch) => onSchritt?.(`Das Überthema entsteht … (Versuch ${versuch + 1})`),
     );
     halte({ kern, name: kern.name, siegel: kern.bogenSiegel });
   }
@@ -142,7 +143,7 @@ export async function erzeugeSaga(
           orte: eingaben.orte,
           nummer,
         }),
-      () => onSchritt?.(`Kapitel ${nummer} von ${anzahl} … (noch einmal)`),
+      (versuch) => onSchritt?.(`Kapitel ${nummer} von ${anzahl} … (Versuch ${versuch + 1})`),
     );
     siegel = antwort.bogenSiegel;
     entwuerfe.push(antwort.kapitel);
@@ -163,8 +164,7 @@ export async function erzeugeSaga(
           bogenSiegel: siegel,
           orte: eingaben.orte,
         }),
-      () => onSchritt?.("Das Finale wird geschmiedet … (noch einmal)"),
-      2,
+      (versuch) => onSchritt?.(`Das Finale wird geschmiedet … (Versuch ${versuch + 1})`),
     );
     siegel = finaleBogen.bogenSiegel;
     finaleTexte = finaleBogen.finale;
@@ -194,8 +194,8 @@ export async function erzeugeSaga(
           bogenSiegel: siegel,
           orte: eingaben.orte,
         }),
-      () => onSchritt?.("Die Beweisstücke werden zusammengetragen … (noch einmal)"),
-      2,
+      (versuch) =>
+        onSchritt?.(`Die Beweisstücke werden zusammengetragen … (Versuch ${versuch + 1})`),
     );
     siegel = beweisBogen.bogenSiegel;
     if (verhandlung) {

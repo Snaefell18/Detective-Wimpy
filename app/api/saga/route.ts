@@ -73,6 +73,14 @@ import type { Character, City, Location } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/*
+ * Ten seconds remain for cancelling a slow model request and returning a
+ * useful JSON error before the platform's 60-second limit intervenes.  The
+ * previous 45-second ceiling was unnecessarily tight for otherwise valid
+ * structured answers, especially for the court steps of a saga.
+ */
+const MODELL_ZEITBUDGET = 50;
+
 /**
  * Der Bogen einer Saga - in vielen kleinen Aufrufen.
  *
@@ -94,6 +102,7 @@ const modellOptionen = (
   frage: string,
   format: ReturnType<typeof zodOutputFormat>,
   maxTokens: number,
+  effort: "low" | "medium" = "low",
 ) =>
   ({
     model: MODEL,
@@ -102,7 +111,9 @@ const modellOptionen = (
       { type: "text" as const, text: system, cache_control: { type: "ephemeral" as const } },
     ],
     thinking: { type: "adaptive" as const },
-    output_config: { effort: "medium", format },
+    // Saga steps are deliberately small. Low effort prevents the model from
+    // spending most of the request budget thinking about a short JSON draft.
+    output_config: { effort, format },
     messages: [{ role: "user" as const, content: frage }],
   }) as MessageCreateParamsNonStreaming;
 
@@ -327,9 +338,9 @@ async function kernSchritt(body: Record<string, unknown>) {
       welt(spielendeBesetzung, orte, staedte, vorgaben),
       buildKernPrompt(spielendeBesetzung, staedte, drahtzieher, vorgaben),
       zodOutputFormat(KernSchema),
-      3000,
+      1800,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<KernDraft>(response, "api/saga:kern");
@@ -462,9 +473,9 @@ async function kapitelSchritt(
         nochNichtDaTiere: zuFrueh,
       }),
       zodOutputFormat(makeKapitelSchema(dabei)),
-      3000,
+      1600,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<KapitelDraft>(response, "api/saga:kapitel");
@@ -580,9 +591,9 @@ async function finaleSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         }).map((c) => c.name),
       }),
       zodOutputFormat(FinaleSchema),
-      3000,
+      1800,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<FinaleDraft>(response, "api/saga:finale");
@@ -667,9 +678,9 @@ async function beweiseSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
         kapitel: bogen.kapitel.map((k) => ({ name: k.name, enthuellung: k.enthuellung })),
       }),
       zodOutputFormat(BeweiseSchema),
-      6000,
+      3200,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<BeweiseDraft>(response, "api/saga:beweise");
@@ -803,9 +814,9 @@ async function verhandlungsSchritt(
           : undefined,
       }),
       zodOutputFormat(VerhandlungSaalSchema),
-      4000,
+      2600,
     ),
-    budget(45),
+    budget(MODELL_ZEITBUDGET),
   );
 
   const antwort = ergebnisAus<VerhandlungSaalDraft>(response, "api/saga:verhandlung");
