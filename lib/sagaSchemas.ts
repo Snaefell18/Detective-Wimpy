@@ -208,3 +208,40 @@ export const AnhoerungSchema = z.object({
 });
 
 export type AnhoerungDraft = z.infer<typeof AnhoerungSchema>;
+
+/**
+ * Ein Zug im Rat. Mehrere Stimmen kommen in einer Modellantwort zurück,
+ * damit sich die Szene wie eine echte Gruppe und nicht wie Einzelchats
+ * nacheinander anfühlt.
+ */
+export const VersammlungSchema = z.object({
+  beitraege: z
+    .array(
+      z.object({
+        sprecherId: z.string().describe("Id des Tiers, das diesen Beitrag spricht"),
+        text: z.string().describe("Ein bis drei Sätze wörtliche Rede, ohne Namenspräfix"),
+      }),
+    )
+    .min(1)
+    .max(6),
+  fortschrittPlus: z
+    .number()
+    .describe("Wie sehr die Diskussion einen verborgenen Zusammenhang freilegt: 5 bis 28"),
+  beweis: z.object({
+    name: z.string().describe("Kurzer Name eines konkreten zusätzlichen Beweisstücks"),
+    beobachtung: z
+      .string()
+      .describe("Was Wimpy daran sieht, ohne die Lösung oder den Culprit auszusprechen"),
+    vermutung: z
+      .string()
+      .describe("Wimpys kurzer, vorsichtiger Gedanke dazu, ohne einen Namen zu nennen"),
+    bedeutung: z
+      .string()
+      .describe("Was es wirklich beweist, mit Namen; bleibt versiegelt und unsichtbar"),
+  }),
+  beenden: z
+    .boolean()
+    .describe("Ob der Vorsitz die Diskussion nach diesem Zug organisch schließen möchte"),
+});
+
+export type VersammlungDraft = z.infer<typeof VersammlungSchema>;

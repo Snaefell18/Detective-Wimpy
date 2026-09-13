@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Saga, SagaLauf } from "./sagaTypen";
+import { versammlungNach } from "./versammlung";
 
 /**
  * Der Fortschritt in einer Saga - liegt nur auf dem Gerät.
@@ -102,7 +103,7 @@ export function useSagaLauf() {
     [],
   );
 
-  /** Kapitel gelöst - weiter zum nächsten Erzählerteil oder zum Finale. */
+  /** Kapitel gelöst - erst in einen eingerichteten Rat, sonst direkt weiter. */
   const kapitelGeschafft = useCallback(() => {
     setStand((alt) => {
       if (!alt) return alt;
@@ -111,10 +112,13 @@ export function useSagaLauf() {
         ? alt.lauf.geloest
         : [...alt.lauf.geloest, nummer];
       const letztes = alt.lauf.kapitel >= alt.saga.kapitel.length - 1;
+      const rat = versammlungNach(alt.saga.vorgaben, nummer);
       return {
         ...alt,
         lauf: letztes
           ? { ...alt.lauf, geloest, phase: "finale-erzaehler", fallId: null }
+          : rat
+            ? { ...alt.lauf, geloest, phase: "versammlung", fallId: null }
           : {
               ...alt.lauf,
               geloest,
@@ -126,7 +130,31 @@ export function useSagaLauf() {
     });
   }, []);
 
+  /** Der Vorsitz oder der Spieler hat die Versammlung beendet. */
+  const versammlungGeschafft = useCallback(() => {
+    setStand((alt) => {
+      if (!alt || alt.lauf.phase !== "versammlung") return alt;
+      const naechstes = alt.lauf.kapitel + 1;
+      const letztes = naechstes >= alt.saga.kapitel.length;
+      return {
+        ...alt,
+        lauf: letztes
+          ? { ...alt.lauf, phase: "finale-erzaehler", fallId: null }
+          : { ...alt.lauf, kapitel: naechstes, phase: "erzaehler", fallId: null },
+      };
+    });
+  }, []);
+
   const beenden = useCallback(() => setStand(null), []);
 
-  return { stand, geladen, starten, nurFinale, setzePhase, kapitelGeschafft, beenden };
+  return {
+    stand,
+    geladen,
+    starten,
+    nurFinale,
+    setzePhase,
+    kapitelGeschafft,
+    versammlungGeschafft,
+    beenden,
+  };
 }

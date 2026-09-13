@@ -17,6 +17,7 @@ import {
   type SagaVorgaben,
 } from "./sagaTypen";
 import type { Character, Einstellungen, Item, Location, PublicCase } from "./types";
+import { oeffentlicheVersammlungen } from "./versammlung";
 
 /**
  * Eine ganze Saga bauen - in lauter kleinen Aufrufen.
@@ -313,7 +314,14 @@ export async function erzeugeSaga(
     // Die Vorgaben liegen offen in der Datenbank - deshalb ohne die beiden
     // Felder, die die Lösung verraten würden. Im versiegelten Bogen stehen
     // sie vollständig, dort kommt niemand heran.
-    vorgaben: { ...eingaben.vorgaben, drahtzieherId: "", kapitelTaeter: [] },
+    vorgaben: {
+      ...eingaben.vorgaben,
+      drahtzieherId: "",
+      kapitelTaeter: [],
+      // Wer im Rat undercover sitzt, ist ebenso geheim wie der
+      // Drahtzieher. Die vollständige Rolle liegt weiter im BogenSiegel.
+      versammlungen: oeffentlicheVersammlungen(eingaben.vorgaben.versammlungen),
+    },
     schlagworte: kern.schlagworte ?? [],
     auftakt: { text: kern.auftaktText, audio: "" },
     kapitel,

@@ -1,4 +1,5 @@
 import type { FinaleArt, Verhandlung } from "./sagaFinale";
+import type { VersammlungVorgabe } from "./versammlung";
 import type {
   Absurditaet,
   Character,
@@ -136,6 +137,12 @@ export type SagaVorgaben = {
    * Ortswechsel und nicht beim Weiterspielen.
    */
   kapitelWetter: (Wetterlage | "")[];
+  /**
+   * Freie Ratsrunden zwischen Kapiteln. Sie werden vor der Erzeugung einer
+   * Arc-Saga festgelegt und dürfen auch Tiere enthalten, die im angrenzenden
+   * Fall nicht mitspielen.
+   */
+  versammlungen: VersammlungVorgabe[];
   /** Stadt-Id oder "zufall". */
   stadt: string;
   /** true: Jedes Kapitel darf in einer anderen Stadt spielen. */
@@ -241,6 +248,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelDaemon: [],
   kapitelMittaeter: [],
   kapitelWetter: [],
+  versammlungen: [],
   stadt: "zufall",
   staedteWechseln: true,
   charaktere: [],
@@ -448,6 +456,8 @@ export type SagaLauf = {
     | "auftakt"
     | "erzaehler"
     | "fall"
+    /** Freier Mehrpersonen-Chat nach einem gelösten Kapitel. */
+    | "versammlung"
     | "finale-erzaehler"
     | "finale"
     /** Der Gerichtssaal statt eines Finalfalls. */

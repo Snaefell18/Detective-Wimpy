@@ -33,6 +33,7 @@ import { NotizbuchScreen } from "@/components/NotizbuchScreen";
 import { OrtScreen } from "@/components/OrtScreen";
 import { StartScreen } from "@/components/StartScreen";
 import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
+import { Versammlung } from "@/components/Versammlung";
 import { useAdmin } from "@/lib/adminStore";
 import { postJson } from "@/lib/api";
 import { arcAbspann, type Arc } from "@/lib/arcTypen";
@@ -62,6 +63,7 @@ import { useArcLauf } from "@/lib/useArcLauf";
 import { useBeutel } from "@/lib/useBeutel";
 import { useGame, type Abdruecke } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
+import { versammlungNach } from "@/lib/versammlung";
 
 export default function Home() {
   const spiel = useGame();
@@ -908,6 +910,39 @@ export default function Home() {
       );
     }
 
+    if (lauf.phase === "versammlung") {
+      const rat = versammlungNach(sagaDaten.vorgaben, lauf.kapitel + 1);
+      if (rat) {
+        return (
+          <main className="app">
+            <Versammlung
+              vorgabe={rat}
+              bogenSiegel={sagaDaten.bogenSiegel}
+              inhalt={tasche.inhalt}
+              onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
+              onFertig={saga.versammlungGeschafft}
+            />
+          </main>
+        );
+      }
+
+      // Alte oder von Hand veränderte Spielstände dürfen nicht in einer
+      // nicht mehr vorhandenen Versammlung festhängen.
+      return (
+        <main className="app">
+          <div className="scroll">
+            <div className="inhalt">
+              <h1>Der Ratssaal ist leer</h1>
+              <p className="leise">Diese Versammlung ist nicht mehr in der Saga hinterlegt.</p>
+              <button className="knopf aktion" onClick={saga.versammlungGeschafft}>
+                Zum nächsten Kapitel ›
+              </button>
+            </div>
+          </div>
+        </main>
+      );
+    }
+
     if (lauf.phase === "erzaehler") {
       const kapitel = sagaDaten.kapitel[lauf.kapitel];
       return (
@@ -1150,7 +1185,15 @@ export default function Home() {
               : undefined
           }
           weiterText={
-            saga.stand?.lauf.phase === "finale" ? "Epilog ›" : "Nächstes Kapitel ›"
+            saga.stand?.lauf.phase === "finale"
+              ? "Epilog ›"
+              : saga.stand &&
+                  versammlungNach(
+                    saga.stand.saga.vorgaben,
+                    saga.stand.lauf.kapitel + 1,
+                  )
+                ? "Zur Versammlung ›"
+                : "Nächstes Kapitel ›"
           }
           laedt={laedt === "fall"}
         />
