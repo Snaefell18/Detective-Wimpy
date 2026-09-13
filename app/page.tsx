@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { AbdruckSchau } from "@/components/AbdruckSchau";
 import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
@@ -64,6 +65,12 @@ import { useBeutel } from "@/lib/useBeutel";
 import { useGame, type Abdruecke } from "@/lib/useGame";
 import { useSagaLauf } from "@/lib/useSagaLauf";
 import { versammlungNach } from "@/lib/versammlung";
+import { verfolgungNach } from "@/lib/verfolgung";
+
+const Verfolgungsjagd = dynamic(
+  () => import("@/components/Verfolgungsjagd").then((modul) => modul.Verfolgungsjagd),
+  { ssr: false },
+);
 
 export default function Home() {
   const spiel = useGame();
@@ -943,6 +950,31 @@ export default function Home() {
       );
     }
 
+    if (lauf.phase === "verfolgung") {
+      const jagd = verfolgungNach(sagaDaten.vorgaben, lauf.kapitel + 1);
+      if (jagd) {
+        return (
+          <main className="app">
+            <Verfolgungsjagd vorgabe={jagd} onFertig={saga.verfolgungGeschafft} />
+          </main>
+        );
+      }
+
+      return (
+        <main className="app">
+          <div className="scroll">
+            <div className="inhalt">
+              <h1>Nur Reifenspuren im Schnee</h1>
+              <p className="leise">Diese Verfolgungsjagd ist nicht mehr in der Saga hinterlegt.</p>
+              <button className="knopf aktion" onClick={saga.verfolgungGeschafft}>
+                Zum nächsten Kapitel ›
+              </button>
+            </div>
+          </div>
+        </main>
+      );
+    }
+
     if (lauf.phase === "erzaehler") {
       const kapitel = sagaDaten.kapitel[lauf.kapitel];
       return (
@@ -1187,6 +1219,12 @@ export default function Home() {
           weiterText={
             saga.stand?.lauf.phase === "finale"
               ? "Epilog ›"
+              : saga.stand &&
+                  verfolgungNach(
+                    saga.stand.saga.vorgaben,
+                    saga.stand.lauf.kapitel + 1,
+                  )
+                ? "Zur Verfolgungsjagd ›"
               : saga.stand &&
                   versammlungNach(
                     saga.stand.saga.vorgaben,

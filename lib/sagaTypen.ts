@@ -1,5 +1,6 @@
 import type { FinaleArt, Verhandlung } from "./sagaFinale";
 import type { VersammlungVorgabe } from "./versammlung";
+import type { VerfolgungVorgabe } from "./verfolgung";
 import type {
   Absurditaet,
   Character,
@@ -143,6 +144,8 @@ export type SagaVorgaben = {
    * Fall nicht mitspielen.
    */
   versammlungen: VersammlungVorgabe[];
+  /** Spielbare Schneejagden als Alternative zur Versammlung in einer Lücke. */
+  verfolgungsjagden: VerfolgungVorgabe[];
   /** Stadt-Id oder "zufall". */
   stadt: string;
   /** true: Jedes Kapitel darf in einer anderen Stadt spielen. */
@@ -249,6 +252,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelMittaeter: [],
   kapitelWetter: [],
   versammlungen: [],
+  verfolgungsjagden: [],
   stadt: "zufall",
   staedteWechseln: true,
   charaktere: [],
@@ -458,6 +462,8 @@ export type SagaLauf = {
     | "fall"
     /** Freier Mehrpersonen-Chat nach einem gelösten Kapitel. */
     | "versammlung"
+    /** Steuerbare Cell-Shading-Schneejagd nach einem gelösten Kapitel. */
+    | "verfolgung"
     | "finale-erzaehler"
     | "finale"
     /** Der Gerichtssaal statt eines Finalfalls. */

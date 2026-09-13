@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdmin } from "@/lib/adminStore";
 import {
   besetzungFuerTeil,
@@ -25,6 +25,7 @@ import {
   speichereSaga,
 } from "@/lib/db";
 import { erzeugeSaga } from "@/lib/sagaErzeugen";
+import { ladeEntwurf, verwirfEntwurf } from "@/lib/sagaEntwurf";
 import {
   STANDARD_SAGA_VORGABEN,
   type Saga,
@@ -140,6 +141,8 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const [entwurf, setEntwurf] = useState<Arc>(leererArc);
   const [offen, setOffen] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
+  /** Verhindert zwei parallele, kostenpflichtige Läufe vor dem nächsten Render. */
+  const erzeugungLaeuft = useRef(false);
   const [schritt, setSchritt] = useState<string | null>(null);
   /** Woran es zuletzt gescheitert ist - steht dort, wo man gerade steht. */
   const [abbruch, setAbbruch] = useState<{ text: string; schritt: string | null } | null>(
@@ -223,6 +226,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
    * ohne dass man alles doppelt eintippen muss.
    */
   const sagaErzeugen = async (arc: Arc, index: number, vorgaben: SagaVorgaben) => {
+    if (erzeugungLaeuft.current) return;
     const teil = arc.teile[index];
     // Dieselbe kostenlose Vorprüfung wie bei einer einzelnen Saga.
     const probleme = pruefeVorgaben({
@@ -236,6 +240,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       onFehler(probleme.join(" "));
       return;
     }
+    erzeugungLaeuft.current = true;
     setLaeuft(true);
     setAbbruch(null);
     onFehler(null);
@@ -248,11 +253,16 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
           vorgaben,
         },
         setSchritt,
+        // Der Entwurf kann aus genau dieser Arc-Station stammen. Passt seine
+        // Kennung nicht, verwirft erzeugeSaga ihn kostenlos und beginnt neu.
+        ladeEntwurf(),
       );
       // Die Herkunft merken: Nur so lässt sich später sagen, ob die Texte die
       // Vorgaben dieses Arcs kannten.
       await speichereSaga({ ...saga, arcId: arc.id });
       await speichereArc(mitSaga(arc, index, saga.id));
+      // Erst beide Datenbank-Schreibvorgänge machen den lokalen Rettungsstand entbehrlich.
+      verwirfEntwurf();
       await laden();
       setEntwurfSaga(null);
       onMeldung(`Saga „${saga.name}“ steht jetzt in ${teil.name}.`);
@@ -267,6 +277,7 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
       setAbbruch({ text, schritt });
       onFehler(text);
     } finally {
+      erzeugungLaeuft.current = false;
       setLaeuft(false);
       setSchritt(null);
     }
@@ -367,7 +378,8 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
             <strong>Abgebrochen{abbruch.schritt ? ` bei: ${abbruch.schritt}` : ""}</strong>
             <p>{abbruch.text}</p>
             <p className="leise klein">
-              Nichts ist verloren gegangen - noch einmal erzeugen fängt von vorn an.
+              Der sichere Zwischenstand bleibt auf diesem Gerät. Klicke noch einmal auf
+              „Saga erzeugen und speichern“: Fertige Schritte werden nicht erneut bei der API bestellt.
             </p>
           </div>
         )}

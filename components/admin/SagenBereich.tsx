@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdmin } from "@/lib/adminStore";
 import { akteLesen, akteSchreiben, bogenLesen, bogenSchreiben } from "@/lib/akte";
 import { leererFall } from "@/lib/leereAkte";
@@ -53,6 +53,8 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const [sagas, setSagas] = useState<Saga[] | null>(null);
   const [vorgaben, setVorgaben] = useState<SagaVorgaben>(STANDARD_SAGA_VORGABEN);
   const [laeuft, setLaeuft] = useState(false);
+  /** React-State wird erst beim nächsten Render sichtbar; diese Sperre greift schon im Doppelklick. */
+  const erzeugungLaeuft = useRef(false);
   const [schritt, setSchritt] = useState<string | null>(null);
   /**
    * Ein angefangener Entwurf vom letzten Anlauf.
@@ -130,8 +132,10 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
    * dieser Bestellung, wird nur noch geholt, was fehlt.
    */
   const erzeugen = async (weiter?: SagaEntwurf | null) => {
+    if (erzeugungLaeuft.current) return;
     const gilt = weiter?.vorgaben ?? vorgaben;
     if (!weiter && probleme.length) return;
+    erzeugungLaeuft.current = true;
     setLaeuft(true);
     setAbbruch(null);
     onFehler(null);
@@ -171,6 +175,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
       // setzt dort an.
       setEntwurf(ladeEntwurf());
     } finally {
+      erzeugungLaeuft.current = false;
       setLaeuft(false);
       setSchritt(null);
     }

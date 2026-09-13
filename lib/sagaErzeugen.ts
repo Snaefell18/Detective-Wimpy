@@ -67,23 +67,23 @@ export type SagaEingaben = {
 };
 
 /**
- * Ein Schritt der Erzeugung - mit Stellenangabe und einem zweiten Versuch.
+ * Ein Schritt der Erzeugung - mit Stellenangabe und genau einem Nachversuch.
  *
  * Der zweite Versuch ist hier bares Geld: Eine Saga besteht aus zwanzig und
  * mehr Aufrufen hintereinander, und ohne ihn kostete ein einzelner Aussetzer
- * alles, was schon gebaut war. Zwei Nachversuche senken das Risiko über die
- * vielen unabhängigen Schritte deutlich; der Zwischenstand verhindert dabei
- * doppelte Arbeit in bereits fertigen Schritten.
+ * alles, was schon gebaut war. Mehrere automatische Nachversuche können bei
+ * einer verlorenen Antwort aber dieselben Modell-Tokens mehrfach verbrauchen.
+ * Deshalb gibt es nur eine zweite Chance; danach setzt der gespeicherte Stand
+ * beim nächsten Klick genau am fehlenden Schritt wieder an.
  */
 const bei = <T>(
   was: string,
   arbeit: () => Promise<T>,
   onErneut?: (versuch: number) => void,
   /**
-   * Wie oft nachgefasst wird. Die Saga besteht aus vielen aufeinander
-   * folgenden Anfragen, daher bekommt jeder Schritt zwei weitere Chancen.
+   * Wie oft nachgefasst wird.
    */
-  versuche = 2,
+  versuche = 1,
 ) => mitWiederholung(was, arbeit, versuche, onErneut);
 
 export async function erzeugeSaga(
@@ -117,7 +117,7 @@ export async function erzeugeSaga(
    * gespeichert. Dadurch gab es nach einem Abbruch beim Überthema nichts,
    * woran die Oberfläche "Weitermachen" anbieten konnte.
    */
-  entwurf = speichereEntwurf(entwurf);
+  entwurf = speichereEntwurf(entwurf, true);
   const halte = (teil: Partial<SagaEntwurf>) => {
     entwurf = speichereEntwurf({ ...entwurf, ...teil });
   };
@@ -235,24 +235,23 @@ export async function erzeugeSaga(
     mittaeter: "aus",
   };
 
-  const fallFuer = (kapitel: number, was: string) =>
-    bei(was, () => {
-      const weiterFall =
-        entwurf.fallEntwurf?.kapitel === kapitel ? entwurf.fallEntwurf : null;
-      return erzeugeFall(
-        {
-          charaktere: eingaben.charaktere,
-          orte: eingaben.orte,
-          items: eingaben.items,
-          einstellungen,
-          sagaSiegel: siegel,
-          kapitel,
-        },
-        (text) => onSchritt?.(`${was}: ${text}`),
-        weiterFall,
-        (fallEntwurf) => halte({ fallEntwurf: { kapitel, ...fallEntwurf } }),
-      );
-    });
+  const fallFuer = (kapitel: number, was: string) => {
+    const weiterFall =
+      entwurf.fallEntwurf?.kapitel === kapitel ? entwurf.fallEntwurf : null;
+    return erzeugeFall(
+      {
+        charaktere: eingaben.charaktere,
+        orte: eingaben.orte,
+        items: eingaben.items,
+        einstellungen,
+        sagaSiegel: siegel,
+        kapitel,
+      },
+      (text) => onSchritt?.(`${was}: ${text}`),
+      weiterFall,
+      (fallEntwurf) => halte({ fallEntwurf: { kapitel, ...fallEntwurf } }),
+    );
+  };
 
   const kapitel = [];
   for (const k of entwuerfe) {

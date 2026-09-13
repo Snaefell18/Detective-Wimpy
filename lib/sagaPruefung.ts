@@ -89,6 +89,37 @@ export function pruefeVorgaben(args: {
     }
   }
 
+  for (const jagd of vorgaben.verfolgungsjagden ?? []) {
+    if (jagd.nachKapitel < 1 || jagd.nachKapitel >= vorgaben.kapitelAnzahl) {
+      probleme.push(
+        `Die Verfolgungsjagd „${jagd.name || "ohne Namen"}“ liegt nicht zwischen zwei Kapiteln.`,
+      );
+    }
+    if (belegteLuecken.has(jagd.nachKapitel)) {
+      probleme.push(
+        `Nach Kapitel ${jagd.nachKapitel} kann nur ein Zwischenereignis stattfinden.`,
+      );
+    }
+    belegteLuecken.add(jagd.nachKapitel);
+
+    const ids = [jagd.fliehenderId, ...jagd.verfolger.map((v) => v.charakterId)];
+    for (const id of ids) {
+      if (!bekannteTiere.has(id)) {
+        probleme.push(`${name(id)} ist für die Verfolgungsjagd gewählt, aber kein bekanntes Tier.`);
+      }
+    }
+    if (new Set(ids).size !== 3) {
+      probleme.push(
+        `Die Verfolgungsjagd „${jagd.name || "ohne Namen"}“ braucht drei verschiedene Tiere.`,
+      );
+    }
+    if (jagd.verfolger[0].modell === jagd.verfolger[1].modell) {
+      probleme.push(
+        `Die beiden Verfolger von „${jagd.name || "der Jagd"}“ brauchen verschiedene 3D-Modelle.`,
+      );
+    }
+  }
+
   // Städte: Jeder Fall braucht so viele Schauplätze, wie eingestellt sind.
   const staedte = alsStaedte(orte).filter((s) => s.orte.length >= vorgaben.ortsAnzahl);
   if (staedte.length === 0) {

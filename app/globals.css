@@ -414,6 +414,279 @@ textarea {
   }
 }
 
+/* --- Cell-Shading-Verfolgungsjagd zwischen Saga-Kapiteln ---------- */
+
+.jagd-editor { margin: 26px 0 8px; }
+.jagd-vorschau {
+  position: fixed;
+  z-index: 500;
+  inset: 0;
+}
+.jagd-vorschau-schliessen {
+  position: fixed;
+  z-index: 530;
+  top: max(18px, var(--safe-top));
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  border: 4px solid #172337;
+  border-radius: 50%;
+  color: #172337;
+  font-size: 30px;
+  line-height: 1;
+  background: #fff;
+  box-shadow: 4px 4px 0 #172337;
+}
+.jagd-editor .rat-editor-block[data-aktiv="true"] {
+  border-color: rgba(111, 235, 255, 0.52);
+  background: linear-gradient(145deg, rgba(65, 201, 232, 0.12), rgba(255, 255, 255, 0.04));
+}
+.jagd-editor .aktionen { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.jagd-modellwahl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.jagd-modellkarte {
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 14px;
+  text-align: left;
+  background: rgba(0,0,0,.16);
+}
+.jagd-modellkarte[data-aktiv="true"] {
+  border-color: #88eeff;
+  box-shadow: inset 0 0 22px rgba(78,220,255,.13);
+}
+.jagd-modellkarte strong,
+.jagd-modellkarte span { display: block; }
+
+.jagd {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: #112337;
+  background: #bceaf2;
+  isolation: isolate;
+  user-select: none;
+  touch-action: none;
+}
+
+.jagd::after {
+  content: "";
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  pointer-events: none;
+  border: clamp(8px, 1.5vw, 18px) solid #172337;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.8);
+}
+
+.jagd-canvas,
+.jagd-canvas canvas { width: 100%; height: 100%; display: block; }
+.jagd-canvas canvas { filter: saturate(1.12) contrast(1.04); }
+
+.jagd-hud {
+  position: absolute;
+  z-index: 12;
+  top: max(24px, calc(var(--safe-top) + 10px));
+  left: clamp(22px, 4vw, 48px);
+  right: clamp(22px, 4vw, 48px);
+  display: grid;
+  grid-template-columns: minmax(160px, auto) minmax(150px, 360px);
+  align-items: center;
+  gap: 22px;
+  padding: 12px 16px;
+  border: 4px solid #172337;
+  border-radius: 4px 18px 4px 18px;
+  color: #172337;
+  background: rgba(255,255,255,.9);
+  box-shadow: 8px 8px 0 #ffcb38;
+  transform: rotate(-.6deg);
+}
+.jagd-hud > div:first-child { display: grid; }
+.jagd-hud strong { font-family: var(--font-display), sans-serif; font-size: clamp(20px, 3vw, 34px); }
+.jagd-kicker { font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.jagd-meter {
+  height: 20px;
+  padding: 3px;
+  border: 3px solid #172337;
+  background: #dbeaf0;
+  transform: skewX(-9deg);
+}
+.jagd-meter i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #34c9e9, #ffe44c 58%, #ff445f);
+  transition: width .12s linear;
+}
+
+.jagd-steuerung {
+  position: absolute;
+  z-index: 14;
+  left: 50%;
+  bottom: max(24px, calc(var(--safe-bottom) + 14px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+}
+.jagd-steuerung button {
+  width: clamp(70px, 14vw, 112px);
+  height: clamp(58px, 10vw, 82px);
+  border: 4px solid #172337;
+  border-radius: 50% 44% 50% 42%;
+  color: #172337;
+  font-size: 50px;
+  line-height: 1;
+  background: #fff;
+  box-shadow: 6px 7px 0 #172337;
+}
+.jagd-steuerung button:active { transform: translate(4px, 5px); box-shadow: 2px 2px 0 #172337; }
+.jagd-steuerung span {
+  padding: 6px 9px;
+  border: 2px solid #172337;
+  border-radius: 6px;
+  font-weight: 900;
+  background: #ffdf42;
+}
+
+.jagd-schlag,
+.jagd-comicwort {
+  position: absolute;
+  z-index: 16;
+  color: #ff3658;
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(54px, 11vw, 144px);
+  font-weight: 900;
+  letter-spacing: -.05em;
+  -webkit-text-stroke: 3px #172337;
+  text-shadow: 7px 7px 0 #fff, 12px 12px 0 #172337;
+  transform: rotate(-9deg);
+}
+.jagd-schlag { top: 31%; left: 50%; transform: translateX(-50%) rotate(-9deg); }
+.jagd[data-treffer="true"] { animation: jagd-treffer .26s steps(2); }
+@keyframes jagd-treffer {
+  0%, 100% { transform: translate(0); filter: none; }
+  30% { transform: translate(-7px, 3px); filter: saturate(1.7); }
+  65% { transform: translate(8px, -4px); }
+}
+
+.jagd-start,
+.jagd-gefangen {
+  display: grid;
+  place-items: center;
+  padding: max(28px, var(--safe-top)) 22px max(28px, var(--safe-bottom));
+  background:
+    linear-gradient(115deg, transparent 0 44%, rgba(255,255,255,.65) 44% 46%, transparent 46%),
+    repeating-linear-gradient(167deg, rgba(23,35,55,.06) 0 2px, transparent 2px 18px),
+    radial-gradient(circle at 78% 18%, #fff 0 7%, transparent 7.5%),
+    linear-gradient(150deg, #8ddfea, #ecfbff 55%, #8ebfd4);
+}
+.jagd-start::before {
+  content: "";
+  position: absolute;
+  inset: 48% -10% -22%;
+  z-index: -1;
+  background: #fff;
+  clip-path: polygon(0 28%, 18% 6%, 32% 29%, 50% 0, 66% 35%, 82% 10%, 100% 38%, 100% 100%, 0 100%);
+}
+.jagd-comicwort { top: 6%; right: 4%; opacity: .92; }
+.jagd-startkarte,
+.jagd-statement {
+  position: relative;
+  z-index: 10;
+  width: min(680px, 92vw);
+  padding: clamp(24px, 5vw, 52px);
+  border: 6px solid #172337;
+  border-radius: 5px 28px 5px 28px;
+  background: rgba(255,255,255,.95);
+  box-shadow: 14px 15px 0 #172337, 21px 22px 0 #ffcf39;
+  transform: rotate(.7deg);
+}
+.jagd-startkarte h1,
+.jagd-statement h1 {
+  margin: 5px 0 12px;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(38px, 7vw, 70px);
+  line-height: .9;
+  text-transform: uppercase;
+}
+.jagd-startkarte p { max-width: 58ch; line-height: 1.55; }
+.jagd-team { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+.jagd-teammitglied {
+  padding: 12px;
+  border: 3px solid #172337;
+  border-radius: 3px 14px 3px 14px;
+  background: #dffaff;
+}
+.jagd-teammitglied:nth-child(2) { background: #fff1b8; transform: rotate(-1.4deg); }
+.jagd-teammitglied span,
+.jagd-teammitglied strong { display: block; }
+.jagd-teammitglied span { font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.jagd-teammitglied strong { font-size: 19px; }
+.jagd-los { margin-top: 12px; }
+
+.jagd-mutprobe { background: #92ddea; }
+.jagd-trinktext {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  bottom: max(42px, calc(var(--safe-bottom) + 24px));
+  display: grid;
+  width: min(620px, 86vw);
+  padding: 14px 20px 16px;
+  border: 5px solid #172337;
+  border-radius: 4px 18px 4px 18px;
+  color: #172337;
+  text-align: center;
+  background: rgba(255,255,255,.94);
+  box-shadow: 9px 10px 0 #172337, 15px 16px 0 #ffca38;
+  transform: translateX(-50%) rotate(-1deg);
+}
+.jagd-trinktext strong,
+.jagd-trinktext em {
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(30px, 6vw, 62px);
+  line-height: .88;
+  font-style: normal;
+  text-transform: uppercase;
+}
+.jagd-trinktext em { color: #ff3658; -webkit-text-stroke: 1px #172337; }
+
+.jagd-gefangen { background: linear-gradient(145deg, #d7f8ff, #fff 58%, #ffe75d); }
+.jagd-fangblitz {
+  position: absolute;
+  inset: -20%;
+  background: repeating-conic-gradient(from 4deg, #fff 0 5deg, #63dcec 5deg 10deg, #fff 10deg 17deg);
+  animation: jagd-blitz .75s ease-out both;
+}
+@keyframes jagd-blitz { from { transform: scale(.2) rotate(-18deg); opacity: 0; } to { transform: scale(1.3); opacity: .72; } }
+.jagd-statement { transform: rotate(-1deg); }
+.jagd-statement blockquote {
+  margin: 24px 0;
+  padding: 18px 20px;
+  border-left: 8px solid #ff405b;
+  font-size: clamp(19px, 3vw, 29px);
+  font-weight: 800;
+  line-height: 1.32;
+  background: #fff5c5;
+}
+
+@media (max-width: 640px) {
+  .jagd-hud { grid-template-columns: 1fr; gap: 7px; padding: 9px 12px; }
+  .jagd-hud strong { font-size: 22px; }
+  .jagd-team { grid-template-columns: 1fr; }
+  .jagd-comicwort { font-size: 55px; top: 3%; }
+  .jagd-startkarte { padding: 24px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jagd[data-treffer="true"], .jagd-fangblitz { animation-duration: 1ms !important; }
+}
+
 /* --- Startbildschirm: das Titelbild füllt alles ------------------ */
 
 .start {

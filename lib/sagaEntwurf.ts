@@ -148,6 +148,9 @@ export function ladeEntwurf(): SagaEntwurf | null {
     return {
       ...daten,
       kapitel: Array.isArray(daten.kapitel) ? daten.kapitel : [],
+      finale: daten.finale ?? null,
+      verhandlung: daten.verhandlung ?? null,
+      beweiseFertig: daten.beweiseFertig === true,
       faelle: daten.faelle ?? {},
       fallEntwurf:
         daten.fallEntwurf &&
@@ -157,6 +160,9 @@ export function ladeEntwurf(): SagaEntwurf | null {
         typeof daten.fallEntwurf.siegel === "string"
           ? daten.fallEntwurf
           : null,
+      finaleFall: daten.finaleFall ?? null,
+      begonnen: Number.isFinite(daten.begonnen) ? daten.begonnen : Date.now(),
+      zuletzt: Number.isFinite(daten.zuletzt) ? daten.zuletzt : Date.now(),
     };
   } catch {
     return null;
@@ -166,16 +172,30 @@ export function ladeEntwurf(): SagaEntwurf | null {
 /**
  * Den Stand festhalten.
  *
- * Schlägt das fehl - voller Speicher, geschlossener privater Modus -, läuft
- * die Erzeugung trotzdem weiter: Verloren ist dann nur das Netz darunter,
- * nicht die Saga.
+ * Vor dem ersten API-Aufruf muss das gelingen, damit die Erzeugung nie ohne
+ * Rettungsnetz startet. Nach einer schon bezahlten Antwort bleibt ein Fehler
+ * dagegen im laufenden Arbeitsspeicher; ein geworfener Fehler würde denselben
+ * Modellschritt beim nächsten Versuch nur doppelt bezahlen.
  */
-export function speichereEntwurf(entwurf: SagaEntwurf): SagaEntwurf {
+export function speichereEntwurf(
+  entwurf: SagaEntwurf,
+  /** Vor dem ersten bezahlten Aufruf lieber kostenlos abbrechen als ohne Rettungsnetz starten. */
+  mussGelingen = false,
+): SagaEntwurf {
   const frisch = { ...entwurf, zuletzt: Date.now() };
   try {
     window.localStorage.setItem(KEY, JSON.stringify(frisch));
-  } catch {
-    // Kein Platz - dann eben ohne Netz.
+  } catch (fehler) {
+    if (mussGelingen) {
+      throw new Error(
+        "Der sichere Saga-Zwischenstand kann auf diesem Gerät nicht gespeichert werden. Es wurde noch kein API-Aufruf gestartet. Bitte lokalen Speicher erlauben oder Platz freigeben.",
+        { cause: fehler },
+      );
+    }
+    // Nach einer bereits bezahlten Antwort darf ein Speicherfehler nicht den
+    // API-Schritt als fehlgeschlagen markieren: Sonst würde genau dieser
+    // Schritt beim Nachversuch doppelt bezahlt. Der laufende Entwurf bleibt
+    // wenigstens bis zum Schließen dieser Seite im Arbeitsspeicher erhalten.
   }
   return frisch;
 }

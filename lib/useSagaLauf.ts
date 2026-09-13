@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Saga, SagaLauf } from "./sagaTypen";
 import { versammlungNach } from "./versammlung";
+import { verfolgungNach } from "./verfolgung";
 
 /**
  * Der Fortschritt in einer Saga - liegt nur auf dem Gerät.
@@ -113,10 +114,13 @@ export function useSagaLauf() {
         : [...alt.lauf.geloest, nummer];
       const letztes = alt.lauf.kapitel >= alt.saga.kapitel.length - 1;
       const rat = versammlungNach(alt.saga.vorgaben, nummer);
+      const jagd = verfolgungNach(alt.saga.vorgaben, nummer);
       return {
         ...alt,
         lauf: letztes
           ? { ...alt.lauf, geloest, phase: "finale-erzaehler", fallId: null }
+          : jagd
+            ? { ...alt.lauf, geloest, phase: "verfolgung", fallId: null }
           : rat
             ? { ...alt.lauf, geloest, phase: "versammlung", fallId: null }
           : {
@@ -145,6 +149,21 @@ export function useSagaLauf() {
     });
   }, []);
 
+  /** Nach dem Fang geht es genau wie nach einem geschlossenen Rat weiter. */
+  const verfolgungGeschafft = useCallback(() => {
+    setStand((alt) => {
+      if (!alt || alt.lauf.phase !== "verfolgung") return alt;
+      const naechstes = alt.lauf.kapitel + 1;
+      const letztes = naechstes >= alt.saga.kapitel.length;
+      return {
+        ...alt,
+        lauf: letztes
+          ? { ...alt.lauf, phase: "finale-erzaehler", fallId: null }
+          : { ...alt.lauf, kapitel: naechstes, phase: "erzaehler", fallId: null },
+      };
+    });
+  }, []);
+
   const beenden = useCallback(() => setStand(null), []);
 
   return {
@@ -155,6 +174,7 @@ export function useSagaLauf() {
     setzePhase,
     kapitelGeschafft,
     versammlungGeschafft,
+    verfolgungGeschafft,
     beenden,
   };
 }

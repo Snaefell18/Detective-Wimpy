@@ -127,6 +127,30 @@ console.log("\n1b. Schon vor dem ersten Modellaufruf liegt ein Entwurf vor");
   pruefe("der Kern ist noch nicht als fertig markiert", stand?.kern === null);
 }
 
+console.log("\n1c. Ohne sicheren Speicher wird kein Token riskiert");
+{
+  speicher.clear();
+  const normalSetzen = window.localStorage.setItem;
+  let apiRufe = 0;
+  window.localStorage.setItem = () => {
+    throw new Error("Speicher gesperrt");
+  };
+  globalThis.fetch = async () => {
+    apiRufe++;
+    throw new Error("Darf nicht erreicht werden");
+  };
+  let gescheitert = false;
+  try {
+    await erzeugeSaga(eingaben, () => {}, null);
+  } catch (fehler) {
+    gescheitert = String(fehler).includes("noch kein API-Aufruf");
+  } finally {
+    window.localStorage.setItem = normalSetzen;
+  }
+  pruefe("der Lauf stoppt mit verständlicher Meldung", gescheitert);
+  pruefe("die API wurde nicht angerührt", apiRufe === 0);
+}
+
 console.log("\n2. Abbruch im letzten Fall - der zweite Anlauf holt nur den Rest");
 {
   speicher.clear();

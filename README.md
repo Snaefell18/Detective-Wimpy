@@ -144,6 +144,25 @@ die Bühne.
 Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
 spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.
 
+### Zwischenereignisse
+
+Beim Vorbereiten einer Saga aus einer Arc-Station lässt sich in jeder echten
+Kapitellücke optional genau ein großes Ereignis einrichten:
+
+- **Versammlung:** freies Gruppengespräch mit Vorsitz, Gästen am Rand,
+  verborgener Resonanz und einem möglichen zusätzlichen Beweisstück.
+- **Verfolgungsjagd:** zwei wählbare Tiere verfolgen einen unkenntlichen Fahrer
+  im weißen Sportwagen durch eine interaktive 3D-Schneelandschaft. Für beide
+  Verfolger werden das Schaf-mit-Schal- und das Zottel-Yeti-Modell zugeordnet.
+  Nach dem Fang spricht das fliehende Tier das im Editor hinterlegte Statement;
+  anschließend läuft die Saga mit dem nächsten Kapitel weiter.
+
+Der Editor verhindert, dass Versammlung und Verfolgungsjagd dieselbe Lücke
+belegen. Die Jagd besitzt dort außerdem eine spielbare **3D-Vorschau**, einen
+frei wählbaren Song und eine kurze Comic-Mutprobe mit zwei langen
+Cognacflaschen, ohne
+dass die Saga dafür gespeichert oder erzeugt werden muss.
+
 ## Bilder erzeugen lassen
 
 Tiere, Schauplätze, Dinge und Ladenzubehör lassen sich im Admin-Menü malen

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
@@ -15,8 +17,18 @@ import { useStammdaten } from "@/lib/stammdaten";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import type { VersammlungVorgabe } from "@/lib/versammlung";
+import {
+  VERFOLGER_MODELLE,
+  type VerfolgerModell,
+  type VerfolgungVorgabe,
+} from "@/lib/verfolgung";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
+
+const Verfolgungsjagd = dynamic(
+  () => import("../Verfolgungsjagd").then((modul) => modul.Verfolgungsjagd),
+  { ssr: false },
+);
 
 /**
  * Alle Vorgaben einer Saga an einem Ort.
@@ -63,6 +75,7 @@ export function SagaVorgabenFelder({
   /** Hinweis je Feld, das der Arc vorgibt - z.B. { thema: "Kommt aus dem Arc" }. */
   vomArc?: Partial<Record<keyof SagaVorgaben, string>>;
 }) {
+  const [jagdVorschau, setJagdVorschau] = useState<VerfolgungVorgabe | null>(null);
   const stammdaten = useStammdaten();
   const staedte = alsStaedte(stammdaten.orte);
   const verdaechtige = stammdaten.charaktere.filter(
@@ -256,7 +269,13 @@ export function SagaVorgabenFelder({
       beobachterIds: [],
       undercoverId: "",
     };
-    onAendern({ versammlungen: [...bisher, neu].sort((a, b) => a.nachKapitel - b.nachKapitel) });
+    onAendern({
+      versammlungen: [...bisher, neu].sort((a, b) => a.nachKapitel - b.nachKapitel),
+      // In einer Lücke spielt genau ein großes Ereignis.
+      verfolgungsjagden: (vorgaben.verfolgungsjagden ?? []).filter(
+        (v) => v.nachKapitel !== nachKapitel,
+      ),
+    });
   };
 
   const ratRolle = (
@@ -287,6 +306,54 @@ export function SagaVorgabenFelder({
           ? rat.undercoverId
           : "",
     });
+  };
+
+  const jagdNach = (nachKapitel: number) =>
+    (vorgaben.verfolgungsjagden ?? []).find((v) => v.nachKapitel === nachKapitel);
+
+  const jagdAendern = (nachKapitel: number, teil: Partial<VerfolgungVorgabe>) =>
+    onAendern({
+      verfolgungsjagden: (vorgaben.verfolgungsjagden ?? []).map((v) =>
+        v.nachKapitel === nachKapitel ? { ...v, ...teil } : v,
+      ),
+    });
+
+  const jagdUmschalten = (nachKapitel: number) => {
+    const bisher = vorgaben.verfolgungsjagden ?? [];
+    if (bisher.some((v) => v.nachKapitel === nachKapitel)) {
+      onAendern({ verfolgungsjagden: bisher.filter((v) => v.nachKapitel !== nachKapitel) });
+      return;
+    }
+    const start = (mitspieler.length >= 3 ? mitspieler : verdaechtige).slice(0, 3);
+    const neu: VerfolgungVorgabe = {
+      id: `jagd-nach-${nachKapitel}`,
+      nachKapitel,
+      name: `Die weiße Spur nach Kapitel ${nachKapitel}`,
+      fliehenderId: start[0]?.id ?? "",
+      verfolger: [
+        { charakterId: start[1]?.id ?? "", modell: "schaf" },
+        { charakterId: start[2]?.id ?? "", modell: "yeti" },
+      ],
+      musik: "",
+      fluchtgrund: "ich jemanden schützen musste, der noch nicht entdeckt werden darf",
+      statement: "",
+    };
+    onAendern({
+      verfolgungsjagden: [...bisher, neu].sort((a, b) => a.nachKapitel - b.nachKapitel),
+      versammlungen: (vorgaben.versammlungen ?? []).filter(
+        (v) => v.nachKapitel !== nachKapitel,
+      ),
+    });
+  };
+
+  const verfolgerAendern = (
+    jagd: VerfolgungVorgabe,
+    index: 0 | 1,
+    teil: Partial<VerfolgungVorgabe["verfolger"][number]>,
+  ) => {
+    const verfolger = [...jagd.verfolger] as VerfolgungVorgabe["verfolger"];
+    verfolger[index] = { ...verfolger[index], ...teil };
+    jagdAendern(jagd.nachKapitel, { verfolger });
   };
 
   /** Steht dieses Feld schon durch den Arc fest? */
@@ -733,6 +800,184 @@ export function SagaVorgabenFelder({
             },
           )}
         </section>
+      )}
+
+      {vomArc && (
+        <section className="jagd-editor">
+          <h3 className="unter-abschnitt">
+            Verfolgungsjagden <span className="leise">· zwischen den Kapiteln</span>
+          </h3>
+          <p className="leise klein">
+            Optional und anstelle einer Versammlung in derselben Lücke. Zwei Tiere
+            jagen gemeinsam einen weißen Sportwagen durch den Schnee. Die fliehende
+            Figur bleibt während der Fahrt hinter der Scheibe unkenntlich und gibt
+            erst nach dem Fang ihr Statement ab.
+          </p>
+
+          {Array.from({ length: Math.max(0, vorgaben.kapitelAnzahl - 1) }, (_, i) => i + 1).map(
+            (nachKapitel) => {
+              const jagd = jagdNach(nachKapitel);
+              const rat = ratNach(nachKapitel);
+              return (
+                <div className="rat-editor-block" key={nachKapitel} data-aktiv={Boolean(jagd)}>
+                  <div className="rat-editor-kopf">
+                    <div>
+                      <strong>Nach Kapitel {nachKapitel}</strong>
+                      <span className="leise klein">
+                        {jagd
+                          ? ` · ${jagd.name}`
+                          : rat
+                            ? " · derzeit findet hier eine Versammlung statt"
+                            : " · keine Verfolgungsjagd"}
+                      </span>
+                    </div>
+                    <div className="aktionen">
+                      {jagd && (
+                        <button
+                          type="button"
+                          className="knopf klein"
+                          onClick={() => setJagdVorschau(jagd)}
+                        >
+                          3D-Vorschau
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="knopf klein"
+                        onClick={() => jagdUmschalten(nachKapitel)}
+                      >
+                        {jagd ? "Entfernen" : rat ? "Versammlung ersetzen" : "Jagd einrichten"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {jagd && (
+                    <div className="rat-editor-inhalt">
+                      <label className="feld">
+                        <span className="leise">Titel der Verfolgungsjagd</span>
+                        <input
+                          value={jagd.name}
+                          maxLength={120}
+                          onChange={(e) => jagdAendern(nachKapitel, { name: e.target.value })}
+                          placeholder="Die weiße Spur"
+                        />
+                      </label>
+
+                      <label className="feld">
+                        <span className="leise">Tier im Fluchtwagen</span>
+                        <select
+                          value={jagd.fliehenderId}
+                          onChange={(e) => jagdAendern(nachKapitel, { fliehenderId: e.target.value })}
+                        >
+                          <option value="">Tier wählen …</option>
+                          {verdaechtige.map((c) => (
+                            <option
+                              key={c.id}
+                              value={c.id}
+                              disabled={jagd.verfolger.some((v) => v.charakterId === c.id)}
+                            >
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {([0, 1] as const).map((index) => {
+                        const rolle = jagd.verfolger[index];
+                        const andereId = jagd.verfolger[index === 0 ? 1 : 0].charakterId;
+                        return (
+                          <div className="kapitel-block" key={index}>
+                            <label className="feld">
+                              <span className="leise">Verfolger {index + 1}</span>
+                              <select
+                                value={rolle.charakterId}
+                                onChange={(e) => verfolgerAendern(jagd, index, { charakterId: e.target.value })}
+                              >
+                                <option value="">Tier wählen …</option>
+                                {verdaechtige.map((c) => (
+                                  <option
+                                    key={c.id}
+                                    value={c.id}
+                                    disabled={c.id === jagd.fliehenderId || c.id === andereId}
+                                  >
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <span className="leise klein">Interaktives 3D-Modell</span>
+                            <div className="jagd-modellwahl">
+                              {VERFOLGER_MODELLE.map((modell) => (
+                                <button
+                                  type="button"
+                                  className="jagd-modellkarte"
+                                  data-aktiv={rolle.modell === modell.id}
+                                  key={modell.id}
+                                  onClick={() =>
+                                    verfolgerAendern(jagd, index, {
+                                      modell: modell.id as VerfolgerModell,
+                                    })
+                                  }
+                                >
+                                  <strong>{modell.name}</strong>
+                                  <span className="leise klein">{modell.beschreibung}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <SongWahl
+                        wert={jagd.musik ?? ""}
+                        onAendern={(musik) => jagdAendern(nachKapitel, { musik })}
+                        beschriftung="Song während der Fahrt"
+                        leerText="Ohne Jagdmusik"
+                      />
+
+                      <label className="feld">
+                        <span className="leise">Warum das Tier flieht</span>
+                        <textarea
+                          rows={2}
+                          maxLength={800}
+                          value={jagd.fluchtgrund}
+                          onChange={(e) => jagdAendern(nachKapitel, { fluchtgrund: e.target.value })}
+                          placeholder="es jemanden schützen will …"
+                        />
+                      </label>
+                      <label className="feld">
+                        <span className="leise">
+                          Statement nach dem Fang · leer = automatisch aus dem Fluchtgrund
+                        </span>
+                        <textarea
+                          rows={3}
+                          maxLength={1200}
+                          value={jagd.statement}
+                          onChange={(e) => jagdAendern(nachKapitel, { statement: e.target.value })}
+                          placeholder="Ich bin geflohen, weil …"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              );
+            },
+          )}
+        </section>
+      )}
+
+      {jagdVorschau && (
+        <div className="jagd-vorschau">
+          <Verfolgungsjagd vorgabe={jagdVorschau} onFertig={() => setJagdVorschau(null)} />
+          <button
+            type="button"
+            className="jagd-vorschau-schliessen"
+            onClick={() => setJagdVorschau(null)}
+            aria-label="3D-Vorschau schließen"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       <h3 className="unter-abschnitt">

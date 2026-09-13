@@ -414,6 +414,30 @@ export const SagaVorgabenSchema = z.object({
     )
     .max(7)
     .default([]),
+  verfolgungsjagden: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        nachKapitel: z.number().min(1).max(7),
+        name: z.string().min(1).max(120),
+        fliehenderId: z.string().min(1).max(40),
+        verfolger: z.tuple([
+          z.object({
+            charakterId: z.string().min(1).max(40),
+            modell: z.enum(["schaf", "yeti"]),
+          }),
+          z.object({
+            charakterId: z.string().min(1).max(40),
+            modell: z.enum(["schaf", "yeti"]),
+          }),
+        ]),
+        musik: z.string().max(200).default(""),
+        fluchtgrund: z.string().max(800).default(""),
+        statement: z.string().max(1200).default(""),
+      }),
+    )
+    .max(7)
+    .default([]),
   stadt: z.string().max(60),
   staedteWechseln: z.boolean(),
   charaktere: z.array(z.string().max(40)).max(24),
