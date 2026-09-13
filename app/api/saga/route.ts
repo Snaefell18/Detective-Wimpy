@@ -185,7 +185,8 @@ export async function POST(request: Request) {
      * dann mit der Antwort auf die Anklage (siehe api/verhandlung).
      */
     if (schritt === "verwandlung") {
-      const geheim = (bogen.vorgaben.finaleArt ?? "klassisch") === "gericht-daemon";
+      const finaleArt = bogen.vorgaben.finaleArt ?? "klassisch";
+      const geheim = finaleArt === "gericht-daemon" || finaleArt === "gericht-wimpy";
       return NextResponse.json({
         spruch: geheim ? "" : (bogen.finale?.verwandlungSpruch ?? ""),
       });
@@ -741,10 +742,11 @@ async function beweiseSchritt(bogen: Bogen, orte: Location[], staedte: City[]) {
  */
 function anklagbar(bogen: Bogen, richterId: string, angeklagterId: string): string[] {
   const daemonId = besessen(bogen.vorgaben)?.daemonId ?? "";
+  const wimpyAnklagbar = (bogen.vorgaben.finaleArt ?? "klassisch") === "gericht-wimpy";
   const ids = bogen.besetzung
     .filter(
       (c) =>
-        !c.istDetektiv &&
+        (wimpyAnklagbar || !c.istDetektiv) &&
         c.id !== richterId &&
         (c.id === angeklagterId || c.id !== daemonId),
     )
@@ -845,7 +847,7 @@ async function verhandlungsSchritt(
     // Bei "Gericht & Dämon" bricht die Gestalt erst bei der richtigen Anklage
     // hervor - vorher weiß der Browser nicht einmal, dass es sie gibt.
     verwandlung:
-      art === "gericht-daemon" && besessenheit
+      (art === "gericht-daemon" || art === "gericht-wimpy") && besessenheit
         ? {
             wirtId: besessenheit.wirtId,
             daemonId: besessenheit.daemonId,

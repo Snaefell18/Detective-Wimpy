@@ -333,7 +333,7 @@ function fernwirkungVon(bogen: Bogen, kapitelNr: number): FernwirkungsVorgabe | 
    * "Kein Täter" wäre das sonst ausgerechnet eine Spur gegen den
    * Unschuldigen.
    */
-  const geheim = art === "ohne-taeter" || art === "wimpy";
+  const geheim = art === "ohne-taeter" || art === "wimpy" || art === "gericht-wimpy";
   return {
     drahtzieherName: geheim ? "" : bogen.drahtzieherName,
     drahtzieherId: geheim ? "" : bogen.drahtzieherId,
@@ -699,8 +699,8 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
 
 /* --- Schritt 3: die Spuren ----------------------------------------- */
 
-/** Ein Anlauf für die Spuren - beim zweiten Mal mit geschärfter Ansage. */
-async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel, nachfassen: boolean) {
+/** Ein einzelner, klar begrenzter Modellaufruf für die Spuren. */
+async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel) {
   return getAnthropic().messages.create(
     modellOptionen(
       weltVon(entwurf),
@@ -714,7 +714,7 @@ async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel, nachfassen: boole
           entwurf.vorgaben,
           entwurf.items,
           entwurf.sagaSpur,
-          nachfassen,
+          false,
           ziel,
           entwurf.mittaeterId ?? "",
         ),
@@ -811,42 +811,24 @@ async function spurenSchritt(entwurf: Entwurf) {
   };
 
   const erste = ergebnisAus<SpurenDraft>(
-    await spurenHolen(entwurf, ziel, false),
+    await spurenHolen(entwurf, ziel),
     "api/case:spuren",
   );
   if ("fehler" in erste) {
     return NextResponse.json({ fehler: erste.fehler }, { status: erste.status });
   }
 
-  let ergebnis = bewerten(erste.daten);
+  const ergebnis = bewerten(erste.daten);
 
   /*
-   * Der zweite Anlauf.
-   *
-   * Er kostet einen Aufruf und wird nur genommen, wenn wirklich etwas fehlt:
-   * zu wenige Spuren, alles an einem Ort, nichts für das Finale. Genau
-   * einmal - danach wird genommen, was besser ist. Das ist billiger als ein
-   * verworfener Fall, der den Spieler drei Aufrufe kostet.
+   * Wichtig: Kein zweiter Modellaufruf innerhalb derselben Serverfunktion.
+   * Bei 15 Tieren braucht gerade der Spuren-Schritt manchmal fast das ganze
+   * Zeitbudget. Ein Nachfassen hier konnte deshalb zwei lange Antworten in
+   * eine 60-Sekunden-Funktion drücken und die gesamte Anfrage hart
+   * abbrechen. Ein mangelhafter Entwurf wird stattdessen sauber beantwortet;
+   * der Browser wiederholt ausschließlich diesen bereits gespeicherten
+   * Spuren-Schritt und behält Gerüst und Verdächtige.
    */
-  if (ergebnis.fehler || ergebnis.maengel.length) {
-    console.warn(
-      "[api/case:spuren] Zweiter Anlauf wegen:",
-      [ergebnis.fehler, ...ergebnis.maengel].filter(Boolean).join(" · "),
-    );
-    const zweite = ergebnisAus<SpurenDraft>(
-      await spurenHolen(entwurf, ziel, true),
-      "api/case:spuren",
-    );
-    if (!("fehler" in zweite)) {
-      const neu = bewerten(zweite.daten);
-      // Besser ist: erst gar kein Fehler, dann weniger Mängel.
-      const besser =
-        (ergebnis.fehler && !neu.fehler) ||
-        (Boolean(ergebnis.fehler) === Boolean(neu.fehler) &&
-          neu.maengel.length < ergebnis.maengel.length);
-      if (besser) ergebnis = neu;
-    }
-  }
 
   if (ergebnis.notizen.length) {
     console.warn("[api/case:spuren] Fall nachgebessert:", ergebnis.notizen.join(" "));

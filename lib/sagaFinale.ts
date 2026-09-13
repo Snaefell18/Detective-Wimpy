@@ -23,11 +23,15 @@ import type { Character } from "./types";
  *                   zeigt sich erst, wenn man ihn wirklich anklagt: Dann
  *                   bricht die Gestalt aus ihm heraus und sitzt an seiner
  *                   Stelle auf der Bank.
+ *   "gericht-wimpy" - wie "Gericht & Dämon", aber Wimpy ist der Wirt. Der
+ *                   Spieler muss ihn selbst anklagen; erst dann zeigt sich
+ *                   die Gestalt.
  */
 export type FinaleArt =
   | "klassisch"
   | "gericht"
   | "gericht-daemon"
+  | "gericht-wimpy"
   | "ohne-taeter"
   | "wimpy";
 
@@ -57,6 +61,12 @@ export const FINALE_ARTEN: {
     lang: "Wie der Gerichtssaal - mit einem Geheimnis: Das Tier, das man anklagt, ist besessen. Bis dahin ist davon nichts zu sehen; erst wenn Wimpy es wirklich vor Gericht benennt, bricht die Gestalt aus ihm heraus und setzt sich an seiner Stelle auf die Anklagebank. Danach geht die Verhandlung gegen sie weiter.",
   },
   {
+    id: "gericht-wimpy",
+    label: "Gericht: Wimpy",
+    hinweis: "Wimpy enttarnt sich erst nach der Anklage",
+    lang: "Wimpy ist die ganze Saga über besessen. Im Gerichtssaal wählst du selbst, wen du anklagst. Erst wenn du Wimpy nennst, bricht die Gestalt aus ihm heraus und die Verhandlung geht gegen sie weiter.",
+  },
+  {
     id: "ohne-taeter",
     label: "Kein Täter",
     hinweis: "es gab nie einen Schuldigen",
@@ -74,6 +84,7 @@ export const FINALE_ARTEN: {
 export const mitVerhandlung = (art: FinaleArt | undefined): boolean =>
   art === "gericht" ||
   art === "gericht-daemon" ||
+  art === "gericht-wimpy" ||
   art === "ohne-taeter" ||
   art === "wimpy";
 
@@ -85,7 +96,7 @@ export const mitVerhandlung = (art: FinaleArt | undefined): boolean =>
  * gerade eben selbst enttarnt.
  */
 export const mitAnklage = (art: FinaleArt | undefined): boolean =>
-  art === "gericht" || art === "gericht-daemon";
+  art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy";
 
 /** Ein Beweisstück, wie es der Spieler sieht - ohne jeden Hinweis darauf, ob es trägt. */
 export type Beweisstueck = {
@@ -236,7 +247,8 @@ export function angeklagterAus(args: {
   wirtId?: string;
 }): string {
   const { art, besetzung, drahtzieherId, wirtId } = args;
-  if (art === "wimpy") return besetzung.find((c) => c.istDetektiv)?.id ?? "";
+  if (art === "wimpy" || art === "gericht-wimpy")
+    return besetzung.find((c) => c.istDetektiv)?.id ?? "";
   // Angeklagt wird, wen man vor sich hat: bei einer Besessenheit der Wirt -
   // die Gestalt darin kennt vorher niemand.
   if (art === "gericht-daemon" && wirtId) return wirtId;

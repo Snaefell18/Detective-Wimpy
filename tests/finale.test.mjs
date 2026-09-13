@@ -38,8 +38,8 @@ console.log("\n1. Klassisch bleibt klassisch");
 pruefe("Standardvorgaben laufen in den Finalfall", STANDARD_SAGA_VORGABEN.finaleArt === "klassisch");
 pruefe("und brauchen keine Verhandlung", mitVerhandlung("klassisch") === false);
 pruefe("alte Sagas ohne Feld ebenso", mitVerhandlung(undefined) === false);
-pruefe("es gibt fünf Arten", FINALE_ARTEN.length === 5);
-for (const art of ["gericht", "gericht-daemon", "ohne-taeter", "wimpy"]) {
+pruefe("es gibt sechs Arten", FINALE_ARTEN.length === 6);
+for (const art of ["gericht", "gericht-daemon", "gericht-wimpy", "ohne-taeter", "wimpy"]) {
   pruefe(`„${art}“ führt in den Saal`, mitVerhandlung(art) === true);
 }
 
@@ -68,6 +68,10 @@ pruefe(
 pruefe(
   "bei „Wimpy selbst“ der Detektiv",
   angeklagterAus({ art: "wimpy", besetzung, drahtzieherId: "nala" }) === "wimpy",
+);
+pruefe(
+  "bei „Gericht: Wimpy“ ebenfalls der Detektiv",
+  angeklagterAus({ art: "gericht-wimpy", besetzung, drahtzieherId: "nala" }) === "wimpy",
 );
 pruefe("Öhö führt den Vorsitz", richterAus(besetzung, "nala")?.id === "oeho");
 // Wie er geschrieben steht, weiß man vorher nie - gefunden wird er trotzdem.
@@ -133,6 +137,7 @@ console.log("\n4. Wer im Saal angekündigt wird");
 console.log("\n5. Anklagen muss man nur, wo es eine offene Frage ist");
 pruefe("beim Gerichtsfinale", mitAnklage("gericht"));
 pruefe("und bei Gericht & Dämon", mitAnklage("gericht-daemon"));
+pruefe("und bei Gericht: Wimpy", mitAnklage("gericht-wimpy"));
 pruefe("nicht bei „kein Täter“", !mitAnklage("ohne-taeter"));
 pruefe("nicht bei „Wimpy selbst“", !mitAnklage("wimpy"));
 pruefe("und nicht im klassischen Finale", !mitAnklage("klassisch"));

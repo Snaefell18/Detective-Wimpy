@@ -117,16 +117,16 @@ export function pruefeVorgaben(args: {
 
   const art = vorgaben.finaleArt ?? "klassisch";
 
-  if (art === "wimpy") {
+  if (art === "wimpy" || art === "gericht-wimpy") {
     const detektiv = besetzung.find((c) => c.istDetektiv);
     if (!detektiv) {
       probleme.push(
-        "Für das Finale „Wimpy selbst“ muss der Detektiv in den Stammdaten stehen - dort ist gerade keiner als Detektiv markiert.",
+        "Für dieses Wimpy-Finale muss der Detektiv in den Stammdaten stehen - dort ist gerade keiner als Detektiv markiert.",
       );
     }
     if (!besessen(vorgaben)?.daemonId) {
       probleme.push(
-        "Für das Finale „Wimpy selbst“ fehlt die Gestalt, die in ihm steckte.",
+        "Für dieses Wimpy-Finale fehlt die Gestalt, die in ihm steckte.",
       );
     }
   }
@@ -155,7 +155,7 @@ export function pruefeVorgaben(args: {
   }
 
   // Columbo und der unsichtbare Drahtzieher schließen einander aus.
-  if ((art === "gericht" || art === "gericht-daemon") && vorgaben.twist) {
+  if ((art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy") && vorgaben.twist) {
     probleme.push(
       "„Gerichtssaal“ und „Twist“ vertragen sich nicht: Im Gerichtsfinale tritt der Drahtzieher von Anfang an auf und spielt mit Wimpy, der Twist verlangt genau das Gegenteil.",
     );

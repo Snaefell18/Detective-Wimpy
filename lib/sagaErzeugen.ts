@@ -108,6 +108,15 @@ export async function erzeugeSaga(
     weiter && weiter.kennung === kennung
       ? weiter
       : leererEntwurf(kennung, eingaben.vorgaben);
+
+  /*
+   * Auch ein noch leerer Entwurf muss sofort auf dem Gerät liegen. Der erste
+   * Modellaufruf ist gerade derjenige, der am ehesten wegen eines Zeitlimits
+   * scheitert; zuvor wurde der Entwurf erst NACH seiner erfolgreichen Antwort
+   * gespeichert. Dadurch gab es nach einem Abbruch beim Überthema nichts,
+   * woran die Oberfläche "Weitermachen" anbieten konnte.
+   */
+  entwurf = speichereEntwurf(entwurf);
   const halte = (teil: Partial<SagaEntwurf>) => {
     entwurf = speichereEntwurf({ ...entwurf, ...teil });
   };
@@ -226,8 +235,10 @@ export async function erzeugeSaga(
   };
 
   const fallFuer = (kapitel: number, was: string) =>
-    bei(was, () =>
-      erzeugeFall(
+    bei(was, () => {
+      const weiterFall =
+        entwurf.fallEntwurf?.kapitel === kapitel ? entwurf.fallEntwurf : null;
+      return erzeugeFall(
         {
           charaktere: eingaben.charaktere,
           orte: eingaben.orte,
@@ -237,8 +248,10 @@ export async function erzeugeSaga(
           kapitel,
         },
         (text) => onSchritt?.(`${was}: ${text}`),
-      ),
-    );
+        weiterFall,
+        (fallEntwurf) => halte({ fallEntwurf: { kapitel, ...fallEntwurf } }),
+      );
+    });
 
   const kapitel = [];
   for (const k of entwuerfe) {
@@ -250,7 +263,7 @@ export async function erzeugeSaga(
     const gebaut: { fall: PublicCase; siegel: string } =
       entwurf.faelle[String(k.nummer)] ??
       (await fallFuer(k.nummer, `Fall ${k.nummer} von ${anzahl}`));
-    halte({ faelle: { ...entwurf.faelle, [String(k.nummer)]: gebaut } });
+    halte({ faelle: { ...entwurf.faelle, [String(k.nummer)]: gebaut }, fallEntwurf: null });
     kapitel.push({
       nummer: k.nummer,
       name: k.name,
@@ -290,7 +303,7 @@ export async function erzeugeSaga(
   const finale =
     entwurf.finaleFall ??
     (saalStattFall ? { fall: null, siegel: null } : await fallFuer(0, "Finalfall"));
-  halte({ finaleFall: finale });
+  halte({ finaleFall: finale, fallEntwurf: null });
 
   return {
     id: kern.id,
