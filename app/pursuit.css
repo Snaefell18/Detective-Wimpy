@@ -82,6 +82,157 @@
 .pursuit-modelle span { display: block; overflow: hidden; text-overflow: ellipsis; }
 .pursuit-modelle span { margin-top: 2px; font-size: 11px; opacity: .7; }
 .pursuit-los { display: block; margin: 19px 0 0 auto; }
+.pursuit-zurueck {
+  display: inline-flex;
+  margin: 0 0 12px;
+  padding: 7px 12px;
+  border: 3px solid #172337;
+  border-radius: 4px 12px 4px 12px;
+  color: #172337;
+  background: #fff;
+  box-shadow: 3px 3px 0 #172337;
+  font: 900 12px/1 var(--font-body), sans-serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.pursuit-zurueck:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #172337; }
+.pursuit-moduswahl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2.5vw, 24px);
+}
+.pursuit-moduskarte {
+  min-height: 270px;
+  padding: clamp(20px, 3vw, 32px);
+  border: 5px solid #172337;
+  border-radius: 5px 26px 5px 26px;
+  color: #172337;
+  text-align: left;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255,255,255,.9) 0 8%, transparent 8.5%),
+    repeating-linear-gradient(155deg, rgba(23,35,55,.06) 0 2px, transparent 2px 14px),
+    #8de0ec;
+  box-shadow: 9px 10px 0 #172337;
+  transition: transform .13s ease, box-shadow .13s ease;
+}
+.pursuit-moduskarte-jump { background-color: #ffd646; transform: rotate(1deg); }
+.pursuit-moduskarte:hover { transform: translate(-3px, -4px) rotate(-1deg); box-shadow: 13px 15px 0 #172337; }
+.pursuit-moduskarte-jump:hover { transform: translate(-3px, -4px) rotate(1.5deg); }
+.pursuit-moduskarte small,
+.pursuit-moduskarte strong,
+.pursuit-moduskarte span,
+.pursuit-moduskarte b { display: block; }
+.pursuit-moduskarte small { font-weight: 950; letter-spacing: .12em; }
+.pursuit-moduskarte strong {
+  margin: 12px 0;
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(32px, 5vw, 58px);
+  line-height: .86;
+  letter-spacing: -.035em;
+}
+.pursuit-moduskarte span { min-height: 66px; font-weight: 750; }
+.pursuit-moduskarte b { margin-top: 18px; font-size: 13px; letter-spacing: .08em; }
+
+.jump-charaktere {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.jump-charaktere button {
+  min-width: 0;
+  padding: 12px;
+  border: 3px solid rgba(23,35,55,.25);
+  border-radius: 3px 13px 3px 13px;
+  color: #172337;
+  text-align: left;
+  background: #eefcff;
+}
+.jump-charaktere button[data-aktiv="true"] {
+  border-color: #172337;
+  background: #ffd747;
+  box-shadow: 4px 4px 0 #172337;
+  transform: translate(-2px, -2px);
+}
+.jump-charaktere strong,
+.jump-charaktere span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jump-charaktere span { margin-top: 3px; font-size: 11px; opacity: .65; }
+.jump-items-vorschau { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.jump-items-vorschau span {
+  padding: 8px 11px;
+  border: 3px solid #172337;
+  border-radius: 100px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+.jump-spiel { background: #83ddec; }
+.jump-hud {
+  position: absolute;
+  z-index: 14;
+  top: max(18px, var(--safe-top));
+  left: clamp(18px, 4vw, 52px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100% - 110px);
+  color: #172337;
+}
+.jump-hud > div:first-child,
+.jump-score,
+.jump-inventar {
+  padding: 8px 12px;
+  border: 4px solid #172337;
+  border-radius: 4px 15px 4px 15px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 5px 6px 0 #172337;
+}
+.jump-hud > div:first-child span,
+.jump-hud > div:first-child strong,
+.jump-score small { display: block; }
+.jump-hud > div:first-child strong { font-size: clamp(17px, 2.2vw, 26px); }
+.jump-score { min-width: 82px; text-align: center; font: 950 25px/1 var(--font-display), Impact, sans-serif; background: #ffd747; }
+.jump-score small { margin-top: 3px; font: 900 9px/1 var(--font-body), sans-serif; letter-spacing: .12em; }
+.jump-inventar { display: flex; gap: 8px; font-weight: 950; }
+.jump-knopf {
+  position: absolute;
+  z-index: 16;
+  right: clamp(22px, 5vw, 70px);
+  bottom: max(24px, calc(var(--safe-bottom) + 12px));
+  width: clamp(112px, 17vw, 170px);
+  aspect-ratio: 1;
+  border: 6px solid #172337;
+  border-radius: 50%;
+  color: #172337;
+  background: #ffcf39;
+  box-shadow: 9px 10px 0 #172337;
+  font: 950 clamp(20px, 3vw, 34px)/.9 var(--font-display), Impact, sans-serif;
+  transform: rotate(-5deg);
+  touch-action: manipulation;
+}
+.jump-knopf small { display: block; margin-top: 8px; font: 900 9px/1 var(--font-body), sans-serif; letter-spacing: .1em; }
+.jump-knopf:active { transform: translate(5px, 5px) rotate(-5deg); box-shadow: 4px 5px 0 #172337; }
+.jump-meldung {
+  position: absolute;
+  z-index: 17;
+  top: 28%;
+  left: 50%;
+  max-width: min(560px, 80%);
+  padding: 12px 20px;
+  border: 5px solid #172337;
+  border-radius: 4px 18px 4px 18px;
+  color: #172337;
+  text-align: center;
+  background: #fff;
+  box-shadow: 8px 9px 0 #ffcf39, 13px 14px 0 #172337;
+  font: 950 clamp(18px, 3.5vw, 40px)/1 var(--font-display), Impact, sans-serif;
+  animation: jump-pop 1.15s both;
+}
+.jump-raus { position: absolute; z-index: 16; left: 24px; bottom: max(24px, calc(var(--safe-bottom) + 12px)); }
+@keyframes jump-pop {
+  0% { opacity: 0; transform: translate(-50%, 35px) scale(.35) rotate(-8deg); }
+  18%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(1deg); }
+  100% { opacity: 0; transform: translate(-50%, -35px) scale(1.08) rotate(-2deg); }
+}
 
 .pursuit-intro { z-index: 600; background: #87ddeb; }
 .pursuit-intro-kopf {
@@ -150,4 +301,12 @@
   .pursuit-namen span { display: none; }
   .pursuit-namen strong { font-size: 14px; }
   .pursuit-fangaktionen { display: grid; }
+  .pursuit-moduswahl { grid-template-columns: 1fr; }
+  .pursuit-moduskarte { min-height: 220px; }
+  .jump-charaktere { grid-template-columns: 1fr; }
+  .jump-hud { align-items: flex-start; gap: 6px; max-width: calc(100% - 68px); }
+  .jump-hud > div:first-child { display: none; }
+  .jump-score, .jump-inventar { padding: 7px 9px; border-width: 3px; box-shadow: 3px 4px 0 #172337; }
+  .jump-knopf { right: 18px; width: 112px; }
+  .jump-raus { left: 16px; max-width: 125px; }
 }

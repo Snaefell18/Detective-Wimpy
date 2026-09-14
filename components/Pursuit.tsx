@@ -12,6 +12,7 @@ import {
   zufaelligeIntroAnimation,
 } from "@/lib/pursuit";
 import { mutFlascheBauen, sportwagenBauen } from "@/components/Verfolgungsjagd";
+import { PursuitJumpNRun } from "@/components/PursuitJumpNRun";
 
 type Phase = "auswahl" | "intro" | "jagd" | "gefangen";
 type Auswahl = [string, string, string];
@@ -393,6 +394,7 @@ function PursuitCanvas({
 }
 
 export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
+  const [spielmodus, setSpielmodus] = useState<"wahl" | "verfolgung" | "jump">("wahl");
   const start = useMemo(() => pursuitStartauswahl(ANIMATIONS_MODELLE), []);
   const [auswahl, setAuswahl] = useState<Auswahl>(start ?? ["", "", ""]);
   const [phase, setPhase] = useState<Phase>("auswahl");
@@ -423,6 +425,37 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
     setPhase("intro");
   };
 
+  if (spielmodus === "wahl") {
+    return (
+      <div className="jagd pursuit-auswahl pursuit-spiel pursuit-modi">
+        <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
+        <section className="pursuit-panel">
+          <span className="jagd-kicker">WÄHLE DEIN CHAOS</span>
+          <h1>PURSUIT</h1>
+          <p>Zwei vollkommen vernünftige Arten, sich durch den Schnee zu bewegen.</p>
+          <div className="pursuit-moduswahl">
+            <button type="button" className="pursuit-moduskarte" onClick={() => setSpielmodus("verfolgung")}>
+              <small>MODUS I · 3 TIERE</small>
+              <strong>VERFOLGUNGS&shy;JAGD</strong>
+              <span>Weißer Sportwagen, zwei Verfolger und ein sehr fragwürdiger Fluchtgrund.</span>
+              <b>JAGD STARTEN ›</b>
+            </button>
+            <button type="button" className="pursuit-moduskarte pursuit-moduskarte-jump" onClick={() => setSpielmodus("jump")}>
+              <small>MODUS II · 1 TIER</small>
+              <strong>JUMP ’N’ RUN</strong>
+              <span>Springe über Schneeklötze und sammle Hotdogs und Hennessy.</span>
+              <b>LOSRENNEN ›</b>
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (spielmodus === "jump") {
+    return <PursuitJumpNRun onZurueck={() => setSpielmodus("wahl")} onSchliessen={onSchliessen} />;
+  }
+
   if (!start) {
     return (
       <div className="jagd jagd-start pursuit-auswahl pursuit-spiel">
@@ -442,6 +475,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
       <div className="jagd pursuit-auswahl pursuit-spiel">
         <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
         <section className="pursuit-panel">
+          <button className="pursuit-zurueck" onClick={() => setSpielmodus("wahl")}>‹ Modi</button>
           <span className="jagd-kicker">EIN 3D-MINISPIEL</span>
           <h1>PURSUIT</h1>
           <p>Drei Tiere. Ein schneeweißer Sportwagen. Sehr vernünftige Entscheidungen.</p>
