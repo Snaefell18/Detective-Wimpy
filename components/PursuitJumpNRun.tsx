@@ -182,7 +182,7 @@ function JumpCanvas({
         if (beendet) return;
         const vorlage = gltf.scene;
         cellShading(vorlage, gradient);
-        aufHoeheBringen(vorlage, 8.2);
+        aufHoeheBringen(vorlage, 8.2 * 1.3);
         vorlage.rotation.y = -Math.PI / 2;
         for (let i = 0; i < 11; i++) {
           const block = new THREE.Group();
