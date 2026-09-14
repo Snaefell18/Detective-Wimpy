@@ -7,9 +7,9 @@ import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.gene
 import { laufAnimation } from "@/lib/pursuit";
 
 type ItemArt = "hotdog" | "hennessy";
-const ITEMS: { id: ItemArt; name: string; datei: string; farbe: number }[] = [
-  { id: "hotdog", name: "Hotdog", datei: "/3d_items/hotdog.glb", farbe: 0xffcc35 },
-  { id: "hennessy", name: "Hennessy", datei: "/3d_items/hennessy.glb", farbe: 0xff546d },
+const ITEMS: { id: ItemArt; name: string; datei: string }[] = [
+  { id: "hotdog", name: "Hotdog", datei: "/3d_items/hotdog.glb" },
+  { id: "hennessy", name: "Hennessy", datei: "/3d_items/hennessy.glb" },
 ];
 const LAUFEN = /(run|running|sprint|jog|walk|walking|laufen|rennen)/i;
 const RUHE = /(rest|idle|t.?pose)/i;
@@ -224,13 +224,6 @@ function JumpCanvas({
           if (vorlage) gruppe.add(vorlage.clone(true));
           basisY = 1.0;
           gruppe.position.y = basisY;
-          const ring = new THREE.Mesh(
-            new THREE.TorusGeometry(0.7, 0.07, 6, 16),
-            new THREE.MeshBasicMaterial({ color: ITEMS.find((item) => item.id === art)?.farbe ?? 0xffffff }),
-          );
-          ring.rotation.x = Math.PI / 2;
-          ring.position.y = 0.35;
-          gruppe.add(ring);
         }
         gruppe.position.z = 12 + i * 9.5;
         scene.add(gruppe);
