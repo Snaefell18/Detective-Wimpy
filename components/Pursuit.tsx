@@ -11,7 +11,7 @@ import {
   pursuitStartauswahl,
   zufaelligeIntroAnimation,
 } from "@/lib/pursuit";
-import { mutFlascheBauen, sportwagenBauen } from "@/components/Verfolgungsjagd";
+import { mutFlascheBauen } from "@/components/Verfolgungsjagd";
 import { PursuitJumpNRun } from "@/components/PursuitJumpNRun";
 
 type Phase = "auswahl" | "intro" | "jagd" | "gefangen";
@@ -119,6 +119,27 @@ async function modellLaden(
   const clip = gltf.animations.find((kandidat) => kandidat.name === name);
   if (clip) mixer.clipAction(clip).reset().play();
   return { figur, mixer, clipName: name };
+}
+
+async function fahrzeugLaden(
+  loader: GLTFLoader,
+  datei: string,
+  gradient: THREE.Texture,
+  drehung: number,
+) {
+  const gltf = await loader.loadAsync(datei);
+  const fahrzeug = gltf.scene;
+  toonMaterialien(fahrzeug, gradient);
+  fahrzeug.rotation.y = drehung;
+  fahrzeug.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(fahrzeug);
+  const groesse = box.getSize(new THREE.Vector3());
+  fahrzeug.scale.multiplyScalar(3.15 / Math.max(0.001, groesse.x, groesse.z));
+  fahrzeug.updateMatrixWorld(true);
+  const neu = new THREE.Box3().setFromObject(fahrzeug);
+  const mitte = neu.getCenter(new THREE.Vector3());
+  fahrzeug.position.set(-mitte.x, -neu.min.y, -mitte.z);
+  return fahrzeug;
 }
 
 function PursuitCanvas({
@@ -246,7 +267,13 @@ function PursuitCanvas({
         scene.add(t);
         bewegteDinge.push(t);
       }
-      car = sportwagenBauen(toon);
+      const [lamboErgebnis, ferrariErgebnis] = await Promise.allSettled([
+        fahrzeugLaden(loader, "/3d_items/lambo.glb", gradient, Math.PI / 2),
+        fahrzeugLaden(loader, "/3d_items/ferrari.glb", gradient, 0),
+      ]);
+      if (beendet) return;
+      car = new THREE.Group();
+      if (lamboErgebnis.status === "fulfilled") car.add(lamboErgebnis.value);
       car.position.set(0, 0.08, -10.5);
       scene.add(car);
       helden = new THREE.Group();
@@ -260,12 +287,17 @@ function PursuitCanvas({
       if (beendet) return;
       ergebnisse.forEach((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled" || !helden) return;
-        const h = new THREE.Group();
-        h.add(ergebnis.value.figur);
-        h.position.x = index ? 0.78 : -0.78;
-        h.rotation.y = Math.PI;
-        helden.add(h);
-        halter.push(h);
+        const verfolgerWagen = new THREE.Group();
+        if (ferrariErgebnis.status === "fulfilled") verfolgerWagen.add(ferrariErgebnis.value.clone(true));
+        verfolgerWagen.position.x = index ? 1.55 : -1.55;
+        const fahrer = new THREE.Group();
+        fahrer.add(ergebnis.value.figur);
+        fahrer.position.set(0, 0.52, 0.12);
+        fahrer.rotation.y = Math.PI;
+        fahrer.scale.setScalar(0.48);
+        verfolgerWagen.add(fahrer);
+        helden.add(verfolgerWagen);
+        halter.push(fahrer);
         mixers.push(ergebnis.value.mixer);
       });
       callbacks.current.onBereit?.(ergebnisse.flatMap((e) => e.status === "fulfilled" && e.value.clipName ? [e.value.clipName] : []));
@@ -437,7 +469,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
             <button type="button" className="pursuit-moduskarte" onClick={() => setSpielmodus("verfolgung")}>
               <small>MODUS I · 3 TIERE</small>
               <strong>VERFOLGUNGS&shy;JAGD</strong>
-              <span>Weißer Sportwagen, zwei Verfolger und ein sehr fragwürdiger Fluchtgrund.</span>
+              <span>Ein Lamborghini, zwei Ferraris und ein sehr fragwürdiger Fluchtgrund.</span>
               <b>JAGD STARTEN ›</b>
             </button>
             <button type="button" className="pursuit-moduskarte pursuit-moduskarte-jump" onClick={() => setSpielmodus("jump")}>
@@ -470,7 +502,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
   }
 
   if (phase === "auswahl") {
-    const rollen = ["FLIEHT IM WEISSEN SPORTWAGEN", "VERFOLGER LINKS", "VERFOLGER RECHTS"];
+    const rollen = ["FLIEHT IM LAMBORGHINI", "FERRARI-VERFOLGER LINKS", "FERRARI-VERFOLGER RECHTS"];
     return (
       <div className="jagd pursuit-auswahl pursuit-spiel">
         <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
@@ -478,7 +510,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
           <button className="pursuit-zurueck" onClick={() => setSpielmodus("wahl")}>‹ Modi</button>
           <span className="jagd-kicker">EIN 3D-MINISPIEL</span>
           <h1>PURSUIT</h1>
-          <p>Drei Tiere. Ein schneeweißer Sportwagen. Sehr vernünftige Entscheidungen.</p>
+          <p>Drei Tiere. Ein Lamborghini. Zwei Ferraris. Sehr vernünftige Entscheidungen.</p>
           <div className="pursuit-rollen">
             {rollen.map((rolle, index) => (
               <fieldset key={rolle}>
