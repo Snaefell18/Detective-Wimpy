@@ -24,7 +24,13 @@ import {
 } from "@/lib/verfolgung";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
-import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D } from "@/lib/pursuit3d";
+import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
+import {
+  DREI_D_LOCATIONS,
+  DREI_D_TAGESZEITEN,
+  DREI_D_WETTER,
+  STANDARD_KAPITEL_3D,
+} from "@/lib/pursuit3d";
 
 const Verfolgungsjagd = dynamic(
   () => import("../Verfolgungsjagd").then((modul) => modul.Verfolgungsjagd),
@@ -248,7 +254,7 @@ export function SagaVorgabenFelder({
       kapitel3d: anStelle(
         vorgaben.kapitel3d,
         i,
-        { ...bisher, ...teil },
+        { ...STANDARD_KAPITEL_3D, ...bisher, ...teil },
         { ...STANDARD_KAPITEL_3D, locations: [...STANDARD_KAPITEL_3D.locations] },
       ),
     });
@@ -708,6 +714,56 @@ export function SagaVorgabenFelder({
                         </button>
                       );
                     })}
+                  </div>
+                  <span className="leise klein">Tageszeit</span>
+                  <div className="marken-reihe">
+                    {DREI_D_TAGESZEITEN.map((zeit) => (
+                      <button
+                        key={zeit.id}
+                        className="marke-knopf"
+                        data-aktiv={(vorgaben.kapitel3d?.[i]?.tageszeit ?? "tag") === zeit.id}
+                        onClick={() => dreiDSetzen(i, { tageszeit: zeit.id })}
+                      >
+                        {zeit.name}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="leise klein">3D-Wetter</span>
+                  <div className="marken-reihe">
+                    {DREI_D_WETTER.map((wetter) => (
+                      <button
+                        key={wetter.id}
+                        className="marke-knopf"
+                        data-aktiv={(vorgaben.kapitel3d?.[i]?.wetter ?? "klar") === wetter.id}
+                        onClick={() => dreiDSetzen(i, { wetter: wetter.id })}
+                      >
+                        {wetter.name}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="leise klein">3D-Modelle der Tiere</span>
+                  <div className="probe-charakter-zuordnung">
+                    {mitspieler.map((charakter) => (
+                      <label className="feld" key={charakter.id}>
+                        <span className="leise klein">{charakter.name}</span>
+                        <select
+                          value={vorgaben.kapitel3d?.[i]?.charakterModelle?.[charakter.id] ?? ""}
+                          onChange={(e) => {
+                            const charakterModelle = {
+                              ...(vorgaben.kapitel3d?.[i]?.charakterModelle ?? {}),
+                            };
+                            if (e.target.value) charakterModelle[charakter.id] = e.target.value;
+                            else delete charakterModelle[charakter.id];
+                            dreiDSetzen(i, { charakterModelle });
+                          }}
+                        >
+                          <option value="">Automatisch nach Name/Tierart</option>
+                          {ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => (
+                            <option key={modell.id} value={modell.id}>{modell.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
                   </div>
                 </>
               )}

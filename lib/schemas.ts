@@ -6,6 +6,8 @@ import { AUFTRITTS_ARTEN } from "./sagaTypen";
 import { FINALE_ARTEN } from "./sagaFinale";
 import { DAEMON_HAEUFIGKEITEN, MITTAETER_HAEUFIGKEITEN, WETTERLAGEN } from "./types";
 import type { Haeufigkeit, Wetterlage } from "./types";
+import { GENERIERTE_3D_LOCATION_IDS } from "./locations3d.generated";
+import { ANIMATIONS_MODELLE } from "./animations.generated";
 
 /**
  * Wichtig: Feste Auswahllisten werden vom Modell nur *beschrieben*, nicht
@@ -402,7 +404,15 @@ export const SagaVorgabenSchema = z.object({
     .array(
       z.object({
         aktiv: z.boolean().default(false),
-        locations: z.array(z.enum(["tokyo1", "akihabara", "residential"])).max(3).default([]),
+        locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(24).default([]),
+        tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("tag"),
+        wetter: z.enum(["klar", "sonne", "regen"]).default("klar"),
+        charakterModelle: z
+          .record(
+            z.string().max(40),
+            ausAuswahl(ANIMATIONS_MODELLE.map((modell) => modell.id)),
+          )
+          .default({}),
       }),
     )
     .max(9)

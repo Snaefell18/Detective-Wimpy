@@ -14,6 +14,7 @@ import {
 import { mutFlascheBauen } from "@/components/Verfolgungsjagd";
 import { PursuitJumpNRun } from "@/components/PursuitJumpNRun";
 import { PursuitExperiment } from "@/components/PursuitExperiment";
+import { PursuitProbeWelt } from "@/components/PursuitProbeWelt";
 
 type Phase = "auswahl" | "intro" | "jagd" | "gefangen";
 type Auswahl = [string, string, string];
@@ -427,7 +428,7 @@ function PursuitCanvas({
 }
 
 export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
-  const [spielmodus, setSpielmodus] = useState<"wahl" | "verfolgung" | "jump" | "experiment">("wahl");
+  const [spielmodus, setSpielmodus] = useState<"wahl" | "verfolgung" | "jump" | "experiment" | "probe">("wahl");
   const start = useMemo(() => pursuitStartauswahl(ANIMATIONS_MODELLE), []);
   const [auswahl, setAuswahl] = useState<Auswahl>(start ?? ["", "", ""]);
   const [phase, setPhase] = useState<Phase>("auswahl");
@@ -465,7 +466,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
         <section className="pursuit-panel">
           <span className="jagd-kicker">WÄHLE DEIN CHAOS</span>
           <h1>PURSUIT</h1>
-          <p>Drei vollkommen vernünftige Arten, sich in 3D zu bewegen.</p>
+          <p>Vier vollkommen vernünftige Arten, sich in 3D zu bewegen.</p>
           <div className="pursuit-moduswahl">
             <button type="button" className="pursuit-moduskarte" onClick={() => setSpielmodus("verfolgung")}>
               <small>MODUS I · 3 TIERE</small>
@@ -485,6 +486,12 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
               <span>Bewege Wimpy frei durch Tokyo und sprich mit den anderen Tieren.</span>
               <b>LABOR ÖFFNEN ›</b>
             </button>
+            <button type="button" className="pursuit-moduskarte pursuit-moduskarte-probe" onClick={() => setSpielmodus("probe")}>
+              <small>MODUS IV · BAUKASTEN</small>
+              <strong>3D-PROBEWELT</strong>
+              <span>Wähle Straßen, Tageszeit, Wetter und Figuren und teste die Welt sofort.</span>
+              <b>WELT BAUEN ›</b>
+            </button>
           </div>
         </section>
       </div>
@@ -497,6 +504,10 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
 
   if (spielmodus === "experiment") {
     return <PursuitExperiment onZurueck={() => setSpielmodus("wahl")} onSchliessen={onSchliessen} />;
+  }
+
+  if (spielmodus === "probe") {
+    return <PursuitProbeWelt onZurueck={() => setSpielmodus("wahl")} onSchliessen={onSchliessen} />;
   }
 
   if (!start) {

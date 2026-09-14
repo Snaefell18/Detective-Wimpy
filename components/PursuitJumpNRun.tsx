@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { laufAnimation } from "@/lib/pursuit";
 import { TOKYO_FASSADEN } from "@/lib/pursuit3d";
@@ -125,6 +126,7 @@ function JumpCanvas({
     element.appendChild(renderer.domElement);
 
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     scene.add(new THREE.HemisphereLight(istTokyo ? 0x728cff : 0xf9ffff, istTokyo ? 0x140c2e : 0x355b78, istTokyo ? 1.8 : 2.7));
     const sonne = new THREE.DirectionalLight(istTokyo ? 0x84dfff : 0xffefc5, istTokyo ? 2.25 : 3.6);
     sonne.position.set(-7, 12, 8);

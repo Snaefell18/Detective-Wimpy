@@ -82,6 +82,7 @@ const Saga3DKapitel = dynamic(
   () => import("@/components/Saga3DKapitel").then((modul) => modul.Saga3DKapitel),
   { ssr: false },
 );
+const LEERE_DREI_D_MODELLE: Record<string, string> = {};
 
 export default function Home() {
   const spiel = useGame();
@@ -1371,6 +1372,9 @@ export default function Home() {
               fall={stand.fall}
               siegel={stand.siegel ?? ""}
               locations={laufendesDreiDKapitel.locations}
+              tageszeit={laufendesDreiDKapitel.tageszeit ?? "tag"}
+              wetter={laufendesDreiDKapitel.wetter ?? "klar"}
+              charakterModelle={laufendesDreiDKapitel.charakterModelle ?? LEERE_DREI_D_MODELLE}
               gefundeneSpuren={stand.gefundeneSpuren}
               kapitel={laufendesKapitel}
               tasche={tasche.inhalt}

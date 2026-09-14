@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
 import { dateienFuer3D } from "@/lib/pursuit3d";
+import type { DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
 import { FundMoment } from "./FundMoment";
@@ -20,9 +22,10 @@ type Naehe =
 
 const normal = (wert: string) => wert.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
 
-function modellFuer(charakter: Character, index: number): AnimationsModell | undefined {
+function modellFuer(charakter: Character, index: number, modellId?: string): AnimationsModell | undefined {
   const schluessel = [charakter.id, charakter.name, charakter.tierart].map(normal);
   return (
+    ANIMATIONS_MODELLE.find((modell) => modell.id === modellId) ??
     ANIMATIONS_MODELLE.find((modell) =>
       schluessel.some((wert) => wert && (normal(modell.id).includes(wert) || wert.includes(normal(modell.id)))),
     ) ?? ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy")[index % Math.max(1, ANIMATIONS_MODELLE.length - 1)]
@@ -82,6 +85,9 @@ function KapitelCanvas({
   locations,
   spuren,
   gefundeneSpuren,
+  tageszeit,
+  wetter,
+  charakterModelle,
   onNaehe,
   onBereit,
 }: {
@@ -90,6 +96,9 @@ function KapitelCanvas({
   locations: string[];
   spuren: SpurVorschau[];
   gefundeneSpuren: string[];
+  tageszeit: DreiDTageszeit;
+  wetter: DreiDWetter;
+  charakterModelle: Record<string, string>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
 }) {
@@ -103,8 +112,15 @@ function KapitelCanvas({
     let beendet = false;
     let frame = 0;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x070a16);
-    scene.fog = new THREE.Fog(0x11152a, 18, 62);
+    const himmel = {
+      morgen: 0xf3a979,
+      tag: wetter === "sonne" ? 0x62c8ff : 0x91b8d2,
+      abend: 0xa84567,
+      nacht: 0x070a16,
+    }[tageszeit];
+    const nebel = wetter === "regen" ? 0x536777 : himmel;
+    scene.background = new THREE.Color(himmel);
+    scene.fog = new THREE.Fog(nebel, wetter === "regen" ? 13 : 20, wetter === "regen" ? 48 : 68);
     const gradient = gradientTextur();
     const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 120);
     camera.position.set(-9.5, 5.1, 13.8);
@@ -116,22 +132,50 @@ function KapitelCanvas({
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.shadowMap.enabled = true;
-    renderer.toneMappingExposure = 0.9;
+    renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
     element.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0x7aa1ff, 0x160d2e, 2.15));
-    const licht = new THREE.DirectionalLight(0xa7e9ff, 2.5);
+    const oben = tageszeit === "nacht" ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
+    scene.add(new THREE.HemisphereLight(oben, tageszeit === "nacht" ? 0x160d2e : 0x455348, tageszeit === "nacht" ? 2.15 : 2.8));
+    const licht = new THREE.DirectionalLight(
+      wetter === "sonne" ? 0xfff1b8 : tageszeit === "abend" ? 0xff9c72 : 0xb9ddff,
+      wetter === "sonne" ? 5.2 : wetter === "regen" ? 1.5 : 2.8,
+    );
     licht.position.set(-8, 14, 9);
     licht.castShadow = true;
     scene.add(licht);
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(24, 80),
-      new THREE.MeshToonMaterial({ color: 0x22283b, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({ color: wetter === "regen" ? 0x172637 : tageszeit === "tag" ? 0x394657 : 0x22283b, gradientMap: gradient }),
     );
     boden.rotation.x = -Math.PI / 2;
     boden.position.z = -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    let regen: THREE.Points | null = null;
+    if (wetter === "regen") {
+      const positionen = new Float32Array(900 * 3);
+      for (let i = 0; i < 900; i++) {
+        positionen[i * 3] = Math.random() * 18 - 9;
+        positionen[i * 3 + 1] = Math.random() * 15;
+        positionen[i * 3 + 2] = Math.random() * 70 - 48;
+      }
+      const geometrie = new THREE.BufferGeometry();
+      geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
+      regen = new THREE.Points(
+        geometrie,
+        new THREE.PointsMaterial({ color: 0xc6edff, size: 0.075, transparent: true, opacity: 0.85 }),
+      );
+      scene.add(regen);
+    }
+    if (wetter === "sonne") {
+      const sonne = new THREE.Mesh(
+        new THREE.SphereGeometry(2.2, 18, 12),
+        new THREE.MeshBasicMaterial({ color: 0xfff3a1 }),
+      );
+      sonne.position.set(-17, 18, -35);
+      scene.add(sonne);
+    }
     for (let i = 0; i < 18; i++) {
       const strich = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.025, 1.7),
@@ -142,6 +186,7 @@ function KapitelCanvas({
     }
 
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     const spieler = new THREE.Group();
     scene.add(spieler);
     const mixers: THREE.AnimationMixer[] = [];
@@ -197,7 +242,7 @@ function KapitelCanvas({
       const tiere = fall.besetzung.filter((charakter) => !charakter.istDetektiv && !charakter.istDaemon);
       const npcLadungen = await Promise.allSettled(
         tiere.map((charakter, index) => {
-          const modell = modellFuer(charakter, index);
+          const modell = modellFuer(charakter, index, charakterModelle[charakter.id]);
           return modell ? figurLaden(modell, 1.8) : Promise.reject(new Error("Kein Modell"));
         }),
       );
@@ -294,6 +339,14 @@ function KapitelCanvas({
       }
       spielerMixer?.update(dt);
       mixers.forEach((mixer) => mixer.update(dt));
+      if (regen) {
+        const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
+        for (let i = 0; i < positionen.count; i++) {
+          const y = positionen.getY(i) - dt * 13;
+          positionen.setY(i, y < 0 ? 15 : y);
+        }
+        positionen.needsUpdate = true;
+      }
       npcGruppen.forEach((npc, index) => {
         if (index % 3 !== 1) return;
         npc.gruppe.position.z = npc.basisZ + Math.sin(jetzt / 1800 + npc.phase) * 2.3;
@@ -344,7 +397,7 @@ function KapitelCanvas({
       renderer.domElement.remove();
       gradient.dispose();
     };
-  }, [fall, locations, spuren, steuerung]);
+  }, [charakterModelle, fall, locations, spuren, steuerung, tageszeit, wetter]);
 
   return <div className="saga3d-canvas" ref={host} aria-label="Spielbares 3D-Kapitel" />;
 }
@@ -353,6 +406,9 @@ export function Saga3DKapitel({
   fall,
   siegel,
   locations,
+  tageszeit,
+  wetter,
+  charakterModelle,
   gefundeneSpuren,
   kapitel,
   tasche,
@@ -364,6 +420,9 @@ export function Saga3DKapitel({
   fall: PublicCase;
   siegel: string;
   locations: string[];
+  tageszeit: DreiDTageszeit;
+  wetter: DreiDWetter;
+  charakterModelle: Record<string, string>;
   gefundeneSpuren: string[];
   kapitel: number | null;
   tasche: Beweismittel[];
@@ -423,6 +482,9 @@ export function Saga3DKapitel({
         steuerung={steuerung}
         fall={fall}
         locations={locations}
+        tageszeit={tageszeit}
+        wetter={wetter}
+        charakterModelle={charakterModelle}
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}
         onNaehe={setNah}
@@ -455,6 +517,110 @@ export function Saga3DKapitel({
           onFertig={() => setFund(null)}
         />
       )}
+    </div>
+  );
+}
+
+/** Dieselbe Stadttechnik ohne Fall-API – für Modus IV unter Pursuit. */
+export function Saga3DProbeSzene({
+  locations,
+  tageszeit,
+  wetter,
+  modellIds,
+  onZurueck,
+  onSchliessen,
+}: {
+  locations: string[];
+  tageszeit: DreiDTageszeit;
+  wetter: DreiDWetter;
+  modellIds: string[];
+  onZurueck: () => void;
+  onSchliessen: () => void;
+}) {
+  const steuerung = useRef<Richtung>({ x: 0, z: 0 });
+  const [nah, setNah] = useState<Naehe | null>(null);
+  const [bereit, setBereit] = useState(false);
+  const [meldung, setMeldung] = useState("");
+  const modellZuordnung = useMemo(
+    () => Object.fromEntries(modellIds.map((id) => [id, id])),
+    [modellIds],
+  );
+  const fall = useMemo<PublicCase>(() => {
+    const stats = {
+      charisma: 50,
+      freundlichkeit: 50,
+      fitness: 50,
+      zauberkraft: 0,
+      schelmischkeit: 50,
+      kriminalitaetslevel: 0,
+      intelligenz: 50,
+    };
+    const besetzung = modellIds
+      .map((id, index) => ANIMATIONS_MODELLE.find((modell) => modell.id === id) && ({
+        id,
+        nummer: index + 1,
+        name: ANIMATIONS_MODELLE.find((modell) => modell.id === id)!.name,
+        tierart: ANIMATIONS_MODELLE.find((modell) => modell.id === id)!.name,
+        alter: 20,
+        stats,
+        beschreibung: "3D-Testfigur",
+        bild: "",
+        istDetektiv: id === "wimpy",
+      }))
+      .filter((wert): wert is Character => Boolean(wert));
+    return {
+      id: "pursuit-3d-probe",
+      besetzung,
+      stadt: "3D-Probewelt",
+      orte: [],
+      introText: "",
+      schlagworte: [],
+      titel: "3D-Probewelt",
+      tatbeschreibung: "",
+      tatort: "",
+      aufenthalt: {},
+      erstelltAm: 0,
+    };
+  }, [modellIds]);
+  const setzen = (x: number, z: number) => {
+    steuerung.current = { x, z };
+  };
+  const stoppen = () => setzen(0, 0);
+
+  return (
+    <div className="jagd pursuit-spiel saga3d-probe">
+      <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
+      <KapitelCanvas
+        steuerung={steuerung}
+        fall={fall}
+        locations={locations}
+        tageszeit={tageszeit}
+        wetter={wetter}
+        charakterModelle={modellZuordnung}
+        spuren={[]}
+        gefundeneSpuren={[]}
+        onNaehe={setNah}
+        onBereit={() => setBereit(true)}
+      />
+      <header className="experiment-hud">
+        <span className="jagd-kicker">MODUS IV · 3D-WELT-PROBE</span>
+        <strong>{tageszeit.toUpperCase()} · {wetter === "sonne" ? "SONNENSCHEIN" : wetter.toUpperCase()}</strong>
+        <small>{bereit ? `${modellIds.length} Modelle in der Testwelt.` : "Straßen und Tiere werden geladen …"}</small>
+      </header>
+      <button className="pursuit-zurueck experiment-zurueck" onClick={onZurueck}>‹ Einstellungen</button>
+      <div className="experiment-steuerkreuz" aria-label="Wimpy steuern">
+        <button onPointerDown={() => setzen(0, -1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▲</button>
+        <button onPointerDown={() => setzen(-1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>◀</button>
+        <button onPointerDown={() => setzen(1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>▶</button>
+        <button onPointerDown={() => setzen(0, 1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▼</button>
+      </div>
+      {nah?.art === "tier" && (
+        <button className="experiment-ansprechen" onClick={() => setMeldung(`${nah.name} ist da, animiert und ansprechbar.`)}>
+          <small>MODELL IN DER NÄHE</small>
+          <strong>{nah.name} PRÜFEN</strong>
+        </button>
+      )}
+      {meldung && <button className="saga3d-meldung" onClick={() => setMeldung("")}>{meldung}</button>}
     </div>
   );
 }

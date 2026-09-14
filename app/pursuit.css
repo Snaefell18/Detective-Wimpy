@@ -122,13 +122,20 @@
 }
 .pursuit-moduskarte-jump { background-color: #ffd646; transform: rotate(1deg); }
 .pursuit-moduskarte-experiment {
-  grid-column: 1 / -1;
   min-height: 210px;
   color: #fff;
   background:
     radial-gradient(circle at 84% 18%, rgba(53,223,255,.35) 0 8%, transparent 8.5%),
     repeating-linear-gradient(155deg, rgba(255,255,255,.06) 0 2px, transparent 2px 14px),
     linear-gradient(145deg, #16142e, #4a2365 62%, #d01e72);
+}
+.pursuit-moduskarte-probe {
+  min-height: 210px;
+  color: #172337;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255,255,255,.9) 0 8%, transparent 8.5%),
+    repeating-linear-gradient(155deg, rgba(23,35,55,.06) 0 2px, transparent 2px 14px),
+    linear-gradient(145deg, #ffef71, #ff9c54 65%, #ff5c83);
 }
 .pursuit-moduskarte:hover { transform: translate(-3px, -4px) rotate(-1deg); box-shadow: 13px 15px 0 #172337; }
 .pursuit-moduskarte-jump:hover { transform: translate(-3px, -4px) rotate(1.5deg); }
@@ -152,6 +159,19 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
 }
+.probe-panel { max-width: 1040px; }
+.probe-panel h1 { font-size: clamp(42px, 8vw, 88px); }
+.probe-panel h3 { margin: 18px 0 7px; }
+.probe-auswahl { gap: 7px; }
+.probe-modelle { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.probe-charakter-zuordnung {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 5px;
+}
+.probe-charakter-zuordnung .feld { margin: 0; }
+.saga3d-probe { background: #080b1c; }
 .jump-levelwahl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -500,6 +520,8 @@
   .pursuit-moduskarte { min-height: 220px; }
   .jump-charaktere { grid-template-columns: 1fr; }
   .jump-levelwahl { grid-template-columns: 1fr; }
+  .probe-modelle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .probe-charakter-zuordnung { grid-template-columns: 1fr; }
   .jump-hud { align-items: flex-start; gap: 6px; max-width: calc(100% - 68px); }
   .jump-hud > div:first-child { display: none; }
   .jump-score, .jump-inventar { padding: 7px 9px; border-width: 3px; box-shadow: 3px 4px 0 #172337; }

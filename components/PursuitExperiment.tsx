@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { laufAnimation } from "@/lib/pursuit";
 import { TOKYO_FASSADEN } from "@/lib/pursuit3d";
@@ -117,6 +118,7 @@ function ExperimentCanvas({
     }
 
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     const spieler = new THREE.Group();
     scene.add(spieler);
     const npcGruppen: { gruppe: THREE.Group; info: NpcInfo }[] = [];

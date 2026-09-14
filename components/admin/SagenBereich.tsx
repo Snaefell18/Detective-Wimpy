@@ -27,7 +27,13 @@ import {
 import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
-import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D } from "@/lib/pursuit3d";
+import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
+import {
+  DREI_D_LOCATIONS,
+  DREI_D_TAGESZEITEN,
+  DREI_D_WETTER,
+  STANDARD_KAPITEL_3D,
+} from "@/lib/pursuit3d";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { BeweisUebersicht } from "./BeweisUebersicht";
 import { FallEditor } from "./FallEditor";
@@ -918,7 +924,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                                 locations: [...STANDARD_KAPITEL_3D.locations],
                               });
                             }
-                            liste[i] = { ...liste[i], aktiv: e.target.checked };
+                            liste[i] = { ...STANDARD_KAPITEL_3D, ...liste[i], aktiv: e.target.checked };
                             kopie.vorgaben.kapitel3d = liste;
                             void sagaAendern(kopie);
                           }}
@@ -963,6 +969,82 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                           );
                         })}
                       </div>
+                    )}
+                    {saga.vorgaben.kapitel3d?.[i]?.aktiv && (
+                      <>
+                        <span className="leise klein">Tageszeit</span>
+                        <div className="marken-reihe">
+                          {DREI_D_TAGESZEITEN.map((zeit) => (
+                            <button
+                              key={zeit.id}
+                              className="marke-knopf"
+                              data-aktiv={(saga.vorgaben.kapitel3d[i].tageszeit ?? "tag") === zeit.id}
+                              onClick={() => {
+                                const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                kopie.vorgaben.kapitel3d[i] = {
+                                  ...STANDARD_KAPITEL_3D,
+                                  ...kopie.vorgaben.kapitel3d[i],
+                                  tageszeit: zeit.id,
+                                };
+                                void sagaAendern(kopie);
+                              }}
+                            >
+                              {zeit.name}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="leise klein">3D-Wetter</span>
+                        <div className="marken-reihe">
+                          {DREI_D_WETTER.map((wetter) => (
+                            <button
+                              key={wetter.id}
+                              className="marke-knopf"
+                              data-aktiv={(saga.vorgaben.kapitel3d[i].wetter ?? "klar") === wetter.id}
+                              onClick={() => {
+                                const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                kopie.vorgaben.kapitel3d[i] = {
+                                  ...STANDARD_KAPITEL_3D,
+                                  ...kopie.vorgaben.kapitel3d[i],
+                                  wetter: wetter.id,
+                                };
+                                void sagaAendern(kopie);
+                              }}
+                            >
+                              {wetter.name}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="leise klein">3D-Modelle der Kapiteltiere</span>
+                        <div className="probe-charakter-zuordnung">
+                          {(k.fall?.besetzung ?? []).filter((charakter) => !charakter.istDetektiv && !charakter.istDaemon).map((charakter) => (
+                            <label className="feld" key={charakter.id}>
+                              <span className="leise klein">{charakter.name}</span>
+                              <select
+                                value={saga.vorgaben.kapitel3d[i].charakterModelle?.[charakter.id] ?? ""}
+                                onChange={(e) => {
+                                  const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                  const eintrag = {
+                                    ...STANDARD_KAPITEL_3D,
+                                    ...kopie.vorgaben.kapitel3d[i],
+                                    charakterModelle: {
+                                      ...(kopie.vorgaben.kapitel3d[i].charakterModelle ?? {}),
+                                    },
+                                  };
+                                  if (e.target.value) eintrag.charakterModelle[charakter.id] = e.target.value;
+                                  else delete eintrag.charakterModelle[charakter.id];
+                                  kopie.vorgaben.kapitel3d[i] = eintrag;
+                                  void sagaAendern(kopie);
+                                }}
+                              >
+                                <option value="">Automatisch nach Name/Tierart</option>
+                                {ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => (
+                                  <option key={modell.id} value={modell.id}>{modell.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
 
