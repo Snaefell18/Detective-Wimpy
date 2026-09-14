@@ -42,7 +42,6 @@ export async function POST(request: Request) {
     if (body.vorschau) {
       return NextResponse.json({
         spuren: fall.spuren
-          .filter((spur) => !gefunden.has(spur.itemId))
           .map((spur) => {
             const item = fall.items?.find((eintrag) => eintrag.id === spur.itemId) ?? getItem(spur.itemId);
             return {
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
         )
       : undefined;
     const hier =
-      angeklickt ??
+      body.itemId ? angeklickt :
       fall.spuren.find((s) => s.ortId === body.ortId && !gefunden.has(s.itemId));
 
     /*
@@ -73,7 +72,7 @@ export async function POST(request: Request) {
      * wo sie liegt. Ohne das Zubehör bleibt alles wie bisher.
      */
     const woanders =
-      !hier && body.wirkung === "spuersinn"
+      !body.itemId && !hier && body.wirkung === "spuersinn"
         ? fall.spuren.find((s) => !gefunden.has(s.itemId))
         : undefined;
     const spur = hier ?? woanders;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { AdminSchloss, abmelden } from "@/components/admin/AdminSchloss";
 import { ArcsBereich } from "@/components/admin/ArcsBereich";
@@ -10,6 +11,8 @@ import { SagenBereich } from "@/components/admin/SagenBereich";
 import { ZubehoerBereich } from "@/components/admin/ZubehoerBereich";
 import { SpielBereich } from "@/components/admin/SpielBereich";
 import { StammdatenBereich } from "@/components/admin/StammdatenBereich";
+
+const Pursuit = dynamic(() => import("@/components/Pursuit").then((m) => m.Pursuit), { ssr: false });
 
 type Bereich =
   | "kampagnen"
@@ -45,6 +48,7 @@ export default function AdminSeite() {
 
 function AdminInhalt() {
   const [bereich, setBereich] = useState<Bereich>("kampagnen");
+  const [pursuitOffen, setPursuitOffen] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -80,6 +84,7 @@ function AdminInhalt() {
       </header>
 
       <div className="reiter">
+        <button onClick={() => setPursuitOffen(true)}>Pursuit · 3D-Labor</button>
         {REITER.map((r) => (
           <button
             key={r.id}
@@ -110,6 +115,7 @@ function AdminInhalt() {
           {bereich === "spiel" && <SpielBereich {...gemeinsam} />}
         </div>
       </div>
+      {pursuitOffen && <Pursuit onSchliessen={() => setPursuitOffen(false)} />}
     </main>
   );
 }

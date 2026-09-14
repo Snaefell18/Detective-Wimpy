@@ -1067,7 +1067,7 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                         </div>
                         <span className="leise klein">3D-Modelle der Kapiteltiere</span>
                         <div className="probe-charakter-zuordnung">
-                          {(k.fall?.besetzung ?? []).filter((charakter) => !charakter.istDetektiv && !charakter.istDaemon).map((charakter) => (
+                          {(k.fall?.besetzung ?? []).filter((charakter) => !charakter.istDetektiv).map((charakter) => (
                             <label className="feld" key={charakter.id}>
                               <span className="leise klein">{charakter.name}</span>
                               <select

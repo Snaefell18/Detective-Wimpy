@@ -73,11 +73,6 @@ const Verfolgungsjagd = dynamic(
   { ssr: false },
 );
 
-const Pursuit = dynamic(
-  () => import("@/components/Pursuit").then((modul) => modul.Pursuit),
-  { ssr: false },
-);
-
 const Saga3DKapitel = dynamic(
   () => import("@/components/Saga3DKapitel").then((modul) => modul.Saga3DKapitel),
   { ssr: false },
@@ -95,7 +90,6 @@ export default function Home() {
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
   const [sagenOffen, setSagenOffen] = useState(false);
   const [arcsOffen, setArcsOffen] = useState(false);
-  const [pursuitOffen, setPursuitOffen] = useState(false);
   const [ladenOffen, setLadenOffen] = useState(false);
   /** Der Inhalt des Ladens - die Beschreibungen kommen aus der Datenbank. */
   const zubehoer = useLaden();
@@ -1122,7 +1116,6 @@ export default function Home() {
           onKampagnen={() => setKampagnenOffen(true)}
           onSagas={() => setSagenOffen(true)}
           onArcs={() => setArcsOffen(true)}
-          onPursuit={() => setPursuitOffen(true)}
           onLaden={() => setLadenOffen(true)}
           yenImBeutel={geld.beutel.yen}
           // Der Laden zeigt sich erst nach dem ersten Honorar - oder wenn
@@ -1147,7 +1140,6 @@ export default function Home() {
           />
         )}
 
-        {pursuitOffen && <Pursuit onSchliessen={() => setPursuitOffen(false)} />}
 
         {arcsOffen && (
           <ArcsListe
@@ -1367,9 +1359,11 @@ export default function Home() {
       )}
 
       <div className={tab === "ort" ? "buehne" : "scroll"}>
-        {tab === "ort" && (
-          laufendesDreiDKapitel ? (
+        {laufendesDreiDKapitel && (
+          <div style={{ display: tab === "ort" ? "contents" : "none" }}>
             <Saga3DKapitel
+              key={stand.fall.id}
+              pausiert={tab !== "ort" || Boolean(chatMit || spiel.gespraechsFund || beschuldigenOffen)}
               fall={stand.fall}
               siegel={stand.siegel ?? ""}
               locations={laufendesDreiDKapitel.locations}
@@ -1388,10 +1382,16 @@ export default function Home() {
                 if (ortId) spiel.gehZuOrt(ortId);
                 setChatMit(id);
               }}
-              onSpur={(ortId, itemId) => spiel.umsehen(undefined, ortId, itemId)}
+              onSpur={(ortId, itemId) => {
+                const wirkung = spuersinn ? "spuersinn" : undefined;
+                if (spuersinn) setSpuersinn(false);
+                return spiel.umsehen(wirkung, ortId, itemId);
+              }}
               onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
             />
-          ) : (
+          </div>
+        )}
+        {tab === "ort" && !laufendesDreiDKapitel && (
             <OrtScreen
               fall={stand.fall}
               ortId={stand.ortId}
@@ -1412,7 +1412,6 @@ export default function Home() {
               kapitel={laufendesKapitel}
               onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
             />
-          )
         )}
 
         {tab === "verdaechtige" && (

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "rea
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { kapitelPosition } from "@/lib/saga3dLayout";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
@@ -15,12 +17,24 @@ import type { Fund } from "@/lib/useGame";
 import { FundMoment } from "./FundMoment";
 
 type Richtung = { x: number; z: number };
+const LEERE_SPUREN: SpurVorschau[] = [];
 type SpurVorschau = { itemId: string; ortId: string; name: string; bild: string | null };
 type Naehe =
   | { art: "tier"; id: string; name: string }
   | { art: "spur"; id: string; ortId: string; name: string };
 
 const normal = (wert: string) => wert.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
+
+function Steuerkreuz({ setzen }: { setzen: (x: number, z: number) => void }) {
+  return <div className="experiment-steuerkreuz" aria-label="Wimpy steuern">
+    {([["▲", 0, -1], ["◀", -1, 0], ["▶", 1, 0], ["▼", 0, 1]] as const).map(([zeichen, x, z]) => (
+      <button key={zeichen}
+        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setzen(x, z); }}
+        onPointerUp={() => setzen(0, 0)} onPointerCancel={() => setzen(0, 0)}
+        onLostPointerCapture={() => setzen(0, 0)}>{zeichen}</button>
+    ))}
+  </div>;
+}
 
 function modellFuer(charakter: Character, index: number, modellId?: string): AnimationsModell | undefined {
   const schluessel = [charakter.id, charakter.name, charakter.tierart].map(normal);
@@ -34,7 +48,7 @@ function modellFuer(charakter: Character, index: number, modellId?: string): Ani
 
 function gradientTextur() {
   const textur = new THREE.DataTexture(
-    new Uint8Array([35, 35, 35, 145, 145, 145, 255, 255, 255]),
+    new Uint8Array([65, 155, 255]),
     3,
     1,
     THREE.RedFormat,
@@ -42,6 +56,21 @@ function gradientTextur() {
   textur.needsUpdate = true;
   textur.magFilter = THREE.NearestFilter;
   textur.minFilter = THREE.NearestFilter;
+  return textur;
+}
+
+function sandTextur() {
+  const pixel = new Uint8Array(64 * 64 * 4);
+  for (let i = 0; i < 64 * 64; i++) {
+    const rauschen = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+    const helligkeit = 224 + Math.floor((rauschen - Math.floor(rauschen)) * 31);
+    pixel.set([helligkeit, helligkeit, helligkeit, 255], i * 4);
+  }
+  const textur = new THREE.DataTexture(pixel, 64, 64, THREE.RGBAFormat);
+  textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
+  textur.repeat.set(5, 50);
+  textur.magFilter = THREE.LinearFilter;
+  textur.needsUpdate = true;
   return textur;
 }
 
@@ -54,6 +83,8 @@ function cellShading(
     if (!(kind instanceof THREE.Mesh)) return;
     kind.castShadow = true;
     kind.receiveShadow = true;
+    // Animierte Meshy-Skelette überschreiten ihre Bounding-Sphere der Ruhepose.
+    if (kind instanceof THREE.SkinnedMesh) kind.frustumCulled = false;
     const mehrfach = Array.isArray(kind.material);
     const materialien: THREE.Material[] = mehrfach ? kind.material : [kind.material];
     const toon = materialien.map((material: THREE.Material) => {
@@ -127,6 +158,7 @@ function KapitelCanvas({
   locationDrehungen,
   onNaehe,
   onBereit,
+  pausiert = false,
 }: {
   steuerung: MutableRefObject<Richtung>;
   fall: PublicCase;
@@ -140,16 +172,40 @@ function KapitelCanvas({
   locationDrehungen: Record<string, number>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
+  pausiert?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const callbacks = useRef({ onNaehe, onBereit, gefunden: new Set(gefundeneSpuren) });
-  callbacks.current = { onNaehe, onBereit, gefunden: new Set(gefundeneSpuren) };
+  const callbacks = useRef({ onNaehe, onBereit, pausiert, gefunden: new Set(gefundeneSpuren) });
+  callbacks.current = { onNaehe, onBereit, pausiert, gefunden: new Set(gefundeneSpuren) };
+  const [ladeFehler, setLadeFehler] = useState("");
+  const [versuch, setVersuch] = useState(0);
+  const position = useRef(new THREE.Vector3());
+  // Wertgleiche Props (insbesondere [] in der Probe) dürfen keine Szene neu laden.
+  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, locationDrehungen });
+  const bauplan = useMemo(() => JSON.parse(bauplanText) as {
+    besetzung: Character[]; locations: string[]; spuren: SpurVorschau[];
+    charakterModelle: Record<string, string>; locationDrehungen: Record<string, number>;
+  }, [bauplanText]);
 
   useEffect(() => {
     const element = host.current;
     if (!element) return;
     let beendet = false;
     let frame = 0;
+    setLadeFehler("");
+    callbacks.current.onNaehe(null);
+    const { besetzung, locations, spuren, charakterModelle, locationDrehungen } = bauplan;
+    const ressourcen = new Set<{ dispose: () => void }>();
+    const registrieren = (objekt: THREE.Object3D) => objekt.traverse((kind) => {
+      if (!(kind instanceof THREE.Mesh)) return;
+      ressourcen.add(kind.geometry);
+      for (const material of Array.isArray(kind.material) ? kind.material : [kind.material]) {
+        ressourcen.add(material);
+        for (const wert of Object.values(material)) if (wert instanceof THREE.Texture) ressourcen.add(wert);
+      }
+      if (kind instanceof THREE.SkinnedMesh) ressourcen.add(kind.skeleton);
+    });
+    const freigeben = () => { ressourcen.forEach((r) => r.dispose()); ressourcen.clear(); };
     const scene = new THREE.Scene();
     const himmel = {
       morgen: 0xf3a979,
@@ -167,12 +223,21 @@ function KapitelCanvas({
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     } catch {
+      setLadeFehler("3D konnte nicht gestartet werden. Bitte erneut versuchen.");
       return;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
     element.appendChild(renderer.domElement);
+    const kontextVerloren = (event: Event) => {
+      event.preventDefault();
+      cancelAnimationFrame(frame);
+      setLadeFehler("Die Grafik wurde unterbrochen. Hier die Welt an gleicher Stelle wieder öffnen.");
+    };
+    renderer.domElement.addEventListener("webglcontextlost", kontextVerloren);
 
     const oben = tageszeit === "nacht" ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
     scene.add(new THREE.HemisphereLight(oben, tageszeit === "nacht" ? 0x160d2e : 0x455348, tageszeit === "nacht" ? 2.15 : 2.8));
@@ -182,6 +247,7 @@ function KapitelCanvas({
     );
     licht.position.set(-8, 14, 9);
     licht.castShadow = true;
+    licht.shadow.mapSize.set(1024, 1024);
     scene.add(licht);
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(40, 90),
@@ -192,6 +258,7 @@ function KapitelCanvas({
     boden.receiveShadow = true;
     scene.add(boden);
     const fahrbahnMaterial = new THREE.MeshToonMaterial({
+      map: strassentyp === "sand" ? sandTextur() : null,
       color: strassentyp === "sand"
         ? wetter === "regen" ? 0x8c704b : tageszeit === "nacht" ? 0x66563f : 0xd3b477
         : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
@@ -241,6 +308,7 @@ function KapitelCanvas({
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const spieler = new THREE.Group();
+    spieler.position.copy(position.current);
     scene.add(spieler);
     const mixers: THREE.AnimationMixer[] = [];
     const npcGruppen: { gruppe: THREE.Group; info: Naehe; basisZ: number; phase: number }[] = [];
@@ -251,22 +319,38 @@ function KapitelCanvas({
     let aktiveAktion: THREE.AnimationAction | null = null;
     let letzteNaehe = "";
 
+    const modelle = new Map<string, ReturnType<typeof loader.loadAsync>>();
+    const laden = (datei: string) => {
+      let ladung = modelle.get(datei);
+      if (!ladung) {
+        ladung = loader.loadAsync(datei).then((gltf) => {
+          registrieren(gltf.scene);
+          if (beendet) freigeben();
+          return gltf;
+        });
+        modelle.set(datei, ladung);
+      }
+      return ladung;
+    };
     const figurLaden = async (modell: AnimationsModell, hoehe: number) => {
-      const gltf = await loader.loadAsync(modell.datei);
-      const figur = gltf.scene;
+      const gltf = await laden(modell.datei);
+      if (beendet) throw new Error("Szene geschlossen");
+      const figur = cloneSkeleton(gltf.scene);
       cellShading(figur, gradient);
       einpassen(figur, hoehe);
+      registrieren(figur);
       return { figur, animationen: gltf.animations };
     };
 
     const aufbauen = async () => {
       const locationEintraege = locationsFuer3D(locations);
-      const kulissen = await Promise.allSettled(locationEintraege.map((ort) => loader.loadAsync(ort.datei)));
+      const kulissen = await Promise.allSettled(locationEintraege.map((ort) => laden(ort.datei)));
       if (beendet) return;
       const vorlagen = kulissen.flatMap((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
         cellShading(vorlage, gradient);
+        registrieren(vorlage);
         const ort = locationEintraege[index];
         const ausmass = kulisseEinpassen(vorlage, locationDrehungen[ort.id] ?? 0);
         return [{ vorlage, laenge: Math.max(5, ausmass.z) }];
@@ -297,7 +381,7 @@ function KapitelCanvas({
         aktiveAktion?.play();
       }
 
-      const tiere = fall.besetzung.filter((charakter) => !charakter.istDetektiv && !charakter.istDaemon);
+      const tiere = besetzung.filter((charakter) => !charakter.istDetektiv);
       const npcLadungen = await Promise.allSettled(
         tiere.map((charakter, index) => {
           const modell = modellFuer(charakter, index, charakterModelle[charakter.id]);
@@ -310,8 +394,8 @@ function KapitelCanvas({
         const charakter = tiere[index];
         const gruppe = new THREE.Group();
         gruppe.add(ergebnis.value.figur);
-        const z = index * -7.4 + 5;
-        gruppe.position.set(index % 2 ? -3.1 : 3.2, 0, z);
+        const { x, z } = kapitelPosition(index, tiere.length, "tier");
+        gruppe.position.set(x, 0, z);
         scene.add(gruppe);
         npcGruppen.push({
           gruppe,
@@ -337,13 +421,16 @@ function KapitelCanvas({
           );
           rahmen.position.y = 0.72;
           gruppe.add(rahmen);
+          registrieren(gruppe);
           if (spur.bild) {
             try {
               const textur = await new THREE.TextureLoader().loadAsync(spur.bild);
+              if (beendet) { textur.dispose(); return; }
+              ressourcen.add(textur);
               textur.colorSpace = THREE.SRGBColorSpace;
               const bild = new THREE.Mesh(
                 new THREE.PlaneGeometry(1, 1),
-                new THREE.MeshBasicMaterial({ map: textur, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: textur, transparent: true, side: THREE.DoubleSide }),
               );
               bild.position.set(0, 0.72, 0.061);
               gruppe.add(bild);
@@ -351,8 +438,10 @@ function KapitelCanvas({
               // Der goldene Rahmen bleibt als klare, untersuchbare Requisite stehen.
             }
           }
-          gruppe.position.set(index % 2 ? 2.15 : -2.15, 0, index * -5.8 + 1.5);
-          gruppe.rotation.y = index % 2 ? -0.35 : 0.35;
+          if (beendet) return;
+          const { x, z } = kapitelPosition(index, spuren.length, "spur");
+          gruppe.position.set(x, 0, z);
+          gruppe.rotation.y = -0.6;
           scene.add(gruppe);
           spurGruppen.push({
             gruppe,
@@ -360,24 +449,42 @@ function KapitelCanvas({
           });
         }),
       );
-      if (!beendet) callbacks.current.onBereit();
+      if (!beendet) {
+        registrieren(scene);
+        if (kulissen.some((r) => r.status === "rejected") || npcLadungen.some((r) => r.status === "rejected")) {
+          setLadeFehler("Einige Straßen oder Figuren konnten nicht geladen werden. Welt erneut laden.");
+        }
+        callbacks.current.onBereit();
+      }
     };
-    void aufbauen();
+    void aufbauen().catch(() => {
+      if (!beendet) setLadeFehler("Die 3D-Welt konnte nicht vollständig geladen werden. Erneut versuchen.");
+    });
 
     const tasten = new Set<string>();
     const runter = (event: KeyboardEvent) => {
+      if (callbacks.current.pausiert || (event.target instanceof HTMLElement && event.target.closest("input,textarea,select,[contenteditable=true]"))) return;
       if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d"].includes(event.key.toLowerCase())) event.preventDefault();
       tasten.add(event.key.toLowerCase());
     };
     const hoch = (event: KeyboardEvent) => tasten.delete(event.key.toLowerCase());
     window.addEventListener("keydown", runter);
     window.addEventListener("keyup", hoch);
+    const stoppen = () => { tasten.clear(); steuerung.current = { x: 0, z: 0 }; };
+    window.addEventListener("blur", stoppen);
+    document.addEventListener("visibilitychange", stoppen);
 
     let letzter = performance.now();
     const zielKamera = new THREE.Vector3();
     const zeichnen = (jetzt: number) => {
       const dt = Math.min(0.035, Math.max(0.001, (jetzt - letzter) / 1000));
       letzter = jetzt;
+      if (!element.clientWidth || !element.clientHeight || document.hidden) {
+        stoppen();
+        frame = requestAnimationFrame(zeichnen);
+        return;
+      }
+      if (callbacks.current.pausiert) stoppen();
       const tx = (tasten.has("d") || tasten.has("arrowright") ? 1 : 0) - (tasten.has("a") || tasten.has("arrowleft") ? 1 : 0);
       const tz = (tasten.has("s") || tasten.has("arrowdown") ? 1 : 0) - (tasten.has("w") || tasten.has("arrowup") ? 1 : 0);
       const x = THREE.MathUtils.clamp(tx || steuerung.current.x, -1, 1);
@@ -404,6 +511,7 @@ function KapitelCanvas({
         aktiveAktion = gewuenscht;
       }
       spielerMixer?.update(dt);
+      position.current.copy(spieler.position);
       mixers.forEach((mixer) => mixer.update(dt));
       if (regen) {
         const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
@@ -438,7 +546,7 @@ function KapitelCanvas({
         callbacks.current.onNaehe(nahesZiel?.info ?? null);
       }
       zielKamera.set(spieler.position.x - 9.5, 5.1, spieler.position.z + 13.8);
-      camera.position.lerp(zielKamera, 0.08);
+      camera.position.lerp(zielKamera, 1 - Math.exp(-5 * dt));
       camera.lookAt(spieler.position.x, 1.05, spieler.position.z + 0.7);
       renderer.render(scene, camera);
       frame = requestAnimationFrame(zeichnen);
@@ -452,6 +560,8 @@ function KapitelCanvas({
       renderer.setSize(element.clientWidth, element.clientHeight);
     };
     groesse();
+    const beobachter = new ResizeObserver(groesse);
+    beobachter.observe(element);
     window.addEventListener("resize", groesse);
     return () => {
       beendet = true;
@@ -459,16 +569,29 @@ function KapitelCanvas({
       window.removeEventListener("keydown", runter);
       window.removeEventListener("keyup", hoch);
       window.removeEventListener("resize", groesse);
+      window.removeEventListener("blur", stoppen);
+      document.removeEventListener("visibilitychange", stoppen);
+      beobachter.disconnect();
+      stoppen();
+      mixers.forEach((mixer) => mixer.stopAllAction());
+      spielerMixer?.stopAllAction();
+      registrieren(scene);
+      freigeben();
       renderer.dispose();
+      renderer.domElement.removeEventListener("webglcontextlost", kontextVerloren);
       renderer.domElement.remove();
       gradient.dispose();
     };
-  }, [charakterModelle, fall, locationDrehungen, locations, spuren, strassentyp, steuerung, tageszeit, wetter]);
+  }, [bauplan, versuch, strassentyp, steuerung, tageszeit, wetter]);
 
-  return <div className="saga3d-canvas" ref={host} aria-label="Spielbares 3D-Kapitel" />;
+  return <>
+    <div className="saga3d-canvas" ref={host} aria-label="Spielbares 3D-Kapitel" />
+    {ladeFehler && <button className="saga3d-meldung" onClick={() => setVersuch((v) => v + 1)}>{ladeFehler}</button>}
+  </>;
 }
 
 export function Saga3DKapitel({
+  pausiert = false,
   fall,
   siegel,
   locations,
@@ -485,6 +608,7 @@ export function Saga3DKapitel({
   onSpur,
   onAufnehmen,
 }: {
+  pausiert?: boolean;
   fall: PublicCase;
   siegel: string;
   locations: string[];
@@ -507,8 +631,13 @@ export function Saga3DKapitel({
   const [spuren, setSpuren] = useState<SpurVorschau[]>([]);
   const [fund, setFund] = useState<Fund | null>(null);
   const [meldung, setMeldung] = useState("");
+  const [spurenGeladen, setSpurenGeladen] = useState(false);
+  const [spurenFehler, setSpurenFehler] = useState("");
+  const [spurenVersuch, setSpurenVersuch] = useState(0);
+  const untersucht = useRef(false);
   useEffect(() => {
     let aktiv = true;
+    setSpurenFehler("");
     void postJson<{ spuren: SpurVorschau[] }>("/api/search", {
       siegel,
       ortId: fall.orte[0]?.id ?? "",
@@ -516,10 +645,13 @@ export function Saga3DKapitel({
       vorschau: true,
     })
       .then((antwort) => {
-        if (aktiv) setSpuren(antwort.spuren ?? []);
+        if (aktiv) {
+          setSpuren(antwort.spuren ?? []);
+          setSpurenGeladen(true);
+        }
       })
       .catch(() => {
-        if (aktiv) setSpuren([]);
+        if (aktiv) setSpurenFehler("Die Beweise konnten nicht geladen werden. Hier erneut versuchen.");
       });
     return () => {
       aktiv = false;
@@ -527,7 +659,7 @@ export function Saga3DKapitel({
     // Für denselben versiegelten Fall bleibt die Vorschau stehen; gefundene
     // Requisiten blendet die laufende Szene ohne teures Neuladen selbst aus.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siegel]);
+  }, [siegel, spurenVersuch]);
 
   const setzen = (x: number, z: number) => {
     steuerung.current = { x, z };
@@ -535,20 +667,29 @@ export function Saga3DKapitel({
   const stoppen = () => setzen(0, 0);
 
   const interagieren = async () => {
-    if (!nah) return;
+    if (!nah || untersucht.current || suchtGerade) return;
+    stoppen();
     if (nah.art === "tier") {
       onCharakter(nah.id);
       return;
     }
     setMeldung("");
-    const ergebnis = await onSpur(nah.ortId, nah.id);
-    if (ergebnis?.spur) setFund(ergebnis);
-    else if (ergebnis?.text) setMeldung(ergebnis.text);
+    untersucht.current = true;
+    try {
+      const ergebnis = await onSpur(nah.ortId, nah.id);
+      if (ergebnis?.spur) setFund(ergebnis);
+      else setMeldung(ergebnis?.text ?? "Der Beweis konnte nicht untersucht werden. Bitte erneut versuchen.");
+    } catch {
+      setMeldung("Die Verbindung ist abgebrochen. Der Beweis kann erneut untersucht werden.");
+    } finally {
+      untersucht.current = false;
+    }
   };
 
   return (
     <div className="saga3d">
-      <KapitelCanvas
+      {spurenGeladen && <KapitelCanvas
+        pausiert={pausiert || Boolean(fund) || suchtGerade}
         steuerung={steuerung}
         fall={fall}
         locations={locations}
@@ -561,18 +702,16 @@ export function Saga3DKapitel({
         gefundeneSpuren={gefundeneSpuren}
         onNaehe={setNah}
         onBereit={() => setBereit(true)}
-      />
+      />}
+      {spurenFehler && <button className="saga3d-meldung" onClick={() => setSpurenVersuch((v) => v + 1)}>{spurenFehler}</button>}
       <div className="saga3d-hud">
         <span className="jagd-kicker">{kapitel === 0 ? "3D-FINALE" : `KAPITEL ${kapitel ?? ""} · 3D`}</span>
         <strong>{fall.stadt}</strong>
-        <small>{bereit ? "Finde Tiere und untersuche herumliegende Spuren." : "Die Stadt wird aufgebaut …"}</small>
+        <small>{bereit
+          ? `${spuren.filter((spur) => gefundeneSpuren.includes(spur.itemId)).length}/${spuren.length} Beweise untersucht · Sprich mit den Tieren.`
+          : "Die Stadt wird aufgebaut …"}</small>
       </div>
-      <div className="experiment-steuerkreuz" aria-label="Wimpy steuern">
-        <button onPointerDown={() => setzen(0, -1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▲</button>
-        <button onPointerDown={() => setzen(-1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>◀</button>
-        <button onPointerDown={() => setzen(1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>▶</button>
-        <button onPointerDown={() => setzen(0, 1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▼</button>
-      </div>
+      <Steuerkreuz setzen={setzen} />
       {nah && (
         <button className="experiment-ansprechen saga3d-interaktion" onClick={() => void interagieren()} disabled={suchtGerade}>
           <small>{nah.art === "tier" ? "IN DER NÄHE" : "SPUR ENTDECKT"}</small>
@@ -661,8 +800,6 @@ export function Saga3DProbeSzene({
   const setzen = (x: number, z: number) => {
     steuerung.current = { x, z };
   };
-  const stoppen = () => setzen(0, 0);
-
   return (
     <div className="jagd pursuit-spiel saga3d-probe">
       <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
@@ -675,7 +812,7 @@ export function Saga3DProbeSzene({
         strassentyp={strassentyp}
         charakterModelle={modellZuordnung}
         locationDrehungen={locationDrehungen}
-        spuren={[]}
+        spuren={LEERE_SPUREN}
         gefundeneSpuren={[]}
         onNaehe={setNah}
         onBereit={() => setBereit(true)}
@@ -686,12 +823,7 @@ export function Saga3DProbeSzene({
         <small>{bereit ? `${modellIds.length} Modelle in der Testwelt.` : "Straßen und Tiere werden geladen …"}</small>
       </header>
       <button className="pursuit-zurueck experiment-zurueck" onClick={onZurueck}>‹ Einstellungen</button>
-      <div className="experiment-steuerkreuz" aria-label="Wimpy steuern">
-        <button onPointerDown={() => setzen(0, -1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▲</button>
-        <button onPointerDown={() => setzen(-1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>◀</button>
-        <button onPointerDown={() => setzen(1, 0)} onPointerUp={stoppen} onPointerCancel={stoppen}>▶</button>
-        <button onPointerDown={() => setzen(0, 1)} onPointerUp={stoppen} onPointerCancel={stoppen}>▼</button>
-      </div>
+      <Steuerkreuz setzen={setzen} />
       {nah?.art === "tier" && (
         <button className="experiment-ansprechen" onClick={() => setMeldung(`${nah.name} ist da, animiert und ansprechbar.`)}>
           <small>MODELL IN DER NÄHE</small>
