@@ -4,9 +4,11 @@ import { useState } from "react";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
 import {
   DREI_D_LOCATIONS,
+  DREI_D_STRASSENTYPEN,
   DREI_D_TAGESZEITEN,
   DREI_D_WETTER,
   type DreiDTageszeit,
+  type DreiDStrassentyp,
   type DreiDWetter,
 } from "@/lib/pursuit3d";
 import { Saga3DProbeSzene } from "./Saga3DKapitel";
@@ -22,6 +24,7 @@ export function PursuitProbeWelt({
   const [locations, setLocations] = useState<string[]>(DREI_D_LOCATIONS.map((ort) => ort.id));
   const [tageszeit, setTageszeit] = useState<DreiDTageszeit>("tag");
   const [wetter, setWetter] = useState<DreiDWetter>("sonne");
+  const [strassentyp, setStrassentyp] = useState<DreiDStrassentyp>("asphalt");
   const [modelle, setModelle] = useState<string[]>(
     ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => modell.id),
   );
@@ -33,6 +36,7 @@ export function PursuitProbeWelt({
         locations={locations}
         tageszeit={tageszeit}
         wetter={wetter}
+        strassentyp={strassentyp}
         modellIds={["wimpy", ...modelle]}
         locationDrehungen={drehungen}
         onZurueck={() => setSpielt(false)}
@@ -91,6 +95,15 @@ export function PursuitProbeWelt({
           {DREI_D_TAGESZEITEN.map((zeit) => (
             <button key={zeit.id} className="marke-knopf" data-aktiv={tageszeit === zeit.id} onClick={() => setTageszeit(zeit.id)}>
               {zeit.name}
+            </button>
+          ))}
+        </div>
+
+        <h3>Straße</h3>
+        <div className="marken-reihe probe-auswahl">
+          {DREI_D_STRASSENTYPEN.map((typ) => (
+            <button key={typ.id} className="marke-knopf" data-aktiv={strassentyp === typ.id} onClick={() => setStrassentyp(typ.id)}>
+              {typ.name}
             </button>
           ))}
         </div>

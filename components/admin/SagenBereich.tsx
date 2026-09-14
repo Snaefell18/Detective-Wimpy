@@ -30,6 +30,7 @@ import type { CaseFile, PublicCase } from "@/lib/types";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
 import {
   DREI_D_LOCATIONS,
+  DREI_D_STRASSENTYPEN,
   DREI_D_TAGESZEITEN,
   DREI_D_WETTER,
   STANDARD_KAPITEL_3D,
@@ -1000,6 +1001,27 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                               </button>
                             ) : null;
                           })}
+                        </div>
+                        <span className="leise klein">Straßentyp</span>
+                        <div className="marken-reihe">
+                          {DREI_D_STRASSENTYPEN.map((typ) => (
+                            <button
+                              key={typ.id}
+                              className="marke-knopf"
+                              data-aktiv={(saga.vorgaben.kapitel3d[i].strassentyp ?? "asphalt") === typ.id}
+                              onClick={() => {
+                                const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                kopie.vorgaben.kapitel3d[i] = {
+                                  ...STANDARD_KAPITEL_3D,
+                                  ...kopie.vorgaben.kapitel3d[i],
+                                  strassentyp: typ.id,
+                                };
+                                void sagaAendern(kopie);
+                              }}
+                            >
+                              {typ.name}
+                            </button>
+                          ))}
                         </div>
                         <span className="leise klein">Tageszeit</span>
                         <div className="marken-reihe">

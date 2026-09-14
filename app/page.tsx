@@ -1375,6 +1375,7 @@ export default function Home() {
               locations={laufendesDreiDKapitel.locations}
               tageszeit={laufendesDreiDKapitel.tageszeit ?? "tag"}
               wetter={laufendesDreiDKapitel.wetter ?? "klar"}
+              strassentyp={laufendesDreiDKapitel.strassentyp ?? "asphalt"}
               charakterModelle={laufendesDreiDKapitel.charakterModelle ?? LEERE_DREI_D_MODELLE}
               locationDrehungen={laufendesDreiDKapitel.locationDrehungen ?? LEERE_DREI_D_DREHUNGEN}
               gefundeneSpuren={stand.gefundeneSpuren}

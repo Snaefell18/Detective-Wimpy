@@ -11,6 +11,7 @@ export type Kapitel3DVorgabe = {
   locations: string[];
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
+  strassentyp: DreiDStrassentyp;
   /** Charakter-Id -> Modell-Id; leer bedeutet automatische Namenszuordnung. */
   charakterModelle: Record<string, string>;
   /** Zusätzliche Drehung je Straßenbaustein in Grad (0/90/180/270). */
@@ -19,6 +20,7 @@ export type Kapitel3DVorgabe = {
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
 export type DreiDWetter = "klar" | "sonne" | "regen";
+export type DreiDStrassentyp = "asphalt" | "sand";
 
 export const DREI_D_TAGESZEITEN: { id: DreiDTageszeit; name: string }[] = [
   { id: "morgen", name: "Morgen" },
@@ -33,11 +35,17 @@ export const DREI_D_WETTER: { id: DreiDWetter; name: string }[] = [
   { id: "regen", name: "Regen" },
 ];
 
+export const DREI_D_STRASSENTYPEN: { id: DreiDStrassentyp; name: string }[] = [
+  { id: "asphalt", name: "Asphalt" },
+  { id: "sand", name: "Sand" },
+];
+
 export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   aktiv: false,
   locations: DREI_D_LOCATIONS.map((ort) => ort.id),
   tageszeit: "tag",
   wetter: "klar",
+  strassentyp: "asphalt",
   charakterModelle: {},
   locationDrehungen: {},
 };

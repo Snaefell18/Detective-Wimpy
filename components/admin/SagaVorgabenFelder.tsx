@@ -27,6 +27,7 @@ import { VideoFeld } from "./VideoFeld";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
 import {
   DREI_D_LOCATIONS,
+  DREI_D_STRASSENTYPEN,
   DREI_D_TAGESZEITEN,
   DREI_D_WETTER,
   STANDARD_KAPITEL_3D,
@@ -737,6 +738,19 @@ export function SagaVorgabenFelder({
                         </button>
                       ) : null;
                     })}
+                  </div>
+                  <span className="leise klein">Straßentyp</span>
+                  <div className="marken-reihe">
+                    {DREI_D_STRASSENTYPEN.map((typ) => (
+                      <button
+                        key={typ.id}
+                        className="marke-knopf"
+                        data-aktiv={(vorgaben.kapitel3d?.[i]?.strassentyp ?? "asphalt") === typ.id}
+                        onClick={() => dreiDSetzen(i, { strassentyp: typ.id })}
+                      >
+                        {typ.name}
+                      </button>
+                    ))}
                   </div>
                   <span className="leise klein">Tageszeit</span>
                   <div className="marken-reihe">

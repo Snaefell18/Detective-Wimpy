@@ -9,7 +9,7 @@ import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
 import { locationsFuer3D } from "@/lib/pursuit3d";
-import type { DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
+import type { DreiDStrassentyp, DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
 import { FundMoment } from "./FundMoment";
@@ -86,13 +86,13 @@ function einpassen(objekt: THREE.Object3D, hoehe: number) {
   objekt.position.set(-mitte.x, -neu.min.y, -mitte.z);
 }
 
-const STRASSENRAND_X = 5.02;
+const STRASSENRAND_X = 4.6;
 
 /**
  * Macht aus beliebig exportierten Meshy-Szenen einen Straßenrand-Baustein.
  * Niedrige, breite Szenen werden nicht mehr anhand ihrer geringen Höhe riesig
  * aufgeblasen. Nach der Drehung liegt ihre komplette Bounding-Box rechts der
- * Bordsteinkante und ist in Laufrichtung zentriert.
+ * Fahrbahnkante und ist in Laufrichtung zentriert.
  */
 function kulisseEinpassen(objekt: THREE.Object3D, zusaetzlicheDrehung: number) {
   objekt.updateMatrixWorld(true);
@@ -122,6 +122,7 @@ function KapitelCanvas({
   gefundeneSpuren,
   tageszeit,
   wetter,
+  strassentyp,
   charakterModelle,
   locationDrehungen,
   onNaehe,
@@ -134,6 +135,7 @@ function KapitelCanvas({
   gefundeneSpuren: string[];
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
+  strassentyp: DreiDStrassentyp;
   charakterModelle: Record<string, string>;
   locationDrehungen: Record<string, number>;
   onNaehe: (wert: Naehe | null) => void;
@@ -189,24 +191,20 @@ function KapitelCanvas({
     boden.position.z = -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    const fahrbahnMaterial = new THREE.MeshToonMaterial({
+      color: strassentyp === "sand"
+        ? wetter === "regen" ? 0x8c704b : tageszeit === "nacht" ? 0x66563f : 0xd3b477
+        : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
+      gradientMap: gradient,
+    });
     const fahrbahn = new THREE.Mesh(
       new THREE.PlaneGeometry(9.2, 90),
-      new THREE.MeshToonMaterial({
-        color: wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
-        gradientMap: gradient,
-      }),
+      fahrbahnMaterial,
     );
     fahrbahn.rotation.x = -Math.PI / 2;
     fahrbahn.position.set(0, 0.012, -8);
     fahrbahn.receiveShadow = true;
     scene.add(fahrbahn);
-    const bordstein = new THREE.Mesh(
-      new THREE.BoxGeometry(0.34, 0.22, 90),
-      new THREE.MeshToonMaterial({ color: 0xc5c7c3, gradientMap: gradient }),
-    );
-    bordstein.position.set(4.72, 0.1, -8);
-    bordstein.receiveShadow = true;
-    scene.add(bordstein);
     let regen: THREE.Points | null = null;
     if (wetter === "regen") {
       const positionen = new Float32Array(900 * 3);
@@ -231,7 +229,7 @@ function KapitelCanvas({
       sonne.position.set(-17, 18, -35);
       scene.add(sonne);
     }
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; strassentyp === "asphalt" && i < 18; i++) {
       const strich = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.025, 1.7),
         new THREE.MeshBasicMaterial({ color: 0x74eaff }),
@@ -465,7 +463,7 @@ function KapitelCanvas({
       renderer.domElement.remove();
       gradient.dispose();
     };
-  }, [charakterModelle, fall, locationDrehungen, locations, spuren, steuerung, tageszeit, wetter]);
+  }, [charakterModelle, fall, locationDrehungen, locations, spuren, strassentyp, steuerung, tageszeit, wetter]);
 
   return <div className="saga3d-canvas" ref={host} aria-label="Spielbares 3D-Kapitel" />;
 }
@@ -476,6 +474,7 @@ export function Saga3DKapitel({
   locations,
   tageszeit,
   wetter,
+  strassentyp,
   charakterModelle,
   locationDrehungen,
   gefundeneSpuren,
@@ -491,6 +490,7 @@ export function Saga3DKapitel({
   locations: string[];
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
+  strassentyp: DreiDStrassentyp;
   charakterModelle: Record<string, string>;
   locationDrehungen: Record<string, number>;
   gefundeneSpuren: string[];
@@ -554,6 +554,7 @@ export function Saga3DKapitel({
         locations={locations}
         tageszeit={tageszeit}
         wetter={wetter}
+        strassentyp={strassentyp}
         charakterModelle={charakterModelle}
         locationDrehungen={locationDrehungen}
         spuren={spuren}
@@ -597,6 +598,7 @@ export function Saga3DProbeSzene({
   locations,
   tageszeit,
   wetter,
+  strassentyp,
   modellIds,
   locationDrehungen,
   onZurueck,
@@ -605,6 +607,7 @@ export function Saga3DProbeSzene({
   locations: string[];
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
+  strassentyp: DreiDStrassentyp;
   modellIds: string[];
   locationDrehungen: Record<string, number>;
   onZurueck: () => void;
@@ -669,6 +672,7 @@ export function Saga3DProbeSzene({
         locations={locations}
         tageszeit={tageszeit}
         wetter={wetter}
+        strassentyp={strassentyp}
         charakterModelle={modellZuordnung}
         locationDrehungen={locationDrehungen}
         spuren={[]}
@@ -678,7 +682,7 @@ export function Saga3DProbeSzene({
       />
       <header className="experiment-hud">
         <span className="jagd-kicker">MODUS IV · 3D-WELT-PROBE</span>
-        <strong>{tageszeit.toUpperCase()} · {wetter === "sonne" ? "SONNENSCHEIN" : wetter.toUpperCase()}</strong>
+        <strong>{tageszeit.toUpperCase()} · {wetter === "sonne" ? "SONNENSCHEIN" : wetter.toUpperCase()} · {strassentyp.toUpperCase()}</strong>
         <small>{bereit ? `${modellIds.length} Modelle in der Testwelt.` : "Straßen und Tiere werden geladen …"}</small>
       </header>
       <button className="pursuit-zurueck experiment-zurueck" onClick={onZurueck}>‹ Einstellungen</button>

@@ -407,6 +407,7 @@ export const SagaVorgabenSchema = z.object({
         locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(24).default([]),
         tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("tag"),
         wetter: z.enum(["klar", "sonne", "regen"]).default("klar"),
+        strassentyp: z.enum(["asphalt", "sand"]).default("asphalt"),
         charakterModelle: z
           .record(
             z.string().max(40),
