@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { anmelden, getDb } from "./firebase";
 import type { Saga } from "./sagaTypen";
+import { bereinigteSaga3D } from "./saga3dSync";
 import type { Arc } from "./arcTypen";
 import type { Zubehoer } from "./zubehoer";
 import type { Character, Item, Kampagne, Location } from "./types";
@@ -169,7 +170,7 @@ export function beobachteSaga3D(id: string, empfangen: (kapitel: Saga["vorgaben"
   return onSnapshot(doc(getDb(), "sagen", id), { includeMetadataChanges: true }, (snapshot) => {
     if (!snapshot.exists() || snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) return;
     const saga = snapshot.data() as Saga;
-    empfangen(saga.vorgaben?.kapitel3d ?? []);
+    empfangen(bereinigteSaga3D(saga));
   }, () => {
     // Ohne Verbindung bleibt die gespeicherte Saga spielbar.
   });
@@ -181,6 +182,7 @@ export async function speichereSaga(saga: Saga): Promise<void> {
     doc(getDb(), "sagen", saga.id),
     sauber({
       ...saga,
+      vorgaben: { ...saga.vorgaben, kapitel3d: bereinigteSaga3D(saga) },
       name: kuerze(saga.name, 120),
       thema: kuerze(saga.thema, 2000),
       klappentext: kuerze(saga.klappentext, 2000),

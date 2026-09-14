@@ -14,6 +14,7 @@ import {
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
 import { useStammdaten } from "@/lib/stammdaten";
+import { sichere3DTiere } from "@/lib/saga3dSync";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import type { VersammlungVorgabe } from "@/lib/versammlung";
@@ -779,8 +780,9 @@ export function SagaVorgabenFelder({
                     ))}
                   </div>
                   <span className="leise klein">3D-Modelle der Tiere</span>
+                  <span className="leise klein">Nur fest eingeplante Kapiteltiere. Bei einem noch unbekannten Twist-Drahtzieher erfolgt die Modellwahl nach der Generierung.</span>
                   <div className="probe-charakter-zuordnung">
-                    {mitspieler.map((charakter) => (
+                    {sichere3DTiere(vorgaben, stammdaten.charaktere, i).map((charakter) => (
                       <label className="feld" key={charakter.id}>
                         <span className="leise klein">{charakter.name}</span>
                         <select
@@ -799,6 +801,17 @@ export function SagaVorgabenFelder({
                             <option key={modell.id} value={modell.id}>{modell.name}</option>
                           ))}
                         </select>
+                        <span className="leise klein">Größe · 1 = normal</span>
+                        <input type="number" min="0.5" max="2.5" step="0.1"
+                          aria-label={`Größe von ${charakter.name}`}
+                          value={vorgaben.kapitel3d?.[i]?.charakterGroessen?.[charakter.id] ?? 1}
+                          onChange={(e) => {
+                            const wert = e.target.valueAsNumber;
+                            if (Number.isFinite(wert)) dreiDSetzen(i, { charakterGroessen: {
+                              ...(vorgaben.kapitel3d?.[i]?.charakterGroessen ?? {}),
+                              [charakter.id]: Math.min(2.5, Math.max(0.5, wert)),
+                            } });
+                          }} />
                       </label>
                     ))}
                   </div>

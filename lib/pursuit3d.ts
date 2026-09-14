@@ -14,6 +14,8 @@ export type Kapitel3DVorgabe = {
   strassentyp: DreiDStrassentyp;
   /** Charakter-Id -> Modell-Id; leer bedeutet automatische Namenszuordnung. */
   charakterModelle: Record<string, string>;
+  /** Größenfaktor pro Charakter: 1 entspricht der Standardgröße. */
+  charakterGroessen: Record<string, number>;
   /** Zusätzliche Drehung je Straßenbaustein in Grad (0/90/180/270). */
   locationDrehungen: Record<string, number>;
 };
@@ -47,6 +49,7 @@ export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   wetter: "klar",
   strassentyp: "asphalt",
   charakterModelle: {},
+  charakterGroessen: {},
   locationDrehungen: {},
 };
 

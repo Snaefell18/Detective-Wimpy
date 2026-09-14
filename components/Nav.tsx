@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 export type Tab = "ort" | "verdaechtige" | "inventar" | "notizbuch";
 
 const TABS: { id: Tab; symbol: string; label: string }[] = [
@@ -15,6 +17,7 @@ export function Nav({
   onWechsel,
   spurenAnzahl,
   spurenMax,
+  onBeschuldigen,
 }: {
   aktiv: Tab;
   onWechsel: (tab: Tab) => void;
@@ -22,6 +25,7 @@ export function Nav({
   spurenAnzahl: number;
   /** Wie viele hineinpassen - dann steht am Reiter "3/6". */
   spurenMax?: number;
+  onBeschuldigen?: () => void;
 }) {
   return (
     <nav className="nav">
@@ -43,6 +47,9 @@ export function Nav({
           </span>
         </button>
       ))}
+      {onBeschuldigen && <button onClick={onBeschuldigen} aria-label="Beschuldigen">
+        <span className="symbol">⚖</span><span className="nav-text">Anklagen</span>
+      </button>}
     </nav>
   );
 }

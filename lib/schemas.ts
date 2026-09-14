@@ -408,6 +408,7 @@ export const SagaVorgabenSchema = z.object({
         tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("tag"),
         wetter: z.enum(["klar", "sonne", "regen"]).default("klar"),
         strassentyp: z.enum(["asphalt", "sand"]).default("asphalt"),
+        charakterGroessen: z.record(z.string().max(80), z.number().min(0.5).max(2.5)).default({}),
         charakterModelle: z
           .record(
             z.string().max(40),

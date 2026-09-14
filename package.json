@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:3d": "npx tsx tests/saga3d.test.mjs",
+    "test:3d": "npx tsx tests/saga3d.test.mjs && npx tsx tests/saga3dGenerierung.test.mjs",
     "audio:liste": "node scripts/audio-liste.mjs",
     "bilder:liste": "node scripts/bilder-liste.mjs",
     "animations:liste": "node scripts/animations-liste.mjs",

@@ -40,11 +40,11 @@ import { postJson } from "@/lib/api";
 import { arcAbspann, type Arc } from "@/lib/arcTypen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
+import { dreiDFuerSagaFall } from "@/lib/saga3dSync";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
   besessen,
-  dreiDFuerKapitel,
   geschenkFuerKapitel,
   musikFuerKapitel,
   neueGesichter,
@@ -355,15 +355,8 @@ export default function Home() {
         )
       : admin.einstellungen.musik;
 
-  const laufendesDreiDKapitel =
-    sagaFallLaeuft && saga.stand
-      ? dreiDFuerKapitel(
-          saga.stand.saga.vorgaben,
-          saga.stand.lauf.phase === "finale"
-            ? saga.stand.saga.vorgaben.kapitelAnzahl
-            : saga.stand.lauf.kapitel,
-        )
-      : null;
+  const laufendesDreiDKapitel = saga.stand && stand.fall
+    ? dreiDFuerSagaFall(saga.stand.saga, stand.fall.id) : null;
 
   /**
    * Das Geschenk nach einem gelösten Kapitel.
@@ -1371,6 +1364,7 @@ export default function Home() {
               wetter={laufendesDreiDKapitel.wetter ?? "klar"}
               strassentyp={laufendesDreiDKapitel.strassentyp ?? "asphalt"}
               charakterModelle={laufendesDreiDKapitel.charakterModelle ?? LEERE_DREI_D_MODELLE}
+              charakterGroessen={laufendesDreiDKapitel.charakterGroessen ?? LEERE_DREI_D_DREHUNGEN}
               locationDrehungen={laufendesDreiDKapitel.locationDrehungen ?? LEERE_DREI_D_DREHUNGEN}
               gefundeneSpuren={stand.gefundeneSpuren}
               kapitel={laufendesKapitel}
@@ -1454,6 +1448,7 @@ export default function Home() {
       )}
 
       <Nav
+        onBeschuldigen={laufendesDreiDKapitel ? () => { setFehler(null); setBeschuldigenOffen(true); } : undefined}
         aktiv={tab}
         onWechsel={setTab}
         spurenAnzahl={tasche.inhalt.length}

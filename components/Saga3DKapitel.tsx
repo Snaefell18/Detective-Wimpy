@@ -18,6 +18,7 @@ import { FundMoment } from "./FundMoment";
 
 type Richtung = { x: number; z: number };
 const LEERE_SPUREN: SpurVorschau[] = [];
+const STANDARD_GROESSEN: Record<string, number> = {};
 type SpurVorschau = { itemId: string; ortId: string; name: string; bild: string | null };
 type Naehe =
   | { art: "tier"; id: string; name: string }
@@ -188,6 +189,7 @@ function KapitelCanvas({
   wetter,
   strassentyp,
   charakterModelle,
+  charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   onNaehe,
   onBereit,
@@ -202,6 +204,7 @@ function KapitelCanvas({
   wetter: DreiDWetter;
   strassentyp: DreiDStrassentyp;
   charakterModelle: Record<string, string>;
+  charakterGroessen?: Record<string, number>;
   locationDrehungen: Record<string, number>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
@@ -214,10 +217,11 @@ function KapitelCanvas({
   const [versuch, setVersuch] = useState(0);
   const position = useRef(new THREE.Vector3());
   // Wertgleiche Props (insbesondere [] in der Probe) dürfen keine Szene neu laden.
-  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, locationDrehungen });
+  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen });
   const bauplan = useMemo(() => JSON.parse(bauplanText) as {
     besetzung: Character[]; locations: string[]; spuren: SpurVorschau[];
     charakterModelle: Record<string, string>; locationDrehungen: Record<string, number>;
+    charakterGroessen: Record<string, number>;
   }, [bauplanText]);
 
   useEffect(() => {
@@ -227,7 +231,11 @@ function KapitelCanvas({
     let frame = 0;
     setLadeFehler("");
     callbacks.current.onNaehe(null);
-    const { besetzung, locations, spuren, charakterModelle, locationDrehungen } = bauplan;
+    const { besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen } = bauplan;
+    const groessenFaktor = (id: string) => {
+      const wert = charakterGroessen[id];
+      return Number.isFinite(wert) ? THREE.MathUtils.clamp(wert, 0.5, 2.5) : 1;
+    };
     const ressourcen = new Set<{ dispose: () => void }>();
     const registrieren = (objekt: THREE.Object3D) => objekt.traverse((kind) => {
       if (!(kind instanceof THREE.Mesh)) return;
@@ -345,7 +353,7 @@ function KapitelCanvas({
     scene.add(spieler);
     const mixers: THREE.AnimationMixer[] = [];
     const npcGruppen: {
-      gruppe: THREE.Group; info: Naehe; basisZ: number; zielZ: number; pause: number;
+      gruppe: THREE.Group; info: Naehe; basisZ: number; zielZ: number; pause: number; radius: number;
       lauf?: THREE.AnimationAction; ruhe?: THREE.AnimationAction; aktiv?: THREE.AnimationAction;
     }[] = [];
     const spurGruppen: { gruppe: THREE.Group; info: Naehe }[] = [];
@@ -405,7 +413,7 @@ function KapitelCanvas({
 
       const wimpy = ANIMATIONS_MODELLE.find((modell) => modell.id === "wimpy");
       if (wimpy) {
-        const geladen = await figurLaden(wimpy, 2.05);
+        const geladen = await figurLaden(wimpy, 2.05 * groessenFaktor("wimpy"));
         if (beendet) return;
         spieler.add(geladen.figur);
         spielerMixer = new THREE.AnimationMixer(geladen.figur);
@@ -421,7 +429,7 @@ function KapitelCanvas({
       const npcLadungen = await Promise.allSettled(
         tiere.map((charakter, index) => {
           const modell = modellFuer(charakter, index, charakterModelle[charakter.id]);
-          return modell ? figurLaden(modell, 1.8) : Promise.reject(new Error("Kein Modell"));
+          return modell ? figurLaden(modell, 1.8 * groessenFaktor(charakter.id)) : Promise.reject(new Error("Kein Modell"));
         }),
       );
       if (beendet) return;
@@ -431,7 +439,8 @@ function KapitelCanvas({
         const gruppe = new THREE.Group();
         gruppe.add(ergebnis.value.figur);
         const { x, z } = kapitelPosition(index, tiere.length, "tier");
-        gruppe.position.set(x, 0, z);
+        const radius = 0.5 * groessenFaktor(charakter.id);
+        gruppe.position.set(Math.sign(x) * Math.min(Math.abs(x), 4.5 - radius), 0, z);
         scene.add(gruppe);
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
         const clips = ergebnis.value.animationen;
@@ -441,7 +450,7 @@ function KapitelCanvas({
         const lauf = laufClip ? mixer.clipAction(laufClip) : undefined;
         const ruhe = ruheClip ? mixer.clipAction(ruheClip) : undefined;
         npcGruppen.push({ gruppe, info: { art: "tier", id: charakter.id, name: charakter.name },
-          basisZ: z, zielZ: z + (index % 2 ? -1.5 : 1.5), pause: index % 3 * 0.6, lauf, ruhe });
+          basisZ: z, zielZ: z + (index % 2 ? -1.5 : 1.5), pause: index % 3 * 0.6, radius, lauf, ruhe });
         mixers.push(mixer);
       });
 
@@ -533,7 +542,7 @@ function KapitelCanvas({
         const kollidiert = npcGruppen.some((npc) => {
           const dx = npc.gruppe.position.x - neuX;
           const dz = npc.gruppe.position.z - neuZ;
-          return dx * dx + dz * dz < 1.15 * 1.15;
+          return dx * dx + dz * dz < (npc.radius + 0.65) ** 2;
         });
         if (!kollidiert) {
           spieler.position.set(neuX, 0, neuZ);
@@ -659,6 +668,7 @@ export function Saga3DKapitel({
   wetter,
   strassentyp,
   charakterModelle,
+  charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   gefundeneSpuren,
   kapitel,
@@ -676,6 +686,7 @@ export function Saga3DKapitel({
   wetter: DreiDWetter;
   strassentyp: DreiDStrassentyp;
   charakterModelle: Record<string, string>;
+  charakterGroessen?: Record<string, number>;
   locationDrehungen: Record<string, number>;
   gefundeneSpuren: string[];
   kapitel: number | null;
@@ -757,6 +768,7 @@ export function Saga3DKapitel({
         wetter={wetter}
         strassentyp={strassentyp}
         charakterModelle={charakterModelle}
+        charakterGroessen={charakterGroessen}
         locationDrehungen={locationDrehungen}
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}

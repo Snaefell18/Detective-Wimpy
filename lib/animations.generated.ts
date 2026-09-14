@@ -11,6 +11,22 @@ export type AnimationsModell = {
 
 export const ANIMATIONS_MODELLE: AnimationsModell[] = [
   {
+    "id": "affin",
+    "name": "Affin",
+    "datei": "/animations/affin.glb",
+    "animationen": [
+      "Running",
+      "Walking",
+      "restpose"
+    ]
+  },
+  {
+    "id": "bock",
+    "name": "Bock",
+    "datei": "/animations/bock.glb",
+    "animationen": []
+  },
+  {
     "id": "evilquana",
     "name": "Evilquana",
     "datei": "/animations/evilquana.glb",
@@ -19,9 +35,47 @@ export const ANIMATIONS_MODELLE: AnimationsModell[] = [
     ]
   },
   {
+    "id": "fauli",
+    "name": "Fauli",
+    "datei": "/animations/fauli.glb",
+    "animationen": [
+      "Running",
+      "Walking",
+      "restpose"
+    ]
+  },
+  {
     "id": "herr",
     "name": "Herr",
     "datei": "/animations/herr.glb",
+    "animationen": [
+      "Armature|Unreal Take|baselayer"
+    ]
+  },
+  {
+    "id": "jumpy",
+    "name": "Jumpy",
+    "datei": "/animations/jumpy.glb",
+    "animationen": [
+      "Running",
+      "Walking",
+      "Backflip_and_Rise",
+      "Big_Heart_Gesture",
+      "Breakdance_1990",
+      "Idle_4",
+      "Male_Head_Down_Charge",
+      "Mirror_Viewing",
+      "Wake_Up_and_Look_Up",
+      "golf_drive",
+      "push_up",
+      "sliding_rool",
+      "restpose"
+    ]
+  },
+  {
+    "id": "mikkeli",
+    "name": "Mikkeli",
+    "datei": "/animations/mikkeli.glb",
     "animationen": [
       "Armature|Unreal Take|baselayer"
     ]

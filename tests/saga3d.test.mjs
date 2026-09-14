@@ -1,11 +1,21 @@
 import { strict as assert } from "node:assert";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Nav } from "../components/Nav.tsx";
 import { kapitelPosition } from "../lib/saga3dLayout.ts";
 import { STANDARD_KAPITEL_3D } from "../lib/pursuit3d.ts";
 import { STANDARD_SAGA_VORGABEN, dreiDFuerKapitel } from "../lib/sagaTypen.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { POST } from "../app/api/search/route.ts";
 import { seal, unseal } from "../lib/seal.ts";
-import { aktualisiereSaga3D } from "../lib/saga3dSync.ts";
+import { aktualisiereSaga3D, dreiDFuerSagaFall, sichere3DTiere, kapitel3DMitBesetzung } from "../lib/saga3dSync.ts";
+
+const navigation = renderToStaticMarkup(React.createElement(Nav, {
+  aktiv: "ort", onWechsel: () => {}, spurenAnzahl: 1, spurenMax: 6, onBeschuldigen: () => {},
+}));
+for (const aktion of ["Orte", "Tiere", "Beweise", "Notizen", "Beschuldigen"]) {
+  assert.ok(navigation.includes(`aria-label="${aktion}"`), `${aktion} bleibt im 3D-Spiel erreichbar`);
+}
 
 for (const anzahl of [1, 7, 12, 24, 40]) {
   for (const art of ["tier", "spur"]) {
@@ -35,6 +45,22 @@ assert.equal(aktualisiereSaga3D(neu, "andere-saga", []), neu, "Verspätete Antwo
 assert.equal(dreiDFuerKapitel(aktualisiereSaga3D(neu, "saga-test", []).saga.vorgaben, 1), null, "3D lässt sich wieder abschalten");
 const nurZweiVomServer = SagaVorgabenSchema.parse(JSON.parse(JSON.stringify({ ...STANDARD_SAGA_VORGABEN, kapitel3d: nurZwei })));
 assert.equal(dreiDFuerKapitel(nurZweiVomServer, 1)?.aktiv, true, "Nur Kapitel zwei übersteht den Generierungsweg");
+const sagaMitFaellen = { ...neu.saga, kapitel: [
+  { nummer: 1, fall: { id: "fall-eins" } }, { nummer: 2, fall: { id: "fall-zwei" } },
+], finale: { fall: { id: "fall-finale" } } };
+assert.equal(dreiDFuerSagaFall(sagaMitFaellen, "fall-eins"), null);
+assert.equal(dreiDFuerSagaFall(sagaMitFaellen, "fall-zwei")?.aktiv, true, "Erster Start wird anhand des tatsächlichen Falls als 3D erkannt");
+assert.equal(dreiDFuerSagaFall(sagaMitFaellen, "fremder-fall"), null);
+const tiere = ["affin", "bock", "fauli", "yeti"].map(id => ({ id, istDetektiv: false }));
+const besetzungsVorgaben = { ...STANDARD_SAGA_VORGABEN, twist: false, abwesenheiten: { bock: [2] }, neuzugaenge: { yeti: 3 } };
+assert.deepEqual(sichere3DTiere(besetzungsVorgaben, tiere, 1).map(c => c.id), ["affin", "fauli"]);
+assert.deepEqual(sichere3DTiere({ ...besetzungsVorgaben, twist: true, drahtzieherId: "" }, tiere, 1), []);
+const groessen = { ...konfiguration, charakterModelle: { affin: "yeti", bock: "herr" }, charakterGroessen: { affin: 1.8, bock: 2 } };
+const bereinigt = kapitel3DMitBesetzung(groessen, [{ id: "affin" }]);
+assert.deepEqual(bereinigt.charakterModelle, { affin: "yeti" });
+assert.deepEqual(bereinigt.charakterGroessen, { affin: 1.8 });
+assert.equal(SagaVorgabenSchema.parse({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [bereinigt] }).kapitel3d[0].charakterGroessen.affin, 1.8);
+assert.equal(SagaVorgabenSchema.safeParse({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [{ ...konfiguration, charakterGroessen: { affin: 100 } }] }).success, false);
 assert.equal(SagaVorgabenSchema.parse({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [{ aktiv: true }] }).kapitel3d[0].strassentyp, "asphalt");
 
 const fall = {

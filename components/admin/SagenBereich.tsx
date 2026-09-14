@@ -1092,6 +1092,20 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                                   <option key={modell.id} value={modell.id}>{modell.name}</option>
                                 ))}
                               </select>
+                              <span className="leise klein">Größe · 1 = normal</span>
+                              <input type="number" min="0.5" max="2.5" step="0.1"
+                                aria-label={`Größe von ${charakter.name}`}
+                                value={saga.vorgaben.kapitel3d[i].charakterGroessen?.[charakter.id] ?? 1}
+                                onChange={(e) => {
+                                  const wert = e.target.valueAsNumber;
+                                  if (!Number.isFinite(wert)) return;
+                                  const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                  kopie.vorgaben.kapitel3d[i].charakterGroessen = {
+                                    ...(kopie.vorgaben.kapitel3d[i].charakterGroessen ?? {}),
+                                    [charakter.id]: Math.min(2.5, Math.max(0.5, wert)),
+                                  };
+                                  void sagaAendern(kopie);
+                                }} />
                             </label>
                           ))}
                         </div>

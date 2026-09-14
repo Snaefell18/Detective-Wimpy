@@ -18,6 +18,7 @@ import {
 } from "./sagaTypen";
 import type { Character, Einstellungen, Item, Location, PublicCase } from "./types";
 import { oeffentlicheVersammlungen } from "./versammlung";
+import { kapitel3DMitBesetzung } from "./saga3dSync";
 
 /**
  * Eine ganze Saga bauen - in lauter kleinen Aufrufen.
@@ -253,7 +254,7 @@ export async function erzeugeSaga(
     );
   };
 
-  const kapitel = [];
+  const kapitel: Saga["kapitel"] = [];
   for (const k of entwuerfe) {
     /*
      * Ein Fall, der beim letzten Anlauf schon gebaut wurde, wird nicht noch
@@ -315,6 +316,10 @@ export async function erzeugeSaga(
     // sie vollständig, dort kommt niemand heran.
     vorgaben: {
       ...eingaben.vorgaben,
+      kapitel3d: (eingaben.vorgaben.kapitel3d ?? []).map((konfiguration, index) => {
+        const fall = index === anzahl ? finale.fall : kapitel.find(k => k.nummer === index + 1)?.fall;
+        return fall ? kapitel3DMitBesetzung(konfiguration, fall.besetzung) : konfiguration;
+      }),
       drahtzieherId: "",
       kapitelTaeter: [],
       // Wer im Rat undercover sitzt, ist ebenso geheim wie der
