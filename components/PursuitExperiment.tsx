@@ -149,7 +149,8 @@ function ExperimentCanvas({
         return [vorlage];
       });
       for (let i = 0; i < 5 && vorlagen.length; i++) {
-        const block = vorlagen[i % vorlagen.length].clone(true);
+        const block = new THREE.Group();
+        block.add(vorlagen[i % vorlagen.length].clone(true));
         block.position.set(7.25, 0, i * 15.5 - 30);
         scene.add(block);
       }
