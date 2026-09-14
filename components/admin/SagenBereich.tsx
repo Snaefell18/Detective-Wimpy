@@ -972,6 +972,35 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                     )}
                     {saga.vorgaben.kapitel3d?.[i]?.aktiv && (
                       <>
+                        <div className="probe-drehungen">
+                          {(saga.vorgaben.kapitel3d[i].locations?.length
+                            ? saga.vorgaben.kapitel3d[i].locations
+                            : STANDARD_KAPITEL_3D.locations
+                          ).map((id) => {
+                            const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
+                            const grad = saga.vorgaben.kapitel3d[i].locationDrehungen?.[id] ?? 0;
+                            return ort ? (
+                              <button
+                                key={id}
+                                className="knopf klein"
+                                onClick={() => {
+                                  const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                  kopie.vorgaben.kapitel3d[i] = {
+                                    ...STANDARD_KAPITEL_3D,
+                                    ...kopie.vorgaben.kapitel3d[i],
+                                    locationDrehungen: {
+                                      ...(kopie.vorgaben.kapitel3d[i].locationDrehungen ?? {}),
+                                      [id]: (grad + 90) % 360,
+                                    },
+                                  };
+                                  void sagaAendern(kopie);
+                                }}
+                              >
+                                {ort.name} drehen · {grad}°
+                              </button>
+                            ) : null;
+                          })}
+                        </div>
                         <span className="leise klein">Tageszeit</span>
                         <div className="marken-reihe">
                           {DREI_D_TAGESZEITEN.map((zeit) => (

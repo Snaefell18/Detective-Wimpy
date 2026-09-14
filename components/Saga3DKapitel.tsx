@@ -8,7 +8,7 @@ import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.gene
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { dateienFuer3D } from "@/lib/pursuit3d";
+import { locationsFuer3D } from "@/lib/pursuit3d";
 import type { DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
@@ -86,6 +86,34 @@ function einpassen(objekt: THREE.Object3D, hoehe: number) {
   objekt.position.set(-mitte.x, -neu.min.y, -mitte.z);
 }
 
+const STRASSENRAND_X = 5.02;
+
+/**
+ * Macht aus beliebig exportierten Meshy-Szenen einen Straßenrand-Baustein.
+ * Niedrige, breite Szenen werden nicht mehr anhand ihrer geringen Höhe riesig
+ * aufgeblasen. Nach der Drehung liegt ihre komplette Bounding-Box rechts der
+ * Bordsteinkante und ist in Laufrichtung zentriert.
+ */
+function kulisseEinpassen(objekt: THREE.Object3D, zusaetzlicheDrehung: number) {
+  objekt.updateMatrixWorld(true);
+  const roh = new THREE.Box3().setFromObject(objekt);
+  const groesse = roh.getSize(new THREE.Vector3());
+  const skala = Math.min(
+    10.66 / Math.max(0.001, groesse.y),
+    14 / Math.max(0.001, groesse.x, groesse.z),
+  );
+  objekt.scale.multiplyScalar(skala);
+  objekt.rotation.y = -Math.PI / 2 + THREE.MathUtils.degToRad(zusaetzlicheDrehung);
+  objekt.updateMatrixWorld(true);
+  const gedreht = new THREE.Box3().setFromObject(objekt);
+  const mitte = gedreht.getCenter(new THREE.Vector3());
+  objekt.position.x += STRASSENRAND_X - gedreht.min.x;
+  objekt.position.y -= gedreht.min.y;
+  objekt.position.z -= mitte.z;
+  objekt.updateMatrixWorld(true);
+  return new THREE.Box3().setFromObject(objekt).getSize(new THREE.Vector3());
+}
+
 function KapitelCanvas({
   steuerung,
   fall,
@@ -95,6 +123,7 @@ function KapitelCanvas({
   tageszeit,
   wetter,
   charakterModelle,
+  locationDrehungen,
   onNaehe,
   onBereit,
 }: {
@@ -106,6 +135,7 @@ function KapitelCanvas({
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
   charakterModelle: Record<string, string>;
+  locationDrehungen: Record<string, number>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
 }) {
@@ -139,7 +169,6 @@ function KapitelCanvas({
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.shadowMap.enabled = true;
-    renderer.localClippingEnabled = true;
     renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
     element.appendChild(renderer.domElement);
 
@@ -233,25 +262,27 @@ function KapitelCanvas({
     };
 
     const aufbauen = async () => {
-      const kulissen = await Promise.allSettled(dateienFuer3D(locations).map((datei) => loader.loadAsync(datei)));
+      const locationEintraege = locationsFuer3D(locations);
+      const kulissen = await Promise.allSettled(locationEintraege.map((ort) => loader.loadAsync(ort.datei)));
       if (beendet) return;
-      const vorlagen = kulissen.flatMap((ergebnis) => {
+      const vorlagen = kulissen.flatMap((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
-        // Alles, was ein Location-GLB selbst vor die Bordsteinkante legt
-        // (Straße, Autos, Mobiliar), wird abgeschnitten. So bleibt es eine
-        // Kulisse und kann den wirklich begehbaren Streifen nicht verschlucken.
-        cellShading(vorlage, gradient, [new THREE.Plane(new THREE.Vector3(1, 0, 0), -4.88)]);
-        einpassen(vorlage, 10.66);
-        // Die exportierten Häuserfronten zeigen so mit ihrer Vorderseite zur Straße.
-        vorlage.rotation.y = -Math.PI / 2;
-        return [vorlage];
+        cellShading(vorlage, gradient);
+        const ort = locationEintraege[index];
+        const ausmass = kulisseEinpassen(vorlage, locationDrehungen[ort.id] ?? 0);
+        return [{ vorlage, laenge: Math.max(5, ausmass.z) }];
       });
-      for (let i = 0; i < 7 && vorlagen.length; i++) {
+      let cursorZ = 19;
+      let i = 0;
+      while (cursorZ > -51 && vorlagen.length && i < 24) {
+        const eintrag = vorlagen[i % vorlagen.length];
         const block = new THREE.Group();
-        block.add(vorlagen[i % vorlagen.length].clone(true));
-        block.position.set(7.25, 0, i * 15.5 - 46);
+        block.add(eintrag.vorlage.clone(true));
+        block.position.z = cursorZ - eintrag.laenge / 2;
         scene.add(block);
+        cursorZ -= eintrag.laenge + 1.1;
+        i++;
       }
 
       const wimpy = ANIMATIONS_MODELLE.find((modell) => modell.id === "wimpy");
@@ -434,7 +465,7 @@ function KapitelCanvas({
       renderer.domElement.remove();
       gradient.dispose();
     };
-  }, [charakterModelle, fall, locations, spuren, steuerung, tageszeit, wetter]);
+  }, [charakterModelle, fall, locationDrehungen, locations, spuren, steuerung, tageszeit, wetter]);
 
   return <div className="saga3d-canvas" ref={host} aria-label="Spielbares 3D-Kapitel" />;
 }
@@ -446,6 +477,7 @@ export function Saga3DKapitel({
   tageszeit,
   wetter,
   charakterModelle,
+  locationDrehungen,
   gefundeneSpuren,
   kapitel,
   tasche,
@@ -460,6 +492,7 @@ export function Saga3DKapitel({
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
   charakterModelle: Record<string, string>;
+  locationDrehungen: Record<string, number>;
   gefundeneSpuren: string[];
   kapitel: number | null;
   tasche: Beweismittel[];
@@ -522,6 +555,7 @@ export function Saga3DKapitel({
         tageszeit={tageszeit}
         wetter={wetter}
         charakterModelle={charakterModelle}
+        locationDrehungen={locationDrehungen}
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}
         onNaehe={setNah}
@@ -564,6 +598,7 @@ export function Saga3DProbeSzene({
   tageszeit,
   wetter,
   modellIds,
+  locationDrehungen,
   onZurueck,
   onSchliessen,
 }: {
@@ -571,6 +606,7 @@ export function Saga3DProbeSzene({
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
   modellIds: string[];
+  locationDrehungen: Record<string, number>;
   onZurueck: () => void;
   onSchliessen: () => void;
 }) {
@@ -634,6 +670,7 @@ export function Saga3DProbeSzene({
         tageszeit={tageszeit}
         wetter={wetter}
         charakterModelle={modellZuordnung}
+        locationDrehungen={locationDrehungen}
         spuren={[]}
         gefundeneSpuren={[]}
         onNaehe={setNah}

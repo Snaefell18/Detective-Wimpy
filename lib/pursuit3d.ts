@@ -13,6 +13,8 @@ export type Kapitel3DVorgabe = {
   wetter: DreiDWetter;
   /** Charakter-Id -> Modell-Id; leer bedeutet automatische Namenszuordnung. */
   charakterModelle: Record<string, string>;
+  /** Zusätzliche Drehung je Straßenbaustein in Grad (0/90/180/270). */
+  locationDrehungen: Record<string, number>;
 };
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
@@ -37,15 +39,19 @@ export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   tageszeit: "tag",
   wetter: "klar",
   charakterModelle: {},
+  locationDrehungen: {},
 };
 
-export const dateienFuer3D = (ids: string[] | undefined): string[] => {
+export const locationsFuer3D = (ids: string[] | undefined) => {
   const reihenfolge = ids?.length ? ids : DREI_D_LOCATIONS.map((ort) => ort.id);
-  const dateien = reihenfolge.flatMap((id) => {
+  const locations = reihenfolge.flatMap((id) => {
     const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
-    return ort ? [ort.datei] : [];
+    return ort ? [ort] : [];
   });
-  return dateien.length ? dateien : DREI_D_LOCATIONS.map((ort) => ort.datei);
+  return locations.length ? locations : [...DREI_D_LOCATIONS];
 };
+
+export const dateienFuer3D = (ids: string[] | undefined): string[] =>
+  locationsFuer3D(ids).map((ort) => ort.datei);
 
 export const TOKYO_FASSADEN = DREI_D_LOCATIONS.map((ort) => ort.datei);

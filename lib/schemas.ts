@@ -413,6 +413,9 @@ export const SagaVorgabenSchema = z.object({
             ausAuswahl(ANIMATIONS_MODELLE.map((modell) => modell.id)),
           )
           .default({}),
+        locationDrehungen: z
+          .record(z.string().max(80), z.number().int().min(0).max(270))
+          .default({}),
       }),
     )
     .max(9)

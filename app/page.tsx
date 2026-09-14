@@ -83,6 +83,7 @@ const Saga3DKapitel = dynamic(
   { ssr: false },
 );
 const LEERE_DREI_D_MODELLE: Record<string, string> = {};
+const LEERE_DREI_D_DREHUNGEN: Record<string, number> = {};
 
 export default function Home() {
   const spiel = useGame();
@@ -1375,6 +1376,7 @@ export default function Home() {
               tageszeit={laufendesDreiDKapitel.tageszeit ?? "tag"}
               wetter={laufendesDreiDKapitel.wetter ?? "klar"}
               charakterModelle={laufendesDreiDKapitel.charakterModelle ?? LEERE_DREI_D_MODELLE}
+              locationDrehungen={laufendesDreiDKapitel.locationDrehungen ?? LEERE_DREI_D_DREHUNGEN}
               gefundeneSpuren={stand.gefundeneSpuren}
               kapitel={laufendesKapitel}
               tasche={tasche.inhalt}

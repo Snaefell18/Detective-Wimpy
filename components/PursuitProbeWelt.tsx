@@ -25,6 +25,7 @@ export function PursuitProbeWelt({
   const [modelle, setModelle] = useState<string[]>(
     ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => modell.id),
   );
+  const [drehungen, setDrehungen] = useState<Record<string, number>>({});
 
   if (spielt) {
     return (
@@ -33,6 +34,7 @@ export function PursuitProbeWelt({
         tageszeit={tageszeit}
         wetter={wetter}
         modellIds={["wimpy", ...modelle]}
+        locationDrehungen={drehungen}
         onZurueck={() => setSpielt(false)}
         onSchliessen={onSchliessen}
       />
@@ -66,6 +68,21 @@ export function PursuitProbeWelt({
                 {ort.name}
               </button>
             );
+          })}
+        </div>
+        <div className="probe-drehungen">
+          {locations.map((id) => {
+            const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
+            const grad = drehungen[id] ?? 0;
+            return ort ? (
+              <button
+                key={id}
+                className="knopf klein"
+                onClick={() => setDrehungen((alt) => ({ ...alt, [id]: (grad + 90) % 360 }))}
+              >
+                {ort.name} drehen · {grad}°
+              </button>
+            ) : null;
           })}
         </div>
 

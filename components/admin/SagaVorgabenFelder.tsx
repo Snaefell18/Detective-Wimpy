@@ -715,6 +715,29 @@ export function SagaVorgabenFelder({
                       );
                     })}
                   </div>
+                  <div className="probe-drehungen">
+                    {(vorgaben.kapitel3d?.[i]?.locations?.length
+                      ? vorgaben.kapitel3d[i].locations
+                      : STANDARD_KAPITEL_3D.locations
+                    ).map((id) => {
+                      const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
+                      const grad = vorgaben.kapitel3d?.[i]?.locationDrehungen?.[id] ?? 0;
+                      return ort ? (
+                        <button
+                          key={id}
+                          className="knopf klein"
+                          onClick={() => dreiDSetzen(i, {
+                            locationDrehungen: {
+                              ...(vorgaben.kapitel3d?.[i]?.locationDrehungen ?? {}),
+                              [id]: (grad + 90) % 360,
+                            },
+                          })}
+                        >
+                          {ort.name} drehen · {grad}°
+                        </button>
+                      ) : null;
+                    })}
+                  </div>
                   <span className="leise klein">Tageszeit</span>
                   <div className="marken-reihe">
                     {DREI_D_TAGESZEITEN.map((zeit) => (
