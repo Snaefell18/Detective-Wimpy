@@ -48,6 +48,7 @@ import {
 import { waehleDaemonform, waehleMittaeter } from "@/lib/daemonEnthuellung";
 import { besessenheitsRegeln } from "@/lib/gestaltStimme";
 import { seal, unseal } from "@/lib/seal";
+import { sichereSpuren } from "@/lib/spurenRettung";
 import {
   STANDARD_EINSTELLUNGEN,
   type CaseClue,
@@ -234,6 +235,27 @@ const weltVon = (entwurf: Entwurf) =>
     entwurf.reifegrad,
     entwurf.absurditaet,
   );
+
+/**
+ * Der letzte Fallschritt braucht keine langen Lebensgeschichten und Stimmen.
+ * Ein kompakter Systemtext senkt Eingabetokens und gibt dem Modell innerhalb
+ * des Serverzeitlimits mehr Luft für die eigentlichen Spuren.
+ */
+const weltFuerSpuren = (entwurf: Entwurf) => `Du legst konkrete, logisch kombinierbare Spuren für ein deutsches Detektivspiel aus.
+Ton: ${entwurf.ton}. Publikum: ${entwurf.reifegrad}. Absurdität: ${entwurf.absurditaet}.
+
+TIERE
+${entwurf.besetzung
+  .map((c) => `- [${c.id}] ${c.name}, ${c.tierart}${c.beruf?.trim() ? `, ${c.beruf.trim()}` : ""}: ${c.beschreibung.slice(0, 220)}`)
+  .join("\n")}
+
+ORTE IN ${entwurf.stadt.toUpperCase()}
+${entwurf.orte.map((o) => `- [${o.id}] ${o.name} (${o.atmosphaere || "neutral"})`).join("\n")}
+
+GEGENSTÄNDE
+${entwurf.items.map((i) => `- [${i.id}] ${i.name}: ${i.beschreibung.slice(0, 160)}`).join("\n")}
+
+Nutze ausschließlich diese Ids. Beobachtungen sind sichtbar und ziehen keinen Schluss; Bedeutungen bleiben geheim und dürfen Namen nennen.`;
 
 /** Wirt und Dämonengestalt mit Namen - undefined, wenn es keine gibt. */
 function besessenheitVon(bogen: Bogen): { wirt: string; daemon: string } | undefined {
@@ -703,7 +725,7 @@ async function verdaechtigeSchritt(entwurf: Entwurf) {
 async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel) {
   return getAnthropic().messages.create(
     modellOptionen(
-      weltVon(entwurf),
+      weltFuerSpuren(entwurf),
       mitBriefing(
         buildSpurenPrompt(
           entwurf.besetzung,
@@ -733,7 +755,8 @@ async function spurenHolen(entwurf: Entwurf, ziel: SpurenZiel) {
 async function spurenSchritt(entwurf: Entwurf) {
   const ortIds = entwurf.orte.map((o) => o.id);
   const charakterIds = entwurf.besetzung.map((c) => c.id);
-  const itemIds = entwurf.items.map((i) => i.id);
+  let fallItems = entwurf.items;
+  let itemIds = fallItems.map((i) => i.id);
 
   /*
    * Wie viele Spuren dieser Fall haben soll.
@@ -810,15 +833,25 @@ async function spurenSchritt(entwurf: Entwurf) {
     };
   };
 
-  const erste = ergebnisAus<SpurenDraft>(
-    await spurenHolen(entwurf, ziel),
-    "api/case:spuren",
-  );
-  if ("fehler" in erste) {
-    return NextResponse.json({ fehler: erste.fehler }, { status: erste.status });
+  let ergebnis: ReturnType<typeof bewerten> | null = null;
+  let grund = "";
+  try {
+    const erste = ergebnisAus<SpurenDraft>(
+      await spurenHolen(entwurf, ziel),
+      "api/case:spuren",
+    );
+    if ("fehler" in erste) {
+      grund = erste.fehler;
+    } else {
+      ergebnis = bewerten(erste.daten);
+      if (ergebnis.fehler || ergebnis.maengel.length) {
+        grund = [ergebnis.fehler, ...ergebnis.maengel].filter(Boolean).join(" · ");
+      }
+    }
+  } catch (fehler) {
+    grund = fehler instanceof Error ? fehler.message : String(fehler);
+    console.error("[api/case:spuren] Modellaufruf fehlgeschlagen, nutze Rettung:", fehler);
   }
-
-  const ergebnis = bewerten(erste.daten);
 
   /*
    * Wichtig: Kein zweiter Modellaufruf innerhalb derselben Serverfunktion.
@@ -830,20 +863,61 @@ async function spurenSchritt(entwurf: Entwurf) {
    * Spuren-Schritt und behält Gerüst und Verdächtige.
    */
 
-  if (ergebnis.notizen.length) {
+  if (ergebnis?.notizen.length) {
     console.warn("[api/case:spuren] Fall nachgebessert:", ergebnis.notizen.join(" "));
   }
-  if (ergebnis.maengel.length) {
+  if (ergebnis?.maengel.length) {
     console.warn("[api/case:spuren] Bleibt bestehen:", ergebnis.maengel.join(" · "));
   }
-  if (ergebnis.fehler) {
-    console.error("[api/case:spuren] Fall unlösbar:", ergebnis.fehler);
+
+  /*
+   * Ein Timeout, abgeschnittenes JSON oder ein logisch kaputter Entwurf darf
+   * den gesamten Fall nicht mehr stoppen. Zu diesem Zeitpunkt sind Täter,
+   * Alibis, Orte und Gegenstände bereits bekannt; daraus entsteht ohne einen
+   * weiteren Modellaufruf eine konservative, aber vollständig spielbare
+   * Beweiskette. Das vermeidet genau die teure Wiederholung, die vorher an
+   * "Die Spuren werden ausgelegt …" hängen blieb.
+   */
+  if (!ergebnis || ergebnis.fehler || ergebnis.maengel.length) {
+    const rettung = sichereSpuren({
+      items: fallItems,
+      orte: entwurf.orte,
+      besetzung: entwurf.besetzung,
+      taeterId: entwurf.taeterId,
+      mittaeterId: entwurf.mittaeterId,
+      ziel,
+      sagaSpur: entwurf.sagaSpur,
+    });
+    if (!rettung) {
+      console.error("[api/case:spuren] Auch die Rettung war unmöglich:", grund);
+      return NextResponse.json(
+        {
+          fehler:
+            "Für diesen Fall gibt es nicht genügend Orte, Tiere oder Gegenstände für sichere Spuren. Bitte prüfe die Stammdaten.",
+        },
+        { status: 400 },
+      );
+    }
+    fallItems = rettung.items;
+    itemIds = fallItems.map((i) => i.id);
+    ergebnis = bewerten({ spuren: rettung.spuren });
+    console.warn(
+      "[api/case:spuren] Kostenlose Rettung verwendet:",
+      grund || "Modellentwurf war nicht vollständig spielbar.",
+    );
+  }
+
+  if (ergebnis.fehler || ergebnis.maengel.length) {
+    console.error(
+      "[api/case:spuren] Rettung unerwartet unbrauchbar:",
+      [ergebnis.fehler, ...ergebnis.maengel].filter(Boolean).join(" · "),
+    );
     return NextResponse.json(
       {
         fehler:
-          "Dieser Fall wäre nicht lösbar gewesen und wurde verworfen. Bitte starte ihn noch einmal.",
+          "Die Spuren konnten aus den Stammdaten nicht sicher fertiggestellt werden. Bitte prüfe Orte, Tiere und Gegenstände.",
       },
-      { status: 502 },
+      { status: 400 },
     );
   }
 
@@ -855,6 +929,7 @@ async function spurenSchritt(entwurf: Entwurf) {
   const { vorgaben: _v, sagaBriefing: _b, ...rest } = entwurf;
   const fall: CaseFile = {
     ...rest,
+    items: fallItems,
     verdaechtige: kur.verdaechtige,
     spuren: kur.spuren,
   };
