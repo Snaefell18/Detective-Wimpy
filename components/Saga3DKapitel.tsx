@@ -25,14 +25,47 @@ type Naehe =
 
 const normal = (wert: string) => wert.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
 
-function Steuerkreuz({ setzen }: { setzen: (x: number, z: number) => void }) {
-  return <div className="experiment-steuerkreuz" aria-label="Wimpy steuern">
-    {([["▲", 0, -1], ["◀", -1, 0], ["▶", 1, 0], ["▼", 0, 1]] as const).map(([zeichen, x, z]) => (
-      <button key={zeichen}
-        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setzen(x, z); }}
-        onPointerUp={() => setzen(0, 0)} onPointerCancel={() => setzen(0, 0)}
-        onLostPointerCapture={() => setzen(0, 0)}>{zeichen}</button>
-    ))}
+function TouchJoystick({ setzen }: { setzen: (x: number, z: number) => void }) {
+  const knauf = useRef<HTMLSpanElement>(null);
+  const finger = useRef<number | null>(null);
+  const aktuell = useRef(setzen);
+  aktuell.current = setzen;
+  const stoppen = () => {
+    finger.current = null;
+    aktuell.current(0, 0);
+    if (knauf.current) knauf.current.style.transform = "translate(0, 0)";
+  };
+  useEffect(() => {
+    window.addEventListener("blur", stoppen);
+    document.addEventListener("visibilitychange", stoppen);
+    return () => {
+      window.removeEventListener("blur", stoppen);
+      document.removeEventListener("visibilitychange", stoppen);
+      aktuell.current(0, 0);
+    };
+  }, []);
+  const bewegen = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (finger.current !== e.pointerId) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const radius = box.width * 0.3;
+    const dx = e.clientX - box.left - box.width / 2;
+    const dz = e.clientY - box.top - box.height / 2;
+    const distanz = Math.hypot(dx, dz);
+    const faktor = Math.min(1, radius / Math.max(1, distanz));
+    if (knauf.current) knauf.current.style.transform = `translate(${dx * faktor}px, ${dz * faktor}px)`;
+    const staerke = Math.max(0, (Math.min(1, distanz / radius) - 0.12) / 0.88);
+    const x = dx / Math.max(1, distanz) * staerke;
+    const z = dz / Math.max(1, distanz) * staerke;
+    // Die Stickrichtung folgt dem Bildschirm trotz schräger Kamera.
+    const kameraLaenge = Math.hypot(13.8, 9.5);
+    aktuell.current((x * 13.8 - z * 9.5) / kameraLaenge, (x * 9.5 + z * 13.8) / kameraLaenge);
+  };
+  return <div className="saga3d-joystick" role="group" aria-label="Wimpy steuern: Joystick in die gewünschte Richtung ziehen"
+    onPointerDown={(e) => { if (finger.current !== null) return; finger.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); bewegen(e); }}
+    onPointerMove={bewegen}
+    onPointerUp={(e) => { if (finger.current === e.pointerId) stoppen(); }}
+    onPointerCancel={stoppen} onLostPointerCapture={stoppen}>
+    <span className="saga3d-joystick-knauf" ref={knauf} aria-hidden="true" />
   </div>;
 }
 
@@ -311,7 +344,10 @@ function KapitelCanvas({
     spieler.position.copy(position.current);
     scene.add(spieler);
     const mixers: THREE.AnimationMixer[] = [];
-    const npcGruppen: { gruppe: THREE.Group; info: Naehe; basisZ: number; phase: number }[] = [];
+    const npcGruppen: {
+      gruppe: THREE.Group; info: Naehe; basisZ: number; zielZ: number; pause: number;
+      lauf?: THREE.AnimationAction; ruhe?: THREE.AnimationAction; aktiv?: THREE.AnimationAction;
+    }[] = [];
     const spurGruppen: { gruppe: THREE.Group; info: Naehe }[] = [];
     let spielerMixer: THREE.AnimationMixer | null = null;
     let laufAktion: THREE.AnimationAction | null = null;
@@ -397,18 +433,15 @@ function KapitelCanvas({
         const { x, z } = kapitelPosition(index, tiere.length, "tier");
         gruppe.position.set(x, 0, z);
         scene.add(gruppe);
-        npcGruppen.push({
-          gruppe,
-          info: { art: "tier", id: charakter.id, name: charakter.name },
-          basisZ: z,
-          phase: index * 1.7,
-        });
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
         const clips = ergebnis.value.animationen;
-        const clip = clips.find((kandidat) =>
-          index % 3 === 0 ? /dance|shuffle|ymca/i.test(kandidat.name) : /idle|walk|rest/i.test(kandidat.name),
-        ) ?? clips[index % Math.max(1, clips.length)];
-        if (clip) mixer.clipAction(clip).play();
+        const laufClip = clips.find((c) => /walk/i.test(c.name)) ?? clips.find((c) => /run|sprint|charge/i.test(c.name)) ?? clips[0];
+        const ruheClip = (index % 3 === 0 ? clips.find((c) => /dance|shuffle|ymca/i.test(c.name)) : undefined)
+          ?? clips.find((c) => /idle|rest/i.test(c.name));
+        const lauf = laufClip ? mixer.clipAction(laufClip) : undefined;
+        const ruhe = ruheClip ? mixer.clipAction(ruheClip) : undefined;
+        npcGruppen.push({ gruppe, info: { art: "tier", id: charakter.id, name: charakter.name },
+          basisZ: z, zielZ: z + (index % 2 ? -1.5 : 1.5), pause: index % 3 * 0.6, lauf, ruhe });
         mixers.push(mixer);
       });
 
@@ -489,19 +522,23 @@ function KapitelCanvas({
       const tz = (tasten.has("s") || tasten.has("arrowdown") ? 1 : 0) - (tasten.has("w") || tasten.has("arrowup") ? 1 : 0);
       const x = THREE.MathUtils.clamp(tx || steuerung.current.x, -1, 1);
       const z = THREE.MathUtils.clamp(tz || steuerung.current.z, -1, 1);
-      const bewegt = Math.abs(x) + Math.abs(z) > 0.05;
-      if (bewegt) {
+      let bewegt = false;
+      const staerke = Math.min(1, Math.hypot(x, z));
+      if (staerke > 0.05) {
         const laenge = Math.hypot(x, z) || 1;
         const vorherX = spieler.position.x;
         const vorherZ = spieler.position.z;
-        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * dt * 4.1, -4.15, 4.15);
-        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * dt * 4.1, -36, 15);
+        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * staerke * dt * 4.1, -4.15, 4.15);
+        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * staerke * dt * 4.1, -36, 15);
         const kollidiert = npcGruppen.some((npc) => {
           const dx = npc.gruppe.position.x - neuX;
           const dz = npc.gruppe.position.z - neuZ;
           return dx * dx + dz * dz < 1.15 * 1.15;
         });
-        if (!kollidiert) spieler.position.set(neuX, 0, neuZ);
+        if (!kollidiert) {
+          spieler.position.set(neuX, 0, neuZ);
+          bewegt = Math.hypot(neuX - vorherX, neuZ - vorherZ) > 0.0001;
+        }
         spieler.rotation.y = Math.atan2(x, z);
       }
       const gewuenscht = bewegt ? laufAktion : (ruheAktion ?? laufAktion);
@@ -510,9 +547,10 @@ function KapitelCanvas({
         gewuenscht.reset().fadeIn(0.14).play();
         aktiveAktion = gewuenscht;
       }
+      if (aktiveAktion) aktiveAktion.paused = !bewegt && !ruheAktion;
+      if (laufAktion) laufAktion.setEffectiveTimeScale(Math.max(0.25, staerke));
       spielerMixer?.update(dt);
       position.current.copy(spieler.position);
-      mixers.forEach((mixer) => mixer.update(dt));
       if (regen) {
         const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
         for (let i = 0; i < positionen.count; i++) {
@@ -521,11 +559,33 @@ function KapitelCanvas({
         }
         positionen.needsUpdate = true;
       }
-      npcGruppen.forEach((npc, index) => {
-        if (index % 3 !== 1) return;
-        npc.gruppe.position.z = npc.basisZ + Math.sin(jetzt / 1800 + npc.phase) * 2.3;
-        npc.gruppe.rotation.y = Math.cos(jetzt / 1800 + npc.phase) > 0 ? 0 : Math.PI;
+      npcGruppen.forEach((npc) => {
+        let laeuft = false;
+        const ansprechbar = npc.gruppe.position.distanceToSquared(spieler.position) < 2.35 ** 2;
+        if (!callbacks.current.pausiert && !ansprechbar) {
+          if (npc.pause > 0) npc.pause -= dt;
+          else {
+            const differenz = npc.zielZ - npc.gruppe.position.z;
+            const schritt = Math.sign(differenz) * Math.min(Math.abs(differenz), dt * 0.9);
+            npc.gruppe.position.z += schritt;
+            laeuft = Math.abs(schritt) > 0.0001;
+            if (laeuft) npc.gruppe.rotation.y = schritt > 0 ? 0 : Math.PI;
+            if (Math.abs(differenz) < 0.03) {
+              npc.zielZ = npc.basisZ + (npc.zielZ > npc.basisZ ? -1.5 : 1.5);
+              npc.pause = 2;
+            }
+          }
+        }
+        const aktion = laeuft ? npc.lauf : (npc.ruhe ?? npc.lauf);
+        if (aktion && aktion !== npc.aktiv) {
+          npc.aktiv?.fadeOut(0.18);
+          aktion.reset().fadeIn(0.18).play();
+          npc.aktiv = aktion;
+        }
+        // Ohne Idle-Clip wird die Pose angehalten, statt auf der Stelle zu rennen.
+        if (npc.aktiv) npc.aktiv.paused = !laeuft && !npc.ruhe;
       });
+      mixers.forEach((mixer) => mixer.update(dt));
 
       let nah: { gruppe: THREE.Group; info: Naehe } | null = null;
       let abstand = 2.35;
@@ -711,7 +771,7 @@ export function Saga3DKapitel({
           ? `${spuren.filter((spur) => gefundeneSpuren.includes(spur.itemId)).length}/${spuren.length} Beweise untersucht · Sprich mit den Tieren.`
           : "Die Stadt wird aufgebaut …"}</small>
       </div>
-      <Steuerkreuz setzen={setzen} />
+      <TouchJoystick setzen={setzen} />
       {nah && (
         <button className="experiment-ansprechen saga3d-interaktion" onClick={() => void interagieren()} disabled={suchtGerade}>
           <small>{nah.art === "tier" ? "IN DER NÄHE" : "SPUR ENTDECKT"}</small>
@@ -823,7 +883,7 @@ export function Saga3DProbeSzene({
         <small>{bereit ? `${modellIds.length} Modelle in der Testwelt.` : "Straßen und Tiere werden geladen …"}</small>
       </header>
       <button className="pursuit-zurueck experiment-zurueck" onClick={onZurueck}>‹ Einstellungen</button>
-      <Steuerkreuz setzen={setzen} />
+      <TouchJoystick setzen={setzen} />
       {nah?.art === "tier" && (
         <button className="experiment-ansprechen" onClick={() => setMeldung(`${nah.name} ist da, animiert und ansprechbar.`)}>
           <small>MODELL IN DER NÄHE</small>

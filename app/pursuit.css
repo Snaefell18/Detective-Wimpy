@@ -179,6 +179,37 @@
 }
 .probe-charakter-zuordnung .feld { margin: 0; }
 .saga3d-probe { background: #080b1c; }
+
+/* Daumensteuerung: fester Kontaktbereich, analoger Knauf, Platz für die iPhone-Home-Leiste. */
+.saga3d-joystick {
+  position: absolute;
+  z-index: 16;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(88px, calc(var(--safe-bottom) + 76px));
+  width: clamp(128px, 35vw, 148px);
+  aspect-ratio: 1;
+  border: 3px solid rgba(23, 35, 55, .8);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.3) 0 38%, rgba(53,223,255,.2) 39% 41%, rgba(255,255,255,.13) 42%);
+  box-shadow: inset 0 0 0 7px rgba(255,255,255,.15), 3px 5px 0 rgba(23,35,55,.5);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+}
+.saga3d-joystick-knauf {
+  width: 40%;
+  aspect-ratio: 1;
+  border: 3px solid #172337;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #fff, #35dfff);
+  box-shadow: 2px 4px 0 rgba(23,35,55,.7);
+  pointer-events: none;
+  will-change: transform;
+}
 .jump-levelwahl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -444,6 +475,19 @@
   }
 }
 .experiment-dialog p { margin: 7px 0 15px; font-size: clamp(17px, 2.4vw, 24px); font-weight: 800; }
+@media (max-width: 600px) {
+  .saga3d .saga3d-interaktion,
+  .saga3d-probe .experiment-ansprechen {
+    left: 12px;
+    bottom: max(110px, calc(var(--safe-bottom) + 98px));
+    width: calc(100% - 184px);
+    min-width: 0;
+    max-width: 210px;
+    padding: 10px;
+    transform: none;
+    overflow-wrap: anywhere;
+  }
+}
 @keyframes jump-pop {
   0% { opacity: 0; transform: translate(-50%, 35px) scale(.35) rotate(-8deg); }
   18%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(1deg); }
