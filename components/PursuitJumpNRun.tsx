@@ -104,8 +104,8 @@ function JumpCanvas({
     const breite = Math.max(320, element.clientWidth);
     const hoehe = Math.max(360, element.clientHeight);
     const camera = new THREE.PerspectiveCamera(46, breite / hoehe, 0.1, 100);
-    camera.position.set(5.8, 3.35, 7.2);
-    camera.lookAt(0, 1.15, 0.1);
+    camera.position.set(-8.4, 4.35, 11.2);
+    camera.lookAt(0, 1.1, 0.8);
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -232,7 +232,7 @@ function JumpCanvas({
           ring.position.y = 0.35;
           gruppe.add(ring);
         }
-        gruppe.position.z = 9 + i * 6.2;
+        gruppe.position.z = 12 + i * 9.5;
         scene.add(gruppe);
         objekte.push({ gruppe, art, erledigt: false, basisY });
       }
@@ -304,7 +304,7 @@ function JumpCanvas({
         }
       }
 
-      const tempo = Math.min(15.5, 10.5 + zeit * 0.08);
+      const tempo = Math.min(10, 6.8 + zeit * 0.035);
       streifen.forEach((strich) => {
         strich.position.z -= tempo * dt;
         if (strich.position.z < -8) strich.position.z += 72;
@@ -335,7 +335,7 @@ function JumpCanvas({
           }
         }
         if (objekt.gruppe.position.z < -7) {
-          groesstesZ += 6.2 + Math.random() * 1.8;
+          groesstesZ += 9.5 + Math.random() * 3;
           objekt.gruppe.position.z = groesstesZ;
           objekt.erledigt = false;
           objekt.gruppe.visible = true;
@@ -347,8 +347,8 @@ function JumpCanvas({
         letztePunkteAusgabe = jetzt;
         callbacks.current.onPunkte(letztePunkte);
       }
-      camera.position.x = 5.8 + Math.sin(zeit * 0.45) * 0.12;
-      camera.lookAt(0, 1.15 + y * 0.12, 0.1);
+      camera.position.x = -8.4 + Math.sin(zeit * 0.35) * 0.1;
+      camera.lookAt(0, 1.1 + y * 0.1, 0.8);
       renderer.render(scene, camera);
       frame = requestAnimationFrame(zeichnen);
     };
