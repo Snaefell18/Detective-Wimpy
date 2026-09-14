@@ -72,6 +72,11 @@ const Verfolgungsjagd = dynamic(
   { ssr: false },
 );
 
+const Pursuit = dynamic(
+  () => import("@/components/Pursuit").then((modul) => modul.Pursuit),
+  { ssr: false },
+);
+
 export default function Home() {
   const spiel = useGame();
   const { daten: admin } = useAdmin();
@@ -82,6 +87,7 @@ export default function Home() {
   const [kampagnenOffen, setKampagnenOffen] = useState(false);
   const [sagenOffen, setSagenOffen] = useState(false);
   const [arcsOffen, setArcsOffen] = useState(false);
+  const [pursuitOffen, setPursuitOffen] = useState(false);
   const [ladenOffen, setLadenOffen] = useState(false);
   /** Der Inhalt des Ladens - die Beschreibungen kommen aus der Datenbank. */
   const zubehoer = useLaden();
@@ -1098,6 +1104,7 @@ export default function Home() {
           onKampagnen={() => setKampagnenOffen(true)}
           onSagas={() => setSagenOffen(true)}
           onArcs={() => setArcsOffen(true)}
+          onPursuit={() => setPursuitOffen(true)}
           onLaden={() => setLadenOffen(true)}
           yenImBeutel={geld.beutel.yen}
           // Der Laden zeigt sich erst nach dem ersten Honorar - oder wenn
@@ -1121,6 +1128,8 @@ export default function Home() {
             onSchliessen={() => setKampagnenOffen(false)}
           />
         )}
+
+        {pursuitOffen && <Pursuit onSchliessen={() => setPursuitOffen(false)} />}
 
         {arcsOffen && (
           <ArcsListe

@@ -13,6 +13,7 @@ export function StartScreen({
   onKampagnen,
   onSagas,
   onArcs,
+  onPursuit,
   onLaden,
   ladenBekannt,
   yenImBeutel,
@@ -26,6 +27,8 @@ export function StartScreen({
   onKampagnen: () => void;
   onSagas: () => void;
   onArcs: () => void;
+  /** Startet das freie 3D-Schneejagd-Minispiel. */
+  onPursuit: () => void;
   /** Der Detektiv-Laden. */
   onLaden: () => void;
   /**
@@ -95,6 +98,12 @@ export function StartScreen({
         <button className="knopf glas schmal" onClick={onArcs}>
           <span className="symbol">🎞</span>
           <span className="zeilen-text">Arcs</span>
+        </button>
+
+        <button className="knopf glas schmal pursuit-menuknopf" onClick={onPursuit}>
+          <span className="symbol">🏎</span>
+          <span className="zeilen-text">Pursuit</span>
+          <span className="zeilen-meta">3D</span>
         </button>
 
         {/* Den Laden gibt es erst, wenn Wimpy zum ersten Mal etwas verdient

@@ -1,0 +1,154 @@
+/* --- Pursuit: freies 3D-Minispiel im Hauptmenü ------------------- */
+
+.pursuit-menuknopf {
+  border-color: rgba(255, 218, 57, .7) !important;
+  box-shadow: inset 0 0 18px rgba(255, 218, 57, .09);
+}
+.pursuit-spiel { z-index: 600; }
+.pursuit-spiel .jagd-vorschau-schliessen {
+  position: absolute;
+  top: max(18px, var(--safe-top));
+  right: 18px;
+}
+.pursuit-auswahl {
+  z-index: 600;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: max(76px, calc(var(--safe-top) + 58px)) 22px max(30px, var(--safe-bottom));
+  background:
+    repeating-linear-gradient(168deg, rgba(23,35,55,.06) 0 2px, transparent 2px 18px),
+    radial-gradient(circle at 80% 14%, #fff 0 6%, transparent 6.5%),
+    linear-gradient(145deg, #78d9e8, #eefcff 56%, #ffd84a);
+}
+.pursuit-panel {
+  position: relative;
+  z-index: 10;
+  width: min(1040px, calc(100% - 12px));
+  box-sizing: border-box;
+  padding: clamp(22px, 4vw, 42px);
+  border: 6px solid #172337;
+  border-radius: 5px 28px 5px 28px;
+  background: rgba(255,255,255,.95);
+  box-shadow: 14px 15px 0 #172337, 21px 22px 0 #ffcf39;
+}
+.pursuit-panel h1,
+.pursuit-intro-kopf h1 {
+  margin: 3px 0 8px;
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(54px, 10vw, 116px);
+  line-height: .82;
+  letter-spacing: -.05em;
+  text-transform: uppercase;
+}
+.pursuit-panel > p { margin: 8px 0 20px; font-weight: 750; }
+.pursuit-rollen { display: grid; gap: 12px; }
+.pursuit-rollen fieldset {
+  min-width: 0;
+  padding: 11px 13px 13px;
+  border: 3px solid #172337;
+  border-radius: 3px 14px 3px 14px;
+  background: #e9faff;
+}
+.pursuit-rollen fieldset:nth-child(2) { background: #fff5c7; }
+.pursuit-rollen fieldset:nth-child(3) { background: #ffe1e7; }
+.pursuit-rollen legend {
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+.pursuit-modelle {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.pursuit-modelle button {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 3px solid rgba(23,35,55,.23);
+  border-radius: 3px 12px 3px 12px;
+  color: #172337;
+  text-align: left;
+  background: rgba(255,255,255,.7);
+}
+.pursuit-modelle button[data-aktiv="true"] {
+  border-color: #172337;
+  background: #fff;
+  box-shadow: 4px 4px 0 #ffca38;
+  transform: translate(-2px, -2px) rotate(-.5deg);
+}
+.pursuit-modelle strong,
+.pursuit-modelle span { display: block; overflow: hidden; text-overflow: ellipsis; }
+.pursuit-modelle span { margin-top: 2px; font-size: 11px; opacity: .7; }
+.pursuit-los { display: block; margin: 19px 0 0 auto; }
+
+.pursuit-intro { z-index: 600; background: #87ddeb; }
+.pursuit-intro-kopf {
+  position: absolute;
+  z-index: 12;
+  top: max(30px, calc(var(--safe-top) + 16px));
+  left: clamp(26px, 5vw, 70px);
+  transform: rotate(-2deg);
+}
+.pursuit-intro-kopf h1 {
+  color: #ff3f61;
+  -webkit-text-stroke: 3px #172337;
+  text-shadow: 7px 7px 0 #fff, 12px 12px 0 #172337;
+}
+.pursuit-namen {
+  position: absolute;
+  z-index: 13;
+  left: 50%;
+  bottom: max(100px, calc(var(--safe-bottom) + 82px));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: min(870px, calc(100% - 20px));
+  transform: translateX(-50%);
+}
+.pursuit-namen > div {
+  min-width: 0;
+  padding: 9px 12px;
+  border: 4px solid #172337;
+  border-radius: 3px 14px 3px 14px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 6px 7px 0 #172337;
+  text-align: center;
+}
+.pursuit-namen > div:nth-child(2) { background: #fff2a9; transform: rotate(-1.4deg); }
+.pursuit-namen > div:nth-child(3) { background: #ffdce5; transform: rotate(1deg); }
+.pursuit-namen small,
+.pursuit-namen strong,
+.pursuit-namen span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pursuit-namen small { font-size: 9px; font-weight: 950; letter-spacing: .12em; }
+.pursuit-namen strong { font-size: clamp(17px, 2.7vw, 27px); }
+.pursuit-namen span { font-size: 10px; opacity: .66; }
+.pursuit-vollgas {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  bottom: max(26px, calc(var(--safe-bottom) + 12px));
+  transform: translateX(-50%) rotate(-1deg);
+}
+.pursuit-vollgas:active { transform: translate(-50%, 3px); }
+.pursuit-fangaktionen { display: flex; flex-wrap: wrap; gap: 8px; }
+.pursuit-spiel .jagd-statement {
+  width: min(680px, calc(100% - 42px));
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .pursuit-auswahl { display: block; padding-top: 74px; }
+  .pursuit-modelle { grid-template-columns: 1fr; }
+  .pursuit-panel { padding: 20px; }
+  .pursuit-panel h1 { font-size: 58px; }
+  .pursuit-intro-kopf { top: 26px; }
+  .pursuit-intro-kopf h1 { font-size: 58px; }
+  .pursuit-namen { bottom: 102px; gap: 4px; }
+  .pursuit-namen > div { padding: 6px 5px; border-width: 2px; box-shadow: 3px 4px 0 #172337; }
+  .pursuit-namen span { display: none; }
+  .pursuit-namen strong { font-size: 14px; }
+  .pursuit-fangaktionen { display: grid; }
+}
+

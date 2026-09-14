@@ -99,7 +99,7 @@ function yetiBauen(toon: THREE.MeshToonMaterial) {
   return gruppe;
 }
 
-function sportwagenBauen(toon: THREE.MeshToonMaterial) {
+export function sportwagenBauen(toon: THREE.MeshToonMaterial) {
   const gruppe = new THREE.Group();
   const weiss = toon.clone();
   weiss.color.set(0xf9fbff);
@@ -129,7 +129,7 @@ function sportwagenBauen(toon: THREE.MeshToonMaterial) {
 }
 
 /** Eine erfundene, etikettlose Comic-Cognacflasche mit ikonisch langem Hals. */
-function mutFlascheBauen(toon: THREE.MeshToonMaterial) {
+export function mutFlascheBauen(toon: THREE.MeshToonMaterial) {
   const gruppe = new THREE.Group();
   const glas = toon.clone();
   glas.color.set(0x4e7d3a);

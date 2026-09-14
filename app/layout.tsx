@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Big_Shoulders } from "next/font/google";
 import { DESIGN_SKRIPT, STANDARD_DESIGN } from "@/lib/design";
 import "./globals.css";
+import "./pursuit.css";
 import "./themes/klassisch.css";
 import "./themes/noir.css";
 
