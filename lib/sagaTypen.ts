@@ -1,6 +1,7 @@
 import type { FinaleArt, Verhandlung } from "./sagaFinale";
 import type { VersammlungVorgabe } from "./versammlung";
 import type { VerfolgungVorgabe } from "./verfolgung";
+import type { Kapitel3DVorgabe } from "./pursuit3d";
 import type {
   Absurditaet,
   Character,
@@ -138,6 +139,8 @@ export type SagaVorgaben = {
    * Ortswechsel und nicht beim Weiterspielen.
    */
   kapitelWetter: (Wetterlage | "")[];
+  /** Optionale 3D-Darstellung je Kapitel; der letzte Eintrag gehört zum Finale. */
+  kapitel3d: Kapitel3DVorgabe[];
   /**
    * Freie Ratsrunden zwischen Kapiteln. Sie werden vor der Erzeugung einer
    * Arc-Saga festgelegt und dürfen auch Tiere enthalten, die im angrenzenden
@@ -251,6 +254,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelDaemon: [],
   kapitelMittaeter: [],
   kapitelWetter: [],
+  kapitel3d: [],
   versammlungen: [],
   verfolgungsjagden: [],
   stadt: "zufall",
@@ -328,6 +332,15 @@ export const wetterFuerKapitel = (
   index: number,
   allgemein: Wetterlage,
 ): Wetterlage => vorgaben?.kapitelWetter?.[index] || allgemein;
+
+/** Die 3D-Konfiguration eines Kapitels, sofern sie eingeschaltet ist. */
+export const dreiDFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitel3d"> | undefined,
+  index: number,
+): Kapitel3DVorgabe | null => {
+  const wert = vorgaben?.kapitel3d?.[index];
+  return wert?.aktiv ? wert : null;
+};
 
 /**
  * Das Geschenk nach einem Kapitel - dieselbe Zählung wie beim Wetter:

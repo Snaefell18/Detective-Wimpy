@@ -398,6 +398,15 @@ export const SagaVorgabenSchema = z.object({
   )
     .max(9)
     .default([]),
+  kapitel3d: z
+    .array(
+      z.object({
+        aktiv: z.boolean().default(false),
+        locations: z.array(z.enum(["tokyo1", "akihabara", "residential"])).max(3).default([]),
+      }),
+    )
+    .max(9)
+    .default([]),
   versammlungen: z
     .array(
       z.object({

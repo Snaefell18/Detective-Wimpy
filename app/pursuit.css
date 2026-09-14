@@ -350,6 +350,72 @@
   box-shadow: 10px 11px 0 #35dfff, 16px 17px 0 #172337;
   transform: translateX(-50%);
 }
+
+/* Ein Saga-Kapitel nutzt dieselbe 3D-Sprache, bleibt aber im normalen
+   Spielrahmen: Kopf, Tabs, Chat, Tasche und Fundmoment liegen weiterhin darüber. */
+.saga3d {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: #172337;
+  background: #080b1c;
+  isolation: isolate;
+  touch-action: none;
+}
+.saga3d-canvas,
+.saga3d-canvas canvas { width: 100%; height: 100%; display: block; }
+.saga3d-canvas canvas { filter: saturate(1.12) contrast(1.05); }
+.saga3d-hud {
+  position: absolute;
+  z-index: 10;
+  top: max(104px, calc(var(--safe-top) + 88px));
+  left: 18px;
+  max-width: min(360px, calc(100% - 36px));
+  padding: 7px 11px;
+  border: 3px solid #172337;
+  border-radius: 4px 13px 4px 13px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 4px 5px 0 #35dfff;
+}
+.saga3d-hud span,
+.saga3d-hud strong,
+.saga3d-hud small { display: block; }
+.saga3d-hud strong { font: 950 22px/1 var(--font-display), Impact, sans-serif; }
+.saga3d .experiment-steuerkreuz { bottom: max(88px, calc(var(--safe-bottom) + 76px)); }
+.saga3d-interaktion { bottom: max(102px, calc(var(--safe-bottom) + 90px)); }
+.saga3d-meldung {
+  position: absolute;
+  z-index: 18;
+  left: 50%;
+  bottom: max(188px, calc(var(--safe-bottom) + 176px));
+  width: min(520px, calc(100% - 36px));
+  padding: 12px 16px;
+  border: 4px solid #172337;
+  border-radius: 4px 16px 4px 16px;
+  color: #172337;
+  background: #fff;
+  box-shadow: 6px 7px 0 #ffcf39;
+  transform: translateX(-50%);
+  font-weight: 800;
+}
+
+@media (max-width: 600px) {
+  .saga3d-hud { top: max(94px, calc(var(--safe-top) + 78px)); }
+  .saga3d-hud small { display: none; }
+  .saga3d .experiment-steuerkreuz {
+    right: 12px;
+    bottom: max(82px, calc(var(--safe-bottom) + 70px));
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+  }
+  .saga3d-interaktion {
+    left: 16px;
+    bottom: max(174px, calc(var(--safe-bottom) + 162px));
+    min-width: min(250px, calc(100% - 32px));
+    max-width: calc(100% - 32px);
+    transform: none;
+  }
+}
 .experiment-dialog p { margin: 7px 0 15px; font-size: clamp(17px, 2.4vw, 24px); font-weight: 800; }
 @keyframes jump-pop {
   0% { opacity: 0; transform: translate(-50%, 35px) scale(.35) rotate(-8deg); }

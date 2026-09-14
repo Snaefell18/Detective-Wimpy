@@ -245,7 +245,11 @@ export function useGame() {
     }));
   }, []);
 
-  const umsehen = useCallback(async (wirkung?: string): Promise<Fund | null> => {
+  const umsehen = useCallback(async (
+    wirkung?: string,
+    ortId?: string,
+    itemId?: string,
+  ): Promise<Fund | null> => {
     const jetzt = standRef.current;
     if (!jetzt.siegel) return null;
     setFehler(null);
@@ -253,14 +257,20 @@ export function useGame() {
     try {
       const daten = await post<Fund>("/api/search", {
         siegel: jetzt.siegel,
-        ortId: jetzt.ortId,
+        ortId: ortId ?? jetzt.ortId,
         gefundeneSpuren: jetzt.gefundeneSpuren,
         wirkung,
+        itemId,
       });
 
       if (daten.spur) {
         setStand((alt) => ({
           ...alt,
+          ortId: ortId ?? alt.ortId,
+          besuchteOrte:
+            ortId && !alt.besuchteOrte.includes(ortId)
+              ? [...alt.besuchteOrte, ortId]
+              : alt.besuchteOrte,
           gefundeneSpuren: [...alt.gefundeneSpuren, daten.spur!.itemId],
           notizen: [
             ...alt.notizen,

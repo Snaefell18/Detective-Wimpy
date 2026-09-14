@@ -44,6 +44,7 @@ import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
   besessen,
+  dreiDFuerKapitel,
   geschenkFuerKapitel,
   musikFuerKapitel,
   neueGesichter,
@@ -74,6 +75,11 @@ const Verfolgungsjagd = dynamic(
 
 const Pursuit = dynamic(
   () => import("@/components/Pursuit").then((modul) => modul.Pursuit),
+  { ssr: false },
+);
+
+const Saga3DKapitel = dynamic(
+  () => import("@/components/Saga3DKapitel").then((modul) => modul.Saga3DKapitel),
   { ssr: false },
 );
 
@@ -352,6 +358,16 @@ export default function Home() {
           admin.einstellungen.musik,
         )
       : admin.einstellungen.musik;
+
+  const laufendesDreiDKapitel =
+    sagaFallLaeuft && saga.stand
+      ? dreiDFuerKapitel(
+          saga.stand.saga.vorgaben,
+          saga.stand.lauf.phase === "finale"
+            ? saga.stand.saga.vorgaben.kapitelAnzahl
+            : saga.stand.lauf.kapitel,
+        )
+      : null;
 
   /**
    * Das Geschenk nach einem gelösten Kapitel.
@@ -1350,26 +1366,46 @@ export default function Home() {
 
       <div className={tab === "ort" ? "buehne" : "scroll"}>
         {tab === "ort" && (
-          <OrtScreen
-            fall={stand.fall}
-            ortId={stand.ortId}
-            onOrtWechsel={spiel.gehZuOrt}
-            onCharakter={(id) => {
-              setFehler(null);
-              setChatMit(id);
-            }}
-            onUmsehen={async () => {
-              // Geschärfter Spürsinn gilt für genau ein Umsehen.
-              const wirkung = spuersinn ? "spuersinn" : undefined;
-              if (spuersinn) setSpuersinn(false);
-              return spiel.umsehen(wirkung);
-            }}
-            suchtGerade={laedt === "suche"}
-            wetter={sagaWetter}
-            tasche={tasche.inhalt}
-            kapitel={laufendesKapitel}
-            onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
-          />
+          laufendesDreiDKapitel ? (
+            <Saga3DKapitel
+              fall={stand.fall}
+              siegel={stand.siegel ?? ""}
+              locations={laufendesDreiDKapitel.locations}
+              gefundeneSpuren={stand.gefundeneSpuren}
+              kapitel={laufendesKapitel}
+              tasche={tasche.inhalt}
+              suchtGerade={laedt === "suche"}
+              onCharakter={(id) => {
+                setFehler(null);
+                const ortId = stand.fall?.aufenthalt[id];
+                if (ortId) spiel.gehZuOrt(ortId);
+                setChatMit(id);
+              }}
+              onSpur={(ortId, itemId) => spiel.umsehen(undefined, ortId, itemId)}
+              onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
+            />
+          ) : (
+            <OrtScreen
+              fall={stand.fall}
+              ortId={stand.ortId}
+              onOrtWechsel={spiel.gehZuOrt}
+              onCharakter={(id) => {
+                setFehler(null);
+                setChatMit(id);
+              }}
+              onUmsehen={async () => {
+                // Geschärfter Spürsinn gilt für genau ein Umsehen.
+                const wirkung = spuersinn ? "spuersinn" : undefined;
+                if (spuersinn) setSpuersinn(false);
+                return spiel.umsehen(wirkung);
+              }}
+              suchtGerade={laedt === "suche"}
+              wetter={sagaWetter}
+              tasche={tasche.inhalt}
+              kapitel={laufendesKapitel}
+              onAufnehmen={(mittel, statt) => tasche.aufnehmen(mittel, statt)}
+            />
+          )
         )}
 
         {tab === "verdaechtige" && (

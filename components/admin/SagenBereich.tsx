@@ -27,6 +27,7 @@ import {
 import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
+import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D } from "@/lib/pursuit3d";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { BeweisUebersicht } from "./BeweisUebersicht";
 import { FallEditor } from "./FallEditor";
@@ -901,6 +902,69 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
                       maxLength={400}
                     />
                   </label>
+
+                  <div className="pruefung" style={{ marginBottom: 12 }}>
+                    <label className="feld" style={{ margin: 0 }}>
+                      <span>
+                        <input
+                          type="checkbox"
+                          checked={saga.vorgaben.kapitel3d?.[i]?.aktiv === true}
+                          onChange={(e) => {
+                            const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                            const liste = [...(kopie.vorgaben.kapitel3d ?? [])];
+                            while (liste.length <= i) {
+                              liste.push({
+                                ...STANDARD_KAPITEL_3D,
+                                locations: [...STANDARD_KAPITEL_3D.locations],
+                              });
+                            }
+                            liste[i] = { ...liste[i], aktiv: e.target.checked };
+                            kopie.vorgaben.kapitel3d = liste;
+                            void sagaAendern(kopie);
+                          }}
+                        />{" "}
+                        <strong>Kapitel in 3D spielen</strong>
+                      </span>
+                    </label>
+                    {saga.vorgaben.kapitel3d?.[i]?.aktiv && (
+                      <div className="marken-reihe">
+                        {DREI_D_LOCATIONS.map((ort) => {
+                          const locations = saga.vorgaben.kapitel3d?.[i]?.locations?.length
+                            ? saga.vorgaben.kapitel3d[i].locations
+                            : STANDARD_KAPITEL_3D.locations;
+                          const aktiv = locations.includes(ort.id);
+                          return (
+                            <button
+                              key={ort.id}
+                              className="marke-knopf"
+                              data-aktiv={aktiv}
+                              onClick={() => {
+                                const kopie: Saga = JSON.parse(JSON.stringify(saga));
+                                const liste = [...(kopie.vorgaben.kapitel3d ?? [])];
+                                while (liste.length <= i) {
+                                  liste.push({
+                                    ...STANDARD_KAPITEL_3D,
+                                    locations: [...STANDARD_KAPITEL_3D.locations],
+                                  });
+                                }
+                                const alt = liste[i].locations?.length
+                                  ? liste[i].locations
+                                  : [...STANDARD_KAPITEL_3D.locations];
+                                const neu = aktiv
+                                  ? alt.filter((id) => id !== ort.id)
+                                  : [...alt, ort.id];
+                                liste[i] = { ...liste[i], locations: neu.length ? neu : [ort.id] };
+                                kopie.vorgaben.kapitel3d = liste;
+                                void sagaAendern(kopie);
+                              }}
+                            >
+                              {ort.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <ErzaehlerFeld
                     teil={k.erzaehler}

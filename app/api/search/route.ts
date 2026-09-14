@@ -13,6 +13,10 @@ type Body = {
   gefundeneSpuren: string[];
   /** Eingesetztes Detektiv-Zubehör - "spuersinn" schärft den Riecher. */
   wirkung?: string;
+  /** Nur sichtbare Requisiten für ein 3D-Kapitel; kein Fund und kein Modellaufruf. */
+  vorschau?: boolean;
+  /** In 3D angeklickte Requisite; muss wirklich am übergebenen Ort liegen. */
+  itemId?: string;
 };
 
 /**
@@ -34,7 +38,34 @@ export async function POST(request: Request) {
     }
 
     const gefunden = new Set(body.gefundeneSpuren ?? []);
-    const hier = fall.spuren.find((s) => s.ortId === body.ortId && !gefunden.has(s.itemId));
+
+    if (body.vorschau) {
+      return NextResponse.json({
+        spuren: fall.spuren
+          .filter((spur) => !gefunden.has(spur.itemId))
+          .map((spur) => {
+            const item = fall.items?.find((eintrag) => eintrag.id === spur.itemId) ?? getItem(spur.itemId);
+            return {
+              itemId: spur.itemId,
+              ortId: spur.ortId,
+              name: item?.name ?? "Spur",
+              bild: item?.bild ?? null,
+            };
+          }),
+      });
+    }
+
+    const angeklickt = body.itemId
+      ? fall.spuren.find(
+          (spur) =>
+            spur.itemId === body.itemId &&
+            spur.ortId === body.ortId &&
+            !gefunden.has(spur.itemId),
+        )
+      : undefined;
+    const hier =
+      angeklickt ??
+      fall.spuren.find((s) => s.ortId === body.ortId && !gefunden.has(s.itemId));
 
     /*
      * Mit geschärftem Spürsinn reicht der Blick über den Ort hinaus: Liegt

@@ -24,6 +24,7 @@ import {
 } from "@/lib/verfolgung";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
+import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D } from "@/lib/pursuit3d";
 
 const Verfolgungsjagd = dynamic(
   () => import("../Verfolgungsjagd").then((modul) => modul.Verfolgungsjagd),
@@ -240,6 +241,18 @@ export function SagaVorgabenFelder({
     onAendern({
       kapitelWetter: anStelle<Wetterlage | "">(vorgaben.kapitelWetter, i, lage, ""),
     });
+
+  const dreiDSetzen = (i: number, teil: Partial<SagaVorgaben["kapitel3d"][number]>) => {
+    const bisher = vorgaben.kapitel3d?.[i] ?? STANDARD_KAPITEL_3D;
+    onAendern({
+      kapitel3d: anStelle(
+        vorgaben.kapitel3d,
+        i,
+        { ...bisher, ...teil },
+        { ...STANDARD_KAPITEL_3D, locations: [...STANDARD_KAPITEL_3D.locations] },
+      ),
+    });
+  };
 
   const ratNach = (nachKapitel: number) =>
     (vorgaben.versammlungen ?? []).find((v) => v.nachKapitel === nachKapitel);
@@ -654,6 +667,50 @@ export function SagaVorgabenFelder({
                   {stadt.name}
                 </button>
               ))}
+            </div>
+
+            <div className="pruefung" style={{ marginTop: 14 }}>
+              <label className="feld" style={{ margin: 0 }}>
+                <span>
+                  <input
+                    type="checkbox"
+                    checked={vorgaben.kapitel3d?.[i]?.aktiv === true}
+                    onChange={(e) => dreiDSetzen(i, { aktiv: e.target.checked })}
+                  />{" "}
+                  <strong>{istFinale ? "Finale in 3D spielen" : "Dieses Kapitel in 3D spielen"}</strong>
+                </span>
+                <span className="leise klein">
+                  Wimpy läuft frei durch die Stadt; Tiere, Gespräche und Spuren bleiben Teil des normalen Falls.
+                </span>
+              </label>
+              {vorgaben.kapitel3d?.[i]?.aktiv && (
+                <>
+                  <span className="leise klein">Bausteine der 3D-Stadt</span>
+                  <div className="marken-reihe">
+                    {DREI_D_LOCATIONS.map((ort) => {
+                      const locations = vorgaben.kapitel3d?.[i]?.locations?.length
+                        ? vorgaben.kapitel3d[i].locations
+                        : STANDARD_KAPITEL_3D.locations;
+                      const aktiv = locations.includes(ort.id);
+                      return (
+                        <button
+                          key={ort.id}
+                          className="marke-knopf"
+                          data-aktiv={aktiv}
+                          onClick={() => {
+                            const neu = aktiv
+                              ? locations.filter((id) => id !== ort.id)
+                              : [...locations, ort.id];
+                            dreiDSetzen(i, { locations: neu.length ? neu : [ort.id] });
+                          }}
+                        >
+                          {ort.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         );
