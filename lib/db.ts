@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   orderBy,
+  onSnapshot,
   query,
   setDoc,
   writeBatch,
@@ -162,6 +163,17 @@ export const loescheKampagne = (id: string) => loesche("faelle", id);
 /* --- Sagas --------------------------------------------------------- */
 
 export const ladeSagas = () => alle<Saga>("sagen");
+
+/** Nur bestätigte Editor-Einstellungen übernehmen; Offline-Spielstände bleiben erhalten. */
+export function beobachteSaga3D(id: string, empfangen: (kapitel: Saga["vorgaben"]["kapitel3d"]) => void) {
+  return onSnapshot(doc(getDb(), "sagen", id), { includeMetadataChanges: true }, (snapshot) => {
+    if (!snapshot.exists() || snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) return;
+    const saga = snapshot.data() as Saga;
+    empfangen(saga.vorgaben?.kapitel3d ?? []);
+  }, () => {
+    // Ohne Verbindung bleibt die gespeicherte Saga spielbar.
+  });
+}
 
 export async function speichereSaga(saga: Saga): Promise<void> {
   await anmelden();

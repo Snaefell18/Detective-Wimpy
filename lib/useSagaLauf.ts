@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { Saga, SagaLauf } from "./sagaTypen";
 import { versammlungNach } from "./versammlung";
 import { verfolgungNach } from "./verfolgung";
+import { beobachteSaga3D } from "./db";
+import { aktualisiereSaga3D } from "./saga3dSync";
 
 /**
  * Der Fortschritt in einer Saga - liegt nur auf dem Gerät.
@@ -18,6 +20,20 @@ export type SagaStand = { saga: Saga; lauf: SagaLauf } | null;
 export function useSagaLauf() {
   const [stand, setStand] = useState<SagaStand>(null);
   const [geladen, setGeladen] = useState(false);
+  const sagaId = stand?.saga.id;
+
+  useEffect(() => {
+    if (!geladen || !sagaId) return;
+    let abbestellen: (() => void) | undefined;
+    try {
+      abbestellen = beobachteSaga3D(sagaId, (kapitel3d) => {
+        setStand((alt) => aktualisiereSaga3D(alt, sagaId, kapitel3d));
+      });
+    } catch {
+      // Auch ohne konfigurierte Datenbank kann der lokale Durchgang weiterlaufen.
+    }
+    return () => abbestellen?.();
+  }, [geladen, sagaId]);
 
   useEffect(() => {
     try {

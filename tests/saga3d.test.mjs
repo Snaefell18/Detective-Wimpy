@@ -5,6 +5,7 @@ import { STANDARD_SAGA_VORGABEN, dreiDFuerKapitel } from "../lib/sagaTypen.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { POST } from "../app/api/search/route.ts";
 import { seal, unseal } from "../lib/seal.ts";
+import { aktualisiereSaga3D } from "../lib/saga3dSync.ts";
 
 for (const anzahl of [1, 7, 12, 24, 40]) {
   for (const art of ["tier", "spur"]) {
@@ -18,6 +19,22 @@ const konfiguration = { ...STANDARD_KAPITEL_3D, aktiv: true, locations: ["tokyo1
 const vorgaben = SagaVorgabenSchema.parse(JSON.parse(JSON.stringify({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [konfiguration] })));
 assert.deepEqual(dreiDFuerKapitel(vorgaben, 0), konfiguration);
 assert.equal(dreiDFuerKapitel(vorgaben, 1), null);
+// Regression: Kapitel zwei nachträglich aktivieren, danach einen alten lokalen Durchgang fortsetzen.
+const nurZwei = [{ ...STANDARD_KAPITEL_3D }, konfiguration];
+const alt = {
+  saga: { id: "saga-test", vorgaben: { ...STANDARD_SAGA_VORGABEN, kapitel3d: [] }, kapitel: [{ nummer: 1 }, { nummer: 2 }] },
+  lauf: { sagaId: "saga-test", kapitel: 1, phase: "fall", fallId: "fall-zwei", geloest: [1] },
+};
+const neu = aktualisiereSaga3D(alt, "saga-test", nurZwei);
+assert.equal(neu.lauf, alt.lauf, "Fortschritt und laufende Fall-ID bleiben identisch");
+assert.equal(neu.saga.kapitel, alt.saga.kapitel, "Gespeicherte Kapitel bleiben identisch");
+assert.equal(dreiDFuerKapitel(neu.saga.vorgaben, 0), null, "Kapitel eins bleibt 2D");
+assert.deepEqual(dreiDFuerKapitel(neu.saga.vorgaben, neu.lauf.kapitel), konfiguration, "Kapitel zwei wird 3D");
+assert.equal(aktualisiereSaga3D(neu, "saga-test", nurZwei), neu, "Gleiche Einstellungen lösen keinen Neuaufbau aus");
+assert.equal(aktualisiereSaga3D(neu, "andere-saga", []), neu, "Verspätete Antwort einer anderen Saga wird ignoriert");
+assert.equal(dreiDFuerKapitel(aktualisiereSaga3D(neu, "saga-test", []).saga.vorgaben, 1), null, "3D lässt sich wieder abschalten");
+const nurZweiVomServer = SagaVorgabenSchema.parse(JSON.parse(JSON.stringify({ ...STANDARD_SAGA_VORGABEN, kapitel3d: nurZwei })));
+assert.equal(dreiDFuerKapitel(nurZweiVomServer, 1)?.aktiv, true, "Nur Kapitel zwei übersteht den Generierungsweg");
 assert.equal(SagaVorgabenSchema.parse({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [{ aktiv: true }] }).kapitel3d[0].strassentyp, "asphalt");
 
 const fall = {
