@@ -13,6 +13,7 @@ import {
 } from "@/lib/pursuit";
 import { mutFlascheBauen } from "@/components/Verfolgungsjagd";
 import { PursuitJumpNRun } from "@/components/PursuitJumpNRun";
+import { PursuitExperiment } from "@/components/PursuitExperiment";
 
 type Phase = "auswahl" | "intro" | "jagd" | "gefangen";
 type Auswahl = [string, string, string];
@@ -426,7 +427,7 @@ function PursuitCanvas({
 }
 
 export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
-  const [spielmodus, setSpielmodus] = useState<"wahl" | "verfolgung" | "jump">("wahl");
+  const [spielmodus, setSpielmodus] = useState<"wahl" | "verfolgung" | "jump" | "experiment">("wahl");
   const start = useMemo(() => pursuitStartauswahl(ANIMATIONS_MODELLE), []);
   const [auswahl, setAuswahl] = useState<Auswahl>(start ?? ["", "", ""]);
   const [phase, setPhase] = useState<Phase>("auswahl");
@@ -464,7 +465,7 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
         <section className="pursuit-panel">
           <span className="jagd-kicker">WÄHLE DEIN CHAOS</span>
           <h1>PURSUIT</h1>
-          <p>Zwei vollkommen vernünftige Arten, sich durch den Schnee zu bewegen.</p>
+          <p>Drei vollkommen vernünftige Arten, sich in 3D zu bewegen.</p>
           <div className="pursuit-moduswahl">
             <button type="button" className="pursuit-moduskarte" onClick={() => setSpielmodus("verfolgung")}>
               <small>MODUS I · 3 TIERE</small>
@@ -478,6 +479,12 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
               <span>Springe über Schneeklötze und sammle Hotdogs und Hennessy.</span>
               <b>LOSRENNEN ›</b>
             </button>
+            <button type="button" className="pursuit-moduskarte pursuit-moduskarte-experiment" onClick={() => setSpielmodus("experiment")}>
+              <small>MODUS III · EXPERIMENT</small>
+              <strong>WIMPY 3D</strong>
+              <span>Bewege Wimpy frei durch Tokyo und sprich mit den anderen Tieren.</span>
+              <b>LABOR ÖFFNEN ›</b>
+            </button>
           </div>
         </section>
       </div>
@@ -486,6 +493,10 @@ export function Pursuit({ onSchliessen }: { onSchliessen: () => void }) {
 
   if (spielmodus === "jump") {
     return <PursuitJumpNRun onZurueck={() => setSpielmodus("wahl")} onSchliessen={onSchliessen} />;
+  }
+
+  if (spielmodus === "experiment") {
+    return <PursuitExperiment onZurueck={() => setSpielmodus("wahl")} onSchliessen={onSchliessen} />;
   }
 
   if (!start) {

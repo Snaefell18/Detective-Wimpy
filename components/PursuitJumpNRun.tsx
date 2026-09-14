@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { laufAnimation } from "@/lib/pursuit";
+import { TOKYO_FASSADEN } from "@/lib/pursuit3d";
 
 type ItemArt = "hotdog" | "hennessy";
 type LevelArt = "schnee" | "tokyo";
@@ -13,7 +14,6 @@ const ITEMS: { id: ItemArt; name: string; datei: string }[] = [
   { id: "hennessy", name: "Hennessy", datei: "/3d_items/hennessy.glb" },
 ];
 // Weitere Fassaden können später einfach an diese Liste angehängt werden.
-const TOKYO_FASSADEN = ["/3d_locations/tokyo1-web.glb"];
 const LAUFEN = /(run|running|sprint|jog|walk|walking|laufen|rennen)/i;
 const RUHE = /(rest|idle|t.?pose)/i;
 
@@ -178,16 +178,20 @@ function JumpCanvas({
         scene.add(neon);
         neonPfosten.push(neon);
       }
-      kulissenPromise = loader.loadAsync(TOKYO_FASSADEN[0]).then((gltf) => {
+      kulissenPromise = Promise.all(TOKYO_FASSADEN.map((datei) => loader.loadAsync(datei))).then((gltfs) => {
         if (beendet) return;
-        const vorlage = gltf.scene;
-        cellShading(vorlage, gradient);
-        aufHoeheBringen(vorlage, 8.2 * 1.3);
-        vorlage.rotation.y = -Math.PI / 2;
+        const vorlagen = gltfs.map((gltf) => {
+          const vorlage = gltf.scene;
+          cellShading(vorlage, gradient);
+          aufHoeheBringen(vorlage, 8.2 * 1.3);
+          // Alle Meshy-Bausteine stehen mit derselben Vorderseite zur Straße.
+          vorlage.rotation.y = -Math.PI / 2;
+          return vorlage;
+        });
         for (let i = 0; i < 11; i++) {
           const block = new THREE.Group();
-          block.add(vorlage.clone(true));
-          block.position.set(7.25, 0, i * 10.5 - 15);
+          block.add(vorlagen[i % vorlagen.length].clone(true));
+          block.position.set(7.25, 0, i * 15.5 - 18);
           scene.add(block);
           fassaden.push(block);
         }
@@ -345,7 +349,7 @@ function JumpCanvas({
       });
       fassaden.forEach((block) => {
         block.position.z -= tempo * dt * 0.82;
-        if (block.position.z < -20) block.position.z += 115.5;
+        if (block.position.z < -26) block.position.z += 170.5;
       });
       neonPfosten.forEach((neon) => {
         neon.position.z -= tempo * dt * 0.82;

@@ -121,6 +121,15 @@
   transition: transform .13s ease, box-shadow .13s ease;
 }
 .pursuit-moduskarte-jump { background-color: #ffd646; transform: rotate(1deg); }
+.pursuit-moduskarte-experiment {
+  grid-column: 1 / -1;
+  min-height: 210px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(53,223,255,.35) 0 8%, transparent 8.5%),
+    repeating-linear-gradient(155deg, rgba(255,255,255,.06) 0 2px, transparent 2px 14px),
+    linear-gradient(145deg, #16142e, #4a2365 62%, #d01e72);
+}
 .pursuit-moduskarte:hover { transform: translate(-3px, -4px) rotate(-1deg); box-shadow: 13px 15px 0 #172337; }
 .pursuit-moduskarte-jump:hover { transform: translate(-3px, -4px) rotate(1.5deg); }
 .pursuit-moduskarte small,
@@ -263,6 +272,85 @@
   animation: jump-pop 1.15s both;
 }
 .jump-raus { position: absolute; z-index: 16; left: 24px; bottom: max(24px, calc(var(--safe-bottom) + 12px)); }
+
+.experiment-spiel { background: #080b1c; }
+.experiment-hud {
+  position: absolute;
+  z-index: 15;
+  top: max(22px, calc(var(--safe-top) + 8px));
+  left: clamp(22px, 4vw, 52px);
+  max-width: min(440px, calc(100% - 100px));
+  padding: 10px 14px;
+  border: 4px solid #172337;
+  border-radius: 4px 16px 4px 16px;
+  color: #172337;
+  background: rgba(255,255,255,.94);
+  box-shadow: 6px 7px 0 #35dfff;
+}
+.experiment-hud span,
+.experiment-hud strong,
+.experiment-hud small { display: block; }
+.experiment-hud strong { font: 950 clamp(19px, 3vw, 32px)/1 var(--font-display), Impact, sans-serif; }
+.experiment-hud small { margin-top: 4px; font-weight: 750; }
+.experiment-zurueck { position: absolute; z-index: 16; left: 24px; bottom: max(24px, calc(var(--safe-bottom) + 12px)); }
+.experiment-steuerkreuz {
+  position: absolute;
+  z-index: 16;
+  right: clamp(22px, 5vw, 68px);
+  bottom: max(22px, calc(var(--safe-bottom) + 10px));
+  display: grid;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(3, 54px);
+  gap: 4px;
+}
+.experiment-steuerkreuz button {
+  border: 4px solid #172337;
+  border-radius: 8px;
+  color: #172337;
+  background: rgba(255,255,255,.9);
+  box-shadow: 4px 4px 0 #172337;
+  font-weight: 950;
+  touch-action: none;
+}
+.experiment-steuerkreuz button:active { background: #35dfff; transform: translate(3px, 3px); box-shadow: 1px 1px 0 #172337; }
+.experiment-steuerkreuz button:nth-child(1) { grid-column: 2; grid-row: 1; }
+.experiment-steuerkreuz button:nth-child(2) { grid-column: 1; grid-row: 2; }
+.experiment-steuerkreuz button:nth-child(3) { grid-column: 3; grid-row: 2; }
+.experiment-steuerkreuz button:nth-child(4) { grid-column: 2; grid-row: 3; }
+.experiment-ansprechen {
+  position: absolute;
+  z-index: 17;
+  left: 50%;
+  bottom: max(38px, calc(var(--safe-bottom) + 26px));
+  min-width: min(310px, calc(100% - 230px));
+  padding: 10px 18px;
+  border: 5px solid #172337;
+  border-radius: 4px 17px 4px 17px;
+  color: #172337;
+  background: #ffcf39;
+  box-shadow: 7px 8px 0 #172337;
+  transform: translateX(-50%) rotate(-1deg);
+}
+.experiment-ansprechen small,
+.experiment-ansprechen strong { display: block; }
+.experiment-ansprechen small { font-size: 9px; font-weight: 950; letter-spacing: .13em; }
+.experiment-ansprechen strong { font: 950 clamp(17px, 2.5vw, 25px)/1 var(--font-display), Impact, sans-serif; }
+.experiment-dialog {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: max(35px, calc(var(--safe-bottom) + 24px));
+  width: min(560px, calc(100% - 44px));
+  box-sizing: border-box;
+  padding: 20px;
+  border: 5px solid #172337;
+  border-radius: 4px 22px 4px 22px;
+  color: #172337;
+  background: #fff;
+  box-shadow: 10px 11px 0 #35dfff, 16px 17px 0 #172337;
+  transform: translateX(-50%);
+}
+.experiment-dialog p { margin: 7px 0 15px; font-size: clamp(17px, 2.4vw, 24px); font-weight: 800; }
 @keyframes jump-pop {
   0% { opacity: 0; transform: translate(-50%, 35px) scale(.35) rotate(-8deg); }
   18%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(1deg); }
@@ -342,6 +430,7 @@
   .pursuit-namen strong { font-size: 14px; }
   .pursuit-fangaktionen { display: grid; }
   .pursuit-moduswahl { grid-template-columns: 1fr; }
+  .pursuit-moduskarte-experiment { grid-column: auto; }
   .pursuit-moduskarte { min-height: 220px; }
   .jump-charaktere { grid-template-columns: 1fr; }
   .jump-levelwahl { grid-template-columns: 1fr; }
@@ -350,4 +439,9 @@
   .jump-score, .jump-inventar { padding: 7px 9px; border-width: 3px; box-shadow: 3px 4px 0 #172337; }
   .jump-knopf { right: 18px; width: 112px; }
   .jump-raus { left: 16px; max-width: 125px; }
+  .experiment-hud { left: 16px; max-width: calc(100% - 74px); padding: 8px 10px; }
+  .experiment-hud small { display: none; }
+  .experiment-zurueck { left: 14px; max-width: 88px; }
+  .experiment-steuerkreuz { right: 16px; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
+  .experiment-ansprechen { bottom: max(180px, calc(var(--safe-bottom) + 168px)); min-width: min(280px, calc(100% - 42px)); }
 }

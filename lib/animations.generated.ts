@@ -27,6 +27,29 @@ export const ANIMATIONS_MODELLE: AnimationsModell[] = [
     ]
   },
   {
+    "id": "wimpy",
+    "name": "Wimpy",
+    "datei": "/animations/wimpy.glb",
+    "animationen": [
+      "Running",
+      "Walking",
+      "Arm_Circle_Shuffle",
+      "Casual_Walk",
+      "FunnyDancing_01",
+      "Hello_Run",
+      "Idle_11",
+      "Idle_15",
+      "Idle_3",
+      "Idle_6",
+      "Male_Head_Down_Charge",
+      "RunFast",
+      "Shake_It_Off_Dance",
+      "baseball_pitching",
+      "run_fast_3",
+      "restpose"
+    ]
+  },
+  {
     "id": "yeti",
     "name": "Yeti",
     "datei": "/animations/yeti.glb",
