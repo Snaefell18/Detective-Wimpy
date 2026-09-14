@@ -45,7 +45,11 @@ function gradientTextur() {
   return textur;
 }
 
-function cellShading(objekt: THREE.Object3D, gradient: THREE.Texture) {
+function cellShading(
+  objekt: THREE.Object3D,
+  gradient: THREE.Texture,
+  clippingPlanes: THREE.Plane[] = [],
+) {
   objekt.traverse((kind) => {
     if (!(kind instanceof THREE.Mesh)) return;
     kind.castShadow = true;
@@ -54,7 +58,7 @@ function cellShading(objekt: THREE.Object3D, gradient: THREE.Texture) {
     const materialien: THREE.Material[] = mehrfach ? kind.material : [kind.material];
     const toon = materialien.map((material: THREE.Material) => {
       const quelle = material as THREE.MeshStandardMaterial;
-      return new THREE.MeshToonMaterial({
+      const materialNeu = new THREE.MeshToonMaterial({
         color: quelle.color?.clone() ?? new THREE.Color(0xffffff),
         map: quelle.map ?? null,
         gradientMap: gradient,
@@ -63,6 +67,9 @@ function cellShading(objekt: THREE.Object3D, gradient: THREE.Texture) {
         alphaTest: quelle.alphaTest,
         side: quelle.side,
       });
+      materialNeu.clippingPlanes = clippingPlanes;
+      materialNeu.clipShadows = clippingPlanes.length > 0;
+      return materialNeu;
     });
     kind.material = mehrfach ? toon : toon[0];
   });
@@ -132,6 +139,7 @@ function KapitelCanvas({
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.shadowMap.enabled = true;
+    renderer.localClippingEnabled = true;
     renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
     element.appendChild(renderer.domElement);
 
@@ -145,13 +153,31 @@ function KapitelCanvas({
     licht.castShadow = true;
     scene.add(licht);
     const boden = new THREE.Mesh(
-      new THREE.PlaneGeometry(24, 80),
-      new THREE.MeshToonMaterial({ color: wetter === "regen" ? 0x172637 : tageszeit === "tag" ? 0x394657 : 0x22283b, gradientMap: gradient }),
+      new THREE.PlaneGeometry(40, 90),
+      new THREE.MeshToonMaterial({ color: wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448, gradientMap: gradient }),
     );
     boden.rotation.x = -Math.PI / 2;
     boden.position.z = -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    const fahrbahn = new THREE.Mesh(
+      new THREE.PlaneGeometry(9.2, 90),
+      new THREE.MeshToonMaterial({
+        color: wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
+        gradientMap: gradient,
+      }),
+    );
+    fahrbahn.rotation.x = -Math.PI / 2;
+    fahrbahn.position.set(0, 0.012, -8);
+    fahrbahn.receiveShadow = true;
+    scene.add(fahrbahn);
+    const bordstein = new THREE.Mesh(
+      new THREE.BoxGeometry(0.34, 0.22, 90),
+      new THREE.MeshToonMaterial({ color: 0xc5c7c3, gradientMap: gradient }),
+    );
+    bordstein.position.set(4.72, 0.1, -8);
+    bordstein.receiveShadow = true;
+    scene.add(bordstein);
     let regen: THREE.Points | null = null;
     if (wetter === "regen") {
       const positionen = new Float32Array(900 * 3);
@@ -212,7 +238,10 @@ function KapitelCanvas({
       const vorlagen = kulissen.flatMap((ergebnis) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
-        cellShading(vorlage, gradient);
+        // Alles, was ein Location-GLB selbst vor die Bordsteinkante legt
+        // (Straße, Autos, Mobiliar), wird abgeschnitten. So bleibt es eine
+        // Kulisse und kann den wirklich begehbaren Streifen nicht verschlucken.
+        cellShading(vorlage, gradient, [new THREE.Plane(new THREE.Vector3(1, 0, 0), -4.88)]);
         einpassen(vorlage, 10.66);
         // Die exportierten Häuserfronten zeigen so mit ihrer Vorderseite zur Straße.
         vorlage.rotation.y = -Math.PI / 2;
@@ -327,8 +356,16 @@ function KapitelCanvas({
       const bewegt = Math.abs(x) + Math.abs(z) > 0.05;
       if (bewegt) {
         const laenge = Math.hypot(x, z) || 1;
-        spieler.position.x = THREE.MathUtils.clamp(spieler.position.x + (x / laenge) * dt * 4.1, -4.8, 4.8);
-        spieler.position.z = THREE.MathUtils.clamp(spieler.position.z + (z / laenge) * dt * 4.1, -36, 15);
+        const vorherX = spieler.position.x;
+        const vorherZ = spieler.position.z;
+        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * dt * 4.1, -4.15, 4.15);
+        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * dt * 4.1, -36, 15);
+        const kollidiert = npcGruppen.some((npc) => {
+          const dx = npc.gruppe.position.x - neuX;
+          const dz = npc.gruppe.position.z - neuZ;
+          return dx * dx + dz * dz < 1.15 * 1.15;
+        });
+        if (!kollidiert) spieler.position.set(neuX, 0, neuZ);
         spieler.rotation.y = Math.atan2(x, z);
       }
       const gewuenscht = bewegt ? laufAktion : (ruheAktion ?? laufAktion);
