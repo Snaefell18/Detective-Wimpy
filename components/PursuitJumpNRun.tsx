@@ -7,10 +7,13 @@ import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.gene
 import { laufAnimation } from "@/lib/pursuit";
 
 type ItemArt = "hotdog" | "hennessy";
+type LevelArt = "schnee" | "tokyo";
 const ITEMS: { id: ItemArt; name: string; datei: string }[] = [
   { id: "hotdog", name: "Hotdog", datei: "/3d_items/hotdog.glb" },
   { id: "hennessy", name: "Hennessy", datei: "/3d_items/hennessy.glb" },
 ];
+// Weitere Fassaden können später einfach an diese Liste angehängt werden.
+const TOKYO_FASSADEN = ["/3d_locations/tokyo1-web.glb"];
 const LAUFEN = /(run|running|sprint|jog|walk|walking|laufen|rennen)/i;
 const RUHE = /(rest|idle|t.?pose)/i;
 
@@ -77,15 +80,17 @@ function baum(gradient: THREE.Texture) {
 
 function JumpCanvas({
   modell,
+  level,
   sprung,
   onPunkte,
   onItem,
   onTreffer,
 }: {
   modell: AnimationsModell;
+  level: LevelArt;
   sprung: MutableRefObject<number>;
   onPunkte: (punkte: number) => void;
-  onItem: (art: ItemArt, animation: string) => void;
+  onItem: (art: ItemArt) => void;
   onTreffer: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -97,9 +102,10 @@ function JumpCanvas({
     if (!element) return;
     let beendet = false;
     let frame = 0;
+    const istTokyo = level === "tokyo";
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x83ddec);
-    scene.fog = new THREE.Fog(0xcdf5fa, 18, 58);
+    scene.background = new THREE.Color(istTokyo ? 0x080b1c : 0x83ddec);
+    scene.fog = new THREE.Fog(istTokyo ? 0x141329 : 0xcdf5fa, istTokyo ? 15 : 18, istTokyo ? 52 : 58);
     const gradient = gradientTextur();
     const breite = Math.max(320, element.clientWidth);
     const hoehe = Math.max(360, element.clientHeight);
@@ -115,41 +121,43 @@ function JumpCanvas({
     renderer.setSize(breite, hoehe);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7));
     renderer.shadowMap.enabled = true;
+    renderer.toneMappingExposure = istTokyo ? 0.82 : 1;
     element.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xf9ffff, 0x355b78, 2.7));
-    const sonne = new THREE.DirectionalLight(0xffefc5, 3.6);
+    const loader = new GLTFLoader();
+    scene.add(new THREE.HemisphereLight(istTokyo ? 0x728cff : 0xf9ffff, istTokyo ? 0x140c2e : 0x355b78, istTokyo ? 1.8 : 2.7));
+    const sonne = new THREE.DirectionalLight(istTokyo ? 0x84dfff : 0xffefc5, istTokyo ? 2.25 : 3.6);
     sonne.position.set(-7, 12, 8);
     sonne.castShadow = true;
     scene.add(sonne);
     const piste = new THREE.Mesh(
       new THREE.PlaneGeometry(7.2, 90),
-      new THREE.MeshToonMaterial({ color: 0xd7f2f5, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({ color: istTokyo ? 0x202536 : 0xd7f2f5, gradientMap: gradient }),
     );
     piste.rotation.x = -Math.PI / 2;
     piste.position.set(0, 0, 17);
     piste.receiveShadow = true;
     scene.add(piste);
-    const schnee = new THREE.Mesh(
+    const umgebung = new THREE.Mesh(
       new THREE.PlaneGeometry(70, 100),
-      new THREE.MeshToonMaterial({ color: 0xf4feff, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({ color: istTokyo ? 0x0d1020 : 0xf4feff, gradientMap: gradient }),
     );
-    schnee.rotation.x = -Math.PI / 2;
-    schnee.position.set(0, -0.03, 17);
-    scene.add(schnee);
+    umgebung.rotation.x = -Math.PI / 2;
+    umgebung.position.set(0, -0.03, 17);
+    scene.add(umgebung);
 
     const streifen: THREE.Mesh[] = [];
     for (let i = 0; i < 18; i++) {
       const strich = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.025, 1.5),
-        new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        new THREE.MeshBasicMaterial({ color: istTokyo ? 0x71e8ff : 0xffffff }),
       );
       strich.position.set(0, 0.035, i * 4 - 6);
       scene.add(strich);
       streifen.push(strich);
     }
     const baeume: THREE.Group[] = [];
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < (istTokyo ? 0 : 24); i++) {
       const t = baum(gradient);
       t.position.set((i % 2 ? 1 : -1) * (5 + (i % 4) * 1.25), 0, i * 4.4 - 10);
       t.scale.setScalar(0.65 + (i % 3) * 0.15);
@@ -157,7 +165,35 @@ function JumpCanvas({
       baeume.push(t);
     }
 
-    const loader = new GLTFLoader();
+    const fassaden: THREE.Group[] = [];
+    const neonPfosten: THREE.Mesh[] = [];
+    let kulissenPromise: Promise<void> = Promise.resolve();
+    if (istTokyo) {
+      for (let i = 0; i < 16; i++) {
+        const neon = new THREE.Mesh(
+          new THREE.BoxGeometry(0.1, 2.4 + (i % 3) * 0.5, 0.12),
+          new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff357f : 0x35dfff }),
+        );
+        neon.position.set(4.15 + (i % 3) * 0.2, 1.5, i * 6.5 - 12);
+        scene.add(neon);
+        neonPfosten.push(neon);
+      }
+      kulissenPromise = loader.loadAsync(TOKYO_FASSADEN[0]).then((gltf) => {
+        if (beendet) return;
+        const vorlage = gltf.scene;
+        cellShading(vorlage, gradient);
+        aufHoeheBringen(vorlage, 8.2);
+        vorlage.rotation.y = Math.PI / 2;
+        for (let i = 0; i < 11; i++) {
+          const block = new THREE.Group();
+          block.add(vorlage.clone(true));
+          block.position.set(7.25, 0, i * 10.5 - 15);
+          scene.add(block);
+          fassaden.push(block);
+        }
+      }).catch(() => undefined);
+    }
+
     const spieler = new THREE.Group();
     spieler.position.set(-0.25, 0, 0);
     scene.add(spieler);
@@ -195,7 +231,7 @@ function JumpCanvas({
       basisY: number;
     };
     const objekte: LaufObjekt[] = [];
-    const hindernisMat = new THREE.MeshToonMaterial({ color: 0x58758b, gradientMap: gradient });
+    const hindernisMat = new THREE.MeshToonMaterial({ color: istTokyo ? 0xff713d : 0x58758b, gradientMap: gradient });
     const schneeMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: gradient });
     const itemVorlagen = new Map<ItemArt, THREE.Object3D>();
 
@@ -215,10 +251,13 @@ function JumpCanvas({
           const klotz = new THREE.Mesh(new THREE.DodecahedronGeometry(0.62), hindernisMat);
           klotz.scale.set(1.35, 0.78, 0.9);
           klotz.position.y = 0.48;
-          const kappe = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 5), schneeMat);
-          kappe.scale.set(1.2, 0.3, 0.9);
-          kappe.position.y = 0.82;
-          gruppe.add(klotz, kappe);
+          gruppe.add(klotz);
+          if (!istTokyo) {
+            const kappe = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 5), schneeMat);
+            kappe.scale.set(1.2, 0.3, 0.9);
+            kappe.position.y = 0.82;
+            gruppe.add(kappe);
+          }
         } else {
           const vorlage = itemVorlagen.get(art);
           if (vorlage) gruppe.add(vorlage.clone(true));
@@ -230,7 +269,7 @@ function JumpCanvas({
         objekte.push({ gruppe, art, erledigt: false, basisY });
       }
     });
-    void Promise.allSettled([figurPromise, itemsPromise]);
+    void Promise.allSettled([figurPromise, itemsPromise, kulissenPromise]);
 
     let y = 0;
     let tempoY = 0;
@@ -252,11 +291,9 @@ function JumpCanvas({
     window.addEventListener("keydown", taste);
 
     const sammelAnimation = (art: ItemArt) => {
-      let name = "COMIC-SPIN";
       if (mixer && spezialClips.length) {
         const clip = spezialClips[spezialIndex % spezialClips.length];
         spezialIndex++;
-        name = clip.name;
         const aktion = mixer.clipAction(clip);
         aktion.reset();
         aktion.setLoop(THREE.LoopOnce, 1);
@@ -269,7 +306,7 @@ function JumpCanvas({
         drehKick = 1;
         spezialBis = zeit + 0.85;
       }
-      callbacks.current.onItem(art, name);
+      callbacks.current.onItem(art);
     };
 
     const zeichnen = (jetzt: number) => {
@@ -305,6 +342,14 @@ function JumpCanvas({
       baeume.forEach((t) => {
         t.position.z -= tempo * dt * 0.72;
         if (t.position.z < -13) t.position.z += 106;
+      });
+      fassaden.forEach((block) => {
+        block.position.z -= tempo * dt * 0.82;
+        if (block.position.z < -20) block.position.z += 115.5;
+      });
+      neonPfosten.forEach((neon) => {
+        neon.position.z -= tempo * dt * 0.82;
+        if (neon.position.z < -18) neon.position.z += 104;
       });
       let groesstesZ = objekte.reduce((max, objekt) => Math.max(max, objekt.gruppe.position.z), 18);
       objekte.forEach((objekt, index) => {
@@ -369,13 +414,14 @@ function JumpCanvas({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [modell, sprung]);
+  }, [level, modell, sprung]);
 
   return <div className="jagd-canvas" ref={host} aria-label="Pursuit Jump and Run" />;
 }
 
 export function PursuitJumpNRun({ onZurueck, onSchliessen }: { onZurueck: () => void; onSchliessen: () => void }) {
   const [modellId, setModellId] = useState(ANIMATIONS_MODELLE[0]?.id ?? "");
+  const [level, setLevel] = useState<LevelArt>("schnee");
   const [spielt, setSpielt] = useState(false);
   const [punkte, setPunkte] = useState(0);
   const [hotdogs, setHotdogs] = useState(0);
@@ -394,6 +440,14 @@ export function PursuitJumpNRun({ onZurueck, onSchliessen }: { onZurueck: () => 
           <span className="jagd-kicker">PURSUIT · MODUS II</span>
           <h1>JUMP ’N’ RUN</h1>
           <p>Wähle dein Tier. Es läuft. Du springst. Der Hotdog wartet auf niemanden.</p>
+          <div className="jump-levelwahl" aria-label="Level wählen">
+            <button data-aktiv={level === "schnee"} onClick={() => setLevel("schnee")}>
+              <small>LEVEL I</small><strong>SCHNEE</strong><span>Eisblau, hell und herrlich kalt.</span>
+            </button>
+            <button data-aktiv={level === "tokyo"} onClick={() => setLevel("tokyo")}>
+              <small>LEVEL II</small><strong>TOKYO NIGHT</strong><span>Dunkle Straße, Neon und endlose Häuserfront.</span>
+            </button>
+          </div>
           <div className="jump-charaktere">
             {ANIMATIONS_MODELLE.map((eintrag) => (
               <button key={eintrag.id} data-aktiv={eintrag.id === modellId} onClick={() => setModellId(eintrag.id)}>
@@ -417,6 +471,7 @@ export function PursuitJumpNRun({ onZurueck, onSchliessen }: { onZurueck: () => 
       <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
       <JumpCanvas
         modell={modell}
+        level={level}
         sprung={sprung}
         onPunkte={setPunkte}
         onTreffer={() => {
@@ -424,20 +479,20 @@ export function PursuitJumpNRun({ onZurueck, onSchliessen }: { onZurueck: () => 
           setMeldung("KRRKS!");
           window.setTimeout(() => setTreffer(false), 280);
         }}
-        onItem={(art, animation) => {
+        onItem={(art) => {
           if (art === "hotdog") setHotdogs((wert) => wert + 1);
           else setFlaschen((wert) => wert + 1);
-          setMeldung(`${art === "hotdog" ? "HOTDOG!" : "HENNESSY!"} · ${animation}`);
+          setMeldung(art === "hotdog" ? "HOTDOG!" : "HENNESSY!");
         }}
       />
       <header className="jump-hud">
-        <div><span className="jagd-kicker">PURSUIT · JUMP ’N’ RUN</span><strong>{modell.name}</strong></div>
+        <div><span className="jagd-kicker">{level === "tokyo" ? "TOKYO NIGHT" : "SCHNEE"} · JUMP ’N’ RUN</span><strong>{modell.name}</strong></div>
         <div className="jump-score">{punkte.toLocaleString("de-DE")}<small>PUNKTE</small></div>
         <div className="jump-inventar"><span>🌭 {hotdogs}</span><span>🍾 {flaschen}</span></div>
       </header>
       {meldung && <div className="jump-meldung" key={`${meldung}-${hotdogs}-${flaschen}`}>{meldung}</div>}
       <button className="jump-knopf" onPointerDown={springen} aria-label="Springen">SPRUNG!<small>LEERTASTE</small></button>
-      <button className="pursuit-zurueck jump-raus" onClick={() => setSpielt(false)}>‹ Figur wechseln</button>
+      <button className="pursuit-zurueck jump-raus" onClick={() => setSpielt(false)}>‹ Figur / Level</button>
     </div>
   );
 }
