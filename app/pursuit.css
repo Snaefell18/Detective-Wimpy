@@ -14,8 +14,13 @@
   z-index: 600;
   display: grid;
   place-items: center;
-  overflow: auto;
-  padding: max(76px, calc(var(--safe-top) + 58px)) 22px max(30px, var(--safe-bottom));
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  padding: max(76px, calc(var(--safe-top) + 58px)) 22px max(64px, calc(var(--safe-bottom) + 44px));
   background:
     repeating-linear-gradient(168deg, rgba(23,35,55,.06) 0 2px, transparent 2px 18px),
     radial-gradient(circle at 80% 14%, #fff 0 6%, transparent 6.5%),
@@ -320,7 +325,12 @@
 }
 
 @media (max-width: 640px) {
-  .pursuit-auswahl { display: block; padding-top: 74px; }
+  .pursuit-auswahl {
+    display: block;
+    padding-top: max(74px, calc(var(--safe-top) + 52px));
+    padding-bottom: max(84px, calc(var(--safe-bottom) + 58px));
+  }
+  .pursuit-auswahl .pursuit-panel { margin: 0 auto; }
   .pursuit-modelle { grid-template-columns: 1fr; }
   .pursuit-panel { padding: 20px; }
   .pursuit-panel h1 { font-size: 58px; }
