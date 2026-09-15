@@ -14,6 +14,7 @@
     "animations:liste": "node scripts/animations-liste.mjs",
     "locations3d:liste": "node scripts/3d-locations-liste.mjs",
     "locations3d:optimieren": "node scripts/3d-locations-optimieren.mjs",
+    "locations3d:klein": "node scripts/3d-locations-optimieren.mjs --klein",
     "import:csv": "node scripts/import-csv.mjs",
     "import:orte": "node scripts/import-locations.mjs",
     "bilder:optimieren": "node scripts/optimize-images.mjs",

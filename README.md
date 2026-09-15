@@ -403,6 +403,31 @@ npm run bilder:optimieren -- --pruefen   # zeigt nur, was passieren würde
 und die Dateien liegen bei ~300-500 kB, ohne sichtbaren Verlust; Transparenz
 bleibt erhalten.
 
+**3D-Bausteine (Straßen, Häuser, Tankstelle).** Die rohen `.glb` aus dem
+Modellierer bleiben auf deinem Rechner - `.gitignore` lässt aus
+`public/3d_locations/` nur die Webfassungen durch. Aus `tankstelle.glb` wird
+mit
+
+```bash
+npm run locations3d:optimieren     # macht aus name.glb eine name-web.glb
+npm run locations3d:klein          # dasselbe noch einmal kleiner
+```
+
+eine `tankstelle-web.glb` mit Meshopt-Komprimierung und WebP-Texturen, und
+nur die kommt ins Repository. Der Befehl schreibt am Ende hin, wie groß sie
+geworden ist:
+
+- **unter 25 MB** - die GitHub-Weboberfläche nimmt sie an (Add file →
+  Upload files).
+- **darüber** - entweder `npm run locations3d:klein` (halb so große Texturen,
+  stärker vereinfachte Geometrie), oder ganz normal per `git push` statt über
+  den Browser: Dort liegt die Grenze bei 100 MB je Datei, und so ist auch die
+  27 MB große `donki2-web.glb` ins Repo gekommen.
+
+Nach dem Deploy taucht der Baustein von selbst überall auf, wo man Bausteine
+wählt - der Build liest den Ordner neu ein. Heißt die Datei „tankstelle",
+erkennt das Spiel sie ohne weiteres Zutun als Wimpys Garage.
+
 ### 2. Zum Ausprobieren: im Admin-Menü
 
 Unter **Admin → Bilder** kannst du zu jedem Eintrag ein Bild direkt vom Handy
@@ -627,5 +652,7 @@ Die Architektur ist darauf vorbereitet:
 | `npm run import:csv` | Charaktere aus der CSV neu einlesen         |
 | `npm run import:orte`| Städte und Orte aus der CSV neu einlesen    |
 | `npm run bilder:optimieren` | Bilder in public/ handytauglich verkleinern |
+| `npm run locations3d:optimieren` | Aus 3D-Rohdateien spielbare `-web.glb` machen |
+| `npm run locations3d:klein` | Dasselbe mit kleineren Texturen, für zu große Dateien |
 | `npm run firebase:rules` | Sicherheitsregeln und Indizes veröffentlichen |
 | `npm run lint`       | Linter                                      |
