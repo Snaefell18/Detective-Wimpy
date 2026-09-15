@@ -21,8 +21,8 @@ export type Kapitel3DVorgabe = {
 };
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
-export type DreiDWetter = "klar" | "sonne" | "regen";
-export type DreiDStrassentyp = "asphalt" | "sand";
+export type DreiDWetter = "klar" | "sonne" | "regen" | "schnee" | "schneesturm" | "nebel";
+export type DreiDStrassentyp = "asphalt" | "sand" | "schnee";
 
 export const DREI_D_TAGESZEITEN: { id: DreiDTageszeit; name: string }[] = [
   { id: "morgen", name: "Morgen" },
@@ -35,11 +35,15 @@ export const DREI_D_WETTER: { id: DreiDWetter; name: string }[] = [
   { id: "klar", name: "Klar" },
   { id: "sonne", name: "Strahlender Sonnenschein" },
   { id: "regen", name: "Regen" },
+  { id: "schnee", name: "Schneefall" },
+  { id: "schneesturm", name: "Schneechaos / Schneesturm" },
+  { id: "nebel", name: "Nebel" },
 ];
 
 export const DREI_D_STRASSENTYPEN: { id: DreiDStrassentyp; name: string }[] = [
   { id: "asphalt", name: "Asphalt" },
   { id: "sand", name: "Sand" },
+  { id: "schnee", name: "Schneestraße · Arktis" },
 ];
 
 export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {

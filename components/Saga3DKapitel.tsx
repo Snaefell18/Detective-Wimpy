@@ -93,16 +93,39 @@ function gradientTextur() {
   return textur;
 }
 
-function sandTextur() {
-  const pixel = new Uint8Array(64 * 64 * 4);
-  for (let i = 0; i < 64 * 64; i++) {
-    const rauschen = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-    const helligkeit = 224 + Math.floor((rauschen - Math.floor(rauschen)) * 31);
-    pixel.set([helligkeit, helligkeit, helligkeit, 255], i * 4);
+function naturStrassenTextur(schnee: boolean) {
+  const breite = 128, laenge = 512;
+  const pixel = new Uint8Array(breite * laenge * 4);
+  for (let y = 0; y < laenge; y++) {
+    for (let x = 0; x < breite; x++) {
+      const u = x / (breite - 1);
+      const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+      const korn = (rauschen - Math.floor(rauschen) - 0.5) * 14;
+      const spur = [0.22, 0.38, 0.62, 0.78].reduce((summe, mitte) =>
+        summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / 0.027) ** 2)), 0);
+      const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
+      const riffeln = Math.sin(y * 0.7 + u * 22) * 3;
+      const basis = schnee ? [222, 236, 244] : [199, 160, 105];
+      const farbe = basis.map((v) => THREE.MathUtils.clamp(v + korn + riffeln - spur * (schnee ? 44 : 29) + rand * (schnee ? 10 : -22), 0, 255));
+      pixel.set([...farbe, 255], (y * breite + x) * 4);
+    }
   }
-  const textur = new THREE.DataTexture(pixel, 64, 64, THREE.RGBAFormat);
+  const textur = new THREE.DataTexture(pixel, breite, laenge, THREE.RGBAFormat);
+  textur.colorSpace = THREE.SRGBColorSpace;
   textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
-  textur.repeat.set(5, 50);
+  textur.repeat.set(1, 6);
+  textur.magFilter = THREE.LinearFilter;
+  textur.needsUpdate = true;
+  return textur;
+}
+
+function schneeflockenTextur() {
+  const pixel = new Uint8Array(32 * 32 * 4);
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+    const radius = Math.hypot(x - 15.5, y - 15.5) / 15.5;
+    pixel.set([255, 255, 255, Math.round(Math.max(0, 1 - radius) ** 0.6 * 255)], (y * 32 + x) * 4);
+  }
+  const textur = new THREE.DataTexture(pixel, 32, 32, THREE.RGBAFormat);
   textur.magFilter = THREE.LinearFilter;
   textur.needsUpdate = true;
   return textur;
@@ -254,9 +277,12 @@ function KapitelCanvas({
       abend: 0xa84567,
       nacht: 0x070a16,
     }[tageszeit];
-    const nebel = wetter === "regen" ? 0x536777 : himmel;
-    scene.background = new THREE.Color(himmel);
-    scene.fog = new THREE.Fog(nebel, wetter === "regen" ? 13 : 20, wetter === "regen" ? 48 : 68);
+    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const dunst = wetter === "nebel" || wetter === "schneesturm";
+    const nebel = dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
+    scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
+    // Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m entfernt).
+    scene.fog = new THREE.Fog(nebel, dunst ? 17 : wetter === "regen" ? 13 : 20, dunst ? 36 : wetter === "regen" ? 48 : 68);
     const gradient = gradientTextur();
     const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 120);
     camera.position.set(-9.5, 5.1, 13.8);
@@ -284,7 +310,7 @@ function KapitelCanvas({
     scene.add(new THREE.HemisphereLight(oben, tageszeit === "nacht" ? 0x160d2e : 0x455348, tageszeit === "nacht" ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
       wetter === "sonne" ? 0xfff1b8 : tageszeit === "abend" ? 0xff9c72 : 0xb9ddff,
-      wetter === "sonne" ? 5.2 : wetter === "regen" ? 1.5 : 2.8,
+      wetter === "sonne" ? 5.2 : dunst ? 0.9 : wetter === "regen" || schneeWetter ? 1.5 : 2.8,
     );
     licht.position.set(-8, 14, 9);
     licht.castShadow = true;
@@ -292,16 +318,16 @@ function KapitelCanvas({
     scene.add(licht);
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(40, 90),
-      new THREE.MeshToonMaterial({ color: wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({ color: strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448, gradientMap: gradient }),
     );
     boden.rotation.x = -Math.PI / 2;
     boden.position.z = -8;
     boden.receiveShadow = true;
     scene.add(boden);
     const fahrbahnMaterial = new THREE.MeshToonMaterial({
-      map: strassentyp === "sand" ? sandTextur() : null,
-      color: strassentyp === "sand"
-        ? wetter === "regen" ? 0x8c704b : tageszeit === "nacht" ? 0x66563f : 0xd3b477
+      map: strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : null,
+      color: strassentyp !== "asphalt"
+        ? wetter === "regen" ? 0xb1a18a : 0xffffff
         : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
       gradientMap: gradient,
     });
@@ -314,20 +340,25 @@ function KapitelCanvas({
     fahrbahn.receiveShadow = true;
     scene.add(fahrbahn);
     let regen: THREE.Points | null = null;
-    if (wetter === "regen") {
-      const positionen = new Float32Array(900 * 3);
-      for (let i = 0; i < 900; i++) {
-        positionen[i * 3] = Math.random() * 18 - 9;
+    if (wetter === "regen" || schneeWetter) {
+      const anzahl = wetter === "schneesturm" ? 1800 : 900;
+      const positionen = new Float32Array(anzahl * 3);
+      for (let i = 0; i < anzahl; i++) {
+        positionen[i * 3] = Math.random() * 28 - 14;
         positionen[i * 3 + 1] = Math.random() * 15;
         positionen[i * 3 + 2] = Math.random() * 70 - 48;
       }
       const geometrie = new THREE.BufferGeometry();
       geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
+      const flocken = schneeWetter ? schneeflockenTextur() : null;
+      if (flocken) ressourcen.add(flocken);
       regen = new THREE.Points(
         geometrie,
-        new THREE.PointsMaterial({ color: 0xc6edff, size: 0.075, transparent: true, opacity: 0.85 }),
+        new THREE.PointsMaterial({ map: flocken, color: schneeWetter ? 0xf3faff : 0xc6edff, size: schneeWetter ? 0.18 : 0.075, transparent: true, opacity: 0.85, depthWrite: false }),
       );
       scene.add(regen);
+      ressourcen.add(geometrie);
+      ressourcen.add(regen.material as THREE.Material);
     }
     if (wetter === "sonne") {
       const sonne = new THREE.Mesh(
@@ -345,6 +376,19 @@ function KapitelCanvas({
       strich.position.set(0, 0.03, i * 4.2 - 38);
       scene.add(strich);
     }
+    if (strassentyp !== "asphalt") {
+      // Flache Schultern statt Bordstein; schmale rote Schneestangen wie in der Arktis.
+      for (const seite of [-1, 1]) {
+        for (let i = 0; i < 15; i++) {
+          const pfosten = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.035, 0.045, strassentyp === "schnee" ? 1.25 : 0.5, 5),
+            new THREE.MeshToonMaterial({ color: strassentyp === "schnee" ? 0xd65a47 : 0xd2bb8b, gradientMap: gradient }),
+          );
+          pfosten.position.set(seite * 4.48, strassentyp === "schnee" ? 0.625 : 0.25, 18 - i * 4.8);
+          scene.add(pfosten);
+        }
+      }
+    }
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
@@ -355,6 +399,7 @@ function KapitelCanvas({
     const npcGruppen: {
       gruppe: THREE.Group; info: Naehe; basisZ: number; zielZ: number; pause: number; radius: number;
       lauf?: THREE.AnimationAction; ruhe?: THREE.AnimationAction; aktiv?: THREE.AnimationAction;
+      ruheAktionen: THREE.AnimationAction[]; strecke: number;
     }[] = [];
     const spurGruppen: { gruppe: THREE.Group; info: Naehe }[] = [];
     let spielerMixer: THREE.AnimationMixer | null = null;
@@ -444,13 +489,16 @@ function KapitelCanvas({
         scene.add(gruppe);
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
         const clips = ergebnis.value.animationen;
-        const laufClip = clips.find((c) => /walk/i.test(c.name)) ?? clips.find((c) => /run|sprint|charge/i.test(c.name)) ?? clips[0];
-        const ruheClip = (index % 3 === 0 ? clips.find((c) => /dance|shuffle|ymca/i.test(c.name)) : undefined)
-          ?? clips.find((c) => /idle|rest/i.test(c.name));
+        const laufClip = clips.find((c) => /walk/i.test(c.name)) ?? clips.find((c) => /run|sprint|charge/i.test(c.name));
+        const ruheClips = clips.filter((c) => /idle|rest|dance|shuffle|ymca|salsa|samba|hip.?hop|rumba|twist/i.test(c.name) && c !== laufClip);
+        if (!ruheClips.length && !laufClip && clips[0]) ruheClips.push(clips[0]);
         const lauf = laufClip ? mixer.clipAction(laufClip) : undefined;
-        const ruhe = ruheClip ? mixer.clipAction(ruheClip) : undefined;
+        const ruheAktionen = ruheClips.map((clip) => mixer.clipAction(clip));
+        const ruhe = ruheAktionen[index % Math.max(1, ruheAktionen.length)];
+        const strecke = Math.min(5, 32 / Math.max(1, tiere.length));
         npcGruppen.push({ gruppe, info: { art: "tier", id: charakter.id, name: charakter.name },
-          basisZ: z, zielZ: z + (index % 2 ? -1.5 : 1.5), pause: index % 3 * 0.6, radius, lauf, ruhe });
+          basisZ: z, zielZ: THREE.MathUtils.clamp(z + (index % 2 ? -strecke : strecke), -34, 13),
+          pause: ruhe ? index % 3 * 2 : 0, radius, lauf, ruhe, ruheAktionen, strecke });
         mixers.push(mixer);
       });
 
@@ -563,8 +611,15 @@ function KapitelCanvas({
       if (regen) {
         const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
         for (let i = 0; i < positionen.count; i++) {
-          const y = positionen.getY(i) - dt * 13;
+          const y = positionen.getY(i) - dt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
           positionen.setY(i, y < 0 ? 15 : y);
+          if (schneeWetter) {
+            const wind = wetter === "schneesturm" ? 7 + Math.sin(jetzt * 0.0014) * 3 : Math.sin(jetzt * 0.0006 + i) * 0.65;
+            const px = positionen.getX(i) + wind * dt;
+            positionen.setX(i, px > 14 ? -14 : px < -14 ? 14 : px);
+            const pz = positionen.getZ(i) + dt * (wetter === "schneesturm" ? 2.2 : 0.2);
+            positionen.setZ(i, pz > 22 ? -48 : pz);
+          }
         }
         positionen.needsUpdate = true;
       }
@@ -573,16 +628,21 @@ function KapitelCanvas({
         const ansprechbar = npc.gruppe.position.distanceToSquared(spieler.position) < 2.35 ** 2;
         if (!callbacks.current.pausiert && !ansprechbar) {
           if (npc.pause > 0) npc.pause -= dt;
-          else {
+          else if (npc.lauf) {
             const differenz = npc.zielZ - npc.gruppe.position.z;
             const schritt = Math.sign(differenz) * Math.min(Math.abs(differenz), dt * 0.9);
             npc.gruppe.position.z += schritt;
             laeuft = Math.abs(schritt) > 0.0001;
             if (laeuft) npc.gruppe.rotation.y = schritt > 0 ? 0 : Math.PI;
             if (Math.abs(differenz) < 0.03) {
-              npc.zielZ = npc.basisZ + (npc.zielZ > npc.basisZ ? -1.5 : 1.5);
-              npc.pause = 2;
+              npc.zielZ = THREE.MathUtils.clamp(npc.basisZ + (npc.zielZ > npc.basisZ ? -npc.strecke : npc.strecke), -34, 13);
+              npc.ruhe = npc.ruheAktionen[Math.floor(Math.random() * npc.ruheAktionen.length)];
+              // Reine Laufmodelle wenden direkt. Andere legen wechselnde Tanz-/Idle-Pausen ein.
+              npc.pause = npc.ruhe ? 3 + Math.random() * 5 : 0;
             }
+          } else if (npc.ruheAktionen.length) {
+            npc.ruhe = npc.ruheAktionen[Math.floor(Math.random() * npc.ruheAktionen.length)];
+            npc.pause = 4 + Math.random() * 5;
           }
         }
         const aktion = laeuft ? npc.lauf : (npc.ruhe ?? npc.lauf);

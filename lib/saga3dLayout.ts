@@ -1,9 +1,10 @@
 /** Verteilt beliebig viele Kapitelobjekte vollständig im begehbaren Korridor. */
 export function kapitelPosition(index: number, anzahl: number, art: "tier" | "spur") {
-  const reihen = Math.max(1, Math.ceil(anzahl / 2));
-  const reihe = Math.floor(index / 2);
+  // Beide Arten nutzen die ganze Straße; versetzte Spuren und getrennte
+  // Seitenkorridore halten Beweise auch bei patrouillierenden Tieren frei.
+  const fortschritt = (index + (art === "tier" ? 0.5 : 0.85)) / Math.max(1, anzahl);
   return {
-    x: (index % 2 ? -1 : 1) * (art === "tier" ? 3.15 : 1.65),
-    z: (art === "tier" ? -4 : -1.5) - reihe * Math.min(7.4, (art === "tier" ? 27 : 30) / Math.max(1, reihen - 1)),
+    x: (index % 2 ? -1 : 1) * (art === "tier" ? 2.9 : 0.85),
+    z: 12 - fortschritt * 45,
   };
 }
