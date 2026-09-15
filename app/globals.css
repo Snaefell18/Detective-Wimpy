@@ -9010,3 +9010,36 @@ a.zurueck {
 .stadtplan-hoehe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .stadtplan-hoehe strong { flex: 1 1 100px; font-size: 13px; }
 .stadtplan-hoehe .knopf { min-width: 40px; padding: 4px 8px; }
+
+/* --- Am Steuer: Tacho und Handbremse -------------------------------- */
+.saga3d-tacho {
+  position: absolute;
+  left: 16px;
+  bottom: max(120px, calc(env(safe-area-inset-bottom) + 116px));
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(19, 34, 56, 0.9);
+  color: #fff;
+  pointer-events: none;
+}
+.saga3d-tacho strong { font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.saga3d-tacho span { font-size: 12px; opacity: 0.75; }
+.saga3d-drift {
+  position: absolute;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(190px, calc(env(safe-area-inset-bottom) + 186px));
+  width: 74px;
+  height: 74px;
+  border: 3px solid #172337;
+  border-radius: 50%;
+  background: #f4ecda;
+  color: #172337;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  touch-action: manipulation;
+}
+.saga3d-drift:active { background: #f6a14b; }

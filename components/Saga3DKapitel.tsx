@@ -8,6 +8,15 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import { kapitelPosition } from "@/lib/saga3dLayout";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
+import {
+  STILLSTAND,
+  angeeckt,
+  angezeigtesTempo,
+  fahrSchritt,
+  fahrwerte,
+  type FahrWerte,
+  type Fahrzustand,
+} from "@/lib/autofahrt";
 import { AUTO_MODELLE, START_AUTO_ID, type Auto } from "@/lib/autos";
 import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
@@ -55,12 +64,22 @@ type Naehe =
  */
 export type FahrzeugBefehl = {
   /** Der Wagen, den Wimpy gerade fährt - null heißt: zu Fuß. */
-  faehrt: { id: string; name: string; modell: string; drehung: number } | null;
+  faehrt: {
+    id: string;
+    name: string;
+    modell: string;
+    drehung: number;
+    /** Aus dem Autokatalog: bestimmt Tempo, Schub und Lenkung. */
+    speed: number;
+    beschleunigung: number;
+  } | null;
   /**
    * Beim Aussteigen: Bleibt der Wagen stehen (abstellen) oder wird er an der
    * Tankstelle abgegeben und verschwindet?
    */
   abgeben: boolean;
+  /** Handbremse - solange sie gezogen ist, bricht der Wagen aus. */
+  handbremse?: boolean;
 };
 
 export const LEERER_FAHRZEUGBEFEHL: FahrzeugBefehl = { faehrt: null, abgeben: false };
@@ -389,6 +408,7 @@ function KapitelCanvas({
   fahrzeug,
   onNaehe,
   onBereit,
+  onTempo,
   pausiert = false,
 }: {
   steuerung: MutableRefObject<Richtung>;
@@ -410,11 +430,13 @@ function KapitelCanvas({
   fahrzeug?: MutableRefObject<FahrzeugBefehl>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
+  /** Der Tacho fürs HUD, in km/h - nur am Steuer. */
+  onTempo?: (kmh: number) => void;
   pausiert?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const callbacks = useRef({ onNaehe, onBereit, pausiert, gefunden: new Set(gefundeneSpuren) });
-  callbacks.current = { onNaehe, onBereit, pausiert, gefunden: new Set(gefundeneSpuren) };
+  const callbacks = useRef({ onNaehe, onBereit, onTempo, pausiert, gefunden: new Set(gefundeneSpuren) });
+  callbacks.current = { onNaehe, onBereit, onTempo, pausiert, gefunden: new Set(gefundeneSpuren) };
   const [ladeFehler, setLadeFehler] = useState("");
   const [versuch, setVersuch] = useState(0);
   const position = useRef(new THREE.Vector3());
@@ -721,7 +743,11 @@ function KapitelCanvas({
     /** Wo der Wagen steht und wo Wimpy einsteigt - erst beim Aufbau bekannt. */
     let tankPlatz: THREE.Vector3 | null = null;
     /** Der Wagen, der gerade gefahren wird, und der, der irgendwo parkt. */
-    let amSteuer: { id: string; name: string; gruppe: THREE.Group } | null = null;
+    let amSteuer: { id: string; name: string; gruppe: THREE.Group; werte: FahrWerte } | null = null;
+    /** Wie schnell der Wagen gerade fährt und wie schräg er dabei steht. */
+    let fahrt: Fahrzustand = { ...STILLSTAND };
+    /** Zuletzt gemeldetes Tempo - die Anzeige soll nicht jedes Bild neu rendern. */
+    let letzterTacho = -1;
     let geparkt: { id: string; name: string; gruppe: THREE.Group } | null = null;
     let laedtWagen = "";
     let wimpyFigur: THREE.Object3D | null = null;
@@ -1026,14 +1052,21 @@ function KapitelCanvas({
     };
 
     /** Wimpy verschwindet im Wagen, der Wagen übernimmt seinen Platz. */
-    const einsteigen = (gruppe: THREE.Group, id: string, name: string) => {
+    const einsteigen = (
+      gruppe: THREE.Group,
+      id: string,
+      name: string,
+      werte: FahrWerte,
+    ) => {
       scene.remove(gruppe);
       gruppe.position.set(0, 0, 0);
       gruppe.rotation.set(0, 0, 0);
       spieler.add(gruppe);
       if (wimpyFigur) wimpyFigur.visible = false;
       if (geparkt?.id === id) geparkt = null;
-      amSteuer = { id, name, gruppe };
+      amSteuer = { id, name, gruppe, werte };
+      // Er startet aus dem Stand, blickt aber dorthin, wo Wimpy stand.
+      fahrt = { winkel: spieler.rotation.y, tempo: 0, drift: 0 };
     };
 
     /**
@@ -1045,6 +1078,8 @@ function KapitelCanvas({
       const { gruppe, id, name } = amSteuer;
       spieler.remove(gruppe);
       amSteuer = null;
+      fahrt = { ...STILLSTAND };
+      spieler.rotation.z = 0;
       if (wimpyFigur) wimpyFigur.visible = true;
       if (abgeben) return;
       gruppe.position.copy(spieler.position);
@@ -1077,8 +1112,8 @@ function KapitelCanvas({
       if (gewuenschterWagen !== (amSteuer?.id ?? "")) {
         if (!gewuenschterWagen) {
           aussteigen(befehl.abgeben);
-        } else if (geparkt?.id === gewuenschterWagen) {
-          einsteigen(geparkt.gruppe, gewuenschterWagen, geparkt.name);
+        } else if (geparkt?.id === gewuenschterWagen && befehl.faehrt) {
+          einsteigen(geparkt.gruppe, gewuenschterWagen, geparkt.name, fahrwerte(befehl.faehrt));
         } else if (laedtWagen !== gewuenschterWagen) {
           // Nur das Laden braucht eine Sperre - sonst bestellte jedes Bild
           // dasselbe Modell noch einmal.
@@ -1096,7 +1131,7 @@ function KapitelCanvas({
                   return;
                 }
                 if (amSteuer) aussteigen(true);
-                einsteigen(gruppe, wunsch.id, wunsch.name);
+                einsteigen(gruppe, wunsch.id, wunsch.name, fahrwerte(wunsch));
               })
               .catch(() => undefined)
               .finally(() => { laedtWagen = ""; });
@@ -1110,24 +1145,17 @@ function KapitelCanvas({
       const z = THREE.MathUtils.clamp(tz || steuerung.current.z, -1, 1);
       let bewegt = false;
       const staerke = Math.min(1, Math.hypot(x, z));
-      if (staerke > 0.05) {
-        const laenge = Math.hypot(x, z) || 1;
-        const vorherX = spieler.position.x;
-        const vorherZ = spieler.position.z;
-        // Im Auto ist Wimpy gut doppelt so schnell unterwegs wie zu Fuß.
-        const tempo = amSteuer ? 9.4 : 4.1;
-        const schrittX = (x / laenge) * staerke * dt * tempo;
-        const schrittZ = (z / laenge) * staerke * dt * tempo;
-        let neuX = vorherX + schrittX;
-        let neuZ = vorherZ + schrittZ;
+      const vorherX = spieler.position.x;
+      const vorherZ = spieler.position.z;
+
+      /** Wohin der Wagen darf - an der Wand entlang, aber nicht hindurch. */
+      const versetzen = (zielX: number, zielZ: number, platz: number) => {
+        let neuX = zielX;
+        let neuZ = zielZ;
+        let angestossen = false;
         if (stadtplan) {
-          /*
-           * Auf dem Stadtplan endet die Straße dort, wo keine mehr liegt.
-           * Geht es schräg nicht weiter, wird es einzeln versucht - so
-           * rutscht man an einer Hauswand entlang, statt festzukleben.
-           */
-          const platz = amSteuer ? 1.2 : 0.7;
           if (!begehbar(stadtplan, neuX, neuZ, platz)) {
+            angestossen = true;
             if (begehbar(stadtplan, neuX, vorherZ, platz)) neuZ = vorherZ;
             else if (begehbar(stadtplan, vorherX, neuZ, platz)) neuX = vorherX;
             else { neuX = vorherX; neuZ = vorherZ; }
@@ -1136,23 +1164,52 @@ function KapitelCanvas({
           neuX = THREE.MathUtils.clamp(neuX, -4.15, 4.15);
           neuZ = THREE.MathUtils.clamp(neuZ, -36, 15);
         }
-        const kollidiert = npcGruppen.some((npc) => {
+        const imWeg = npcGruppen.some((npc) => {
           const dx = npc.gruppe.position.x - neuX;
           const dz = npc.gruppe.position.z - neuZ;
-          return dx * dx + dz * dz < (npc.radius + 0.65) ** 2;
+          return dx * dx + dz * dz < (npc.radius + platz) ** 2;
         });
-        if (!kollidiert) {
-          spieler.position.set(neuX, 0, neuZ);
-          bewegt = Math.hypot(neuX - vorherX, neuZ - vorherZ) > 0.0001;
+        if (imWeg) return { x: vorherX, z: vorherZ, angestossen: true };
+        return { x: neuX, z: neuZ, angestossen };
+      };
+
+      if (amSteuer) {
+        /*
+         * Am Steuer wird nicht geschoben, sondern gefahren: Der Stick sagt,
+         * wohin es gehen soll, und der Wagen zieht an, trägt, rutscht in die
+         * Kurve und braucht einen Moment zum Stehen. Die Rechnung dazu steht
+         * in lib/autofahrt.ts.
+         */
+        const schritt = fahrSchritt(
+          fahrt,
+          { x, z, handbremse: befehl.handbremse === true },
+          dt,
+          amSteuer.werte,
+        );
+        fahrt = schritt.zustand;
+        const ziel = versetzen(vorherX + schritt.bewegung.x, vorherZ + schritt.bewegung.z, 1.2);
+        spieler.position.set(ziel.x, 0, ziel.z);
+        if (ziel.angestossen) fahrt = angeeckt(fahrt);
+        bewegt = Math.hypot(ziel.x - vorherX, ziel.z - vorherZ) > 0.0001;
+        spieler.rotation.y = fahrt.winkel;
+        // Die Karosserie legt sich in die Kurve - so sieht man den Drift.
+        const schraeg = THREE.MathUtils.clamp(-fahrt.drift * 0.05, -0.26, 0.26);
+        spieler.rotation.z = THREE.MathUtils.damp(spieler.rotation.z, schraeg, 8, dt);
+        const tacho = angezeigtesTempo(fahrt, amSteuer.werte, { speed: befehl.faehrt?.speed ?? 120 });
+        if (tacho !== letzterTacho) {
+          letzterTacho = tacho;
+          callbacks.current.onTempo?.(tacho);
         }
-        // Ein Auto dreht sich nicht auf der Stelle - es zieht in die Kurve.
-        const richtung = Math.atan2(x, z);
-        if (amSteuer) {
-          const unterschied = ((richtung - spieler.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-          spieler.rotation.y += unterschied * Math.min(1, dt * 6);
-        } else {
-          spieler.rotation.y = richtung;
-        }
+      } else if (staerke > 0.05) {
+        const laenge = Math.hypot(x, z) || 1;
+        const ziel = versetzen(
+          vorherX + (x / laenge) * staerke * dt * 4.1,
+          vorherZ + (z / laenge) * staerke * dt * 4.1,
+          0.7,
+        );
+        spieler.position.set(ziel.x, 0, ziel.z);
+        bewegt = Math.hypot(ziel.x - vorherX, ziel.z - vorherZ) > 0.0001;
+        spieler.rotation.y = Math.atan2(x, z);
       }
       const gewuenscht = amSteuer ? ruheAktion : bewegt ? laufAktion : (ruheAktion ?? laufAktion);
       if (gewuenscht && gewuenscht !== aktiveAktion) {
@@ -1253,11 +1310,21 @@ function KapitelCanvas({
         letzteNaehe = schluessel;
         callbacks.current.onNaehe(nahesZiel?.info ?? null);
       }
-      // Am Steuer rückt die Kamera etwas ab: Der Wagen braucht mehr Platz im Bild.
-      const weite = amSteuer ? 1.25 : 1;
+      /*
+       * Die Kamera fährt mit: Am Steuer rückt sie ab, und je schneller es
+       * geht, desto weiter - und desto weiter schaut sie voraus. Nichts
+       * verkauft Tempo so gut wie eine Kamera, die Mühe hat mitzuhalten.
+       */
+      const flott = amSteuer ? Math.min(1, Math.abs(fahrt.tempo) / amSteuer.werte.hoechst) : 0;
+      const weite = amSteuer ? 1.22 + flott * 0.5 : 1;
       zielKamera.set(spieler.position.x - 9.5 * weite, 5.1 * weite, spieler.position.z + 13.8 * weite);
-      camera.position.lerp(zielKamera, 1 - Math.exp(-5 * dt));
-      camera.lookAt(spieler.position.x, 1.05, spieler.position.z + 0.7);
+      camera.position.lerp(zielKamera, 1 - Math.exp(-(amSteuer ? 3.4 : 5) * dt));
+      const voraus = flott * 5.5;
+      camera.lookAt(
+        spieler.position.x + Math.sin(fahrt.winkel) * voraus,
+        1.05,
+        spieler.position.z + 0.7 + Math.cos(fahrt.winkel) * voraus,
+      );
       renderer.render(scene, camera);
       frame = requestAnimationFrame(zeichnen);
     };
@@ -1398,22 +1465,37 @@ export function Saga3DKapitel({
   const fahrzeug = useRef<FahrzeugBefehl>({ ...LEERER_FAHRZEUGBEFEHL });
   const [amSteuer, setAmSteuer] = useState<{ id: string; name: string } | null>(null);
   const [garageOffen, setGarageOffen] = useState(false);
+  /** Was der Tacho zeigt - kommt aus der Szene. */
+  const [tempo, setTempo] = useState(0);
   const { autos } = useAutos();
   // Gefahren wird nur, was Wimpy besitzt - der Startwagen gehört ihm immer.
   const meineAutos = autos.filter((auto) => auto.id === START_AUTO_ID || besitz[auto.id]);
 
   const einsteigen = (auto: Auto) => {
     fahrzeug.current = {
-      faehrt: { id: auto.id, name: auto.name, modell: auto.modell, drehung: auto.drehung },
+      faehrt: {
+        id: auto.id,
+        name: auto.name,
+        modell: auto.modell,
+        drehung: auto.drehung,
+        speed: auto.speed,
+        beschleunigung: auto.beschleunigung,
+      },
       abgeben: false,
     };
     setAmSteuer({ id: auto.id, name: auto.name });
+    setTempo(0);
     setGarageOffen(false);
     onAutoWaehlen?.(auto.id);
   };
   const aussteigen = (abgeben: boolean) => {
-    fahrzeug.current = { faehrt: null, abgeben };
+    fahrzeug.current = { faehrt: null, abgeben, handbremse: false };
     setAmSteuer(null);
+    setTempo(0);
+  };
+  /** Die Handbremse liegt im Ref: Die Szene liest sie in jedem Bild. */
+  const handbremse = (gezogen: boolean) => {
+    fahrzeug.current = { ...fahrzeug.current, handbremse: gezogen };
   };
 
   useEffect(() => {
@@ -1496,6 +1578,7 @@ export function Saga3DKapitel({
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}
         onNaehe={setNah}
+        onTempo={setTempo}
         onBereit={() => setBereit(true)}
       />}
       {spurenFehler && <button className="saga3d-meldung" onClick={() => setSpurenVersuch((v) => v + 1)}>{spurenFehler}</button>}
@@ -1531,12 +1614,28 @@ export function Saga3DKapitel({
           <strong>🚗 {nah.name.toUpperCase()} EINSTEIGEN</strong>
         </button>
       )}
-      {amSteuer && (
-        <button className="saga3d-aussteigen" onClick={() => { stoppen(); aussteigen(false); }}>
+      {amSteuer && <>
+        <div className="saga3d-tacho" role="status">
+          <strong>{tempo}</strong>
+          <span>km/h · {amSteuer.name}</span>
+        </div>
+        {/* Gedrückt halten: Der Hinterwagen bricht aus und man kommt um
+            die Ecke, ohne vom Gas zu gehen. */}
+        <button
+          className="saga3d-drift"
+          aria-label="Handbremse ziehen"
+          onPointerDown={() => handbremse(true)}
+          onPointerUp={() => handbremse(false)}
+          onPointerLeave={() => handbremse(false)}
+          onPointerCancel={() => handbremse(false)}
+        >
+          DRIFT
+        </button>
+        <button className="saga3d-aussteigen" onClick={() => { stoppen(); handbremse(false); aussteigen(false); }}>
           <small>{amSteuer.name.toUpperCase()}</small>
           <strong>Hier abstellen und aussteigen</strong>
         </button>
-      )}
+      </>}
       {garageOffen && (
         <GaragenWahl autos={meineAutos} onWaehlen={einsteigen} onSchliessen={() => setGarageOffen(false)} />
       )}
@@ -1634,17 +1733,30 @@ export function Saga3DProbeSzene({
   const fahrzeug = useRef<FahrzeugBefehl>({ ...LEERER_FAHRZEUGBEFEHL });
   const [amSteuer, setAmSteuer] = useState<{ id: string; name: string } | null>(null);
   const [garageOffen, setGarageOffen] = useState(false);
+  const [tempo, setTempo] = useState(0);
+  const handbremse = (gezogen: boolean) => {
+    fahrzeug.current = { ...fahrzeug.current, handbremse: gezogen };
+  };
   const einsteigen = (auto: Auto) => {
     fahrzeug.current = {
-      faehrt: { id: auto.id, name: auto.name, modell: auto.modell, drehung: auto.drehung },
+      faehrt: {
+        id: auto.id,
+        name: auto.name,
+        modell: auto.modell,
+        drehung: auto.drehung,
+        speed: auto.speed,
+        beschleunigung: auto.beschleunigung,
+      },
       abgeben: false,
     };
     setAmSteuer({ id: auto.id, name: auto.name });
+    setTempo(0);
     setGarageOffen(false);
   };
   const aussteigen = (abgeben: boolean) => {
-    fahrzeug.current = { faehrt: null, abgeben };
+    fahrzeug.current = { faehrt: null, abgeben, handbremse: false };
     setAmSteuer(null);
+    setTempo(0);
   };
   return (
     <div className="jagd pursuit-spiel saga3d-probe">
@@ -1661,6 +1773,7 @@ export function Saga3DProbeSzene({
         tankstelleId={tankstelleId}
         plan={plan}
         fahrzeug={fahrzeug}
+        onTempo={setTempo}
         pausiert={garageOffen}
         spuren={LEERE_SPUREN}
         gefundeneSpuren={[]}
@@ -1698,12 +1811,26 @@ export function Saga3DProbeSzene({
           <strong>🚗 {nah.name.toUpperCase()} EINSTEIGEN</strong>
         </button>
       )}
-      {amSteuer && (
-        <button className="saga3d-aussteigen" onClick={() => { setzen(0, 0); aussteigen(false); }}>
+      {amSteuer && <>
+        <div className="saga3d-tacho" role="status">
+          <strong>{tempo}</strong>
+          <span>km/h · {amSteuer.name}</span>
+        </div>
+        <button
+          className="saga3d-drift"
+          aria-label="Handbremse ziehen"
+          onPointerDown={() => handbremse(true)}
+          onPointerUp={() => handbremse(false)}
+          onPointerLeave={() => handbremse(false)}
+          onPointerCancel={() => handbremse(false)}
+        >
+          DRIFT
+        </button>
+        <button className="saga3d-aussteigen" onClick={() => { setzen(0, 0); handbremse(false); aussteigen(false); }}>
           <small>{amSteuer.name.toUpperCase()}</small>
           <strong>Hier abstellen und aussteigen</strong>
         </button>
-      )}
+      </>}
       {garageOffen && (
         <GaragenWahl autos={autos} onWaehlen={einsteigen} onSchliessen={() => setGarageOffen(false)} />
       )}
