@@ -12,7 +12,21 @@ import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { locationsFuer3D, tankstelleAus } from "@/lib/pursuit3d";
+import { DREI_D_LOCATIONS, locationsFuer3D, tankstelleAus } from "@/lib/pursuit3d";
+import {
+  FELD_GROESSE,
+  begehbar,
+  feldAn,
+  feldMitte,
+  gebaeudeFelder,
+  istStrasse,
+  planAusmass,
+  planGueltig,
+  startFeld,
+  strassenFelder,
+  verteilen,
+  type Stadtplan,
+} from "@/lib/stadtplan";
 import type { DreiDStrassentyp, DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
@@ -226,6 +240,33 @@ function kulisseEinpassen(objekt: THREE.Object3D, zusaetzlicheDrehung: number) {
   return new THREE.Box3().setFromObject(objekt).getSize(new THREE.Vector3());
 }
 
+/**
+ * Denselben Baustein als Gebäude auf ein Rasterfeld stellen.
+ *
+ * Im Straßenzug liegt ein Baustein längs an der Fahrbahnkante; auf dem
+ * Stadtplan steht er auf einem Feld und darf nicht darüber hinausragen -
+ * sonst stünde die Nachbarstraße in seiner Wand.
+ */
+function aufFeldEinpassen(objekt: THREE.Object3D, drehung: number) {
+  objekt.updateMatrixWorld(true);
+  const roh = new THREE.Box3().setFromObject(objekt);
+  const groesse = roh.getSize(new THREE.Vector3());
+  const platz = FELD_GROESSE * 0.94;
+  objekt.scale.multiplyScalar(
+    Math.min(
+      11 / Math.max(0.001, groesse.y),
+      platz / Math.max(0.001, groesse.x, groesse.z),
+    ),
+  );
+  objekt.rotation.y = THREE.MathUtils.degToRad(drehung);
+  objekt.updateMatrixWorld(true);
+  const gedreht = new THREE.Box3().setFromObject(objekt);
+  const mitte = gedreht.getCenter(new THREE.Vector3());
+  objekt.position.x -= mitte.x;
+  objekt.position.z -= mitte.z;
+  objekt.position.y -= gedreht.min.y;
+}
+
 function KapitelCanvas({
   steuerung,
   fall,
@@ -239,6 +280,7 @@ function KapitelCanvas({
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   tankstelleId,
+  plan,
   fahrzeug,
   onNaehe,
   onBereit,
@@ -257,6 +299,8 @@ function KapitelCanvas({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
+  plan?: Stadtplan | null;
   /** Wimpys Auto - siehe FahrzeugBefehl. */
   fahrzeug?: MutableRefObject<FahrzeugBefehl>;
   onNaehe: (wert: Naehe | null) => void;
@@ -270,11 +314,11 @@ function KapitelCanvas({
   const [versuch, setVersuch] = useState(0);
   const position = useRef(new THREE.Vector3());
   // Wertgleiche Props (insbesondere [] in der Probe) dürfen keine Szene neu laden.
-  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen, tankstelleId: tankstelleId ?? "" });
+  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen, tankstelleId: tankstelleId ?? "", plan: plan ?? null });
   const bauplan = useMemo(() => JSON.parse(bauplanText) as {
     besetzung: Character[]; locations: string[]; spuren: SpurVorschau[];
     charakterModelle: Record<string, string>; locationDrehungen: Record<string, number>;
-    charakterGroessen: Record<string, number>; tankstelleId: string;
+    charakterGroessen: Record<string, number>; tankstelleId: string; plan: Stadtplan | null;
   }, [bauplanText]);
 
   useEffect(() => {
@@ -346,29 +390,88 @@ function KapitelCanvas({
     licht.castShadow = true;
     licht.shadow.mapSize.set(1024, 1024);
     scene.add(licht);
+    /*
+     * Zwei Bauweisen, dieselbe Stadt.
+     *
+     * Ohne Plan bleibt alles wie gehabt: ein Straßenzug, 9 Meter breit, an
+     * dem die Bausteine aufgereiht sind. Mit Plan wird Feld für Feld gelegt.
+     */
+    const stadtplan = planGueltig(bauplan.plan) ? bauplan.plan : null;
+    // Der Straßenzug behält seinen gewohnten Boden; der Stadtplan bekommt
+    // genau seine Rasterfläche plus einen Rand, damit nichts abbricht.
+    const ausmass = stadtplan
+      ? { breite: planAusmass(stadtplan).breite + 24, tiefe: planAusmass(stadtplan).tiefe + 24 }
+      : { breite: 40, tiefe: 90 };
+    /*
+     * Im Straßenzug ist der Untergrund nur schmaler Rand neben der Fahrbahn.
+     * Auf dem Stadtplan ist er die Fläche zwischen allen Straßen - und muss
+     * sich deshalb deutlich von ihnen absetzen, sonst sieht die Stadt aus
+     * wie eine leere Ebene.
+     */
+    const bodenFarbe = stadtplan
+      ? strassentyp === "schnee"
+        ? 0xe4eef5
+        : strassentyp === "sand"
+          ? 0xb59468
+          : tageszeit === "nacht"
+            ? 0x30404a
+            : wetter === "regen"
+              ? 0x46605c
+              : 0x7d9472
+      : strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
     const boden = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 90),
-      new THREE.MeshToonMaterial({ color: strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448, gradientMap: gradient }),
+      new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
+      new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
     );
     boden.rotation.x = -Math.PI / 2;
-    boden.position.z = -8;
+    boden.position.z = stadtplan ? 0 : -8;
     boden.receiveShadow = true;
     scene.add(boden);
     const fahrbahnMaterial = new THREE.MeshToonMaterial({
       map: strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : null,
       color: strassentyp !== "asphalt"
         ? wetter === "regen" ? 0xb1a18a : 0xffffff
-        : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
+        : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : stadtplan ? 0x3a4553 : 0x52606c,
       gradientMap: gradient,
     });
-    const fahrbahn = new THREE.Mesh(
-      new THREE.PlaneGeometry(9.2, 90),
-      fahrbahnMaterial,
-    );
-    fahrbahn.rotation.x = -Math.PI / 2;
-    fahrbahn.position.set(0, 0.012, -8);
-    fahrbahn.receiveShadow = true;
-    scene.add(fahrbahn);
+    if (stadtplan) {
+      // Jedes Straßenfeld bekommt seine eigene Fläche. Kreuzungen, Ecken und
+      // Sackgassen entstehen dabei von allein - es liegt eben nur dort
+      // Fahrbahn, wo im Plan eine steht.
+      const feldGeometrie = new THREE.PlaneGeometry(FELD_GROESSE, FELD_GROESSE);
+      ressourcen.add(feldGeometrie);
+      // Ein heller Punkt in der Feldmitte macht Kreuzungen und Verläufe
+      // lesbar, ohne dass irgendetwas blinkt.
+      const markeGeometrie = new THREE.PlaneGeometry(0.5, 0.5);
+      const markeMaterial = new THREE.MeshBasicMaterial({
+        color: strassentyp === "asphalt" ? 0x74eaff : 0xcfd8c8,
+        transparent: true,
+        opacity: 0.5,
+      });
+      ressourcen.add(markeGeometrie);
+      ressourcen.add(markeMaterial);
+      for (const feld of strassenFelder(stadtplan)) {
+        const mitte = feldMitte(stadtplan, feld.x, feld.z);
+        const flaeche = new THREE.Mesh(feldGeometrie, fahrbahnMaterial);
+        flaeche.rotation.x = -Math.PI / 2;
+        flaeche.position.set(mitte.x, 0.012, mitte.z);
+        flaeche.receiveShadow = true;
+        scene.add(flaeche);
+        const marke = new THREE.Mesh(markeGeometrie, markeMaterial);
+        marke.rotation.x = -Math.PI / 2;
+        marke.position.set(mitte.x, 0.03, mitte.z);
+        scene.add(marke);
+      }
+    } else {
+      const fahrbahn = new THREE.Mesh(
+        new THREE.PlaneGeometry(9.2, 90),
+        fahrbahnMaterial,
+      );
+      fahrbahn.rotation.x = -Math.PI / 2;
+      fahrbahn.position.set(0, 0.012, -8);
+      fahrbahn.receiveShadow = true;
+      scene.add(fahrbahn);
+    }
     let regen: THREE.Points | null = null;
     if (wetter === "regen" || schneeWetter) {
       const anzahl = wetter === "schneesturm" ? 1800 : 900;
@@ -398,7 +501,7 @@ function KapitelCanvas({
       sonne.position.set(-17, 18, -35);
       scene.add(sonne);
     }
-    for (let i = 0; strassentyp === "asphalt" && i < 18; i++) {
+    for (let i = 0; !stadtplan && strassentyp === "asphalt" && i < 18; i++) {
       const strich = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.025, 1.7),
         new THREE.MeshBasicMaterial({ color: 0x74eaff }),
@@ -406,7 +509,7 @@ function KapitelCanvas({
       strich.position.set(0, 0.03, i * 4.2 - 38);
       scene.add(strich);
     }
-    if (strassentyp !== "asphalt") {
+    if (!stadtplan && strassentyp !== "asphalt") {
       // Flache Schultern statt Bordstein; schmale rote Schneestangen wie in der Arktis.
       for (const seite of [-1, 1]) {
         for (let i = 0; i < 15; i++) {
@@ -434,6 +537,16 @@ function KapitelCanvas({
     loader.setMeshoptDecoder(MeshoptDecoder);
     const spieler = new THREE.Group();
     spieler.position.copy(position.current);
+    if (stadtplan && !begehbar(stadtplan, spieler.position.x, spieler.position.z)) {
+      // Beim ersten Betreten (oder nach einem geänderten Plan) steht Wimpy
+      // mitten in der Stadt auf der Straße, nicht im Nichts.
+      const start = startFeld(stadtplan);
+      if (start) {
+        const mitte = feldMitte(stadtplan, start.x, start.z);
+        spieler.position.set(mitte.x, 0, mitte.z);
+        position.current.copy(spieler.position);
+      }
+    }
     scene.add(spieler);
     const mixers: THREE.AnimationMixer[] = [];
     const npcGruppen: {
@@ -472,9 +585,73 @@ function KapitelCanvas({
     };
 
     const aufbauen = async () => {
+      /** Hat sich ein Baustein nicht laden lassen? Gilt für beide Bauweisen. */
+      let kulissenFehler = false;
+      /*
+       * Auf dem Stadtplan stehen Tiere und Fundstücke weiterhin zufällig
+       * verteilt - nur eben über die ganze Stadt statt entlang einer Straße.
+       * Beides kommt aus einem Topf, damit niemand auf einem Beweisstück steht.
+       */
+      const plaetze = stadtplan
+        ? verteilen(stadtplan, fall.besetzung.filter((c) => !c.istDetektiv).length + spuren.length)
+        : [];
+      const platzFuer = (art: "tier" | "spur", index: number, fallback: { x: number; z: number }) => {
+        if (!stadtplan) return fallback;
+        const versatz = art === "tier" ? 0 : fall.besetzung.filter((c) => !c.istDetektiv).length;
+        return plaetze[versatz + index] ?? fallback;
+      };
+      if (stadtplan) {
+        /*
+         * Der gelegte Stadtplan: Jedes Gebäudefeld holt sich seinen Baustein.
+         * Derselbe Baustein darf beliebig oft vorkommen - geladen wird er
+         * trotzdem nur einmal und danach nur noch kopiert.
+         */
+        const felder = gebaeudeFelder(stadtplan);
+        const gebraucht = [...new Set(felder.map((feld) => feld.id))];
+        const geladen = new Map<string, THREE.Object3D>();
+        const ergebnisse = await Promise.allSettled(
+          gebraucht.map(async (id) => {
+            const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
+            if (!ort) throw new Error("Baustein fehlt");
+            const gltf = await laden(ort.datei);
+            return { id, szene: gltf.scene };
+          }),
+        );
+        if (beendet) return;
+        kulissenFehler = ergebnisse.some((ergebnis) => ergebnis.status === "rejected");
+        for (const ergebnis of ergebnisse) {
+          if (ergebnis.status !== "fulfilled") continue;
+          cellShading(ergebnis.value.szene, gradient);
+          registrieren(ergebnis.value.szene);
+          geladen.set(ergebnis.value.id, ergebnis.value.szene);
+        }
+        for (const feld of felder) {
+          const vorlage = geladen.get(feld.id);
+          if (!vorlage) continue;
+          const haus = vorlage.clone(true);
+          aufFeldEinpassen(haus, feld.drehung);
+          const mitte = feldMitte(stadtplan, feld.x, feld.z);
+          const block = new THREE.Group();
+          block.add(haus);
+          block.position.set(mitte.x, 0, mitte.z);
+          scene.add(block);
+          // Steht hier die Tankstelle, liegt ihr Stellplatz auf der Straße davor.
+          if (tankstelle && feld.id === tankstelle.id && tankPlatz === null) {
+            const nachbar = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+              .map(([dx, dz]) => ({ x: feld.x + dx, z: feld.z + dz }))
+              .find((nach) => istStrasse(stadtplan, nach.x, nach.z));
+            if (nachbar) {
+              const platz = feldMitte(stadtplan, nachbar.x, nachbar.z);
+              tankPlatz = new THREE.Vector3(platz.x, 0, platz.z);
+            }
+          }
+        }
+      } else {
+
       const locationEintraege = locationsFuer3D(locations);
       const kulissen = await Promise.allSettled(locationEintraege.map((ort) => laden(ort.datei)));
       if (beendet) return;
+      kulissenFehler = kulissen.some((ergebnis) => ergebnis.status === "rejected");
       const vorlagen = kulissen.flatMap((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
@@ -498,6 +675,7 @@ function KapitelCanvas({
         }
         cursorZ -= eintrag.laenge + 1.1;
         i++;
+      }
       }
       if (tankPlatz) {
         /*
@@ -543,9 +721,12 @@ function KapitelCanvas({
         const charakter = tiere[index];
         const gruppe = new THREE.Group();
         gruppe.add(ergebnis.value.figur);
-        const { x, z } = kapitelPosition(index, tiere.length, "tier");
+        const roh = platzFuer("tier", index, kapitelPosition(index, tiere.length, "tier"));
         const radius = 0.5 * groessenFaktor(charakter.id);
-        gruppe.position.set(Math.sign(x) * Math.min(Math.abs(x), 4.5 - radius), 0, z);
+        // Im Straßenzug bleibt die alte Einschnürung auf die Fahrbahnbreite.
+        const x = stadtplan ? roh.x : Math.sign(roh.x) * Math.min(Math.abs(roh.x), 4.5 - radius);
+        const z = roh.z;
+        gruppe.position.set(x, 0, z);
         scene.add(gruppe);
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
         const clips = ergebnis.value.animationen;
@@ -589,7 +770,7 @@ function KapitelCanvas({
             }
           }
           if (beendet) return;
-          const { x, z } = kapitelPosition(index, spuren.length, "spur");
+          const { x, z } = platzFuer("spur", index, kapitelPosition(index, spuren.length, "spur"));
           gruppe.position.set(x, 0, z);
           gruppe.rotation.y = -0.6;
           scene.add(gruppe);
@@ -601,7 +782,7 @@ function KapitelCanvas({
       );
       if (!beendet) {
         registrieren(scene);
-        if (kulissen.some((r) => r.status === "rejected") || npcLadungen.some((r) => r.status === "rejected")) {
+        if (kulissenFehler || npcLadungen.some((r) => r.status === "rejected")) {
           setLadeFehler("Einige Straßen oder Figuren konnten nicht geladen werden. Welt erneut laden.");
         }
         callbacks.current.onBereit();
@@ -741,8 +922,26 @@ function KapitelCanvas({
         const vorherZ = spieler.position.z;
         // Im Auto ist Wimpy gut doppelt so schnell unterwegs wie zu Fuß.
         const tempo = amSteuer ? 9.4 : 4.1;
-        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * staerke * dt * tempo, -4.15, 4.15);
-        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * staerke * dt * tempo, -36, 15);
+        const schrittX = (x / laenge) * staerke * dt * tempo;
+        const schrittZ = (z / laenge) * staerke * dt * tempo;
+        let neuX = vorherX + schrittX;
+        let neuZ = vorherZ + schrittZ;
+        if (stadtplan) {
+          /*
+           * Auf dem Stadtplan endet die Straße dort, wo keine mehr liegt.
+           * Geht es schräg nicht weiter, wird es einzeln versucht - so
+           * rutscht man an einer Hauswand entlang, statt festzukleben.
+           */
+          const platz = amSteuer ? 1.2 : 0.7;
+          if (!begehbar(stadtplan, neuX, neuZ, platz)) {
+            if (begehbar(stadtplan, neuX, vorherZ, platz)) neuZ = vorherZ;
+            else if (begehbar(stadtplan, vorherX, neuZ, platz)) neuX = vorherX;
+            else { neuX = vorherX; neuZ = vorherZ; }
+          }
+        } else {
+          neuX = THREE.MathUtils.clamp(neuX, -4.15, 4.15);
+          neuZ = THREE.MathUtils.clamp(neuZ, -36, 15);
+        }
         const kollidiert = npcGruppen.some((npc) => {
           const dx = npc.gruppe.position.x - neuX;
           const dz = npc.gruppe.position.z - neuZ;
@@ -794,8 +993,15 @@ function KapitelCanvas({
           else if (npc.lauf) {
             const differenz = npc.zielZ - npc.gruppe.position.z;
             const schritt = Math.sign(differenz) * Math.min(Math.abs(differenz), dt * 0.9);
-            npc.gruppe.position.z += schritt;
-            laeuft = Math.abs(schritt) > 0.0001;
+            // Auf dem Stadtplan endet der Spaziergang an der Hauswand: Wer
+            // nicht weiterkann, dreht um, statt durch die Fassade zu laufen.
+            if (stadtplan && !begehbar(stadtplan, npc.gruppe.position.x, npc.gruppe.position.z + schritt, 0.4)) {
+              npc.zielZ = npc.basisZ - (npc.zielZ - npc.basisZ);
+              npc.pause = 1.5 + Math.random() * 3;
+            } else {
+              npc.gruppe.position.z += schritt;
+            }
+            laeuft = Math.abs(schritt) > 0.0001 && npc.pause <= 0;
             if (laeuft) npc.gruppe.rotation.y = schritt > 0 ? 0 : Math.PI;
             if (Math.abs(differenz) < 0.03) {
               npc.zielZ = THREE.MathUtils.clamp(npc.basisZ + (npc.zielZ > npc.basisZ ? -npc.strecke : npc.strecke), -34, 13);
@@ -942,6 +1148,7 @@ export function Saga3DKapitel({
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   tankstelleId,
+  plan,
   gefundeneSpuren,
   kapitel,
   tasche,
@@ -964,6 +1171,8 @@ export function Saga3DKapitel({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
+  plan?: Stadtplan | null;
   gefundeneSpuren: string[];
   kapitel: number | null;
   tasche: Beweismittel[];
@@ -1088,6 +1297,7 @@ export function Saga3DKapitel({
         charakterGroessen={charakterGroessen}
         locationDrehungen={locationDrehungen}
         tankstelleId={tankstelleId}
+        plan={plan}
         fahrzeug={fahrzeug}
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}
@@ -1159,6 +1369,7 @@ export function Saga3DProbeSzene({
   modellIds,
   locationDrehungen,
   tankstelleId,
+  plan,
   onZurueck,
   onSchliessen,
 }: {
@@ -1170,6 +1381,8 @@ export function Saga3DProbeSzene({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
+  plan?: Stadtplan | null;
   onZurueck: () => void;
   onSchliessen: () => void;
 }) {
@@ -1252,6 +1465,7 @@ export function Saga3DProbeSzene({
         charakterModelle={modellZuordnung}
         locationDrehungen={locationDrehungen}
         tankstelleId={tankstelleId}
+        plan={plan}
         fahrzeug={fahrzeug}
         pausiert={garageOffen}
         spuren={LEERE_SPUREN}

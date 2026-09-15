@@ -420,6 +420,21 @@ export const SagaVorgabenSchema = z.object({
           .default({}),
         // Welcher Baustein die Tankstelle ist. Leer = am Namen erkennen.
         tankstelleId: z.string().max(80).default("").catch(""),
+        /*
+         * Der selbst gelegte Stadtplan. Kaputte Pläne werden zu null - dann
+         * entsteht die Stadt wie bisher als Straßenzug, statt dass ein
+         * verrutschtes Feld das ganze Kapitel unbrauchbar macht.
+         */
+        plan: z
+          .object({
+            breite: z.number().int().min(3).max(14),
+            tiefe: z.number().int().min(3).max(14),
+            felder: z.array(z.string().max(80)).max(196),
+            drehungen: z.record(z.string().max(12), z.number().int().min(0).max(270)).default({}),
+          })
+          .nullable()
+          .default(null)
+          .catch(null),
       }),
     )
     .max(9)

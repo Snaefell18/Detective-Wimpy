@@ -1,3 +1,4 @@
+import type { Stadtplan } from "./stadtplan";
 import { GENERIERTE_3D_LOCATIONS } from "./locations3d.generated";
 
 /** Beim Build automatisch aus /public/3d_locations gelesen. */
@@ -26,6 +27,15 @@ export type Kapitel3DVorgabe = {
    * mehrere hat oder eine anders benannte nutzen will, wählt sie hier aus.
    */
   tankstelleId?: string;
+  /**
+   * Ein selbst gelegter Stadtplan statt des gereihten Straßenzugs.
+   *
+   * Fehlt er oder hat er keine Straße, entsteht die Stadt wie bisher: Die
+   * gewählten Bausteine werden hintereinandergehängt. Liegt hier ein Plan,
+   * wird er Feld für Feld aufgebaut - mit Kreuzungen, Sackgassen und
+   * Gebäuden, die so oft vorkommen dürfen, wie man mag.
+   */
+  plan?: Stadtplan | null;
 };
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
@@ -64,6 +74,7 @@ export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   charakterGroessen: {},
   locationDrehungen: {},
   tankstelleId: "",
+  plan: null,
 };
 
 export const locationsFuer3D = (ids: string[] | undefined) => {

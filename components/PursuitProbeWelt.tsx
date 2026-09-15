@@ -12,6 +12,8 @@ import {
   type DreiDWetter,
 } from "@/lib/pursuit3d";
 import { Saga3DProbeSzene } from "./Saga3DKapitel";
+import { StadtplanFeld } from "./admin/StadtplanFeld";
+import type { Stadtplan } from "@/lib/stadtplan";
 
 export function PursuitProbeWelt({
   onZurueck,
@@ -31,6 +33,8 @@ export function PursuitProbeWelt({
   const [drehungen, setDrehungen] = useState<Record<string, number>>({});
   /** Welcher Baustein hier die Tankstelle ist - leer heißt: am Namen erkennen. */
   const [tankstelle, setTankstelle] = useState("");
+  /** Optionaler eigener Stadtplan statt des Straßenzugs. */
+  const [plan, setPlan] = useState<Stadtplan | null>(null);
 
   if (spielt) {
     return (
@@ -42,6 +46,7 @@ export function PursuitProbeWelt({
         modellIds={["wimpy", ...modelle]}
         locationDrehungen={drehungen}
         tankstelleId={tankstelle}
+        plan={plan}
         onZurueck={() => setSpielt(false)}
         onSchliessen={onSchliessen}
       />
@@ -77,6 +82,9 @@ export function PursuitProbeWelt({
             );
           })}
         </div>
+        <h3>Stadtplan <span className="leise">· leer = Straßenzug wie bisher</span></h3>
+        <StadtplanFeld plan={plan} onAendern={setPlan} />
+
         <h3>Tankstelle <span className="leise">· hier steigt Wimpy ins Auto</span></h3>
         <label className="feld">
           <select value={tankstelle} onChange={(e) => setTankstelle(e.target.value)}>

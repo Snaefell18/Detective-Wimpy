@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
+import { StadtplanFeld } from "./StadtplanFeld";
 import { yen } from "@/lib/zubehoer";
 import {
   AUFTRITTS_ARTEN,
@@ -730,6 +731,13 @@ export function SagaVorgabenFelder({
                       ) : null;
                     })}
                   </div>
+                  {/* Entweder Straßenzug wie bisher - oder ein selbst
+                      gelegter Stadtplan mit Kreuzungen und Sackgassen. */}
+                  <span className="leise klein">Aufbau der Stadt</span>
+                  <StadtplanFeld
+                    plan={vorgaben.kapitel3d?.[i]?.plan ?? null}
+                    onAendern={(plan) => dreiDSetzen(i, { plan })}
+                  />
                   {/* Wo Wimpy in sein Auto steigt. Ohne Wahl erkennt das Spiel
                       die Tankstelle am Namen des Bausteins. */}
                   <label className="feld">

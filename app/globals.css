@@ -8977,3 +8977,32 @@ a.zurueck {
   color: inherit;
 }
 .saga3d-wagenwahl strong { font-size: 16px; }
+
+/* --- Der selbst gelegte Stadtplan im Admin-Menü --------------------- */
+.stadtplan { display: grid; gap: 10px; }
+.stadtplan-leer { display: grid; gap: 8px; justify-items: start; }
+.stadtplan-raster {
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(22, 35, 58, 0.14);
+}
+.stadtplan-feld {
+  aspect-ratio: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  color: #16233a;
+  background: rgba(255, 255, 255, 0.35);
+  touch-action: manipulation;
+}
+.stadtplan-feld[data-art="strasse"] { background: #47566b; color: #cfe6f5; }
+.stadtplan-feld[data-art="haus"] { background: #f2b544; color: #16233a; }
+.stadtplan-feld span { display: block; }
