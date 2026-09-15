@@ -16,6 +16,8 @@ import { laufAnimation } from "@/lib/pursuit";
 import { DREI_D_LOCATIONS, locationsFuer3D, tankstelleAus } from "@/lib/pursuit3d";
 import {
   FELD_GROESSE,
+  STADT_HOEHE,
+  hoeheFuer,
   begehbar,
   feldAn,
   feldMitte,
@@ -165,14 +167,16 @@ function asphaltTextur(nacht: boolean) {
   const basis = nacht ? [34, 42, 56] : [78, 86, 94];
   for (let y = 0; y < kante; y++) {
     for (let x = 0; x < kante; x++) {
-      const korn = (zufall(x, y) - 0.5) * 22;
-      // Große, weiche Flecken: ausgebesserte Stellen im Belag.
-      const flicken =
-        Math.sin(x * 0.045 + Math.cos(y * 0.031) * 2) * Math.cos(y * 0.037) * 9;
-      // Ein paar dünne Risse quer über die Fläche.
-      const riss = Math.abs(Math.sin(x * 0.11 + y * 0.047)) > 0.995 ? -26 : 0;
+      /*
+       * Nur Korn und grobe Flecken - keine Wellen, keine Sinuslinien.
+       * Alles Regelmäßige legt sich über ein gekacheltes Feld sofort als
+       * Muster, und dann sieht die Straße aus wie ein Teppich.
+       */
+      const korn = (zufall(x, y) - 0.5) * 16;
+      const flicken = (zufall(Math.floor(x / 32), Math.floor(y / 32)) - 0.5) * 9;
+      const feiner = (zufall(Math.floor(x / 7), Math.floor(y / 7)) - 0.5) * 5;
       const farbe = basis.map((wert) =>
-        THREE.MathUtils.clamp(wert + korn + flicken + riss, 0, 255),
+        THREE.MathUtils.clamp(wert + korn + flicken + feiner, 0, 255),
       );
       pixel.set([...farbe, 255], (y * kante + x) * 4);
     }
@@ -180,6 +184,7 @@ function asphaltTextur(nacht: boolean) {
   const textur = new THREE.DataTexture(pixel, kante, kante, THREE.RGBAFormat);
   textur.colorSpace = THREE.SRGBColorSpace;
   textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
+  textur.repeat.set(1.7, 1.7);
   textur.magFilter = THREE.LinearFilter;
   textur.needsUpdate = true;
   return textur;
@@ -307,6 +312,8 @@ function aufFeldEinpassen(
   objekt: THREE.Object3D,
   richtung: { x: number; z: number } | null,
   drehung: number,
+  /** Höhenfaktor aus dem Editor: 1 = Stadthöhe, 2 = doppelt so hoch. */
+  hoehe = 1,
 ) {
   const blick = richtung ? Math.atan2(richtung.x, richtung.z) : 0;
   objekt.rotation.y = blick + THREE.MathUtils.degToRad(drehung);
@@ -323,9 +330,28 @@ function aufFeldEinpassen(
       // Ein sehr tiefer Baustein würde sonst durch die Rückseite des
       // Nachbarfeldes stoßen.
       (FELD_GROESSE * 1.4) / Math.max(0.001, tiefe),
-      16 / Math.max(0.001, groesse.y),
     ),
   );
+  objekt.updateMatrixWorld(true);
+  /*
+   * Und jetzt die Höhe.
+   *
+   * Passt man einen Baustein nur in die Feldbreite ein, wird aus einem
+   * vierstöckigen Haus schnell ein Bungalow: Die Bausteine zeigen ganze
+   * Häuserzeilen, und was in der Breite auf neun Meter schrumpft, schrumpft
+   * in der Höhe mit. Neben einem Tier von zwei Metern sieht das aus wie eine
+   * Spielzeugstadt. Deshalb wird nur die Höhe nachgezogen - die Straßenfront
+   * bleibt unangetastet, sonst risse die Häuserzeile auf.
+   */
+  const jetzt = new THREE.Box3().setFromObject(objekt).getSize(new THREE.Vector3());
+  const streckung = THREE.MathUtils.clamp(
+    (STADT_HOEHE * hoehe) / Math.max(0.001, jetzt.y),
+    // Nach unten darf der Faktor alles, nach oben bleibt die Dehnung im Rahmen:
+    // Ein Haus auf das Dreifache zu ziehen, sieht man ihm an.
+    hoehe < 1 ? 0.35 : 1,
+    2.6,
+  );
+  objekt.scale.y *= streckung;
   objekt.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(objekt);
   const mitte = box.getCenter(new THREE.Vector3());
@@ -530,19 +556,14 @@ function KapitelCanvas({
        * Beides kostet fast nichts und trägt fast alles - ohne sie sieht das
        * Raster aus wie ein Parkplatz.
        */
-      const bordGeometrie = new THREE.BoxGeometry(FELD_GROESSE, 0.34, 1.1);
-      const bordMaterial = new THREE.MeshToonMaterial({
-        color: strassentyp === "schnee" ? 0xdae8f2 : tageszeit === "nacht" ? 0x4a5464 : 0xb9bfae,
-        gradientMap: gradient,
-      });
       const strichGeometrie = new THREE.PlaneGeometry(0.16, 2.2);
       const strichMaterial = new THREE.MeshBasicMaterial({
         color: strassentyp === "asphalt" ? 0xe8e2b8 : 0xdfe7ea,
         transparent: true,
         opacity: 0.65,
       });
-      for (const geo of [bordGeometrie, strichGeometrie]) ressourcen.add(geo);
-      for (const mat of [bordMaterial, strichMaterial]) ressourcen.add(mat);
+      ressourcen.add(strichGeometrie);
+      ressourcen.add(strichMaterial);
 
       /*
        * Straßenlaternen.
@@ -587,6 +608,9 @@ function KapitelCanvas({
         const mitte = feldMitte(stadtplan, feld.x, feld.z);
         const flaeche = new THREE.Mesh(feldGeometrie, fahrbahnMaterial);
         flaeche.rotation.x = -Math.PI / 2;
+        // Viertelweise gedreht: Derselbe Belag wiederholt sich dadurch nicht
+        // sichtbar von Feld zu Feld.
+        flaeche.rotation.z = ((feld.x * 3 + feld.z * 7) % 4) * (Math.PI / 2);
         flaeche.position.set(mitte.x, 0.012, mitte.z);
         flaeche.receiveShadow = true;
         scene.add(flaeche);
@@ -597,29 +621,23 @@ function KapitelCanvas({
           west: istStrasse(stadtplan, feld.x - 1, feld.z),
           ost: istStrasse(stadtplan, feld.x + 1, feld.z),
         };
-        // Bordstein an jeder Kante ohne Fahrbahn dahinter.
+        /*
+         * Kein Bordstein. Eine umlaufende Steinkante macht aus jeder Straße
+         * eine Rennbahn und aus der Stadt ein Modell - die Häuser stehen
+         * jetzt ohnehin direkt an der Fahrbahn, und dort, wo eine Straße
+         * endet, sieht man das an den Häusern.
+         *
+         * Was bleibt, ist die Laterne an jeder zweiten Ecke.
+         */
         const kante = FELD_GROESSE / 2 - 0.4;
         for (const [seite, offen] of Object.entries(nachbarn)) {
-          if (offen) continue;
-          const bord = new THREE.Mesh(bordGeometrie, bordMaterial);
-          bord.castShadow = true;
-          bord.receiveShadow = true;
-          if (seite === "nord" || seite === "sued") {
-            bord.position.set(mitte.x, 0.17, mitte.z + (seite === "sued" ? kante : -kante));
-          } else {
-            bord.rotation.y = Math.PI / 2;
-            bord.position.set(mitte.x + (seite === "ost" ? kante : -kante), 0.17, mitte.z);
-          }
-          scene.add(bord);
-          // Jede zweite Ecke bekommt eine Laterne - dichter wäre Kirmes.
-          if ((feld.x + feld.z) % 2 === 0) {
-            const nach =
-              seite === "nord" ? { x: 0, z: -1 }
-                : seite === "sued" ? { x: 0, z: 1 }
-                  : seite === "ost" ? { x: 1, z: 0 }
-                    : { x: -1, z: 0 };
-            laterne(mitte.x + nach.x * kante, mitte.z + nach.z * kante, nach);
-          }
+          if (offen || (feld.x + feld.z) % 2 !== 0) continue;
+          const nach =
+            seite === "nord" ? { x: 0, z: -1 }
+              : seite === "sued" ? { x: 0, z: 1 }
+                : seite === "ost" ? { x: 1, z: 0 }
+                  : { x: -1, z: 0 };
+          laterne(mitte.x + nach.x * kante, mitte.z + nach.z * kante, nach);
         }
         // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen.
         const laengs = nachbarn.nord && nachbarn.sued && !nachbarn.west && !nachbarn.ost;
@@ -808,7 +826,7 @@ function KapitelCanvas({
             .map(([dx, dz]) => ({ x: dx, z: dz }))
             .find((weg) => istStrasse(stadtplan, feld.x + weg.x, feld.z + weg.z)) ?? null;
           const haus = vorlage.clone(true);
-          aufFeldEinpassen(haus, nachbar, feld.drehung);
+          aufFeldEinpassen(haus, nachbar, feld.drehung, hoeheFuer(stadtplan, feld.id));
           const mitte = feldMitte(stadtplan, feld.x, feld.z);
           const block = new THREE.Group();
           block.add(haus);

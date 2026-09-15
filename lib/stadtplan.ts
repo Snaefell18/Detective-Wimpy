@@ -34,7 +34,39 @@ export type Stadtplan = {
   felder: string[];
   /** Zusätzliche Drehung einzelner Gebäude in Grad, Schlüssel "x,z". */
   drehungen: Record<string, number>;
+  /**
+   * Wie hoch ein Baustein in dieser Stadt gebaut wird, je Baustein-Id.
+   *
+   * 1 heißt: so, wie das Spiel es von selbst auf Stadthöhe bringt - ungefähr
+   * vier Stockwerke, damit ein Tier von zwei Metern davorsteht und nicht
+   * daneben. Wer ein flaches Haus oder einen Turm will, dreht hier daran.
+   * Gestreckt wird nur die Höhe; die Straßenfront bleibt, wie sie ist, sonst
+   * risse die Häuserzeile auf.
+   */
+  hoehen?: Record<string, number>;
 };
+
+/** Auf diese Höhe bringt der Faktor 1 ein Gebäude - etwa vier Stockwerke. */
+export const STADT_HOEHE = 11;
+export const HOEHE_GRENZEN = { min: 0.6, max: 3 };
+
+/** Der Höhenfaktor eines Bausteins - immer ein brauchbarer Wert. */
+export function hoeheFuer(plan: Stadtplan, id: string): number {
+  const wert = Number(plan.hoehen?.[id]);
+  if (!Number.isFinite(wert)) return 1;
+  return Math.max(HOEHE_GRENZEN.min, Math.min(HOEHE_GRENZEN.max, Math.round(wert * 10) / 10));
+}
+
+/** Den Höhenfaktor setzen - gibt einen neuen Plan zurück. */
+export function hoeheSetzen(plan: Stadtplan, id: string, faktor: number): Stadtplan {
+  const wert = Math.max(HOEHE_GRENZEN.min, Math.min(HOEHE_GRENZEN.max, Math.round(faktor * 10) / 10));
+  return { ...plan, hoehen: { ...(plan.hoehen ?? {}), [id]: wert } };
+}
+
+/** Welche Bausteine in diesem Plan überhaupt vorkommen - für den Editor. */
+export const gebaeudeArten = (plan: Stadtplan): string[] => [
+  ...new Set(gebaeudeFelder(plan).map((feld) => feld.id)),
+];
 
 export const PLAN_MASSE = { min: 3, max: 14 };
 

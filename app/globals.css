@@ -9006,3 +9006,7 @@ a.zurueck {
 .stadtplan-feld[data-art="strasse"] { background: #47566b; color: #cfe6f5; }
 .stadtplan-feld[data-art="haus"] { background: #f2b544; color: #16233a; }
 .stadtplan-feld span { display: block; }
+.stadtplan-hoehen { display: grid; gap: 6px; }
+.stadtplan-hoehe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stadtplan-hoehe strong { flex: 1 1 100px; font-size: 13px; }
+.stadtplan-hoehe .knopf { min-width: 40px; padding: 4px 8px; }

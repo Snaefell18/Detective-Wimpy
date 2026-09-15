@@ -433,6 +433,8 @@ export const SagaVorgabenSchema = z.object({
             tiefe: z.number().int().min(3).max(14),
             felder: z.array(z.string().max(80)).max(196),
             drehungen: z.record(z.string().max(12), z.number().int().min(0).max(270)).default({}),
+            // Höhenfaktor je Baustein - siehe Stadtplan.hoehen.
+            hoehen: z.record(z.string().max(80), z.number().min(0.6).max(3)).default({}),
           })
           .nullable()
           .default(null)

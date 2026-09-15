@@ -7,6 +7,8 @@
  */
 import {
   FELD_GROESSE,
+  HOEHE_GRENZEN,
+  STADT_HOEHE,
   STRASSE,
   beispielPlan,
   begehbar,
@@ -16,7 +18,10 @@ import {
   feldDrehen,
   feldMitte,
   feldSetzen,
+  gebaeudeArten,
   gebaeudeFelder,
+  hoeheFuer,
+  hoeheSetzen,
   leererPlan,
   planAusmass,
   planGroesse,
@@ -80,6 +85,41 @@ console.log("\n2. Felder setzen, drehen, vergrößern");
   pruefe("vergrößern erhält die Felder", groesser.breite === 8 && feldAn(groesser, 2, 2) === STRASSE);
   const kleiner = planGroesse(beispielPlan(9, 9), 4, 4);
   pruefe("verkleinern schneidet nur ab", kleiner.felder.length === 16);
+}
+
+console.log("\n2b. Wie hoch gebaut wird");
+{
+  const haus = DREI_D_LOCATIONS[0].id;
+  const zweites = DREI_D_LOCATIONS[1].id;
+  let plan = feldSetzen(feldSetzen(beispielPlan(5, 5), 0, 0, haus), 4, 4, haus);
+  plan = feldSetzen(plan, 0, 4, zweites);
+
+  pruefe("ohne Angabe gilt die Stadthöhe", hoeheFuer(plan, haus) === 1);
+  pruefe("und die sind etwa vier Stockwerke", STADT_HOEHE >= 9 && STADT_HOEHE <= 14, `${STADT_HOEHE} m`);
+
+  plan = hoeheSetzen(plan, haus, 1.8);
+  pruefe("höher gestellt bleibt höher", hoeheFuer(plan, haus) === 1.8);
+  pruefe("und gilt für alle Felder dieses Bausteins", gebaeudeFelder(plan).filter((f) => f.id === haus).length === 2);
+  pruefe("das andere Haus bleibt unberührt", hoeheFuer(plan, zweites) === 1);
+
+  pruefe("zu hoch wird gekappt", hoeheFuer(hoeheSetzen(plan, haus, 99), haus) === HOEHE_GRENZEN.max);
+  pruefe("zu flach auch", hoeheFuer(hoeheSetzen(plan, haus, 0), haus) === HOEHE_GRENZEN.min);
+  pruefe("Unsinn fällt auf 1 zurück", hoeheFuer({ ...plan, hoehen: { [haus]: "hoch" } }, haus) === 1);
+
+  const arten = gebaeudeArten(plan);
+  pruefe("der Editor sieht beide Bausteine", arten.length === 2 && arten.includes(haus) && arten.includes(zweites));
+  pruefe("und jeden nur einmal", new Set(arten).size === arten.length);
+
+  const gespeichert = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, plan }],
+  });
+  pruefe("die Höhen überstehen das Speichern", gespeichert.data?.kapitel3d[0].plan?.hoehen?.[haus] === 1.8);
+  const alteStadt = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, plan: beispielPlan(5, 5) }],
+  });
+  pruefe("ältere Pläne ohne Höhen bleiben gültig", alteStadt.success && planGueltig(alteStadt.data?.kapitel3d[0].plan));
 }
 
 console.log("\n3. Wo man laufen darf - und wo die Straße endet");

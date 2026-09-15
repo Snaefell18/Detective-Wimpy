@@ -3,13 +3,18 @@
 import { useState } from "react";
 import { DREI_D_LOCATIONS } from "@/lib/pursuit3d";
 import {
+  HOEHE_GRENZEN,
   PLAN_MASSE,
+  STADT_HOEHE,
   STRASSE,
   beispielPlan,
   drehungAn,
   feldAn,
   feldDrehen,
   feldSetzen,
+  gebaeudeArten,
+  hoeheFuer,
+  hoeheSetzen,
   leererPlan,
   planGroesse,
   planGueltig,
@@ -127,6 +132,46 @@ export function StadtplanFeld({
           }),
         )}
       </div>
+
+      {/* Wie hoch die gesetzten Häuser gebaut werden. Ein Tier ist zwei
+          Meter groß - daran misst sich, ob eine Stadt echt wirkt. */}
+      {gebaeudeArten(plan).length > 0 && (
+        <div className="stadtplan-hoehen">
+          <span className="leise klein">
+            Höhe der Gebäude · ein Tier ist ~2 m groß
+          </span>
+          {gebaeudeArten(plan).map((id) => {
+            const faktor = hoeheFuer(plan, id);
+            const meter = Math.round(STADT_HOEHE * faktor);
+            return (
+              <div className="stadtplan-hoehe" key={id}>
+                <strong>{DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}</strong>
+                <button
+                  type="button"
+                  className="knopf klein"
+                  aria-label={`Niedriger: ${id}`}
+                  disabled={faktor <= HOEHE_GRENZEN.min}
+                  onClick={() => onAendern(hoeheSetzen(plan, id, faktor - 0.1))}
+                >
+                  −
+                </button>
+                <span className="leise klein">
+                  {faktor.toFixed(1)}× · ~{meter} m · {Math.max(1, Math.round(meter / 3))} Stockwerke
+                </span>
+                <button
+                  type="button"
+                  className="knopf klein"
+                  aria-label={`Höher: ${id}`}
+                  disabled={faktor >= HOEHE_GRENZEN.max}
+                  onClick={() => onAendern(hoeheSetzen(plan, id, faktor + 0.1))}
+                >
+                  +
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <p className="leise klein">
         {strassen} Straßenfeld{strassen === 1 ? "" : "er"}
