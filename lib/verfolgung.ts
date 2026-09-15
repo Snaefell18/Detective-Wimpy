@@ -16,6 +16,15 @@ export type VerfolgungVorgabe = {
   fliehenderId: string;
   /** Auto aus dem zentralen Autokatalog. Alte Jagden nutzen den Sportwagen. */
   fluchtAutoId?: string;
+  /**
+   * Zusätzliche Drehung des Fluchtwagens in Grad.
+   *
+   * Jedes 3D-Modell steht in seiner eigenen Blickrichtung in der Datei. Der
+   * Autokatalog gleicht das mit `drehung` aus - hier kommt dazu, was nur für
+   * diese Jagd gilt. 180 dreht den Wagen also um, wenn er verkehrt herum
+   * vorausfährt. Fehlt der Wert, bleibt alles wie im Katalog.
+   */
+  fluchtDrehung?: number;
   /** Legacy-Daten alter Sagas; die neue Jagd wird immer von Wimpy gefahren. */
   verfolger: [VerfolgerRolle, VerfolgerRolle];
   /** Optionaler Song, der nur während der eigentlichen Fahrt läuft. */

@@ -3,10 +3,17 @@ import type { Zubehoer } from './zubehoer';
 export { AUTO_MODELLE };
 export type Auto = Zubehoer & { modell: string; speed: number; beschleunigung: number; drehung: number };
 export const START_AUTO_ID = 'auto-start';
+/*
+ * Jedes 3D-Modell steht anders in seiner Datei. Gefahren wird in Richtung +z:
+ * Der Ferrari zeigt dort von Haus aus hin, der Lambo liegt quer und muss um
+ * 270 Grad gedreht werden - bei 90 Grad fuhr er rückwärts voraus. Ein eigenes
+ * Modell stellt man im Autokatalog (`drehung`) oder für eine einzelne Jagd in
+ * der Verfolgungsjagd selbst gerade.
+ */
 export const STANDARD_AUTOS: Auto[] = AUTO_MODELLE.slice(0, 2).map((modell, i) => ({
   id: i === 0 ? START_AUTO_ID : 'auto-sport', name: i === 0 ? 'Wimpys Ferrari' : 'Lamborghini',
   modell: modell.id, speed: i === 0 ? 155 : 190, beschleunigung: i === 0 ? 28 : 38,
-  preis: i === 0 ? 0 : 1200, drehung: /lambo/i.test(modell.name) ? 90 : 0, bild: '', wirkung: 'auto', erstelltAm: 0,
+  preis: i === 0 ? 0 : 1200, drehung: /lambo/i.test(modell.name) ? 270 : 0, bild: '', wirkung: 'auto', erstelltAm: 0,
   beschreibung: 'Dein Wagen für die Verfolgungsjagd.',
 }));
 export function autoGueltig(auto: Auto) {

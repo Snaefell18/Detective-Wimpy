@@ -84,6 +84,32 @@ pruefe("Versammlung und Jagd teilen sich keine Lücke", probleme({
   }],
 }).some((p) => p.includes("nur ein Zwischenereignis")));
 
+console.log("\n2b. Der Fluchtwagen lässt sich drehen");
+{
+  const mitDrehung = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    verfolgungsjagden: [{ ...jagd, fluchtDrehung: 180 }],
+  });
+  pruefe("die Drehung übersteht die Generierung", mitDrehung.data?.verfolgungsjagden[0]?.fluchtDrehung === 180);
+
+  const ohne = SagaVorgabenSchema.safeParse({ ...STANDARD_SAGA_VORGABEN, verfolgungsjagden: [jagd] });
+  pruefe("ohne Angabe bleibt der Wagen ungedreht", ohne.data?.verfolgungsjagden[0]?.fluchtDrehung === 0);
+
+  const unsinn = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    verfolgungsjagden: [{ ...jagd, fluchtDrehung: 5000 }],
+  });
+  pruefe("ein unmöglicher Wert wird zu 0 statt zum Fehler", unsinn.data?.verfolgungsjagden[0]?.fluchtDrehung === 0);
+  pruefe("und die Jagd bleibt erhalten", unsinn.data?.verfolgungsjagden.length === 1);
+
+  // Gefahren wird in Richtung +z. Der Ferrari zeigt dort von Haus aus hin,
+  // der Lambo liegt quer - bei 90 Grad fuhr er rückwärts voraus.
+  const lambo = STANDARD_AUTOS.find((a) => /lambo/i.test(a.name));
+  pruefe("der Lambo steht nicht mehr falsch herum", lambo?.drehung === 270);
+  pruefe("Wimpys Ferrari bleibt ungedreht", STANDARD_AUTOS[0].drehung === 0);
+  pruefe("beide Wagen bleiben gültig", STANDARD_AUTOS.every(autoGueltig));
+}
+
 console.log("\n3. Nach dem Fang gibt es immer ein Statement");
 pruefe("eigener Satz gewinnt", fluchtStatement({ ...jagd, statement: "Ich hatte keine Wahl." }) === "Ich hatte keine Wahl.");
 pruefe("Fluchtgrund wird zu wörtlicher Rede", fluchtStatement(jagd).includes("Schlüssel im Schnee"));

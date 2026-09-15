@@ -3,21 +3,55 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
 import { AUTO_MODELLE, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
 import { fluchtStatement, type VerfolgungVorgabe } from '@/lib/verfolgung';
 import { Hintergrundmusik } from './Hintergrundmusik';
 
-function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }: {
+/**
+ * Gefahren wird in Richtung +z, also auf die Kamera zu; die Welt wandert
+ * dafür nach -z. Alles Folgende hängt an dieser einen Festlegung.
+ */
+const KAMERA_JAGD = { pos: [-12.6, 7.3, 18.8], ziel: [0, 0.8, 4], fov: 46 } as const;
+/**
+ * Die Anfahrt schaut von weiter außen und mit weiterem Blickwinkel auf den
+ * Straßenrand: Sonst stünden Wimpy und sein Wagen im selben Fleck.
+ */
+const KAMERA_ANFAHRT = { pos: [-17.5, 4.6, 14.5], ziel: [-5.2, 1.2, 1.0], fov: 58 } as const;
+
+/** Wo Wimpys Wagen parkt und wo Wimpy selbst danebensteht. */
+const PARKPLATZ = { x: -6.6, z: 0.8, winkel: -0.42 };
+const STANDPLATZ = { x: -10, z: 3 };
+
+/**
+ * Der Ablauf der Anfahrt in Sekunden.
+ *
+ * Erst sieht man Wimpy und seinen Wagen am Straßenrand, dann rast der andere
+ * Wagen vorbei, dann steigt Wimpy ein und zieht los - ohne Schnitt, die
+ * Kamera gleitet dabei in die Verfolgungsansicht.
+ */
+const ANFAHRT = { vorbei: 2.9, einsteigen: 4.3, losfahren: 5.9 };
+
+/** Nur so weit vor Wimpy, dass der Fluchtwagen im Bild bleibt. */
+const FLUCHT_NAH = 3.8;
+const FLUCHT_FERN = 7.0;
+const ABSTAND_MAX = 260;
+
+const weich = (t: number) => t * t * (3 - 2 * t);
+
+function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, onBereit, onPhase }: {
   auto: Auto; flucht: Auto; spur: React.MutableRefObject<number>;
+  /** Zusätzliche Drehung des Fluchtwagens in Grad - live veränderbar. */
+  drehung: React.MutableRefObject<number>;
   onStand: (speed: number, abstand: number, treffer: boolean) => void;
   onEnde: (gefangen: boolean) => void; onFehler: (text: string) => void;
-  onBereit: () => void;
+  onBereit: () => void; onPhase: (phase: 'anfahrt' | 'jagd') => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const callbacks = useRef({ onStand, onEnde, onFehler, onBereit });
-  callbacks.current = { onStand, onEnde, onFehler, onBereit };
+  const callbacks = useRef({ onStand, onEnde, onFehler, onBereit, onPhase });
+  callbacks.current = { onStand, onEnde, onFehler, onBereit, onPhase };
   useEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -25,10 +59,10 @@ function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }:
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x091426);
     scene.fog = new THREE.Fog(0x15283e, 28, 95);
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 130);
     // Gleiche Achsen und Blickrichtung wie Jump-and-Run; etwas weiter für zwei Autos.
-    camera.position.set(-12.6, 7.3, 18.8);
-    camera.lookAt(0, 0.8, 4);
+    const camera = new THREE.PerspectiveCamera(KAMERA_ANFAHRT.fov, 1, 0.1, 130);
+    camera.position.set(...KAMERA_ANFAHRT.pos);
+    camera.lookAt(...KAMERA_ANFAHRT.ziel);
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
     catch { callbacks.current.onFehler('3D konnte nicht gestartet werden.'); return; }
@@ -58,11 +92,20 @@ function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }:
     const kulisse: THREE.Mesh[] = [];
     for (let i = 0; i < 28; i++) {
       const x = (i % 2 ? -1 : 1) * (7 + i % 3);
-      const baum = mesh(new THREE.ConeGeometry(1.4, 4, 5), i % 3 ? 0x4b8496 : 0xc8e6ed, x, 2, i * 4 - 25);
+      // Wo Wimpy und sein Wagen auf die Jagd warten, steht kein Baum im Bild.
+      const z = i * 4 - 25;
+      const imWeg = x < -5 && z > -6 && z < 10;
+      const baum = mesh(new THREE.ConeGeometry(1.4, 4, 5), i % 3 ? 0x4b8496 : 0xc8e6ed, x, 2, imWeg ? z + 56 : z);
       kulisse.push(baum);
     }
-    const spieler = new THREE.Group(), gegner = new THREE.Group();
-    scene.add(spieler, gegner);
+    const spieler = new THREE.Group(), gegner = new THREE.Group(), wimpy = new THREE.Group();
+    spieler.position.set(PARKPLATZ.x, 0, PARKPLATZ.z); spieler.rotation.y = PARKPLATZ.winkel;
+    // Vor der Vorbeifahrt steht der Fluchtwagen weit außerhalb des Bildes.
+    gegner.position.set(0, 0, -60);
+    wimpy.position.set(STANDPLATZ.x, 0, STANDPLATZ.z);
+    // Die Figuren schauen bei rotation.y = 0 nach +z; Wimpy blickt zur Straße.
+    wimpy.rotation.y = Math.PI / 2;
+    scene.add(spieler, gegner, wimpy);
     const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
     async function laden(wagen: Auto, gruppe: THREE.Group) {
       const modell = AUTO_MODELLE.find(m => m.id === wagen.modell);
@@ -81,19 +124,75 @@ function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }:
       obj.position.set(-mitte.x, -box.min.y, -mitte.z);
       gruppe.add(obj);
     }
-    void Promise.all([laden(auto, spieler), laden(flucht, gegner)]).then(() => {
+    /*
+     * Wimpy am Straßenrand. Er gehört zur Anfahrt, nicht zur Jagd: Wenn sein
+     * Modell fehlt oder zu lange braucht, beginnt die Anfahrt trotzdem - nur
+     * eben ohne ihn. Ein Ladefehler darf die Verfolgung nie aufhalten.
+     */
+    let mixer: THREE.AnimationMixer | null = null;
+    let stehen: THREE.AnimationAction | null = null;
+    let gehen: THREE.AnimationAction | null = null;
+    async function figurLaden() {
+      const modell = ANIMATIONS_MODELLE.find(m => m.id === 'wimpy');
+      if (!modell) return;
+      const gltf = await loader.loadAsync(modell.datei);
+      sammeln(gltf.scene);
+      if (beendet) { ressourcen.forEach(r => r.dispose()); return; }
+      const figur = gltf.scene;
+      figur.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(figur);
+      const groesse = box.getSize(new THREE.Vector3());
+      figur.scale.multiplyScalar(1.7 / Math.max(0.001, groesse.y));
+      figur.updateMatrixWorld(true);
+      const neu = new THREE.Box3().setFromObject(figur);
+      const mitte = neu.getCenter(new THREE.Vector3());
+      figur.position.set(-mitte.x, -neu.min.y, -mitte.z);
+      wimpy.add(figur);
+      mixer = new THREE.AnimationMixer(figur);
+      const ruheClip = gltf.animations.find(c => /idle|rest/i.test(c.name)) ?? gltf.animations[0];
+      const gehClip = gltf.animations.find(c => /walk/i.test(c.name)) ?? gltf.animations.find(c => /run/i.test(c.name));
+      stehen = ruheClip ? mixer.clipAction(ruheClip) : null;
+      gehen = gehClip ? mixer.clipAction(gehClip) : null;
+      stehen?.play();
+    }
+    void Promise.all([laden(auto, spieler), laden(flucht, gegner)]).then(async () => {
+      await figurLaden().catch(() => undefined);
       if (!beendet) { bereit = true; callbacks.current.onBereit(); }
     }).catch(() => { if (!beendet) callbacks.current.onFehler('Ein Automodell konnte nicht geladen werden. Bitte erneut starten.'); });
     const hindernisse = Array.from({ length: 5 }, (_, i) => ({
       obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * 70), getroffen: false,
     }));
+    let phase: 'anfahrt' | 'jagd' = 'anfahrt', anfahrtZeit = 0;
     let speed = 0, fluchtSpeed = 0, abstand = 180, zeit = 0, ausgabe = 0, unverwundbar = 0, letzter = performance.now();
+    /** Straße und Kulisse ziehen vorbei - in der Anfahrt wie in der Jagd. */
+    const weltBewegen = (weg: number) => {
+      for (const m of markierungen) { m.position.z -= weg; if (m.position.z < -22) m.position.z += 100; }
+      for (const b of kulisse) { b.position.z -= weg; if (b.position.z < -30) b.position.z += 112; }
+    };
+    /** Aus der Anfahrt in die Jagd - ohne Schnitt, nur ohne Wimpy am Rand. */
+    const losfahren = () => {
+      if (phase !== 'anfahrt') return;
+      phase = 'jagd';
+      wimpy.visible = false;
+      spieler.position.set(spur.current * 3.4, 0, 0);
+      spieler.rotation.y = 0;
+      gegner.position.set(0, 0, FLUCHT_FERN);
+      camera.position.set(...KAMERA_JAGD.pos);
+      camera.lookAt(...KAMERA_JAGD.ziel);
+      camera.fov = KAMERA_JAGD.fov;
+      camera.updateProjectionMatrix();
+      callbacks.current.onPhase('jagd');
+    };
     const taste = (e: KeyboardEvent) => {
       if (e.repeat || (e.target instanceof HTMLElement && e.target.closest('input,select,textarea'))) return;
+      if (phase === 'anfahrt') { e.preventDefault(); losfahren(); return; }
       const delta = ['ArrowLeft', 'ArrowUp', 'a', 'w'].includes(e.key) ? -1 : ['ArrowRight', 'ArrowDown', 'd', 's'].includes(e.key) ? 1 : 0;
       if (delta) { e.preventDefault(); spur.current = THREE.MathUtils.clamp(spur.current + delta, -1, 1); }
     };
     window.addEventListener('keydown', taste);
+    // Ein Tipp aufs Bild überspringt die Anfahrt - niemand will sie zehnmal sehen.
+    const tippen = () => { if (phase === 'anfahrt' && bereit) losfahren(); };
+    renderer.domElement.addEventListener('pointerdown', tippen);
     const resize = () => {
       if (!element.clientWidth || !element.clientHeight) return;
       camera.aspect = element.clientWidth / element.clientHeight;
@@ -102,18 +201,81 @@ function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }:
     const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const verloren = (e: Event) => { e.preventDefault(); bereit = false; callbacks.current.onFehler('Grafik unterbrochen. Bitte Jagd erneut starten.'); };
     renderer.domElement.addEventListener('webglcontextlost', verloren);
+    /** Die Anfahrt: zuschauen, einsteigen, losfahren. */
+    function anfahrt(dt: number) {
+      anfahrtZeit += dt;
+      const t = anfahrtZeit;
+      mixer?.update(dt);
+
+      // Der andere Wagen rast an Wimpy vorbei und ist gleich wieder weg.
+      const raste = THREE.MathUtils.clamp((t - 0.7) / (ANFAHRT.vorbei - 0.7), 0, 1);
+      // Auf der Spur, die am nächsten an Wimpy vorbeiführt.
+      gegner.position.set(-3.4, 0, THREE.MathUtils.lerp(-40, 26, raste));
+
+      // Dann geht Wimpy die zwei Schritte zu seinem Wagen und steigt ein.
+      if (t > ANFAHRT.vorbei) {
+        const schritt = THREE.MathUtils.clamp((t - ANFAHRT.vorbei) / (ANFAHRT.einsteigen - ANFAHRT.vorbei), 0, 1);
+        if (gehen && stehen?.isRunning()) { stehen.fadeOut(0.25); gehen.reset().fadeIn(0.25).play(); }
+        const ziel = { x: PARKPLATZ.x - 0.9, z: PARKPLATZ.z + 0.5 };
+        wimpy.position.x = THREE.MathUtils.lerp(STANDPLATZ.x, ziel.x, weich(schritt));
+        wimpy.position.z = THREE.MathUtils.lerp(STANDPLATZ.z, ziel.z, weich(schritt));
+        // Er geht dorthin, wo er hinschaut: Modelle blicken bei 0 nach +z.
+        wimpy.rotation.y = Math.atan2(ziel.x - STANDPLATZ.x, ziel.z - STANDPLATZ.z);
+        // Zum Schluss verschwindet er in der Fahrerkabine.
+        const rein = THREE.MathUtils.clamp((schritt - 0.75) / 0.25, 0, 1);
+        wimpy.scale.setScalar(Math.max(0.001, 1 - rein));
+        wimpy.visible = rein < 1;
+      }
+
+      // Und zieht auf die Straße, während die Kamera nach hinten gleitet.
+      const anfahren = weich(THREE.MathUtils.clamp((t - ANFAHRT.einsteigen) / (ANFAHRT.losfahren - ANFAHRT.einsteigen), 0, 1));
+      spieler.position.x = THREE.MathUtils.lerp(PARKPLATZ.x, spur.current * 3.4, anfahren);
+      spieler.position.z = THREE.MathUtils.lerp(PARKPLATZ.z, 0, anfahren);
+      spieler.rotation.y = THREE.MathUtils.lerp(PARKPLATZ.winkel, 0, anfahren);
+      camera.position.set(
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.pos[0], KAMERA_JAGD.pos[0], anfahren),
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.pos[1], KAMERA_JAGD.pos[1], anfahren),
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.pos[2], KAMERA_JAGD.pos[2], anfahren),
+      );
+      camera.lookAt(
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.ziel[0], KAMERA_JAGD.ziel[0], anfahren),
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.ziel[1], KAMERA_JAGD.ziel[1], anfahren),
+        THREE.MathUtils.lerp(KAMERA_ANFAHRT.ziel[2], KAMERA_JAGD.ziel[2], anfahren),
+      );
+      camera.fov = THREE.MathUtils.lerp(KAMERA_ANFAHRT.fov, KAMERA_JAGD.fov, anfahren);
+      camera.updateProjectionMatrix();
+      // Der Wagen ist schon in Fahrt, wenn die Jagd übernimmt: kein Ruck.
+      speed = auto.speed * 0.4 * anfahren;
+      weltBewegen(speed / 3.6 * dt);
+      if (t >= ANFAHRT.losfahren) losfahren();
+    }
     function zeichnen(jetzt: number) {
       if (beendet) return;
       frame = requestAnimationFrame(zeichnen);
       const dt = Math.min(0.04, (jetzt - letzter) / 1000); letzter = jetzt;
       if (document.hidden || !bereit) return;
+      // Die zusätzliche Drehung des Fluchtwagens lässt sich in der Vorschau
+      // im laufenden Bild ändern, ohne die Szene neu zu bauen.
+      gegner.rotation.y = THREE.MathUtils.degToRad(drehung.current);
+      if (phase === 'anfahrt') { anfahrt(dt); renderer.render(scene, camera); return; }
       zeit += dt; unverwundbar = Math.max(0, unverwundbar - dt);
       speed = Math.min(auto.speed, speed + auto.beschleunigung * dt);
       const weg = speed / 3.6 * dt;
       fluchtSpeed = Math.min(fluchtTempo(flucht, zeit), fluchtSpeed + flucht.beschleunigung / 3.6 * dt);
       abstand += fluchtSpeed * dt - weg;
       spieler.position.x = THREE.MathUtils.damp(spieler.position.x, spur.current * 3.4, 7, dt);
-      gegner.position.set(Math.sin(zeit * 0.65) > 0.4 ? 3.4 : 0, 0, 3.8 + Math.max(0, abstand) * 0.065);
+      /*
+       * Der Fluchtwagen bleibt im Bild.
+       *
+       * Voraus heißt hier +z, und dort läuft die Straße aus dem Bildrand
+       * heraus: Ein Vorsprung von 200 Metern maßstäblich gefahren hieße, dass
+       * man den Wagen, den man jagt, nie zu sehen bekommt. Der Abstand wird
+       * deshalb in ein schmales sichtbares Band gelegt - die Zahl im HUD sagt,
+       * wie weit es wirklich ist.
+       */
+      const fern = THREE.MathUtils.clamp(abstand, 0, ABSTAND_MAX) / ABSTAND_MAX;
+      gegner.position.z = THREE.MathUtils.damp(gegner.position.z, THREE.MathUtils.lerp(FLUCHT_NAH, FLUCHT_FERN, fern), 4, dt);
+      gegner.position.x = THREE.MathUtils.damp(gegner.position.x, Math.sin(zeit * 0.65) > 0.4 ? -3.4 : 0, 3, dt);
       let treffer = false;
       for (const h of hindernisse) {
         const vorher = h.obj.position.z;
@@ -123,51 +285,66 @@ function RennCanvas({ auto, flucht, spur, onStand, onEnde, onFehler, onBereit }:
         }
         if (h.obj.position.z < -15) { h.obj.position.z += 350; h.obj.position.x = (Math.floor(Math.random() * 3) - 1) * 3.4; h.getroffen = false; }
       }
-      for (const m of markierungen) { m.position.z -= weg; if (m.position.z < -22) m.position.z += 100; }
-      for (const b of kulisse) { b.position.z -= weg; if (b.position.z < -30) b.position.z += 112; }
+      weltBewegen(weg);
       ausgabe += dt;
       if (ausgabe > 0.12 || treffer) { callbacks.current.onStand(Math.round(speed), Math.max(0, Math.round(abstand)), unverwundbar > 0); ausgabe = 0; }
       renderer.render(scene, camera);
-      if (abstand <= 0 || abstand > 260 || zeit > 150) { bereit = false; callbacks.current.onEnde(abstand <= 0); }
+      if (abstand <= 0 || abstand > ABSTAND_MAX || zeit > 150) { bereit = false; callbacks.current.onEnde(abstand <= 0); }
     }
     frame = requestAnimationFrame(zeichnen);
     return () => {
       beendet = true; cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('keydown', taste);
+      renderer.domElement.removeEventListener('pointerdown', tippen);
       renderer.domElement.removeEventListener('webglcontextlost', verloren);
+      mixer?.stopAllAction();
       sammeln(scene); ressourcen.forEach(r => r.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [auto, flucht, spur]);
+  }, [auto, flucht, spur, drehung]);
   return <div className="jagd-canvas" ref={host} aria-label="Wimpy verfolgt den Fluchtwagen auf drei Spuren" />;
 }
 
-export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = false }: {
+export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = false, onDrehung }: {
   vorgabe: VerfolgungVorgabe; onFertig: () => void; autoId?: string; besitz?: Record<string, number>; vorschau?: boolean;
+  /** Nur in der Vorschau: die gefundene Drehung des Fluchtwagens zurückgeben. */
+  onDrehung?: (grad: number) => void;
 }) {
   const { autos, fehler: katalogFehler } = useAutos();
   const stammdaten = useStammdaten();
   const [wahl, setWahl] = useState(autoId ?? START_AUTO_ID);
   const [fluchtId, setFluchtId] = useState(vorgabe.fluchtAutoId ?? 'auto-sport');
   const [rennen, setRennen] = useState<{ auto: Auto; flucht: Auto } | null>(null);
-  const [phase, setPhase] = useState<'bereit' | 'jagd' | 'gefangen' | 'entkommen'>('bereit');
+  const [phase, setPhase] = useState<'bereit' | 'anfahrt' | 'jagd' | 'gefangen' | 'entkommen'>('bereit');
   const [fehler, setFehler] = useState('');
   const [bereit, setBereit] = useState(false);
   const [stand, setStand] = useState({ speed: 0, abstand: 180, treffer: false });
+  const [fluchtDrehung, setFluchtDrehung] = useState(vorgabe.fluchtDrehung ?? 0);
   const spur = useRef(0);
+  const drehung = useRef(fluchtDrehung);
+  const faehrt = phase === 'anfahrt' || phase === 'jagd';
   const fliehender = stammdaten.charaktere.find(c => c.id === vorgabe.fliehenderId);
   const verfuegbar = autos.filter(a => vorschau || a.id === START_AUTO_ID || besitz[a.id]);
+  const drehen = (schritt: number) => {
+    const grad = (((fluchtDrehung + schritt) % 360) + 360) % 360;
+    setFluchtDrehung(grad); drehung.current = grad; onDrehung?.(grad);
+  };
   const starten = () => {
     const auto = verfuegbar.find(a => a.id === wahl) ?? verfuegbar[0];
     const flucht = autos.find(a => a.id === (vorschau ? fluchtId : vorgabe.fluchtAutoId ?? 'auto-sport')) ?? autos[0];
     if (!auto || !flucht) { setFehler('Bitte zuerst ein Automodell im Admin-Menü hinterlegen.'); return; }
-    spur.current = 0; setFehler(''); setBereit(false); setStand({ speed: 0, abstand: 180, treffer: false }); setRennen({ auto, flucht }); setPhase('jagd');
+    spur.current = 0; drehung.current = fluchtDrehung;
+    setFehler(''); setBereit(false); setStand({ speed: 0, abstand: 180, treffer: false }); setRennen({ auto, flucht }); setPhase('anfahrt');
   };
   return <div className="jagd" data-treffer={stand.treffer}>
-    {phase === 'jagd' && rennen && !fehler ? <>
-      {vorgabe.musik && <Hintergrundmusik stueck={vorgabe.musik} />}
-      <RennCanvas {...rennen} spur={spur} onBereit={() => setBereit(true)} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
+    {faehrt && rennen && !fehler ? <>
+      {vorgabe.musik && phase === 'jagd' && <Hintergrundmusik stueck={vorgabe.musik} />}
+      <RennCanvas {...rennen} spur={spur} drehung={drehung} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
       {!bereit && <div className="auto-jagd-laden" role="status">Die Wagen werden bereitgestellt …</div>}
-      <div className="auto-jagd-hud"><strong>WIMPY · {rennen.auto.name}</strong><span>{stand.speed} km/h · Abstand {stand.abstand} m</span>{stand.treffer && <b>REMPLER! TEMPO VERLOREN</b>}</div>
-      <div className="auto-jagd-steuerung"><button aria-label="Eine Spur nach links" onClick={() => { spur.current = Math.max(-1, spur.current - 1); }}>◀</button><button aria-label="Eine Spur nach rechts" onClick={() => { spur.current = Math.min(1, spur.current + 1); }}>▶</button></div>
+      {bereit && phase === 'anfahrt' && <div className="auto-jagd-anfahrt" role="status"><strong>{vorgabe.name}</strong><span>Tippen überspringt</span></div>}
+      {phase === 'jagd' && <>
+        <div className="auto-jagd-hud"><strong>WIMPY · {rennen.auto.name}</strong><span>{stand.speed} km/h · Abstand {stand.abstand} m</span>{stand.treffer && <b>REMPLER! TEMPO VERLOREN</b>}</div>
+        <div className="auto-jagd-steuerung"><button aria-label="Eine Spur nach links" onClick={() => { spur.current = Math.max(-1, spur.current - 1); }}>◀</button><button aria-label="Eine Spur nach rechts" onClick={() => { spur.current = Math.min(1, spur.current + 1); }}>▶</button></div>
+      </>}
+      {vorschau && <div className="auto-jagd-drehen"><button type="button" onClick={() => drehen(-90)} aria-label="Fluchtwagen nach links drehen">↺</button><span>Fluchtwagen {fluchtDrehung}°</span><button type="button" onClick={() => drehen(90)} aria-label="Fluchtwagen nach rechts drehen">↻</button></div>}
     </> : <div className="jagd-start auto-jagd-auswahl"><article className="jagd-startkarte">
       <span className="jagd-kicker">WIMPY · PURSUIT</span><h1>{phase === 'gefangen' ? 'EINGEHOLT!' : phase === 'entkommen' ? 'ENTKOMMEN!' : vorgabe.name}</h1>
       {phase === 'gefangen' ? <><h2>{fliehender?.name ?? vorgabe.fliehenderId}</h2><blockquote>„{fluchtStatement(vorgabe)}“</blockquote><button className="knopf aktion" onClick={onFertig}>Weiter ›</button></> : <>
@@ -175,6 +352,7 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
         {phase === 'entkommen' && <p>Der Wagen ist entwischt. Versuche es erneut oder wähle einen anderen Wagen aus deiner Garage.</p>}
         <label className="feld">Wimpys Wagen<select value={verfuegbar.some(a => a.id === wahl) ? wahl : verfuegbar[0]?.id ?? ''} onChange={e => setWahl(e.target.value)}>{verfuegbar.map(a => <option key={a.id} value={a.id}>{a.name} · {a.speed} km/h · +{a.beschleunigung} km/h/s</option>)}</select></label>
         {vorschau && <label className="feld">Fluchtwagen<select value={fluchtId} onChange={e => setFluchtId(e.target.value)}>{autos.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>}
+        {vorschau && <label className="feld">Fluchtwagen drehen<select value={fluchtDrehung} onChange={e => { const grad = Number(e.target.value); setFluchtDrehung(grad); drehung.current = grad; onDrehung?.(grad); }}>{[0, 90, 180, 270].map(grad => <option key={grad} value={grad}>{grad}°</option>)}</select></label>}
         {(fehler || katalogFehler) && <p role="alert">{fehler || katalogFehler}</p>}
         <button className="knopf aktion" onClick={starten}>Verfolgung starten ›</button>
       </>}

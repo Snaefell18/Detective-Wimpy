@@ -446,6 +446,9 @@ export const SagaVorgabenSchema = z.object({
         name: z.string().min(1).max(120),
         fliehenderId: z.string().min(1).max(40),
         fluchtAutoId: z.string().max(100).optional(),
+        // Wie das Modell des Fluchtwagens in dieser Jagd gedreht wird. Ein
+        // unsinniger Wert wird zu 0 - lieber ungedreht als gar keine Jagd.
+        fluchtDrehung: z.number().int().min(0).max(359).default(0).catch(0),
         verfolger: z.tuple([
           z.object({
             charakterId: z.string().min(1).max(40),

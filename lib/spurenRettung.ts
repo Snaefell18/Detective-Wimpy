@@ -95,9 +95,12 @@ export function sichereSpuren(args: {
       };
     }
 
+    // Der Fundtext nennt niemanden beim Namen - das gehört in die Bedeutung,
+    // die der Spieler erst im Notizbuch liest. Sonst stünde die Lösung schon
+    // in dem Moment da, in dem man das Stück aufhebt.
     const detail = index % 2 === 0
       ? `die eingeritzten Initialen „${kuerzel(zielTier.name)}“`
-      : `eine Quittung auf den Namen „${zielTier.name}“`;
+      : "eine Quittung, deren Name unter einem Daumenabdruck verschmiert ist";
     return {
       itemId: item.id,
       ortId: ort.id,

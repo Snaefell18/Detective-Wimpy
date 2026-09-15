@@ -590,3 +590,12 @@
 .auto-jagd-hud { position: absolute; top: max(18px, env(safe-area-inset-top)); left: 16px; right: 60px; display: grid; gap: 5px; padding: 14px; background: #132238e8; color: #fff; border-left: 5px solid #70e0f2; pointer-events: none; }
 .auto-jagd-steuerung { position: absolute; bottom: max(22px, env(safe-area-inset-bottom)); left: 20px; right: 20px; display: flex; justify-content: space-between; }
 .auto-jagd-steuerung button { width: 80px; height: 76px; border: 4px solid #172337; border-radius: 20px; background: #f4ecda; color: #172337; font-size: 32px; touch-action: manipulation; }
+
+/* Die Anfahrt: der Titel der Jagd und der Hinweis, dass man sie wegtippen kann. */
+.auto-jagd-anfahrt { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 16px; right: 16px; display: grid; gap: 4px; justify-items: start; padding: 14px 16px; background: #132238cc; color: #fff; border-left: 5px solid #f4ecda; pointer-events: none; }
+.auto-jagd-anfahrt strong { font-size: 17px; letter-spacing: 0.04em; }
+.auto-jagd-anfahrt span { font-size: 13px; opacity: 0.75; }
+/* Nur in der Vorschau: den Fluchtwagen drehen, bis er richtig herum fährt. */
+.auto-jagd-drehen { position: absolute; bottom: max(110px, calc(env(safe-area-inset-bottom) + 108px)); left: 20px; right: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #fff; }
+.auto-jagd-drehen span { padding: 6px 12px; background: #132238e8; border-radius: 999px; font-size: 13px; }
+.auto-jagd-drehen button { width: 52px; height: 48px; border: 3px solid #172337; border-radius: 16px; background: #f4ecda; color: #172337; font-size: 22px; touch-action: manipulation; }

@@ -878,7 +878,17 @@ async function spurenSchritt(entwurf: Entwurf) {
    * Beweiskette. Das vermeidet genau die teure Wiederholung, die vorher an
    * "Die Spuren werden ausgelegt …" hängen blieb.
    */
-  if (!ergebnis || ergebnis.fehler || ergebnis.maengel.length) {
+  /*
+   * Gerettet wird nur, was wirklich kaputt ist.
+   *
+   * Ein Entwurf mit Schönheitsfehlern - eine Spur unter dem Wunsch, zu viel
+   * an einem Ort - bleibt stehen: Er ist gespielt immer noch besser als die
+   * Notspuren, die aus dem Stammdatengerüst entstehen. Ersetzt wird er nur,
+   * wenn die Antwort ausbleibt, der Fall unlösbar wäre oder so wenig
+   * übrigbleibt, dass es kein Fall mehr ist.
+   */
+  const zuDuenn = ergebnis !== null && !ergebnis.fehler && ergebnis.spuren.length < 3;
+  if (!ergebnis || ergebnis.fehler || zuDuenn) {
     const rettung = sichereSpuren({
       items: fallItems,
       orte: entwurf.orte,
@@ -907,11 +917,8 @@ async function spurenSchritt(entwurf: Entwurf) {
     );
   }
 
-  if (ergebnis.fehler || ergebnis.maengel.length) {
-    console.error(
-      "[api/case:spuren] Rettung unerwartet unbrauchbar:",
-      [ergebnis.fehler, ...ergebnis.maengel].filter(Boolean).join(" · "),
-    );
+  if (ergebnis.fehler) {
+    console.error("[api/case:spuren] Auch nach der Rettung unlösbar:", ergebnis.fehler);
     return NextResponse.json(
       {
         fehler:
@@ -919,6 +926,9 @@ async function spurenSchritt(entwurf: Entwurf) {
       },
       { status: 400 },
     );
+  }
+  if (ergebnis.maengel.length) {
+    console.warn("[api/case:spuren] Bleibt mit Mängeln stehen:", ergebnis.maengel.join(" · "));
   }
 
   const kur = { spuren: ergebnis.spuren, verdaechtige: ergebnis.verdaechtige };

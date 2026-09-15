@@ -1040,6 +1040,24 @@ export function SagaVorgabenFelder({
                           {autos.map(auto => <option key={auto.id} value={auto.id}>{auto.name} · {auto.speed} km/h</option>)}
                         </select>
                       </label>
+                      {/* Jedes Modell steht anders in seiner Datei. Fährt der
+                          Wagen verkehrt herum voraus, wird er hier gedreht -
+                          in der 3D-Vorschau sieht man es sofort. */}
+                      <label className="feld">
+                        <span className="leise">Fluchtwagen drehen · falls er verkehrt herum fährt</span>
+                        <select
+                          value={jagd.fluchtDrehung ?? 0}
+                          onChange={(e) =>
+                            jagdAendern(nachKapitel, { fluchtDrehung: Number(e.target.value) })
+                          }
+                        >
+                          {[0, 90, 180, 270].map((grad) => (
+                            <option key={grad} value={grad}>
+                              {grad}° {grad === 180 ? "· umgedreht" : grad === 0 ? "· wie im Katalog" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <SongWahl
                         wert={jagd.musik ?? ""}
                         onAendern={(musik) => jagdAendern(nachKapitel, { musik })}
@@ -1080,7 +1098,16 @@ export function SagaVorgabenFelder({
 
       {jagdVorschau && (
         <div className="jagd-vorschau">
-          <Verfolgungsjagd vorschau vorgabe={jagdVorschau} onFertig={() => setJagdVorschau(null)} />
+          <Verfolgungsjagd
+            vorschau
+            vorgabe={jagdVorschau}
+            onFertig={() => setJagdVorschau(null)}
+            onDrehung={(grad) => {
+              // Was in der Vorschau gedreht wird, steht danach auch in der Jagd.
+              setJagdVorschau((alt) => (alt ? { ...alt, fluchtDrehung: grad } : alt));
+              jagdAendern(jagdVorschau.nachKapitel, { fluchtDrehung: grad });
+            }}
+          />
           <button
             type="button"
             className="jagd-vorschau-schliessen"
