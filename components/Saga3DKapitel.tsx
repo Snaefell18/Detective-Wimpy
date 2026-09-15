@@ -26,6 +26,7 @@ import { DREI_D_LOCATIONS, locationsFuer3D, tankstelleAus } from "@/lib/pursuit3
 import {
   FELD_GROESSE,
   STADT_HOEHE,
+  gebaeudeArten,
   hoeheFuer,
   begehbar,
   feldAn,
@@ -739,7 +740,16 @@ function KapitelCanvas({
     }
 
     /* --- Tankstelle, Auto und alles, was daran hängt ------------------ */
-    const tankstelle = tankstelleAus(bauplan.locations, bauplan.tankstelleId);
+    /*
+     * Im Stadtplan zählt, was wirklich gebaut ist.
+     *
+     * Die Liste der Bausteine gilt für den Straßenzug; auf dem Plan wird
+     * gesetzt, was man malt. Wer eine Tankstelle ins Raster malt, sie oben
+     * in der Bausteinliste aber nicht angehakt hat, soll trotzdem einsteigen
+     * können - sonst sucht man den Stellplatz vergeblich.
+     */
+    const gebaut = stadtplan ? gebaeudeArten(stadtplan) : bauplan.locations;
+    const tankstelle = tankstelleAus(gebaut, bauplan.tankstelleId);
     /** Wo der Wagen steht und wo Wimpy einsteigt - erst beim Aufbau bekannt. */
     let tankPlatz: THREE.Vector3 | null = null;
     /** Der Wagen, der gerade gefahren wird, und der, der irgendwo parkt. */
