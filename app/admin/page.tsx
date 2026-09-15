@@ -11,6 +11,7 @@ import { SagenBereich } from "@/components/admin/SagenBereich";
 import { ZubehoerBereich } from "@/components/admin/ZubehoerBereich";
 import { AutosBereich } from "@/components/admin/AutosBereich";
 import { SpielBereich } from "@/components/admin/SpielBereich";
+import { StaedteBereich } from "@/components/admin/StaedteBereich";
 import { StammdatenBereich } from "@/components/admin/StammdatenBereich";
 
 const Pursuit = dynamic(() => import("@/components/Pursuit").then((m) => m.Pursuit), { ssr: false });
@@ -24,6 +25,7 @@ type Bereich =
   | "items"
   | "zubehoer"
   | "autos"
+  | "staedte"
   | "bilder"
   | "spiel";
 
@@ -36,6 +38,7 @@ const REITER: { id: Bereich; label: string }[] = [
   { id: "items", label: "Dinge" },
   { id: "zubehoer", label: "Laden" },
   { id: "autos", label: "Autos" },
+  { id: "staedte", label: "Städte" },
   { id: "bilder", label: "Bilder" },
   { id: "spiel", label: "Spiel" },
 ];
@@ -115,6 +118,7 @@ function AdminInhalt() {
           {bereich === "items" && <StammdatenBereich art="items" {...gemeinsam} />}
           {bereich === "zubehoer" && <ZubehoerBereich {...gemeinsam} />}
           {bereich === "autos" && <AutosBereich {...gemeinsam} />}
+          {bereich === "staedte" && <StaedteBereich {...gemeinsam} />}
           {bereich === "bilder" && <BilderBereich {...gemeinsam} />}
           {bereich === "spiel" && <SpielBereich {...gemeinsam} />}
         </div>

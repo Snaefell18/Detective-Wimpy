@@ -7,6 +7,7 @@ import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
+import { StadtWahl } from "./StadtWahl";
 import { yen } from "@/lib/zubehoer";
 import {
   AUFTRITTS_ARTEN,
@@ -734,6 +735,19 @@ export function SagaVorgabenFelder({
                   {/* Entweder Straßenzug wie bisher - oder ein selbst
                       gelegter Stadtplan mit Kreuzungen und Sackgassen. */}
                   <span className="leise klein">Aufbau der Stadt</span>
+                  {/* Eine im Reiter „Städte“ geplante Stadt bringt Plan,
+                      Tankstelle, Belag und Licht in einem Zug mit. Sie wird
+                      dabei abgeschrieben: Was hier steht, bleibt stehen. */}
+                  <StadtWahl
+                    onUebernehmen={(stadt) => dreiDSetzen(i, {
+                      plan: stadt.plan,
+                      ...(stadt.locations.length ? { locations: stadt.locations } : {}),
+                      tankstelleId: stadt.tankstelleId,
+                      strassentyp: stadt.strassentyp,
+                      tageszeit: stadt.tageszeit,
+                      wetter: stadt.wetter,
+                    })}
+                  />
                   <StadtplanFeld
                     plan={vorgaben.kapitel3d?.[i]?.plan ?? null}
                     onAendern={(plan) => dreiDSetzen(i, { plan })}

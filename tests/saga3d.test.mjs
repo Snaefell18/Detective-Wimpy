@@ -102,11 +102,24 @@ assert.equal((await suchen({})).spur.itemId, "beweis-a", "Normale 2D-Suche bleib
     null,
     "Ein Baustein, der nicht in der Stadt steht, ist keine Tankstelle",
   );
-  // Ohne Wahl entscheidet der Name - und ohne passenden Namen gibt es keine.
-  assert.equal(tankstelleAus(ids)?.id ?? null, null, "Noch liegt keine Tankstelle im Ordner");
-  const mitTanke = ["tankstelle", ...ids];
+  // Ohne Wahl entscheidet der Name.
+  const nachNamen = tankstelleAus(ids)?.id ?? null;
+  const getauft = ids.filter((id) => /tank/i.test(id));
   assert.equal(
-    tankstelleAus(mitTanke)?.id ?? "keine",
+    nachNamen,
+    getauft[0] ?? null,
+    "Ohne Wahl wird die Tankstelle am Namen erkannt - oder es gibt eben keine",
+  );
+  // Ohne einen so getauften Baustein bleibt es dabei: keine Tankstelle.
+  assert.equal(
+    tankstelleAus(ids.filter((id) => !/tank|zapf|benzin|sprit|garage|werkstatt/i.test(id)))?.id ?? null,
+    null,
+    "Ohne passenden Namen gibt es keine Tankstelle",
+  );
+  // Ein Name allein macht noch keine Tankstelle: Der Baustein muss es geben.
+  const ohneTank = ids.filter((id) => !/tank/i.test(id));
+  assert.equal(
+    tankstelleAus(["tankstelle-die-es-nicht-gibt", ohneTank[0]])?.id ?? "keine",
     "keine",
     "Ein unbekannter Baustein wird nicht einfach erfunden",
   );

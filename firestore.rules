@@ -121,6 +121,16 @@ service cloud.firestore {
       allow delete: if angemeldet();
     }
 
+    // Fertig geplante 3D-Städte: ein Raster aus Straßen und Bausteinen.
+    // Nichts davon ist geheim - man läuft im Spiel ohnehin hindurch.
+    match /staedte/{id} {
+      allow read: if true;
+      allow create, update: if angemeldet()
+        && textLimit('name', 80)
+        && textLimit('beschreibung', 400);
+      allow delete: if angemeldet();
+    }
+
     // Alles andere ist gesperrt.
     match /{document=**} {
       allow read, write: if false;

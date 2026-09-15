@@ -18,6 +18,7 @@ import { bereinigteSaga3D } from "./saga3dSync";
 import type { Arc } from "./arcTypen";
 import type { Zubehoer } from "./zubehoer";
 import type { Character, Item, Kampagne, Location } from "./types";
+import { stadtLesen, type Stadt } from "./staedte";
 
 /**
  * Alle Daten des Spiels liegen in Firestore:
@@ -28,6 +29,7 @@ import type { Character, Item, Kampagne, Location } from "./types";
  *   faelle/{id}      - vorgenerierte Fälle ("Kampagnen")
  *   sagen/{id}       - Sagas: mehrere Fälle mit gemeinsamem Überthema
  *   arcs/{id}        - Arcs: mehrere Sagas unter einem Bogen
+ *   staedte/{id}     - fertig geplante 3D-Städte
  *
  * Die Lösung eines Falls steht nie im Klartext in der Datenbank - sie steckt
  * verschlüsselt im Feld "siegel" (siehe lib/seal.ts).
@@ -241,6 +243,36 @@ export async function speichereZubehoer(stueck: Zubehoer): Promise<void> {
 }
 
 export const loescheZubehoer = (id: string) => loesche("zubehoer", id);
+
+/* --- Städte: fertig geplante 3D-Welten ----------------------------- */
+
+/**
+ * Eine Stadt ist eine Vorlage, kein Geheimnis: ein Raster aus Straßen und
+ * Bausteinen. Was davon in einer Saga landet, wird beim Auswählen
+ * abgeschrieben - die Sammlung hier ist nur der Baukasten.
+ */
+export async function ladeStaedte(): Promise<Abfrage<Stadt>> {
+  const ergebnis = await alle<unknown>("staedte");
+  return {
+    ...ergebnis,
+    // Was sich nicht mehr lesen lässt, fällt weg, statt das Menü zu sprengen.
+    daten: ergebnis.daten.map(stadtLesen).filter((stadt): stadt is Stadt => Boolean(stadt)),
+  };
+}
+
+export async function speichereStadt(stadt: Stadt): Promise<void> {
+  await anmelden();
+  await setDoc(
+    doc(getDb(), "staedte", stadt.id),
+    sauber({
+      ...stadt,
+      name: kuerze(stadt.name, 80),
+      beschreibung: kuerze(stadt.beschreibung, 400),
+    }),
+  );
+}
+
+export const loescheStadt = (id: string) => loesche("staedte", id);
 
 /* --- Gesprochene Erzählertexte ------------------------------------- */
 

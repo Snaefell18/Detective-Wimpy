@@ -26,6 +26,11 @@ export const GENERIERTE_3D_LOCATIONS = [
     "datei": "/3d_locations/stellenbosch-web.glb"
   },
   {
+    "id": "tankstelle",
+    "name": "Tankstelle",
+    "datei": "/3d_locations/tankstelle-web.glb"
+  },
+  {
     "id": "tokyo1",
     "name": "Tokyo1",
     "datei": "/3d_locations/tokyo1-web.glb"

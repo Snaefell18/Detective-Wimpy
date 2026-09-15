@@ -13,6 +13,7 @@ import {
 } from "@/lib/pursuit3d";
 import { Saga3DProbeSzene } from "./Saga3DKapitel";
 import { StadtplanFeld } from "./admin/StadtplanFeld";
+import { StadtWahl } from "./admin/StadtWahl";
 import type { Stadtplan } from "@/lib/stadtplan";
 
 export function PursuitProbeWelt({
@@ -83,6 +84,18 @@ export function PursuitProbeWelt({
           })}
         </div>
         <h3>Stadtplan <span className="leise">· leer = Straßenzug wie bisher</span></h3>
+        {/* Eine im Reiter „Städte“ geplante Stadt bringt ihren Plan, ihre
+            Tankstelle und ihr Licht gleich mit. */}
+        <StadtWahl
+          onUebernehmen={(vorgabe) => {
+            setPlan(vorgabe.plan);
+            if (vorgabe.locations.length) setLocations(vorgabe.locations);
+            setTankstelle(vorgabe.tankstelleId);
+            setStrassentyp(vorgabe.strassentyp);
+            setTageszeit(vorgabe.tageszeit);
+            setWetter(vorgabe.wetter);
+          }}
+        />
         <StadtplanFeld plan={plan} onAendern={setPlan} />
 
         <h3>Tankstelle <span className="leise">· hier steigt Wimpy ins Auto</span></h3>
