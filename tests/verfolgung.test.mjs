@@ -2,7 +2,7 @@ import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { pruefeVorgaben } from "../lib/sagaPruefung.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 import { fluchtStatement, verfolgungNach } from "../lib/verfolgung.ts";
-import { STANDARD_AUTOS, autoGueltig, fluchtTempo } from '../lib/autos.ts';
+import { FLUCHT_RUECKSTAND, REMPLER, STANDARD_AUTOS, autoGueltig, fluchtTempo } from '../lib/autos.ts';
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -68,14 +68,42 @@ pruefe('Autozuordnung ohne alte Verfolger übersteht Generierung', neueJagd.data
 pruefe('Standardautos sind gültig', STANDARD_AUTOS.every(autoGueltig));
 pruefe('Negative Preise sind ungültig', !autoGueltig({ ...STANDARD_AUTOS[0], preis: -1 }));
 pruefe('Unbekannte Modelle sind ungültig', !autoGueltig({ ...STANDARD_AUTOS[0], modell: 'fehlt' }));
+/**
+ * Eine Jagd durchrechnen - dieselbe Rechnung wie im Bild, nur ohne Bild.
+ * `rempler` sind gleichmäßig verteilte Kollisionen: Tempo weg, Vorsprung dazu.
+ */
+const jagdDauer = (spieler, flucht, rempler = 0) => {
+  let abstand = 180, speed = 0, fluchtSpeed = 0, zeit = 0, gehabt = 0;
+  for (; zeit < 180 && abstand > 0 && abstand <= 320; zeit += 0.02) {
+    speed = Math.min(spieler.speed, speed + spieler.beschleunigung * 0.02);
+    fluchtSpeed = Math.min(
+      fluchtTempo(flucht, zeit, spieler.speed / 3.6 * (abstand > 180 ? FLUCHT_RUECKSTAND : 1)),
+      fluchtSpeed + flucht.beschleunigung / 3.6 * 0.02,
+    );
+    abstand += (fluchtSpeed - speed / 3.6) * 0.02;
+    if (rempler && gehabt < rempler && 180 - abstand > (180 / (rempler + 1)) * (gehabt + 1)) {
+      speed *= REMPLER.tempo; abstand += REMPLER.verlust; gehabt++;
+    }
+  }
+  return { gefangen: abstand <= 0, sekunden: zeit };
+};
+
+const start = jagdDauer(STANDARD_AUTOS[0], STANDARD_AUTOS[1]);
+pruefe('Der Startwagen holt den Fluchtwagen ein', start.gefangen, `${start.sekunden.toFixed(0)} s`);
+pruefe('und die Jagd dauert mehr als 15 Sekunden', start.sekunden > 15, `${start.sekunden.toFixed(0)} s`);
+pruefe('bleibt aber unter zwei Minuten', start.sekunden < 120, `${start.sekunden.toFixed(0)} s`);
+
+const mitRemplern = jagdDauer(STANDARD_AUTOS[0], STANDARD_AUTOS[1], 4);
+pruefe('Vier Rempler kosten Zeit, aber nicht die Jagd', mitRemplern.gefangen, `${mitRemplern.sekunden.toFixed(0)} s`);
+pruefe('und machen sie deutlich länger', mitRemplern.sekunden > start.sekunden + 5);
+
+const schneller = jagdDauer({ ...STANDARD_AUTOS[0], speed: 240, beschleunigung: 40 }, STANDARD_AUTOS[1]);
+pruefe('Ein gekaufter schnellerer Wagen holt früher ein', schneller.gefangen && schneller.sekunden < start.sekunden);
+
 // Schlechteste erlaubte Kombination bleibt ohne Kollisionen einholbar.
-let abstand = 180, speed = 0, fluchtSpeed = 0;
-for (let zeit = 0; zeit < 150 && abstand > 0; zeit += 0.02) {
-  speed = Math.min(60, speed + 5 * 0.02);
-  fluchtSpeed = Math.min(fluchtTempo({ ...STANDARD_AUTOS[1], speed: 320 }, zeit), fluchtSpeed + 100 / 3.6 * 0.02);
-  abstand += (fluchtSpeed - speed / 3.6) * 0.02;
-}
-pruefe('Langsamstes Auto kann bei sauberer Fahrt den schnellsten Flüchtigen fangen', abstand <= 0);
+const schlimmst = jagdDauer({ speed: 60, beschleunigung: 5 }, { ...STANDARD_AUTOS[1], speed: 320, beschleunigung: 100 });
+pruefe('Langsamstes Auto kann bei sauberer Fahrt den schnellsten Flüchtigen fangen', schlimmst.gefangen, `${schlimmst.sekunden.toFixed(0)} s`);
+pruefe('und das innerhalb des Zeitlimits', schlimmst.sekunden < 180);
 pruefe("Versammlung und Jagd teilen sich keine Lücke", probleme({
   verfolgungsjagden: [jagd],
   versammlungen: [{

@@ -33,7 +33,7 @@ export type AnhoerungZug = {
 export const UEBERZEUGT = 100;
 
 /** Wie viele fruchtlose Züge Öhö mitmacht. */
-export const GEDULD = 6;
+export const GEDULD = 8;
 
 /**
  * Wie weit ein einzelner Zug tragen kann.
@@ -41,12 +41,16 @@ export const GEDULD = 6;
  * Mit einem vorgelegten Beweismittel weit, durch bloßes Fragen nur ein
  * Stück: Reden allein soll eine Verhandlung nicht gewinnen, sonst wäre die
  * Tasche Zierde. Ganz ohne Beweise bleibt sie trotzdem zu schaffen - es
- * braucht dann eben sieben gute Fragen statt drei starker Stücke.
+ * braucht dann eben fünf gute Fragen statt zwei starker Stücke.
+ *
+ * Die Zahlen sind mit Absicht großzügig: Eine Verhandlung, die man mit
+ * ordentlicher Arbeit verliert, ist keine gute Schlussszene. Ein Fehlgriff
+ * kostet etwas, aber er soll den Abend nicht kippen.
  */
-export const MIT_BEWEIS_MAX = 45;
-export const OHNE_BEWEIS_MAX = 15;
+export const MIT_BEWEIS_MAX = 50;
+export const OHNE_BEWEIS_MAX = 22;
 /** So weit kann ein Zug nach hinten losgehen. */
-export const RUECKSCHLAG_MAX = 15;
+export const RUECKSCHLAG_MAX = 8;
 
 export type AnhoerungStand = {
   verlauf: AnhoerungZug[];
@@ -117,8 +121,9 @@ export function geklammert(
     angeklagter: String(roh.angeklagter ?? "").trim(),
     richter: String(roh.richter ?? "").trim(),
     plus,
-    // Wer etwas erreicht hat, zehrt nicht an der Geduld.
-    geduldMinus: plus > 0 ? 0 : kappen(zahl(roh.geduldMinus), 0, 2),
+    // Wer etwas erreicht hat, zehrt nicht an der Geduld - und ein einzelner
+    // Fehlgriff kostet höchstens einen der Züge, die Öhö noch mitmacht.
+    geduldMinus: plus > 0 ? 0 : kappen(zahl(roh.geduldMinus), 0, 1),
     gestaendnis: roh.gestaendnis === true,
   };
 }

@@ -26,7 +26,34 @@ export function autoRegal(daten: Auto[]) {
   const eigene = daten.filter(autoGueltig);
   return [...STANDARD_AUTOS.filter(a => !eigene.some(e => e.id === a.id)), ...eigene];
 }
-/** km/h -> Weltmeter pro Sekunde. Fluchtwagen bremst regelmäßig für Kurven. */
-export function fluchtTempo(auto: Auto, zeit: number) {
-  return auto.speed / 3.6 * (Math.sin(zeit * 0.28) > 0.15 ? 0.08 : 0.24);
+/**
+ * Wie schnell der Fluchtwagen gerade fährt, in Weltmetern pro Sekunde.
+ *
+ * Er fährt nicht sein eigenes Tempo, sondern eines knapp unter Wimpys: So
+ * bleibt die Jagd eine Jagd - man holt Meter für Meter auf, statt nach
+ * sechs Sekunden aufzulaufen, und selbst der langsamste Wagen aus der Garage
+ * hat eine Chance gegen den schnellsten Flüchtigen. Schneller gekaufte Wagen
+ * verkürzen die Jagd trotzdem: Der Vorsprung schmilzt im gleichen Verhältnis
+ * schneller.
+ *
+ * In den Kurven geht er vom Gas - das sind die Momente, in denen man
+ * wirklich Boden gutmacht.
+ */
+export const FLUCHT_BAND = 0.93;
+export const FLUCHT_KURVE = 0.55;
+/**
+ * Und wenn Wimpy zurückliegt, geht der Flüchtige unauffällig vom Gas.
+ *
+ * Ohne das wäre ein Rempler das Ende: Während Wimpy wieder auf Tempo kommt,
+ * zieht der andere in ein paar Sekunden sechzig Meter davon. So bleibt auch
+ * eine Jagd mit Fehlern zu gewinnen.
+ */
+export const FLUCHT_RUECKSTAND = 0.82;
+
+export function fluchtTempo(auto: Auto, zeit: number, spielerTempo = Infinity) {
+  const band = Math.min(auto.speed / 3.6 * 0.95, spielerTempo * FLUCHT_BAND);
+  return Math.sin(zeit * 0.28) > 0.55 ? band * FLUCHT_KURVE : band;
 }
+
+/** Was ein Rempler kostet: Tempo und ein Stück Vorsprung. */
+export const REMPLER = { tempo: 0.45, verlust: 8 };

@@ -1,4 +1,11 @@
-import { GEDULD, MIT_BEWEIS_MAX, OHNE_BEWEIS_MAX, UEBERZEUGT, type AnhoerungZug } from "./anhoerung";
+import {
+  GEDULD,
+  MIT_BEWEIS_MAX,
+  OHNE_BEWEIS_MAX,
+  RUECKSCHLAG_MAX,
+  UEBERZEUGT,
+  type AnhoerungZug,
+} from "./anhoerung";
 import { characterBrief } from "./characters";
 import type { BeweismittelKern } from "./beweismittel";
 import { gestaltRegeln } from "./gestaltStimme";
@@ -149,7 +156,7 @@ WIE DER SAAL SEIN GEWICHT VERTEILT
 - Die Überzeugung des Gerichts steht bei ${ueberzeugung} von ${UEBERZEUGT}. Bei ${UEBERZEUGT} ist entschieden.
 - Öhös Geduld steht bei ${geduld} von ${GEDULD}.
 - Trägt der Zug etwas bei, setze ueberzeugungPlus entsprechend: ein starkes, im richtigen Moment vorgelegtes Stück ${MIT_BEWEIS_MAX / 2} bis ${MIT_BEWEIS_MAX}, eine gute Frage, die den Angeklagten ins Wanken bringt, 5 bis ${OHNE_BEWEIS_MAX}.
-- Ein Stück, das in die Irre führt, oder ein Vorhalt, der nicht passt: ueberzeugungPlus negativ (bis -15). Öhö sagt dann freundlich, warum das nichts trägt.
+- Ein Stück, das in die Irre führt, oder ein Vorhalt, der nicht passt: ueberzeugungPlus negativ (bis -${RUECKSCHLAG_MAX}). Öhö sagt dann freundlich, warum das nichts trägt.
 - Bringt ein Zug gar nichts - Geplauder, Wiederholung, Beleidigung -, setze ueberzeugungPlus auf 0 und geduldMinus auf 1.
 - ${jetzt ? `Wimpy legt gerade "${jetzt.kern.name}" vor. Der Angeklagte MUSS darauf eingehen.` : "Wimpy legt in diesem Zug nichts vor - er redet nur."}
 - Dasselbe Stück ein zweites Mal bringt nichts Neues: ueberzeugungPlus 0.${

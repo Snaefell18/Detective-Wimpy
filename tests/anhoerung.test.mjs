@@ -39,7 +39,7 @@ console.log("\n1. Was das Modell schickt, wird eingeklammert");
 
   const rueck = geklammert({ ueberzeugungPlus: -500, geduldMinus: 5 }, true);
   pruefe("nach unten gekappt", rueck.plus === -RUECKSCHLAG_MAX);
-  pruefe("Geduld kostet höchstens zwei", rueck.geduldMinus === 2);
+  pruefe("Geduld kostet höchstens einen Zug", rueck.geduldMinus === 1);
 
   const kaputt = geklammert({ ueberzeugungPlus: "viel", geduldMinus: null }, true);
   pruefe("Unsinn wird null", kaputt.plus === 0 && kaputt.geduldMinus === 0);
@@ -71,15 +71,42 @@ console.log("\n2. Ein Zug wird verrechnet");
   pruefe("unter 0 geht es auch nicht", runter.ueberzeugung === 0);
 }
 
-console.log("\n3. Drei Züge mit einem starken Stück reichen - einer nicht");
+console.log("\n3. Die Verhandlung ist zu gewinnen - aber nicht in einem Zug");
 {
-  let stand = LEERE_ANHOERUNG;
-  for (let i = 0; i < 2; i++) {
-    stand = verrechnen(stand, geklammert({ ueberzeugungPlus: 99 }, true), [], `s${i}`);
-    pruefe(`nach Zug ${i + 1} ist es noch offen`, anhoerungsErgebnis(stand) === "laeuft");
+  // Zwei Stücke, die voll durchschlagen, entscheiden den Abend. Eines nicht:
+  // Ein einzelner Glückstreffer soll kein Urteil sein.
+  let stand = verrechnen(LEERE_ANHOERUNG, geklammert({ ueberzeugungPlus: 99 }, true), [], "s0");
+  pruefe("ein einzelnes Stück entscheidet nichts", anhoerungsErgebnis(stand) === "laeuft");
+  stand = verrechnen(stand, geklammert({ ueberzeugungPlus: 99 }, true), [], "s1");
+  pruefe("zwei volle Treffer reichen", anhoerungsErgebnis(stand) === "gewonnen");
+
+  // Der Regelfall: Stücke, die ordentlich, aber nicht perfekt sitzen.
+  let ueblich = LEERE_ANHOERUNG;
+  const mittel = Math.round(MIT_BEWEIS_MAX * 0.7);
+  for (let i = 0; i < 3; i++) {
+    ueblich = verrechnen(ueblich, geklammert({ ueberzeugungPlus: mittel }, true), [], `m${i}`);
   }
-  stand = verrechnen(stand, geklammert({ ueberzeugungPlus: 99 }, true), [], "s2");
-  pruefe("nach dem dritten ist es entschieden", anhoerungsErgebnis(stand) === "gewonnen");
+  pruefe("drei ordentliche Stücke genügen", anhoerungsErgebnis(ueblich) === "gewonnen", `${mittel} je Stück`);
+
+  // Und ohne Tasche: gutes Fragen allein trägt die Verhandlung auch.
+  let nurFragen = LEERE_ANHOERUNG;
+  let zuege = 0;
+  while (anhoerungsErgebnis(nurFragen) === "laeuft" && zuege < 20) {
+    nurFragen = verrechnen(nurFragen, geklammert({ ueberzeugungPlus: 99 }, false), []);
+    zuege++;
+  }
+  pruefe("auch ohne Beweise ist es zu schaffen", anhoerungsErgebnis(nurFragen) === "gewonnen", `${zuege} Fragen`);
+  pruefe("und zwar innerhalb von Öhös Geduld", zuege <= GEDULD, `${zuege} von ${GEDULD}`);
+
+  // Ein Fehlgriff tut weh, wirft aber nicht um.
+  const fehlgriff = verrechnen(
+    { ...LEERE_ANHOERUNG, ueberzeugung: 60 },
+    geklammert({ ueberzeugungPlus: -99, geduldMinus: 5 }, true),
+    [],
+  );
+  pruefe("ein Fehlgriff kostet höchstens den Rückschlag", fehlgriff.ueberzeugung === 60 - RUECKSCHLAG_MAX);
+  pruefe("und höchstens einen Zug Geduld", fehlgriff.geduld === GEDULD - 1);
+  pruefe("die Verhandlung läuft weiter", anhoerungsErgebnis(fehlgriff) === "laeuft");
 }
 
 console.log("\n4. Ein Geständnis nur mit überzeugtem Gericht");

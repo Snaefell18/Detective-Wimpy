@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
-import { AUTO_MODELLE, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
+import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
 import { fluchtStatement, type VerfolgungVorgabe } from '@/lib/verfolgung';
@@ -37,7 +37,17 @@ const ANFAHRT = { vorbei: 2.9, einsteigen: 4.3, losfahren: 5.9 };
 /** Nur so weit vor Wimpy, dass der Fluchtwagen im Bild bleibt. */
 const FLUCHT_NAH = 3.8;
 const FLUCHT_FERN = 7.0;
-const ABSTAND_MAX = 260;
+/** Vorsprung am Start, und ab wann er als entkommen gilt. */
+const ABSTAND_START = 180;
+const ABSTAND_VERLOREN = 320;
+/**
+ * Abstand zwischen zwei Hindernissen in Weltmetern.
+ *
+ * Die Jagd dauert jetzt eine halbe Minute statt sechs Sekunden; stünden die
+ * Klötze weiter so dicht, käme alle anderthalb Sekunden einer - das wäre
+ * kein Ausweichen mehr, sondern ein Würfelspiel.
+ */
+const HINDERNIS_ABSTAND = 140;
 
 const weich = (t: number) => t * t * (3 - 2 * t);
 
@@ -160,10 +170,10 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       if (!beendet) { bereit = true; callbacks.current.onBereit(); }
     }).catch(() => { if (!beendet) callbacks.current.onFehler('Ein Automodell konnte nicht geladen werden. Bitte erneut starten.'); });
     const hindernisse = Array.from({ length: 5 }, (_, i) => ({
-      obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * 70), getroffen: false,
+      obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * HINDERNIS_ABSTAND), getroffen: false,
     }));
     let phase: 'anfahrt' | 'jagd' = 'anfahrt', anfahrtZeit = 0;
-    let speed = 0, fluchtSpeed = 0, abstand = 180, zeit = 0, ausgabe = 0, unverwundbar = 0, letzter = performance.now();
+    let speed = 0, fluchtSpeed = 0, abstand = ABSTAND_START, zeit = 0, ausgabe = 0, unverwundbar = 0, letzter = performance.now();
     /** Straße und Kulisse ziehen vorbei - in der Anfahrt wie in der Jagd. */
     const weltBewegen = (weg: number) => {
       for (const m of markierungen) { m.position.z -= weg; if (m.position.z < -22) m.position.z += 100; }
@@ -261,7 +271,12 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       zeit += dt; unverwundbar = Math.max(0, unverwundbar - dt);
       speed = Math.min(auto.speed, speed + auto.beschleunigung * dt);
       const weg = speed / 3.6 * dt;
-      fluchtSpeed = Math.min(fluchtTempo(flucht, zeit), fluchtSpeed + flucht.beschleunigung / 3.6 * dt);
+      // Der Flüchtige richtet sich nach Wimpys Wagen: Er bleibt knapp voraus,
+      // geht in den Kurven vom Gas - und ist damit immer einholbar.
+      // Liegt Wimpy hinter dem Start zurück - meist nach einem Rempler -,
+      // lässt sich der Flüchtige ein Stück zurückfallen.
+      const band = auto.speed / 3.6 * (abstand > ABSTAND_START ? FLUCHT_RUECKSTAND : 1);
+      fluchtSpeed = Math.min(fluchtTempo(flucht, zeit, band), fluchtSpeed + flucht.beschleunigung / 3.6 * dt);
       abstand += fluchtSpeed * dt - weg;
       spieler.position.x = THREE.MathUtils.damp(spieler.position.x, spur.current * 3.4, 7, dt);
       /*
@@ -273,7 +288,7 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
        * deshalb in ein schmales sichtbares Band gelegt - die Zahl im HUD sagt,
        * wie weit es wirklich ist.
        */
-      const fern = THREE.MathUtils.clamp(abstand, 0, ABSTAND_MAX) / ABSTAND_MAX;
+      const fern = THREE.MathUtils.clamp(abstand, 0, ABSTAND_VERLOREN) / ABSTAND_VERLOREN;
       gegner.position.z = THREE.MathUtils.damp(gegner.position.z, THREE.MathUtils.lerp(FLUCHT_NAH, FLUCHT_FERN, fern), 4, dt);
       gegner.position.x = THREE.MathUtils.damp(gegner.position.x, Math.sin(zeit * 0.65) > 0.4 ? -3.4 : 0, 3, dt);
       let treffer = false;
@@ -281,15 +296,15 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
         const vorher = h.obj.position.z;
         h.obj.position.z -= weg;
         if (!h.getroffen && vorher > -2 && h.obj.position.z <= 2 && Math.abs(h.obj.position.x - spieler.position.x) < 1.8 && !unverwundbar) {
-          speed *= 0.32; abstand += 14; unverwundbar = 1; treffer = true; h.getroffen = true;
+          speed *= REMPLER.tempo; abstand += REMPLER.verlust; unverwundbar = 1; treffer = true; h.getroffen = true;
         }
-        if (h.obj.position.z < -15) { h.obj.position.z += 350; h.obj.position.x = (Math.floor(Math.random() * 3) - 1) * 3.4; h.getroffen = false; }
+        if (h.obj.position.z < -15) { h.obj.position.z += HINDERNIS_ABSTAND * 5; h.obj.position.x = (Math.floor(Math.random() * 3) - 1) * 3.4; h.getroffen = false; }
       }
       weltBewegen(weg);
       ausgabe += dt;
       if (ausgabe > 0.12 || treffer) { callbacks.current.onStand(Math.round(speed), Math.max(0, Math.round(abstand)), unverwundbar > 0); ausgabe = 0; }
       renderer.render(scene, camera);
-      if (abstand <= 0 || abstand > ABSTAND_MAX || zeit > 150) { bereit = false; callbacks.current.onEnde(abstand <= 0); }
+      if (abstand <= 0 || abstand > ABSTAND_VERLOREN || zeit > 180) { bereit = false; callbacks.current.onEnde(abstand <= 0); }
     }
     frame = requestAnimationFrame(zeichnen);
     return () => {
@@ -316,7 +331,7 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   const [phase, setPhase] = useState<'bereit' | 'anfahrt' | 'jagd' | 'gefangen' | 'entkommen'>('bereit');
   const [fehler, setFehler] = useState('');
   const [bereit, setBereit] = useState(false);
-  const [stand, setStand] = useState({ speed: 0, abstand: 180, treffer: false });
+  const [stand, setStand] = useState({ speed: 0, abstand: ABSTAND_START, treffer: false });
   const [fluchtDrehung, setFluchtDrehung] = useState(vorgabe.fluchtDrehung ?? 0);
   const spur = useRef(0);
   const drehung = useRef(fluchtDrehung);
@@ -332,7 +347,7 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
     const flucht = autos.find(a => a.id === (vorschau ? fluchtId : vorgabe.fluchtAutoId ?? 'auto-sport')) ?? autos[0];
     if (!auto || !flucht) { setFehler('Bitte zuerst ein Automodell im Admin-Menü hinterlegen.'); return; }
     spur.current = 0; drehung.current = fluchtDrehung;
-    setFehler(''); setBereit(false); setStand({ speed: 0, abstand: 180, treffer: false }); setRennen({ auto, flucht }); setPhase('anfahrt');
+    setFehler(''); setBereit(false); setStand({ speed: 0, abstand: ABSTAND_START, treffer: false }); setRennen({ auto, flucht }); setPhase('anfahrt');
   };
   return <div className="jagd" data-treffer={stand.treffer}>
     {faehrt && rennen && !fehler ? <>

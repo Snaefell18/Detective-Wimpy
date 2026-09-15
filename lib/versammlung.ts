@@ -63,17 +63,29 @@ export function versammlungNach(
 }
 
 /**
+ * Wie weit ein einzelner Zug die verborgene Resonanz bewegen kann.
+ *
+ * Auch der schwächste Zug bringt etwas: Eine Versammlung, aus der man nach
+ * zwölf Runden ohne das Stück herausgeht, hat dem Spieler nur Zeit
+ * abgenommen. Selbst wenn jeder Zug nur das Minimum trägt, ist die Schwelle
+ * vor dem Zwangsende erreicht.
+ */
+export const VERSAMMLUNG_PLUS_MIN = 8;
+export const VERSAMMLUNG_PLUS_MAX = 34;
+
+/**
  * Modellwerte bleiben Spielwerte: Ein Zug kann die verborgene Resonanz
  * spürbar bewegen, aber nie allein den Fund erzwingen.
  */
 export function versammlungsFortschritt(roh: unknown, start = false): number {
   if (start) return 0;
   const zahl = Number(roh);
-  if (!Number.isFinite(zahl)) return 8;
-  return Math.max(5, Math.min(28, Math.round(zahl)));
+  if (!Number.isFinite(zahl)) return 12;
+  return Math.max(VERSAMMLUNG_PLUS_MIN, Math.min(VERSAMMLUNG_PLUS_MAX, Math.round(zahl)));
 }
 
-export const VERSAMMLUNG_BEWEIS_SCHWELLE = 100;
+/** Ab hier legt die Runde das Stück auf den Tisch (von 100). */
+export const VERSAMMLUNG_BEWEIS_SCHWELLE = 80;
 export const VERSAMMLUNG_MIN_ENDE = 6;
 export const VERSAMMLUNG_ZWANGSENDE = 12;
 

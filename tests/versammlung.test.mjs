@@ -7,6 +7,9 @@ import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 import {
   VERSAMMLUNG_BEWEIS_SCHWELLE,
+  VERSAMMLUNG_PLUS_MAX,
+  VERSAMMLUNG_PLUS_MIN,
+  VERSAMMLUNG_ZWANGSENDE,
   versammlungNach,
   oeffentlicheVersammlungen,
   versammlungsFortschritt,
@@ -63,10 +66,39 @@ console.log("\n2. Die Vorgaben gehen sicher zum Server");
 console.log("\n3. Die verborgene Resonanz ist begrenzt");
 {
   pruefe("Eröffnung zählt nicht", versammlungsFortschritt(999, true) === 0);
-  pruefe("riesige Modellzahl wird gekappt", versammlungsFortschritt(999) === 28);
-  pruefe("negative Modellzahl bringt wenigstens etwas", versammlungsFortschritt(-50) === 5);
-  pruefe("kaputter Wert fällt sicher zurück", versammlungsFortschritt("Quallen") === 8);
-  pruefe("Schwelle braucht mehrere Züge", Math.ceil(VERSAMMLUNG_BEWEIS_SCHWELLE / 28) === 4);
+  pruefe("riesige Modellzahl wird gekappt", versammlungsFortschritt(999) === VERSAMMLUNG_PLUS_MAX);
+  pruefe("negative Modellzahl bringt wenigstens etwas", versammlungsFortschritt(-50) === VERSAMMLUNG_PLUS_MIN);
+  pruefe("kaputter Wert fällt sicher zurück", versammlungsFortschritt("Quallen") === 12);
+  pruefe(
+    "Schwelle braucht mehrere Züge",
+    Math.ceil(VERSAMMLUNG_BEWEIS_SCHWELLE / VERSAMMLUNG_PLUS_MAX) >= 3,
+  );
+
+  /*
+   * Und sie ist auch dann erreicht, wenn jeder einzelne Zug nur das Minimum
+   * trägt: Eine Versammlung, aus der man nach zwölf Runden ohne das
+   * Beweisstück herausgeht, wäre nur verlorene Zeit.
+   */
+  let fortschritt = 0;
+  let runden = 0;
+  while (fortschritt < VERSAMMLUNG_BEWEIS_SCHWELLE && runden < VERSAMMLUNG_ZWANGSENDE) {
+    fortschritt = Math.min(100, fortschritt + versammlungsFortschritt(0));
+    runden++;
+  }
+  pruefe(
+    "selbst schwächste Züge finden das Stück vor dem Zwangsende",
+    fortschritt >= VERSAMMLUNG_BEWEIS_SCHWELLE,
+    `${runden} von ${VERSAMMLUNG_ZWANGSENDE} Runden`,
+  );
+
+  let gute = 0;
+  let zuege = 0;
+  while (gute < VERSAMMLUNG_BEWEIS_SCHWELLE) {
+    gute = Math.min(100, gute + versammlungsFortschritt(VERSAMMLUNG_PLUS_MAX));
+    zuege++;
+  }
+  pruefe("mit guten Fragen geht es zügig", zuege <= 3, `${zuege} Züge`);
+  pruefe("aber nie in einem einzigen Zug", VERSAMMLUNG_PLUS_MAX < VERSAMMLUNG_BEWEIS_SCHWELLE);
 }
 
 console.log("\n4. Der Fund passt in die Beweismitteltasche");

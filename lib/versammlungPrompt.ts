@@ -1,7 +1,13 @@
 import { characterBrief } from "./characters";
 import type { Bogen } from "./sagaBogen";
 import type { Character } from "./types";
-import type { VersammlungBeitrag, VersammlungVorgabe } from "./versammlung";
+import {
+  VERSAMMLUNG_MIN_ENDE,
+  VERSAMMLUNG_PLUS_MAX,
+  VERSAMMLUNG_PLUS_MIN,
+  type VersammlungBeitrag,
+  type VersammlungVorgabe,
+} from "./versammlung";
 
 /**
  * Ein Gruppenprompt statt vieler Einzelgespräche: Eine Antwort bringt zwei
@@ -95,9 +101,9 @@ WIE DIE RUNDE LEBT
 - Jeder Beitrag ist 1 bis 3 Sätze, reine wörtliche Rede, ohne Namenspräfix, Anführungszeichen, Regieklammern oder Markdown.
 - Respektiere Sprachstil, Beruf, Beziehungen und Charakterwerte. Alle wissen nur, was sie plausibel wissen können.
 - Niemand nennt die geheime Wahrheit offen und niemand gesteht. Die Versammlung darf neue Verdachtsmomente schaffen, aber löst die Saga nicht vorzeitig.
-- fortschrittPlus liegt zwischen 5 und 28. Konkrete Fragen, Widersprüche und genaue Erinnerungen bringen 15 bis 28; Smalltalk oder Wiederholung 5 bis 10. Bei der Eröffnung trotzdem einen beliebigen Wert liefern; der Server zählt ihn nicht.
+- fortschrittPlus liegt zwischen ${VERSAMMLUNG_PLUS_MIN} und ${VERSAMMLUNG_PLUS_MAX}. Konkrete Fragen, Widersprüche und genaue Erinnerungen bringen ${Math.round(VERSAMMLUNG_PLUS_MAX * 0.6)} bis ${VERSAMMLUNG_PLUS_MAX}; Smalltalk oder Wiederholung ${VERSAMMLUNG_PLUS_MIN} bis ${VERSAMMLUNG_PLUS_MIN + 4}. Bei der Eröffnung trotzdem einen beliebigen Wert liefern; der Server zählt ihn nicht.
 - Liefere bei JEDEM Zug einen guten Kandidaten im Feld beweis. Er bleibt unsichtbar, bis das Hintergrundsystem ihn freigibt. Es ist ein KONKRETER Gegenstand, Protokollfetzen, Abdruck, Geräuschmitschnitt oder physischer Rückstand, der sich organisch aus dem Gesagten ergibt. beobachtung nennt nur sichtbare Fakten; vermutung bleibt vorsichtig und ohne Namen; bedeutung sagt präzise, wie das Stück mit ${bogen.drahtzieherName} und der Wahrheit zusammenhängt.
-- beenden darf erst ab Runde 6 true sein, wenn sich das Gespräch natürlich erschöpft oder der entscheidende Zusammenhang gefunden ist. Dann muss der LETZTE Beitrag von ${vorsitz} stammen und die Runde klar schließen.
+- beenden darf erst ab Runde ${VERSAMMLUNG_MIN_ENDE} true sein, wenn sich das Gespräch natürlich erschöpft oder der entscheidende Zusammenhang gefunden ist. Dann muss der LETZTE Beitrag von ${vorsitz} stammen und die Runde klar schließen.
 
 SONDERFALL DIESER ANTWORT
 ${
