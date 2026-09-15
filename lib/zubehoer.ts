@@ -15,6 +15,7 @@
 
 /** Was ein Gegenstand bewirkt. */
 export type Wirkung =
+  | "auto"
   | "wahrheit"
   | "spuersinn"
   | "beschuldigung"

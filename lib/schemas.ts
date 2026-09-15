@@ -445,6 +445,7 @@ export const SagaVorgabenSchema = z.object({
         nachKapitel: z.number().min(1).max(7),
         name: z.string().min(1).max(120),
         fliehenderId: z.string().min(1).max(40),
+        fluchtAutoId: z.string().max(100).optional(),
         verfolger: z.tuple([
           z.object({
             charakterId: z.string().min(1).max(40),
@@ -454,7 +455,7 @@ export const SagaVorgabenSchema = z.object({
             charakterId: z.string().min(1).max(40),
             modell: z.enum(["schaf", "yeti"]),
           }),
-        ]),
+        ]).default([{ charakterId: "wimpy", modell: "schaf" }, { charakterId: "wimpy", modell: "yeti" }]),
         musik: z.string().max(200).default(""),
         fluchtgrund: z.string().max(800).default(""),
         statement: z.string().max(1200).default(""),

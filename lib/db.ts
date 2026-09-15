@@ -223,7 +223,10 @@ export const loescheArc = (id: string) => loesche("arcs", id);
  * Was im Detektiv-Laden steht. Der Inhalt gehört zum Spiel und liegt deshalb
  * in der Datenbank; was jemand davon gekauft hat, liegt auf seinem Gerät.
  */
-export const ladeZubehoer = () => alle<Zubehoer>("zubehoer");
+export const ladeZubehoer = async () => {
+  const ergebnis = await alle<Zubehoer>("zubehoer");
+  return { ...ergebnis, daten: ergebnis.daten.filter(s => s.wirkung !== "auto") };
+};
 
 export async function speichereZubehoer(stueck: Zubehoer): Promise<void> {
   await anmelden();

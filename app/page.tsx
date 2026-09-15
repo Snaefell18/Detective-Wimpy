@@ -966,7 +966,7 @@ export default function Home() {
       if (jagd) {
         return (
           <main className="app">
-            <Verfolgungsjagd vorgabe={jagd} onFertig={saga.verfolgungGeschafft} />
+            <Verfolgungsjagd vorgabe={jagd} autoId={geld.beutel.autoId} besitz={geld.beutel.vorrat} onFertig={saga.verfolgungGeschafft} />
           </main>
         );
       }
@@ -1146,6 +1146,9 @@ export default function Home() {
 
         {ladenOffen && (
           <ShopScreen
+            autoId={geld.beutel.autoId}
+            onAutoKaufen={geld.autoKaufen}
+            onAutoWaehlen={geld.autoWaehlen}
             yenImBeutel={geld.beutel.yen}
             vorrat={geld.beutel.vorrat}
             onKaufen={(stueck) => geld.kaufen(stueck.id, stueck.preis)}

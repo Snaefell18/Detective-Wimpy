@@ -14,7 +14,9 @@ export type VerfolgungVorgabe = {
   name: string;
   /** Dieses Tier sitzt im weißen Wagen, bleibt während der Fahrt aber unsichtbar. */
   fliehenderId: string;
-  /** Genau zwei Tiere werden gemeinsam gesteuert. */
+  /** Auto aus dem zentralen Autokatalog. Alte Jagden nutzen den Sportwagen. */
+  fluchtAutoId?: string;
+  /** Legacy-Daten alter Sagas; die neue Jagd wird immer von Wimpy gefahren. */
   verfolger: [VerfolgerRolle, VerfolgerRolle];
   /** Optionaler Song, der nur während der eigentlichen Fahrt läuft. */
   musik: string;

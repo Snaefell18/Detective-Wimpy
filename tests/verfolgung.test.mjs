@@ -2,6 +2,7 @@ import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { pruefeVorgaben } from "../lib/sagaPruefung.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 import { fluchtStatement, verfolgungNach } from "../lib/verfolgung.ts";
+import { STANDARD_AUTOS, autoGueltig, fluchtTempo } from '../lib/autos.ts';
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -56,12 +57,25 @@ const gut = SagaVorgabenSchema.safeParse({ ...STANDARD_SAGA_VORGABEN, verfolgung
 pruefe("vollständige Jagd geht durchs Schema", gut.success, gut.error?.issues[0]?.message);
 pruefe("gewählter Jagdsong bleibt erhalten", gut.data?.verfolgungsjagden[0]?.musik === "/audio/jagd.mp3");
 pruefe("drei verschiedene Tiere sind spielbar", probleme({ verfolgungsjagden: [jagd] }).length === 0, probleme({ verfolgungsjagden: [jagd] })[0]);
-pruefe("derselbe Flüchtende und Verfolger fällt auf", probleme({
+pruefe("alte Verfolgerdaten blockieren Wimpys Jagd nicht", probleme({
   verfolgungsjagden: [{ ...jagd, verfolger: [{ ...jagd.verfolger[0], charakterId: "boss" }, jagd.verfolger[1]] }],
-}).some((p) => p.includes("drei verschiedene Tiere")));
-pruefe("zweimal dasselbe Modell fällt auf", probleme({
+}).length === 0);
+pruefe("alte doppelte Modelle sind für die neue Jagd unerheblich", probleme({
   verfolgungsjagden: [{ ...jagd, verfolger: [jagd.verfolger[0], { ...jagd.verfolger[1], modell: "schaf" }] }],
-}).some((p) => p.includes("verschiedene 3D-Modelle")));
+}).length === 0);
+const neueJagd = SagaVorgabenSchema.safeParse({ ...STANDARD_SAGA_VORGABEN, verfolgungsjagden: [{ ...jagd, verfolger: undefined, fluchtAutoId: 'auto-sport' }] });
+pruefe('Autozuordnung ohne alte Verfolger übersteht Generierung', neueJagd.data?.verfolgungsjagden[0]?.fluchtAutoId === 'auto-sport');
+pruefe('Standardautos sind gültig', STANDARD_AUTOS.every(autoGueltig));
+pruefe('Negative Preise sind ungültig', !autoGueltig({ ...STANDARD_AUTOS[0], preis: -1 }));
+pruefe('Unbekannte Modelle sind ungültig', !autoGueltig({ ...STANDARD_AUTOS[0], modell: 'fehlt' }));
+// Schlechteste erlaubte Kombination bleibt ohne Kollisionen einholbar.
+let abstand = 180, speed = 0, fluchtSpeed = 0;
+for (let zeit = 0; zeit < 150 && abstand > 0; zeit += 0.02) {
+  speed = Math.min(60, speed + 5 * 0.02);
+  fluchtSpeed = Math.min(fluchtTempo({ ...STANDARD_AUTOS[1], speed: 320 }, zeit), fluchtSpeed + 100 / 3.6 * 0.02);
+  abstand += (fluchtSpeed - speed / 3.6) * 0.02;
+}
+pruefe('Langsamstes Auto kann bei sauberer Fahrt den schnellsten Flüchtigen fangen', abstand <= 0);
 pruefe("Versammlung und Jagd teilen sich keine Lücke", probleme({
   verfolgungsjagden: [jagd],
   versammlungen: [{

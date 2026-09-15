@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LOHN_FALL, LOHN_SAGA, type Zubehoer } from "./zubehoer";
+import { START_AUTO_ID, autoGueltig, type Auto } from "./autos";
 
 /**
  * Wimpys Geldbeutel und sein Zubehör.
@@ -18,6 +19,7 @@ import { LOHN_FALL, LOHN_SAGA, type Zubehoer } from "./zubehoer";
 const KEY = "detective-wimpy:beutel:v1";
 
 export type Beutel = {
+  autoId?: string;
   yen: number;
   /** Gekaufte Gegenstände: Zubehör-Id -> Anzahl. */
   vorrat: Record<string, number>;
@@ -61,6 +63,7 @@ export function useBeutel() {
           yen: Number.isFinite(daten.yen) ? Number(daten.yen) : 0,
           vorrat: daten.vorrat ?? {},
           bezahlt: daten.bezahlt ?? [],
+          autoId: daten.autoId ?? START_AUTO_ID,
         });
       }
     } catch {
@@ -131,7 +134,7 @@ export function useBeutel() {
   /** Kaufen. Gibt zurück, ob es geklappt hat. */
   const kaufen = useCallback((id: string, preis: number): boolean => {
     const alt = jetzt.current;
-    if (alt.yen < preis) return false;
+    if (!Number.isFinite(preis) || preis < 0 || alt.yen < preis) return false;
     const neu = {
       ...alt,
       yen: alt.yen - preis,
@@ -140,6 +143,22 @@ export function useBeutel() {
     jetzt.current = neu;
     setBeutel(neu);
     return true;
+  }, []);
+
+  const autoKaufen = useCallback((auto: Auto): boolean => {
+    const alt = jetzt.current;
+    if (!autoGueltig(auto) || auto.versteckt || alt.vorrat[auto.id] || alt.yen < auto.preis) return false;
+    const neu = { ...alt, yen: alt.yen - auto.preis, autoId: auto.id, vorrat: { ...alt.vorrat, [auto.id]: 1 } };
+    jetzt.current = neu;
+    setBeutel(neu);
+    return true;
+  }, []);
+  const autoWaehlen = useCallback((id: string) => {
+    const alt = jetzt.current;
+    if (id !== START_AUTO_ID && !alt.vorrat[id]) return;
+    const neu = { ...alt, autoId: id };
+    jetzt.current = neu;
+    setBeutel(neu);
   }, []);
 
   /** Einsetzen - und damit verbrauchen. */
@@ -168,6 +187,8 @@ export function useBeutel() {
     fallGeloest,
     sagaGeschafft,
     kaufen,
+    autoKaufen,
+    autoWaehlen,
     verbrauchen,
   };
 }

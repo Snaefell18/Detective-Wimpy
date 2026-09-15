@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAutos } from '@/lib/useAutos';
 import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
@@ -18,11 +19,7 @@ import { sichere3DTiere } from "@/lib/saga3dSync";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import type { VersammlungVorgabe } from "@/lib/versammlung";
-import {
-  VERFOLGER_MODELLE,
-  type VerfolgerModell,
-  type VerfolgungVorgabe,
-} from "@/lib/verfolgung";
+import type { VerfolgungVorgabe } from "@/lib/verfolgung";
 import { TonFeld } from "./TonFeld";
 import { VideoFeld } from "./VideoFeld";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
@@ -85,6 +82,7 @@ export function SagaVorgabenFelder({
   vomArc?: Partial<Record<keyof SagaVorgaben, string>>;
 }) {
   const [jagdVorschau, setJagdVorschau] = useState<VerfolgungVorgabe | null>(null);
+  const { autos } = useAutos();
   const stammdaten = useStammdaten();
   const staedte = alsStaedte(stammdaten.orte);
   const verdaechtige = stammdaten.charaktere.filter(
@@ -351,9 +349,10 @@ export function SagaVorgabenFelder({
       nachKapitel,
       name: `Die weiße Spur nach Kapitel ${nachKapitel}`,
       fliehenderId: start[0]?.id ?? "",
+      fluchtAutoId: 'auto-sport',
       verfolger: [
-        { charakterId: start[1]?.id ?? "", modell: "schaf" },
-        { charakterId: start[2]?.id ?? "", modell: "yeti" },
+        { charakterId: "wimpy", modell: "schaf" },
+        { charakterId: "wimpy", modell: "yeti" },
       ],
       musik: "",
       fluchtgrund: "ich jemanden schützen musste, der noch nicht entdeckt werden darf",
@@ -367,15 +366,6 @@ export function SagaVorgabenFelder({
     });
   };
 
-  const verfolgerAendern = (
-    jagd: VerfolgungVorgabe,
-    index: 0 | 1,
-    teil: Partial<VerfolgungVorgabe["verfolger"][number]>,
-  ) => {
-    const verfolger = [...jagd.verfolger] as VerfolgungVorgabe["verfolger"];
-    verfolger[index] = { ...verfolger[index], ...teil };
-    jagdAendern(jagd.nachKapitel, { verfolger });
-  };
 
   /** Steht dieses Feld schon durch den Arc fest? */
   const arcHinweis = (feld: keyof SagaVorgaben) =>
@@ -1037,7 +1027,6 @@ export function SagaVorgabenFelder({
                             <option
                               key={c.id}
                               value={c.id}
-                              disabled={jagd.verfolger.some((v) => v.charakterId === c.id)}
                             >
                               {c.name}
                             </option>
@@ -1045,52 +1034,12 @@ export function SagaVorgabenFelder({
                         </select>
                       </label>
 
-                      {([0, 1] as const).map((index) => {
-                        const rolle = jagd.verfolger[index];
-                        const andereId = jagd.verfolger[index === 0 ? 1 : 0].charakterId;
-                        return (
-                          <div className="kapitel-block" key={index}>
-                            <label className="feld">
-                              <span className="leise">Verfolger {index + 1}</span>
-                              <select
-                                value={rolle.charakterId}
-                                onChange={(e) => verfolgerAendern(jagd, index, { charakterId: e.target.value })}
-                              >
-                                <option value="">Tier wählen …</option>
-                                {verdaechtige.map((c) => (
-                                  <option
-                                    key={c.id}
-                                    value={c.id}
-                                    disabled={c.id === jagd.fliehenderId || c.id === andereId}
-                                  >
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <span className="leise klein">Interaktives 3D-Modell</span>
-                            <div className="jagd-modellwahl">
-                              {VERFOLGER_MODELLE.map((modell) => (
-                                <button
-                                  type="button"
-                                  className="jagd-modellkarte"
-                                  data-aktiv={rolle.modell === modell.id}
-                                  key={modell.id}
-                                  onClick={() =>
-                                    verfolgerAendern(jagd, index, {
-                                      modell: modell.id as VerfolgerModell,
-                                    })
-                                  }
-                                >
-                                  <strong>{modell.name}</strong>
-                                  <span className="leise klein">{modell.beschreibung}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-
+                      <label className="feld">
+                        <span className="leise">Fluchtwagen · Wimpy verfolgt mit seinem eigenen Auto</span>
+                        <select value={jagd.fluchtAutoId ?? 'auto-sport'} onChange={e => jagdAendern(nachKapitel, { fluchtAutoId: e.target.value })}>
+                          {autos.map(auto => <option key={auto.id} value={auto.id}>{auto.name} · {auto.speed} km/h</option>)}
+                        </select>
+                      </label>
                       <SongWahl
                         wert={jagd.musik ?? ""}
                         onAendern={(musik) => jagdAendern(nachKapitel, { musik })}
@@ -1131,7 +1080,7 @@ export function SagaVorgabenFelder({
 
       {jagdVorschau && (
         <div className="jagd-vorschau">
-          <Verfolgungsjagd vorgabe={jagdVorschau} onFertig={() => setJagdVorschau(null)} />
+          <Verfolgungsjagd vorschau vorgabe={jagdVorschau} onFertig={() => setJagdVorschau(null)} />
           <button
             type="button"
             className="jagd-vorschau-schliessen"

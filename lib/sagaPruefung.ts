@@ -102,21 +102,11 @@ export function pruefeVorgaben(args: {
     }
     belegteLuecken.add(jagd.nachKapitel);
 
-    const ids = [jagd.fliehenderId, ...jagd.verfolger.map((v) => v.charakterId)];
+    const ids = [jagd.fliehenderId];
     for (const id of ids) {
       if (!bekannteTiere.has(id)) {
         probleme.push(`${name(id)} ist für die Verfolgungsjagd gewählt, aber kein bekanntes Tier.`);
       }
-    }
-    if (new Set(ids).size !== 3) {
-      probleme.push(
-        `Die Verfolgungsjagd „${jagd.name || "ohne Namen"}“ braucht drei verschiedene Tiere.`,
-      );
-    }
-    if (jagd.verfolger[0].modell === jagd.verfolger[1].modell) {
-      probleme.push(
-        `Die beiden Verfolger von „${jagd.name || "der Jagd"}“ brauchen verschiedene 3D-Modelle.`,
-      );
     }
   }
 

@@ -9,6 +9,7 @@ import { BilderBereich } from "@/components/admin/BilderBereich";
 import { KampagnenBereich } from "@/components/admin/KampagnenBereich";
 import { SagenBereich } from "@/components/admin/SagenBereich";
 import { ZubehoerBereich } from "@/components/admin/ZubehoerBereich";
+import { AutosBereich } from "@/components/admin/AutosBereich";
 import { SpielBereich } from "@/components/admin/SpielBereich";
 import { StammdatenBereich } from "@/components/admin/StammdatenBereich";
 
@@ -22,6 +23,7 @@ type Bereich =
   | "orte"
   | "items"
   | "zubehoer"
+  | "autos"
   | "bilder"
   | "spiel";
 
@@ -33,6 +35,7 @@ const REITER: { id: Bereich; label: string }[] = [
   { id: "orte", label: "Orte" },
   { id: "items", label: "Dinge" },
   { id: "zubehoer", label: "Laden" },
+  { id: "autos", label: "Autos" },
   { id: "bilder", label: "Bilder" },
   { id: "spiel", label: "Spiel" },
 ];
@@ -111,6 +114,7 @@ function AdminInhalt() {
           {bereich === "orte" && <StammdatenBereich art="orte" {...gemeinsam} />}
           {bereich === "items" && <StammdatenBereich art="items" {...gemeinsam} />}
           {bereich === "zubehoer" && <ZubehoerBereich {...gemeinsam} />}
+          {bereich === "autos" && <AutosBereich {...gemeinsam} />}
           {bereich === "bilder" && <BilderBereich {...gemeinsam} />}
           {bereich === "spiel" && <SpielBereich {...gemeinsam} />}
         </div>

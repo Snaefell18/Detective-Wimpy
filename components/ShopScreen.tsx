@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Bild } from "./Bild";
+import { AutoGarage } from './AutoGarage';
+import type { Auto } from '@/lib/autos';
 import { ladeZubehoer } from "@/lib/db";
 import { GRUNDREGAL, wirkungVon, yen, type Zubehoer } from "@/lib/zubehoer";
 
@@ -22,12 +24,16 @@ export function ShopScreen({
   vorrat,
   onKaufen,
   onSchliessen,
+  autoId, onAutoKaufen, onAutoWaehlen,
 }: {
   yenImBeutel: number;
   vorrat: Record<string, number>;
   /** Gibt zurück, ob der Kauf geklappt hat. */
   onKaufen: (stueck: Zubehoer) => boolean;
   onSchliessen: () => void;
+  autoId?: string;
+  onAutoKaufen: (auto: Auto) => boolean;
+  onAutoWaehlen: (id: string) => void;
 }) {
   const [regal, setRegal] = useState<Zubehoer[] | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -83,6 +89,7 @@ export function ShopScreen({
 
       <div className="scroll">
         <div className="inhalt">
+          <AutoGarage yen={yenImBeutel} vorrat={vorrat} autoId={autoId} kaufen={onAutoKaufen} waehlen={onAutoWaehlen} />
           {meldung && <p className="hinweis erfolg">{meldung}</p>}
 
           {regal === null && <p className="leise">Der Laden schließt gerade auf …</p>}

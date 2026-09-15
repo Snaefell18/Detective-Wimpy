@@ -584,3 +584,9 @@
   .experiment-steuerkreuz { right: 16px; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
   .experiment-ansprechen { bottom: max(180px, calc(var(--safe-bottom) + 168px)); min-width: min(280px, calc(100% - 42px)); }
 }
+.auto-jagd-auswahl { height: 100%; overflow-y: auto; padding: max(24px, env(safe-area-inset-top)) 18px max(32px, env(safe-area-inset-bottom)); }
+.auto-jagd-auswahl .jagd-startkarte { margin: auto; }
+.auto-jagd-laden { position: absolute; inset: 40% 15% auto; background: #132238; color: white; padding: 24px; border-radius: 16px; text-align: center; }
+.auto-jagd-hud { position: absolute; top: max(18px, env(safe-area-inset-top)); left: 16px; right: 60px; display: grid; gap: 5px; padding: 14px; background: #132238e8; color: #fff; border-left: 5px solid #70e0f2; pointer-events: none; }
+.auto-jagd-steuerung { position: absolute; bottom: max(22px, env(safe-area-inset-bottom)); left: 20px; right: 20px; display: flex; justify-content: space-between; }
+.auto-jagd-steuerung button { width: 80px; height: 76px; border: 4px solid #172337; border-radius: 20px; background: #f4ecda; color: #172337; font-size: 32px; touch-action: manipulation; }
