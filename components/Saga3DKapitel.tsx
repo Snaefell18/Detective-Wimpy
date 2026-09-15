@@ -7,10 +7,12 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { kapitelPosition } from "@/lib/saga3dLayout";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
+import { AUTO_MODELLE, START_AUTO_ID, type Auto } from "@/lib/autos";
+import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { locationsFuer3D } from "@/lib/pursuit3d";
+import { locationsFuer3D, tankstelleAus } from "@/lib/pursuit3d";
 import type { DreiDStrassentyp, DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
@@ -19,10 +21,32 @@ import { FundMoment } from "./FundMoment";
 type Richtung = { x: number; z: number };
 const LEERE_SPUREN: SpurVorschau[] = [];
 const STANDARD_GROESSEN: Record<string, number> = {};
+const KEIN_BESITZ: Record<string, number> = {};
 type SpurVorschau = { itemId: string; ortId: string; name: string; bild: string | null };
 type Naehe =
   | { art: "tier"; id: string; name: string }
-  | { art: "spur"; id: string; ortId: string; name: string };
+  | { art: "spur"; id: string; ortId: string; name: string }
+  | { art: "tankstelle"; id: string; name: string }
+  | { art: "wagen"; id: string; name: string };
+
+/**
+ * Was die Szene über Wimpys Auto wissen muss.
+ *
+ * Das läuft absichtlich über ein Ref und nicht über Eigenschaften: Die Stadt
+ * wird beim Aufbau einmal zusammengesetzt, und ein Wagenwechsel darf sie
+ * nicht neu bauen lassen. Die Szene sieht in jedem Bild nach, was hier steht.
+ */
+export type FahrzeugBefehl = {
+  /** Der Wagen, den Wimpy gerade fährt - null heißt: zu Fuß. */
+  faehrt: { id: string; name: string; modell: string; drehung: number } | null;
+  /**
+   * Beim Aussteigen: Bleibt der Wagen stehen (abstellen) oder wird er an der
+   * Tankstelle abgegeben und verschwindet?
+   */
+  abgeben: boolean;
+};
+
+export const LEERER_FAHRZEUGBEFEHL: FahrzeugBefehl = { faehrt: null, abgeben: false };
 
 const normal = (wert: string) => wert.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
 
@@ -214,6 +238,8 @@ function KapitelCanvas({
   charakterModelle,
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
+  tankstelleId,
+  fahrzeug,
   onNaehe,
   onBereit,
   pausiert = false,
@@ -229,6 +255,10 @@ function KapitelCanvas({
   charakterModelle: Record<string, string>;
   charakterGroessen?: Record<string, number>;
   locationDrehungen: Record<string, number>;
+  /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
+  tankstelleId?: string;
+  /** Wimpys Auto - siehe FahrzeugBefehl. */
+  fahrzeug?: MutableRefObject<FahrzeugBefehl>;
   onNaehe: (wert: Naehe | null) => void;
   onBereit: () => void;
   pausiert?: boolean;
@@ -240,11 +270,11 @@ function KapitelCanvas({
   const [versuch, setVersuch] = useState(0);
   const position = useRef(new THREE.Vector3());
   // Wertgleiche Props (insbesondere [] in der Probe) dürfen keine Szene neu laden.
-  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen });
+  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen, tankstelleId: tankstelleId ?? "" });
   const bauplan = useMemo(() => JSON.parse(bauplanText) as {
     besetzung: Character[]; locations: string[]; spuren: SpurVorschau[];
     charakterModelle: Record<string, string>; locationDrehungen: Record<string, number>;
-    charakterGroessen: Record<string, number>;
+    charakterGroessen: Record<string, number>; tankstelleId: string;
   }, [bauplanText]);
 
   useEffect(() => {
@@ -390,6 +420,16 @@ function KapitelCanvas({
       }
     }
 
+    /* --- Tankstelle, Auto und alles, was daran hängt ------------------ */
+    const tankstelle = tankstelleAus(bauplan.locations, bauplan.tankstelleId);
+    /** Wo der Wagen steht und wo Wimpy einsteigt - erst beim Aufbau bekannt. */
+    let tankPlatz: THREE.Vector3 | null = null;
+    /** Der Wagen, der gerade gefahren wird, und der, der irgendwo parkt. */
+    let amSteuer: { id: string; name: string; gruppe: THREE.Group } | null = null;
+    let geparkt: { id: string; name: string; gruppe: THREE.Group } | null = null;
+    let laedtWagen = "";
+    let wimpyFigur: THREE.Object3D | null = null;
+
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const spieler = new THREE.Group();
@@ -442,7 +482,7 @@ function KapitelCanvas({
         registrieren(vorlage);
         const ort = locationEintraege[index];
         const ausmass = kulisseEinpassen(vorlage, locationDrehungen[ort.id] ?? 0);
-        return [{ vorlage, laenge: Math.max(5, ausmass.z) }];
+        return [{ id: ort.id, vorlage, laenge: Math.max(5, ausmass.z) }];
       });
       let cursorZ = 19;
       let i = 0;
@@ -452,8 +492,27 @@ function KapitelCanvas({
         block.add(eintrag.vorlage.clone(true));
         block.position.z = cursorZ - eintrag.laenge / 2;
         scene.add(block);
+        // Die erste aufgebaute Tankstelle ist Wimpys Garage.
+        if (tankstelle && eintrag.id === tankstelle.id && tankPlatz === null) {
+          tankPlatz = new THREE.Vector3(2.7, 0, block.position.z);
+        }
         cursorZ -= eintrag.laenge + 1.1;
         i++;
+      }
+      if (tankPlatz) {
+        /*
+         * Ein ruhiger Ring auf dem Boden zeigt, wo Wimpy einsteigen kann.
+         * Er leuchtet nicht und blinkt nicht - er liegt einfach da, wie ein
+         * aufgemalter Stellplatz.
+         */
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.75, 1.15, 28),
+          new THREE.MeshBasicMaterial({ color: 0xf6c667, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(tankPlatz.x, 0.04, tankPlatz.z);
+        scene.add(ring);
+        registrieren(ring);
       }
 
       const wimpy = ANIMATIONS_MODELLE.find((modell) => modell.id === "wimpy");
@@ -461,6 +520,7 @@ function KapitelCanvas({
         const geladen = await figurLaden(wimpy, 2.05 * groessenFaktor("wimpy"));
         if (beendet) return;
         spieler.add(geladen.figur);
+        wimpyFigur = geladen.figur;
         spielerMixer = new THREE.AnimationMixer(geladen.figur);
         const laufClip = geladen.animationen.find((clip) => clip.name === laufAnimation(geladen.animationen.map((c) => c.name))) ?? geladen.animationen[0];
         const idleClip = geladen.animationen.find((clip) => /idle|rest/i.test(clip.name));
@@ -564,6 +624,62 @@ function KapitelCanvas({
     window.addEventListener("blur", stoppen);
     document.addEventListener("visibilitychange", stoppen);
 
+    /* --- Ein- und Aussteigen ------------------------------------------ */
+    /** Ein Auto aus dem Katalog als fahrbereite Gruppe. */
+    const wagenBauen = async (wunsch: { modell: string; drehung: number }) => {
+      const modell = AUTO_MODELLE.find((m) => m.id === wunsch.modell);
+      if (!modell) return null;
+      const gltf = await laden(modell.datei);
+      if (beendet) return null;
+      const körper = gltf.scene.clone(true);
+      cellShading(körper, gradient);
+      // Jedes Modell liegt anders in seiner Datei; die Drehung aus dem
+      // Autokatalog stellt es gerade - genau wie in der Verfolgungsjagd.
+      körper.rotation.y = THREE.MathUtils.degToRad(wunsch.drehung);
+      körper.updateMatrixWorld(true);
+      let box = new THREE.Box3().setFromObject(körper);
+      const groesse = box.getSize(new THREE.Vector3());
+      körper.scale.multiplyScalar(3 / Math.max(groesse.x, groesse.z, 0.001));
+      körper.updateMatrixWorld(true);
+      box = new THREE.Box3().setFromObject(körper);
+      const mitte = box.getCenter(new THREE.Vector3());
+      körper.position.set(-mitte.x, -box.min.y, -mitte.z);
+      registrieren(körper);
+      const gruppe = new THREE.Group();
+      gruppe.add(körper);
+      return gruppe;
+    };
+
+    /** Wimpy verschwindet im Wagen, der Wagen übernimmt seinen Platz. */
+    const einsteigen = (gruppe: THREE.Group, id: string, name: string) => {
+      scene.remove(gruppe);
+      gruppe.position.set(0, 0, 0);
+      gruppe.rotation.set(0, 0, 0);
+      spieler.add(gruppe);
+      if (wimpyFigur) wimpyFigur.visible = false;
+      if (geparkt?.id === id) geparkt = null;
+      amSteuer = { id, name, gruppe };
+    };
+
+    /**
+     * Aussteigen. Abgestellt bleibt der Wagen stehen, wo er steht - an der
+     * Tankstelle abgegeben ist er wieder weg.
+     */
+    const aussteigen = (abgeben: boolean) => {
+      if (!amSteuer) return;
+      const { gruppe, id, name } = amSteuer;
+      spieler.remove(gruppe);
+      amSteuer = null;
+      if (wimpyFigur) wimpyFigur.visible = true;
+      if (abgeben) return;
+      gruppe.position.copy(spieler.position);
+      gruppe.rotation.y = spieler.rotation.y;
+      scene.add(gruppe);
+      geparkt = { id, name, gruppe };
+      // Einen Schritt zur Seite, sonst steht Wimpy in seinem eigenen Wagen.
+      spieler.position.x = THREE.MathUtils.clamp(spieler.position.x + 1.6, -4.15, 4.15);
+    };
+
     let letzter = performance.now();
     const zielKamera = new THREE.Vector3();
     const zeichnen = (jetzt: number) => {
@@ -575,6 +691,44 @@ function KapitelCanvas({
         return;
       }
       if (callbacks.current.pausiert) stoppen();
+
+      /*
+       * Wagenwechsel: Die Oberfläche legt ihren Wunsch im Ref ab, die Szene
+       * führt ihn im nächsten Bild aus. Ein Modell wird nur einmal geladen -
+       * wer denselben Wagen wieder besteigt, steigt sofort ein.
+       */
+      const befehl = fahrzeug?.current ?? LEERER_FAHRZEUGBEFEHL;
+      const gewuenschterWagen = befehl.faehrt?.id ?? "";
+      if (gewuenschterWagen !== (amSteuer?.id ?? "")) {
+        if (!gewuenschterWagen) {
+          aussteigen(befehl.abgeben);
+        } else if (geparkt?.id === gewuenschterWagen) {
+          einsteigen(geparkt.gruppe, gewuenschterWagen, geparkt.name);
+        } else if (laedtWagen !== gewuenschterWagen) {
+          // Nur das Laden braucht eine Sperre - sonst bestellte jedes Bild
+          // dasselbe Modell noch einmal.
+          laedtWagen = gewuenschterWagen;
+          const wunsch = befehl.faehrt;
+          if (wunsch) {
+            void wagenBauen(wunsch)
+              .then((gruppe) => {
+                if (beendet || !gruppe) return;
+                // Inzwischen umentschieden? Dann bleibt der Wagen stehen.
+                if ((fahrzeug?.current.faehrt?.id ?? "") !== wunsch.id) {
+                  gruppe.position.copy(spieler.position);
+                  scene.add(gruppe);
+                  geparkt = { id: wunsch.id, name: wunsch.name, gruppe };
+                  return;
+                }
+                if (amSteuer) aussteigen(true);
+                einsteigen(gruppe, wunsch.id, wunsch.name);
+              })
+              .catch(() => undefined)
+              .finally(() => { laedtWagen = ""; });
+          }
+        }
+      }
+
       const tx = (tasten.has("d") || tasten.has("arrowright") ? 1 : 0) - (tasten.has("a") || tasten.has("arrowleft") ? 1 : 0);
       const tz = (tasten.has("s") || tasten.has("arrowdown") ? 1 : 0) - (tasten.has("w") || tasten.has("arrowup") ? 1 : 0);
       const x = THREE.MathUtils.clamp(tx || steuerung.current.x, -1, 1);
@@ -585,8 +739,10 @@ function KapitelCanvas({
         const laenge = Math.hypot(x, z) || 1;
         const vorherX = spieler.position.x;
         const vorherZ = spieler.position.z;
-        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * staerke * dt * 4.1, -4.15, 4.15);
-        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * staerke * dt * 4.1, -36, 15);
+        // Im Auto ist Wimpy gut doppelt so schnell unterwegs wie zu Fuß.
+        const tempo = amSteuer ? 9.4 : 4.1;
+        const neuX = THREE.MathUtils.clamp(vorherX + (x / laenge) * staerke * dt * tempo, -4.15, 4.15);
+        const neuZ = THREE.MathUtils.clamp(vorherZ + (z / laenge) * staerke * dt * tempo, -36, 15);
         const kollidiert = npcGruppen.some((npc) => {
           const dx = npc.gruppe.position.x - neuX;
           const dz = npc.gruppe.position.z - neuZ;
@@ -596,9 +752,16 @@ function KapitelCanvas({
           spieler.position.set(neuX, 0, neuZ);
           bewegt = Math.hypot(neuX - vorherX, neuZ - vorherZ) > 0.0001;
         }
-        spieler.rotation.y = Math.atan2(x, z);
+        // Ein Auto dreht sich nicht auf der Stelle - es zieht in die Kurve.
+        const richtung = Math.atan2(x, z);
+        if (amSteuer) {
+          const unterschied = ((richtung - spieler.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+          spieler.rotation.y += unterschied * Math.min(1, dt * 6);
+        } else {
+          spieler.rotation.y = richtung;
+        }
       }
-      const gewuenscht = bewegt ? laufAktion : (ruheAktion ?? laufAktion);
+      const gewuenscht = amSteuer ? ruheAktion : bewegt ? laufAktion : (ruheAktion ?? laufAktion);
       if (gewuenscht && gewuenscht !== aktiveAktion) {
         aktiveAktion?.fadeOut(0.14);
         gewuenscht.reset().fadeIn(0.14).play();
@@ -661,20 +824,38 @@ function KapitelCanvas({
       spurGruppen.forEach((ziel) => {
         ziel.gruppe.visible = !callbacks.current.gefunden.has(ziel.info.id);
       });
-      [...npcGruppen, ...spurGruppen.filter((ziel) => ziel.gruppe.visible)].forEach((ziel) => {
-        const distanz = ziel.gruppe.position.distanceTo(spieler.position);
-        if (distanz < abstand) {
-          abstand = distanz;
-          nah = ziel;
+      // Aus dem Auto heraus spricht Wimpy niemanden an und hebt nichts auf -
+      // dafür muss er aussteigen. Die Tankstelle sieht er trotzdem.
+      if (!amSteuer) {
+        [...npcGruppen, ...spurGruppen.filter((ziel) => ziel.gruppe.visible)].forEach((ziel) => {
+          const distanz = ziel.gruppe.position.distanceTo(spieler.position);
+          if (distanz < abstand) {
+            abstand = distanz;
+            nah = ziel;
+          }
+        });
+        if (geparkt && geparkt.gruppe.position.distanceTo(spieler.position) < Math.min(abstand, 2.8)) {
+          abstand = geparkt.gruppe.position.distanceTo(spieler.position);
+          nah = { gruppe: geparkt.gruppe, info: { art: "wagen", id: geparkt.id, name: geparkt.name } };
         }
-      });
+      }
+      if (tankPlatz && tankstelle) {
+        const distanz = tankPlatz.distanceTo(spieler.position);
+        // Im Auto zählt nur die Tankstelle, zu Fuß gewinnt das nächste Ziel.
+        if (distanz < 3.2 && (amSteuer || distanz < abstand)) {
+          abstand = distanz;
+          nah = { gruppe: spieler, info: { art: "tankstelle", id: tankstelle.id, name: tankstelle.name } };
+        }
+      }
       const nahesZiel = nah as { gruppe: THREE.Group; info: Naehe } | null;
       const schluessel = nahesZiel ? `${nahesZiel.info.art}:${nahesZiel.info.id}` : "";
       if (schluessel !== letzteNaehe) {
         letzteNaehe = schluessel;
         callbacks.current.onNaehe(nahesZiel?.info ?? null);
       }
-      zielKamera.set(spieler.position.x - 9.5, 5.1, spieler.position.z + 13.8);
+      // Am Steuer rückt die Kamera etwas ab: Der Wagen braucht mehr Platz im Bild.
+      const weite = amSteuer ? 1.25 : 1;
+      zielKamera.set(spieler.position.x - 9.5 * weite, 5.1 * weite, spieler.position.z + 13.8 * weite);
       camera.position.lerp(zielKamera, 1 - Math.exp(-5 * dt));
       camera.lookAt(spieler.position.x, 1.05, spieler.position.z + 0.7);
       renderer.render(scene, camera);
@@ -719,6 +900,36 @@ function KapitelCanvas({
   </>;
 }
 
+/** Die Auswahl der eigenen Wagen an der Tankstelle. */
+function GaragenWahl({
+  autos,
+  onWaehlen,
+  onSchliessen,
+}: {
+  autos: Auto[];
+  onWaehlen: (auto: Auto) => void;
+  onSchliessen: () => void;
+}) {
+  return (
+    <div className="saga3d-garage" role="dialog" aria-label="Wimpys Garage">
+      <article>
+        <span className="jagd-kicker">WIMPYS GARAGE</span>
+        <h2>Womit fährst du los?</h2>
+        {autos.length === 0 && (
+          <p className="leise">In der Garage steht noch kein Wagen. Im Laden gibt es welche.</p>
+        )}
+        {autos.map((auto) => (
+          <button key={auto.id} className="saga3d-wagenwahl" onClick={() => onWaehlen(auto)}>
+            <strong>{auto.name}</strong>
+            <span className="leise klein">{auto.speed} km/h · Beschleunigung {auto.beschleunigung}</span>
+          </button>
+        ))}
+        <button className="knopf" onClick={onSchliessen}>Doch zu Fuß</button>
+      </article>
+    </div>
+  );
+}
+
 export function Saga3DKapitel({
   pausiert = false,
   fall,
@@ -730,13 +941,16 @@ export function Saga3DKapitel({
   charakterModelle,
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
+  tankstelleId,
   gefundeneSpuren,
   kapitel,
   tasche,
   suchtGerade,
+  besitz = KEIN_BESITZ,
   onCharakter,
   onSpur,
   onAufnehmen,
+  onAutoWaehlen,
 }: {
   pausiert?: boolean;
   fall: PublicCase;
@@ -748,13 +962,19 @@ export function Saga3DKapitel({
   charakterModelle: Record<string, string>;
   charakterGroessen?: Record<string, number>;
   locationDrehungen: Record<string, number>;
+  /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
+  tankstelleId?: string;
   gefundeneSpuren: string[];
   kapitel: number | null;
   tasche: Beweismittel[];
   suchtGerade: boolean;
+  /** Was Wimpy im Laden gekauft hat - nur damit darf er losfahren. */
+  besitz?: Record<string, number>;
   onCharakter: (id: string) => void;
   onSpur: (ortId: string, itemId: string) => Promise<Fund | null>;
   onAufnehmen: (mittel: Beweismittel, statt?: string) => void;
+  /** Welcher Wagen zuletzt gefahren wurde - der fährt auch in der Jagd. */
+  onAutoWaehlen?: (id: string) => void;
 }) {
   const steuerung = useRef<Richtung>({ x: 0, z: 0 });
   const [nah, setNah] = useState<Naehe | null>(null);
@@ -766,6 +986,33 @@ export function Saga3DKapitel({
   const [spurenFehler, setSpurenFehler] = useState("");
   const [spurenVersuch, setSpurenVersuch] = useState(0);
   const untersucht = useRef(false);
+  /*
+   * Wimpys Wagen in der Stadt.
+   *
+   * Der Wunsch liegt im Ref, damit die Szene beim Ein- und Aussteigen nicht
+   * neu aufgebaut wird; `amSteuer` ist nur die Anzeige dazu.
+   */
+  const fahrzeug = useRef<FahrzeugBefehl>({ ...LEERER_FAHRZEUGBEFEHL });
+  const [amSteuer, setAmSteuer] = useState<{ id: string; name: string } | null>(null);
+  const [garageOffen, setGarageOffen] = useState(false);
+  const { autos } = useAutos();
+  // Gefahren wird nur, was Wimpy besitzt - der Startwagen gehört ihm immer.
+  const meineAutos = autos.filter((auto) => auto.id === START_AUTO_ID || besitz[auto.id]);
+
+  const einsteigen = (auto: Auto) => {
+    fahrzeug.current = {
+      faehrt: { id: auto.id, name: auto.name, modell: auto.modell, drehung: auto.drehung },
+      abgeben: false,
+    };
+    setAmSteuer({ id: auto.id, name: auto.name });
+    setGarageOffen(false);
+    onAutoWaehlen?.(auto.id);
+  };
+  const aussteigen = (abgeben: boolean) => {
+    fahrzeug.current = { faehrt: null, abgeben };
+    setAmSteuer(null);
+  };
+
   useEffect(() => {
     let aktiv = true;
     setSpurenFehler("");
@@ -800,6 +1047,16 @@ export function Saga3DKapitel({
   const interagieren = async () => {
     if (!nah || untersucht.current || suchtGerade) return;
     stoppen();
+    if (nah.art === "tankstelle") {
+      // An der Tankstelle entscheidet der eigene Knopf, nicht dieser hier.
+      setGarageOffen(true);
+      return;
+    }
+    if (nah.art === "wagen") {
+      const auto = meineAutos.find((a) => a.id === nah.id);
+      if (auto) einsteigen(auto);
+      return;
+    }
     if (nah.art === "tier") {
       onCharakter(nah.id);
       return;
@@ -820,7 +1077,7 @@ export function Saga3DKapitel({
   return (
     <div className="saga3d">
       {spurenGeladen && <KapitelCanvas
-        pausiert={pausiert || Boolean(fund) || suchtGerade}
+        pausiert={pausiert || Boolean(fund) || suchtGerade || garageOffen}
         steuerung={steuerung}
         fall={fall}
         locations={locations}
@@ -830,6 +1087,8 @@ export function Saga3DKapitel({
         charakterModelle={charakterModelle}
         charakterGroessen={charakterGroessen}
         locationDrehungen={locationDrehungen}
+        tankstelleId={tankstelleId}
+        fahrzeug={fahrzeug}
         spuren={spuren}
         gefundeneSpuren={gefundeneSpuren}
         onNaehe={setNah}
@@ -844,11 +1103,38 @@ export function Saga3DKapitel({
           : "Die Stadt wird aufgebaut …"}</small>
       </div>
       <TouchJoystick setzen={setzen} />
-      {nah && (
+      {(nah?.art === "tier" || nah?.art === "spur") && (
         <button className="experiment-ansprechen saga3d-interaktion" onClick={() => void interagieren()} disabled={suchtGerade}>
           <small>{nah.art === "tier" ? "IN DER NÄHE" : "SPUR ENTDECKT"}</small>
           <strong>{suchtGerade ? "WIMPY UNTERSUCHT …" : `${nah.name} ${nah.art === "tier" ? "ANSPRECHEN" : "ANSEHEN"}`}</strong>
         </button>
+      )}
+      {nah?.art === "tankstelle" && !amSteuer && (
+        <button className="experiment-ansprechen saga3d-interaktion" onClick={() => { stoppen(); setGarageOffen(true); }}>
+          <small>{nah.name.toUpperCase()}</small>
+          <strong>⛽ INS AUTO STEIGEN</strong>
+        </button>
+      )}
+      {nah?.art === "tankstelle" && amSteuer && (
+        <button className="experiment-ansprechen saga3d-interaktion" onClick={() => { stoppen(); aussteigen(true); }}>
+          <small>{nah.name.toUpperCase()}</small>
+          <strong>⛽ WAGEN ABGEBEN</strong>
+        </button>
+      )}
+      {nah?.art === "wagen" && !amSteuer && (
+        <button className="experiment-ansprechen saga3d-interaktion" onClick={() => void interagieren()}>
+          <small>DEIN WAGEN</small>
+          <strong>🚗 {nah.name.toUpperCase()} EINSTEIGEN</strong>
+        </button>
+      )}
+      {amSteuer && (
+        <button className="saga3d-aussteigen" onClick={() => { stoppen(); aussteigen(false); }}>
+          <small>{amSteuer.name.toUpperCase()}</small>
+          <strong>Hier abstellen und aussteigen</strong>
+        </button>
+      )}
+      {garageOffen && (
+        <GaragenWahl autos={meineAutos} onWaehlen={einsteigen} onSchliessen={() => setGarageOffen(false)} />
       )}
       {meldung && <button className="saga3d-meldung" onClick={() => setMeldung("")}>{meldung}</button>}
       {fund && (
@@ -872,6 +1158,7 @@ export function Saga3DProbeSzene({
   strassentyp,
   modellIds,
   locationDrehungen,
+  tankstelleId,
   onZurueck,
   onSchliessen,
 }: {
@@ -881,6 +1168,8 @@ export function Saga3DProbeSzene({
   strassentyp: DreiDStrassentyp;
   modellIds: string[];
   locationDrehungen: Record<string, number>;
+  /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
+  tankstelleId?: string;
   onZurueck: () => void;
   onSchliessen: () => void;
 }) {
@@ -932,6 +1221,24 @@ export function Saga3DProbeSzene({
   const setzen = (x: number, z: number) => {
     steuerung.current = { x, z };
   };
+  // In der Probewelt darf alles gefahren werden, was im Katalog steht -
+  // hier wird geprüft, nicht gespielt.
+  const { autos } = useAutos();
+  const fahrzeug = useRef<FahrzeugBefehl>({ ...LEERER_FAHRZEUGBEFEHL });
+  const [amSteuer, setAmSteuer] = useState<{ id: string; name: string } | null>(null);
+  const [garageOffen, setGarageOffen] = useState(false);
+  const einsteigen = (auto: Auto) => {
+    fahrzeug.current = {
+      faehrt: { id: auto.id, name: auto.name, modell: auto.modell, drehung: auto.drehung },
+      abgeben: false,
+    };
+    setAmSteuer({ id: auto.id, name: auto.name });
+    setGarageOffen(false);
+  };
+  const aussteigen = (abgeben: boolean) => {
+    fahrzeug.current = { faehrt: null, abgeben };
+    setAmSteuer(null);
+  };
   return (
     <div className="jagd pursuit-spiel saga3d-probe">
       <button className="jagd-vorschau-schliessen" onClick={onSchliessen} aria-label="Pursuit schließen">×</button>
@@ -944,6 +1251,9 @@ export function Saga3DProbeSzene({
         strassentyp={strassentyp}
         charakterModelle={modellZuordnung}
         locationDrehungen={locationDrehungen}
+        tankstelleId={tankstelleId}
+        fahrzeug={fahrzeug}
+        pausiert={garageOffen}
         spuren={LEERE_SPUREN}
         gefundeneSpuren={[]}
         onNaehe={setNah}
@@ -961,6 +1271,33 @@ export function Saga3DProbeSzene({
           <small>MODELL IN DER NÄHE</small>
           <strong>{nah.name} PRÜFEN</strong>
         </button>
+      )}
+      {nah?.art === "tankstelle" && (
+        <button
+          className="experiment-ansprechen"
+          onClick={() => { setzen(0, 0); if (amSteuer) aussteigen(true); else setGarageOffen(true); }}
+        >
+          <small>{nah.name.toUpperCase()}</small>
+          <strong>{amSteuer ? "⛽ WAGEN ABGEBEN" : "⛽ INS AUTO STEIGEN"}</strong>
+        </button>
+      )}
+      {nah?.art === "wagen" && !amSteuer && (
+        <button
+          className="experiment-ansprechen"
+          onClick={() => { const auto = autos.find((a) => a.id === nah.id); if (auto) einsteigen(auto); }}
+        >
+          <small>ABGESTELLTER WAGEN</small>
+          <strong>🚗 {nah.name.toUpperCase()} EINSTEIGEN</strong>
+        </button>
+      )}
+      {amSteuer && (
+        <button className="saga3d-aussteigen" onClick={() => { setzen(0, 0); aussteigen(false); }}>
+          <small>{amSteuer.name.toUpperCase()}</small>
+          <strong>Hier abstellen und aussteigen</strong>
+        </button>
+      )}
+      {garageOffen && (
+        <GaragenWahl autos={autos} onWaehlen={einsteigen} onSchliessen={() => setGarageOffen(false)} />
       )}
       {meldung && <button className="saga3d-meldung" onClick={() => setMeldung("")}>{meldung}</button>}
     </div>

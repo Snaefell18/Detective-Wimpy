@@ -18,6 +18,14 @@ export type Kapitel3DVorgabe = {
   charakterGroessen: Record<string, number>;
   /** Zusätzliche Drehung je Straßenbaustein in Grad (0/90/180/270). */
   locationDrehungen: Record<string, number>;
+  /**
+   * Welcher Baustein die Tankstelle ist - dort steigt Wimpy in sein Auto.
+   *
+   * Leer heißt: Der Baustein wird am Namen erkannt (alles mit „Tank“ darin).
+   * So genügt es, eine `tankstelle-web.glb` in den Ordner zu legen; wer
+   * mehrere hat oder eine anders benannte nutzen will, wählt sie hier aus.
+   */
+  tankstelleId?: string;
 };
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
@@ -55,6 +63,7 @@ export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   charakterModelle: {},
   charakterGroessen: {},
   locationDrehungen: {},
+  tankstelleId: "",
 };
 
 export const locationsFuer3D = (ids: string[] | undefined) => {
@@ -68,5 +77,27 @@ export const locationsFuer3D = (ids: string[] | undefined) => {
 
 export const dateienFuer3D = (ids: string[] | undefined): string[] =>
   locationsFuer3D(ids).map((ort) => ort.datei);
+
+/** Woran eine Tankstelle ohne ausdrückliche Wahl zu erkennen ist. */
+const TANK_NAME = /tank|zapf|benzin|sprit|garage|werkstatt/i;
+
+/**
+ * Die Tankstelle unter den gewählten Bausteinen - oder nichts.
+ *
+ * Gewählt schlägt erkannt: Steht im Kapitel ausdrücklich eine Tankstelle und
+ * ist sie auch aufgebaut, gilt sie. Sonst entscheidet der Name, damit eine
+ * frisch hinzugefügte Datei ohne weiteres Zutun funktioniert.
+ */
+export function tankstelleAus(
+  ids: string[] | undefined,
+  gewaehlt?: string,
+): { id: string; name: string; datei: string } | null {
+  const gebaut = locationsFuer3D(ids);
+  if (gewaehlt) {
+    const genau = gebaut.find((ort) => ort.id === gewaehlt);
+    if (genau) return genau;
+  }
+  return gebaut.find((ort) => TANK_NAME.test(ort.id) || TANK_NAME.test(ort.name)) ?? null;
+}
 
 export const TOKYO_FASSADEN = DREI_D_LOCATIONS.map((ort) => ort.datei);

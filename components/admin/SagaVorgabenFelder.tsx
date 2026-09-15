@@ -730,6 +730,25 @@ export function SagaVorgabenFelder({
                       ) : null;
                     })}
                   </div>
+                  {/* Wo Wimpy in sein Auto steigt. Ohne Wahl erkennt das Spiel
+                      die Tankstelle am Namen des Bausteins. */}
+                  <label className="feld">
+                    <span className="leise klein">Tankstelle · hier steigt Wimpy ins Auto</span>
+                    <select
+                      value={vorgaben.kapitel3d?.[i]?.tankstelleId ?? ""}
+                      onChange={(e) => dreiDSetzen(i, { tankstelleId: e.target.value })}
+                    >
+                      <option value="">Automatisch erkennen (Name enthält „Tank“)</option>
+                      {(vorgaben.kapitel3d?.[i]?.locations?.length
+                        ? vorgaben.kapitel3d[i].locations
+                        : STANDARD_KAPITEL_3D.locations
+                      ).map((id) => (
+                        <option key={id} value={id}>
+                          {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <span className="leise klein">Straßentyp</span>
                   <div className="marken-reihe">
                     {DREI_D_STRASSENTYPEN.map((typ) => (

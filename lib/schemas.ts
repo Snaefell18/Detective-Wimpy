@@ -418,6 +418,8 @@ export const SagaVorgabenSchema = z.object({
         locationDrehungen: z
           .record(z.string().max(80), z.number().int().min(0).max(270))
           .default({}),
+        // Welcher Baustein die Tankstelle ist. Leer = am Namen erkennen.
+        tankstelleId: z.string().max(80).default("").catch(""),
       }),
     )
     .max(9)

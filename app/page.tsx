@@ -1369,6 +1369,9 @@ export default function Home() {
               charakterModelle={laufendesDreiDKapitel.charakterModelle ?? LEERE_DREI_D_MODELLE}
               charakterGroessen={laufendesDreiDKapitel.charakterGroessen ?? LEERE_DREI_D_DREHUNGEN}
               locationDrehungen={laufendesDreiDKapitel.locationDrehungen ?? LEERE_DREI_D_DREHUNGEN}
+              tankstelleId={laufendesDreiDKapitel.tankstelleId ?? ""}
+              besitz={geld.beutel.vorrat}
+              onAutoWaehlen={geld.autoWaehlen}
               gefundeneSpuren={stand.gefundeneSpuren}
               kapitel={laufendesKapitel}
               tasche={tasche.inhalt}

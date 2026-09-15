@@ -3,7 +3,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Nav } from "../components/Nav.tsx";
 import { kapitelPosition } from "../lib/saga3dLayout.ts";
-import { STANDARD_KAPITEL_3D } from "../lib/pursuit3d.ts";
+import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D, tankstelleAus } from "../lib/pursuit3d.ts";
 import { STANDARD_SAGA_VORGABEN, dreiDFuerKapitel } from "../lib/sagaTypen.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { POST } from "../app/api/search/route.ts";
@@ -91,4 +91,37 @@ assert.equal(unseal(fund.spur.siegel).bedeutung, "Geheim B", "Fund bleibt vor Ge
 assert.equal((await suchen({ itemId: "beweis-b" })).spur, null, "Falscher Ort darf keinen anderen Gegenstand liefern");
 assert.equal((await suchen({ itemId: "beweis-a", gefundeneSpuren: ["beweis-a"] })).spur, null);
 assert.equal((await suchen({})).spur.itemId, "beweis-a", "Normale 2D-Suche bleibt erhalten");
+/* --- Die Tankstelle: Wimpys Garage in der Stadt --------------------- */
+{
+  const ids = DREI_D_LOCATIONS.map((ort) => ort.id);
+  // Ausdrücklich gewählt gilt immer - auch ohne "Tank" im Namen.
+  assert.equal(tankstelleAus(ids, ids[0])?.id, ids[0], "Die gewählte Tankstelle wird genommen");
+  // Eine Wahl, die gar nicht aufgebaut wird, zählt nicht.
+  assert.equal(
+    tankstelleAus([ids[1]], ids[0])?.id ?? null,
+    null,
+    "Ein Baustein, der nicht in der Stadt steht, ist keine Tankstelle",
+  );
+  // Ohne Wahl entscheidet der Name - und ohne passenden Namen gibt es keine.
+  assert.equal(tankstelleAus(ids)?.id ?? null, null, "Noch liegt keine Tankstelle im Ordner");
+  const mitTanke = ["tankstelle", ...ids];
+  assert.equal(
+    tankstelleAus(mitTanke)?.id ?? "keine",
+    "keine",
+    "Ein unbekannter Baustein wird nicht einfach erfunden",
+  );
+
+  // Und die Wahl übersteht Speichern und Erzeugung.
+  const gespeichert = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, tankstelleId: ids[0] }],
+  });
+  assert.equal(gespeichert.data?.kapitel3d[0].tankstelleId, ids[0], "Die Tankstelle bleibt gespeichert");
+  const alt3d = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, tankstelleId: undefined }],
+  });
+  assert.equal(alt3d.data?.kapitel3d[0].tankstelleId, "", "Ältere Kapitel bleiben ohne Tankstelle gültig");
+}
+
 console.log("3D-Kapitel: erreichbare Figuren/Beweise, Konfiguration und echte Fund-API erfolgreich geprüft.");

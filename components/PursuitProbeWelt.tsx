@@ -29,6 +29,8 @@ export function PursuitProbeWelt({
     ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => modell.id),
   );
   const [drehungen, setDrehungen] = useState<Record<string, number>>({});
+  /** Welcher Baustein hier die Tankstelle ist - leer heißt: am Namen erkennen. */
+  const [tankstelle, setTankstelle] = useState("");
 
   if (spielt) {
     return (
@@ -39,6 +41,7 @@ export function PursuitProbeWelt({
         strassentyp={strassentyp}
         modellIds={["wimpy", ...modelle]}
         locationDrehungen={drehungen}
+        tankstelleId={tankstelle}
         onZurueck={() => setSpielt(false)}
         onSchliessen={onSchliessen}
       />
@@ -74,6 +77,18 @@ export function PursuitProbeWelt({
             );
           })}
         </div>
+        <h3>Tankstelle <span className="leise">· hier steigt Wimpy ins Auto</span></h3>
+        <label className="feld">
+          <select value={tankstelle} onChange={(e) => setTankstelle(e.target.value)}>
+            <option value="">Automatisch erkennen (Name enthält „Tank“)</option>
+            {locations.map((id) => (
+              <option key={id} value={id}>
+                {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="probe-drehungen">
           {locations.map((id) => {
             const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);

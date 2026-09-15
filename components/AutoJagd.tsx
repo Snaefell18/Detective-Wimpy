@@ -51,6 +51,47 @@ const HINDERNIS_ABSTAND = 140;
 
 const weich = (t: number) => t * t * (3 - 2 * t);
 
+/**
+ * Ein weicher runder Fleck als Textur - daraus werden Rauch und Schneefahne.
+ *
+ * Gemalt statt geladen: Eine Datei mehr im Netz wäre für einen grauen Punkt
+ * nicht zu rechtfertigen, und so passt er sich jeder Auflösung an.
+ */
+function weicherPunkt(): THREE.CanvasTexture {
+  const leinwand = document.createElement("canvas");
+  leinwand.width = leinwand.height = 64;
+  const stift = leinwand.getContext("2d");
+  if (stift) {
+    const verlauf = stift.createRadialGradient(32, 32, 0, 32, 32, 32);
+    verlauf.addColorStop(0, "rgba(255,255,255,0.95)");
+    verlauf.addColorStop(0.45, "rgba(255,255,255,0.45)");
+    verlauf.addColorStop(1, "rgba(255,255,255,0)");
+    stift.fillStyle = verlauf;
+    stift.fillRect(0, 0, 64, 64);
+  }
+  return new THREE.CanvasTexture(leinwand);
+}
+
+/**
+ * Eine Wolke aus dem Vorrat.
+ *
+ * Statt ständig neue Objekte zu bauen, liegen immer dieselben bereit und
+ * werden wiederverwendet, sobald sie ausgeblendet sind - das hält die
+ * Bildrate auf dem Handy stabil.
+ */
+type Wolke = {
+  sprite: THREE.Sprite;
+  material: THREE.SpriteMaterial;
+  leben: number;
+  dauer: number;
+  tempo: THREE.Vector3;
+  start: number;
+  deckkraft: number;
+};
+
+/** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
+const RAD_NAME = /wheel|rad\b|reifen|tyre|tire|felge/i;
+
 function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, onBereit, onPhase }: {
   auto: Auto; flucht: Auto; spur: React.MutableRefObject<number>;
   /** Zusätzliche Drehung des Fluchtwagens in Grad - live veränderbar. */
@@ -133,6 +174,12 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       const mitte = box.getCenter(new THREE.Vector3());
       obj.position.set(-mitte.x, -box.min.y, -mitte.z);
       gruppe.add(obj);
+      /*
+       * Die beiden mitgelieferten Wagen sind je ein einziges Mesh - da gibt es
+       * nichts, was sich drehen ließe. Bringt ein später hinzugefügtes Modell
+       * benannte Räder mit, drehen die sich hier von selbst mit.
+       */
+      obj.traverse((teil) => { if (RAD_NAME.test(teil.name)) raeder.push(teil); });
     }
     /*
      * Wimpy am Straßenrand. Er gehört zur Anfahrt, nicht zur Jagd: Wenn sein
@@ -169,6 +216,80 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       await figurLaden().catch(() => undefined);
       if (!beendet) { bereit = true; callbacks.current.onBereit(); }
     }).catch(() => { if (!beendet) callbacks.current.onFehler('Ein Automodell konnte nicht geladen werden. Bitte erneut starten.'); });
+    /* --- Was Tempo sichtbar macht ------------------------------------ */
+    const raeder: THREE.Object3D[] = [];
+    const punkt = weicherPunkt();
+    ressourcen.add(punkt);
+    const vorrat = (anzahl: number, farbe: number, groesse: number, deckkraft: number): Wolke[] =>
+      Array.from({ length: anzahl }, () => {
+        const material = new THREE.SpriteMaterial({ map: punkt, color: farbe, transparent: true, opacity: 0, depthWrite: false });
+        ressourcen.add(material);
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.setScalar(groesse);
+        sprite.visible = false;
+        scene.add(sprite);
+        return { sprite, material, leben: 0, dauer: 1, tempo: new THREE.Vector3(), start: groesse, deckkraft };
+      });
+    // Auspuff: gräulich und träge. Schneefahne: weiß, kurz, dicht über dem Boden.
+    const rauch = vorrat(20, 0xa8bccd, 1, 0.58);
+    const fahne = vorrat(16, 0xffffff, 0.7, 0.34);
+    let rauchUhr = 0, fahneUhr = 0;
+    /**
+     * Eine freie Wolke ans Heck setzen.
+     *
+     * `tempoZ` ist bewusst nicht das echte Fahrtempo: Physikalisch bliebe der
+     * Qualm mit 40 Metern je Sekunde zurück und wäre im nächsten Bild nicht
+     * mehr da. Er zieht deshalb nur gemächlich ab - so sieht man ihn auch.
+     */
+    const qualmen = (
+      vorratListe: Wolke[], gruppe: THREE.Group, seite: number,
+      tempoZ: number, dauer: number, hoehe: number,
+    ) => {
+      const frei = vorratListe.find((w) => w.leben <= 0);
+      if (!frei) return;
+      frei.leben = dauer;
+      frei.dauer = dauer;
+      frei.sprite.position.set(
+        gruppe.position.x + seite + (Math.random() - 0.5) * 0.3,
+        hoehe,
+        gruppe.position.z - 1.35 + (Math.random() - 0.5) * 0.25,
+      );
+      frei.tempo.set((Math.random() - 0.5) * 0.5, 0.35 + Math.random() * 0.4, tempoZ);
+      frei.sprite.scale.setScalar(frei.start);
+      frei.sprite.visible = true;
+    };
+    /** Wolken altern lassen: aufsteigen, größer werden, ruhig verschwinden. */
+    const wolkenBewegen = (vorratListe: Wolke[], dt: number) => {
+      for (const w of vorratListe) {
+        if (w.leben <= 0) continue;
+        w.leben -= dt;
+        if (w.leben <= 0) { w.sprite.visible = false; w.material.opacity = 0; continue; }
+        w.sprite.position.addScaledVector(w.tempo, dt);
+        const anteil = w.leben / w.dauer;
+        // Sanft ein- und ausblenden - nichts blitzt, nichts springt.
+        w.material.opacity = w.deckkraft * Math.min(1, anteil * 2.2) * anteil;
+        w.sprite.scale.setScalar(w.start * (1 + (1 - anteil) * 1.6));
+      }
+    };
+    /**
+     * Tempostriche am Fahrbahnrand.
+     *
+     * Sie liegen weit außen, wo das Auge sie nicht verfolgt, und ziehen ruhig
+     * durch - kein Blinken, kein Flackern: nur ein Zug im Augenwinkel, der mit
+     * dem Tempo länger und deutlicher wird.
+     */
+    const striche = Array.from({ length: 14 }, (_, i) => {
+      const streifen = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.05, 3),
+        new THREE.MeshBasicMaterial({ color: 0xdff2ff, transparent: true, opacity: 0 }),
+      );
+      streifen.position.set((i % 2 ? -1 : 1) * (5.6 + (i % 3) * 0.5), 0.5 + (i % 4) * 0.35, i * 7 - 30);
+      scene.add(streifen);
+      ressourcen.add(streifen.geometry);
+      ressourcen.add(streifen.material);
+      return streifen;
+    });
+
     const hindernisse = Array.from({ length: 5 }, (_, i) => ({
       obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * HINDERNIS_ABSTAND), getroffen: false,
     }));
@@ -185,7 +306,7 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       phase = 'jagd';
       wimpy.visible = false;
       spieler.position.set(spur.current * 3.4, 0, 0);
-      spieler.rotation.y = 0;
+      spieler.rotation.set(0, 0, 0);
       gegner.position.set(0, 0, FLUCHT_FERN);
       camera.position.set(...KAMERA_JAGD.pos);
       camera.lookAt(...KAMERA_JAGD.ziel);
@@ -257,6 +378,15 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       // Der Wagen ist schon in Fahrt, wenn die Jagd übernimmt: kein Ruck.
       speed = auto.speed * 0.4 * anfahren;
       weltBewegen(speed / 3.6 * dt);
+      // Der Motor läuft schon, während Wimpy noch zusieht: ein ruhiger
+      // Standgasqualm, der beim Anfahren kräftiger wird.
+      rauchUhr -= dt;
+      if (rauchUhr <= 0) {
+        rauchUhr = anfahren > 0 ? 0.1 : 0.5;
+        qualmen(rauch, spieler, 0.5, -1 - anfahren * 4, anfahren > 0 ? 1 : 1.6, 0.42);
+      }
+      wolkenBewegen(rauch, dt);
+      wolkenBewegen(fahne, dt);
       if (t >= ANFAHRT.losfahren) losfahren();
     }
     function zeichnen(jetzt: number) {
@@ -301,6 +431,50 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
         if (h.obj.position.z < -15) { h.obj.position.z += HINDERNIS_ABSTAND * 5; h.obj.position.x = (Math.floor(Math.random() * 3) - 1) * 3.4; h.getroffen = false; }
       }
       weltBewegen(weg);
+
+      /* --- Was das Tempo sichtbar macht ------------------------------ */
+      const tempoAnteil = THREE.MathUtils.clamp(speed / Math.max(1, auto.speed), 0, 1);
+      // Auspuff: je schneller, desto dichter die Fahne hinter dem Wagen.
+      rauchUhr -= dt;
+      if (rauchUhr <= 0) {
+        rauchUhr = 0.14 - tempoAnteil * 0.08;
+        const abzug = -(2.5 + tempoAnteil * 5.5);
+        qualmen(rauch, spieler, 0.5, abzug, 0.9 + tempoAnteil * 0.5, 0.42);
+        qualmen(rauch, gegner, 0.5, abzug, 0.9, 0.5);
+      }
+      // Schneefahne von den Hinterrädern - erst ab ordentlichem Tempo.
+      fahneUhr -= dt;
+      if (fahneUhr <= 0 && tempoAnteil > 0.25) {
+        fahneUhr = 0.06;
+        qualmen(fahne, spieler, (Math.random() < 0.5 ? -1 : 1) * 0.75, -(3 + tempoAnteil * 7), 0.45 + tempoAnteil * 0.3, 0.18);
+      }
+      wolkenBewegen(rauch, dt);
+      wolkenBewegen(fahne, dt);
+
+      // Die Karosserie legt sich in den Spurwechsel und nickt beim Rempler.
+      const seitlich = (spur.current * 3.4 - spieler.position.x) / 3.4;
+      spieler.rotation.z = THREE.MathUtils.damp(spieler.rotation.z, -seitlich * 0.2, 6, dt);
+      spieler.rotation.x = THREE.MathUtils.damp(spieler.rotation.x, unverwundbar > 0 ? 0.05 : -0.015 * tempoAnteil, 5, dt);
+      // Und sie zittert bei hohem Tempo ganz leicht - spürbar, nicht sichtbar.
+      spieler.position.y = Math.sin(zeit * 34) * 0.012 * tempoAnteil;
+      gegner.position.y = Math.sin(zeit * 31 + 1.3) * 0.01;
+
+      // Räder, sofern das Modell welche mitbringt.
+      for (const rad of raeder) rad.rotation.x -= weg / dt * dt * 1.6;
+
+      // Tempostriche und ein ganz leicht weiteres Sichtfeld beim Vollgas.
+      for (const strich of striche) {
+        strich.position.z -= weg * 1.6;
+        if (strich.position.z < -34) strich.position.z += 98 + Math.random() * 6;
+        strich.scale.z = 0.6 + tempoAnteil * 2.4;
+        (strich.material as THREE.MeshBasicMaterial).opacity = Math.max(0, tempoAnteil - 0.3) * 0.75;
+      }
+      const sichtfeld = KAMERA_JAGD.fov + tempoAnteil * 4;
+      if (Math.abs(camera.fov - sichtfeld) > 0.01) {
+        camera.fov = THREE.MathUtils.damp(camera.fov, sichtfeld, 3, dt);
+        camera.updateProjectionMatrix();
+      }
+
       ausgabe += dt;
       if (ausgabe > 0.12 || treffer) { callbacks.current.onStand(Math.round(speed), Math.max(0, Math.round(abstand)), unverwundbar > 0); ausgabe = 0; }
       renderer.render(scene, camera);
