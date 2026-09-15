@@ -3,19 +3,88 @@ import type { Zubehoer } from './zubehoer';
 export { AUTO_MODELLE };
 export type Auto = Zubehoer & { modell: string; speed: number; beschleunigung: number; drehung: number };
 export const START_AUTO_ID = 'auto-start';
+
+/**
+ * Wimpys eigener Wagen: der RAV4.
+ *
+ * Er wird am Dateinamen erkannt, damit eine neu eingelegte `rav4.glb` ohne
+ * weiteres Zutun zum Startwagen wird. Fehlt sie noch, bleibt es beim ersten
+ * Modell im Ordner - besser ein anderer Wagen als gar keiner. Der Name folgt
+ * dem, was wirklich fährt: Steht kein RAV4 im Ordner, heißt er auch nicht so.
+ */
+const RAV4 = /rav\s*-?\s*4/i;
+
+const huebsch = (name: string) =>
+  name.replace(/[-_]+/g, ' ').replace(/\b\p{L}/gu, (buchstabe) => buchstabe.toLocaleUpperCase('de'));
+
 /*
  * Jedes 3D-Modell steht anders in seiner Datei. Gefahren wird in Richtung +z:
  * Der Ferrari zeigt dort von Haus aus hin, der Lambo liegt quer und muss um
- * 270 Grad gedreht werden - bei 90 Grad fuhr er rückwärts voraus. Ein eigenes
- * Modell stellt man im Autokatalog (`drehung`) oder für eine einzelne Jagd in
- * der Verfolgungsjagd selbst gerade.
+ * 270 Grad gedreht werden - bei 90 Grad fuhr er rückwärts voraus. Ein neues
+ * Modell fängt bei 0 an; fährt es verkehrt herum, stellt man es im
+ * Autokatalog (`drehung`) oder für eine einzelne Jagd in der
+ * Verfolgungsjagd selbst gerade.
  */
-export const STANDARD_AUTOS: Auto[] = AUTO_MODELLE.slice(0, 2).map((modell, i) => ({
-  id: i === 0 ? START_AUTO_ID : 'auto-sport', name: i === 0 ? 'Wimpys Ferrari' : 'Lamborghini',
-  modell: modell.id, speed: i === 0 ? 155 : 190, beschleunigung: i === 0 ? 28 : 38,
-  preis: i === 0 ? 0 : 1200, drehung: /lambo/i.test(modell.name) ? 270 : 0, bild: '', wirkung: 'auto', erstelltAm: 0,
-  beschreibung: 'Dein Wagen für die Verfolgungsjagd.',
-}));
+const drehungFuer = (modell: { name: string } | undefined) =>
+  modell && /lambo/i.test(modell.name) ? 270 : 0;
+
+type Modell = { id: string; name: string };
+
+const auto = (
+  id: string,
+  name: string,
+  modell: Modell | undefined,
+  speed: number,
+  beschleunigung: number,
+  preis: number,
+  beschreibung: string,
+): Auto[] =>
+  modell
+    ? [{
+        id, name, modell: modell.id, speed, beschleunigung, preis,
+        drehung: drehungFuer(modell), bild: '', wirkung: 'auto', erstelltAm: 0, beschreibung,
+      }]
+    : [];
+
+/**
+ * Was ohne eigenen Autokatalog in der Garage steht.
+ *
+ * Der Startwagen gehört Wimpy von Anfang an; die Sportwagen stehen im Laden.
+ * Sobald in der Datenbank ein Wagen mit derselben Id liegt, gilt der - hier
+ * steht nur, was es ohne Zutun gibt.
+ *
+ * Die Liste hängt an den Dateien im Ordner: Deshalb ist es eine Funktion und
+ * keine feste Liste - so lässt sich prüfen, was passiert, wenn eine dazukommt
+ * oder fehlt.
+ */
+export function standardAutos(modelle: Modell[]): Auto[] {
+  const mit = (muster: RegExp) =>
+    modelle.find((modell) => muster.test(modell.name) || muster.test(modell.id));
+  const start = mit(RAV4) ?? modelle[0];
+  const ferrari = mit(/ferrari/i);
+  const lambo = mit(/lambo/i);
+  return [
+    ...auto(
+      START_AUTO_ID,
+      start && RAV4.test(start.name) ? 'Wimpys RAV4' : `Wimpys ${huebsch(start?.name ?? 'Wagen')}`,
+      start,
+      155, 28, 0,
+      'Wimpys eigener Wagen. Nicht der schnellste, aber er springt immer an.',
+    ),
+    // Der Ferrari ist nicht mehr Wimpys Wagen, sondern einer zum Kaufen -
+    // außer er muss mangels RAV4 selbst als Startwagen herhalten.
+    ...(ferrari && ferrari.id !== start?.id
+      ? auto('auto-ferrari', 'Ferrari', ferrari, 205, 34, 900,
+          'Schnell auf der Geraden, nervös in der Kurve.')
+      : []),
+    ...(lambo && lambo.id !== start?.id
+      ? auto('auto-sport', 'Lamborghini', lambo, 190, 38, 1200,
+          'Zieht an wie nichts anderes in der Stadt.')
+      : []),
+  ];
+}
+
+export const STANDARD_AUTOS: Auto[] = standardAutos(AUTO_MODELLE);
 export function autoGueltig(auto: Auto) {
   return Boolean(auto.name.trim()) && AUTO_MODELLE.some(m => m.id === auto.modell)
     && Number.isFinite(auto.speed) && auto.speed >= 60 && auto.speed <= 320
