@@ -147,6 +147,44 @@ function naturStrassenTextur(schnee: boolean) {
   return textur;
 }
 
+/**
+ * Asphalt fürs Stadtraster.
+ *
+ * Eine glatte Farbfläche verrät sofort, dass hier nichts weiter ist als ein
+ * Rechteck. Ein wenig Korn, ein paar Flicken und Risse kosten nichts - sie
+ * werden hier gerechnet, nicht geladen - und geben der Straße eine Oberfläche,
+ * auf der das Licht etwas zu tun hat.
+ */
+function asphaltTextur(nacht: boolean) {
+  const kante = 256;
+  const pixel = new Uint8Array(kante * kante * 4);
+  const zufall = (x: number, y: number) => {
+    const wert = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return wert - Math.floor(wert);
+  };
+  const basis = nacht ? [34, 42, 56] : [78, 86, 94];
+  for (let y = 0; y < kante; y++) {
+    for (let x = 0; x < kante; x++) {
+      const korn = (zufall(x, y) - 0.5) * 22;
+      // Große, weiche Flecken: ausgebesserte Stellen im Belag.
+      const flicken =
+        Math.sin(x * 0.045 + Math.cos(y * 0.031) * 2) * Math.cos(y * 0.037) * 9;
+      // Ein paar dünne Risse quer über die Fläche.
+      const riss = Math.abs(Math.sin(x * 0.11 + y * 0.047)) > 0.995 ? -26 : 0;
+      const farbe = basis.map((wert) =>
+        THREE.MathUtils.clamp(wert + korn + flicken + riss, 0, 255),
+      );
+      pixel.set([...farbe, 255], (y * kante + x) * 4);
+    }
+  }
+  const textur = new THREE.DataTexture(pixel, kante, kante, THREE.RGBAFormat);
+  textur.colorSpace = THREE.SRGBColorSpace;
+  textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
+  textur.magFilter = THREE.LinearFilter;
+  textur.needsUpdate = true;
+  return textur;
+}
+
 function schneeflockenTextur() {
   const pixel = new Uint8Array(32 * 32 * 4);
   for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
@@ -159,10 +197,28 @@ function schneeflockenTextur() {
   return textur;
 }
 
+/**
+ * Wie stark die Kulisse aus sich selbst leuchtet.
+ *
+ * Die Stadtbausteine bringen kein Leuchten mit - ihre Neonschilder sind nur
+ * aufgemalt und bleiben deshalb nachts genauso dunkel wie eine Hauswand.
+ * Darum wird die Farbtextur zusätzlich als Leuchttextur gesetzt: Helle
+ * Stellen (Schilder, Fenster, Lampen) geben dann Licht ab, dunkle kaum. Das
+ * kostet nichts und macht aus einer flachen Nacht eine Stadt.
+ */
+const LEUCHTEN: Record<DreiDTageszeit, number> = {
+  nacht: 0.62,
+  abend: 0.34,
+  morgen: 0.12,
+  tag: 0,
+};
+
 function cellShading(
   objekt: THREE.Object3D,
   gradient: THREE.Texture,
   clippingPlanes: THREE.Plane[] = [],
+  /** 0 = gar nicht, 1 = volle Eigenhelligkeit. Nur für Kulissen. */
+  leuchten = 0,
 ) {
   objekt.traverse((kind) => {
     if (!(kind instanceof THREE.Mesh)) return;
@@ -182,6 +238,9 @@ function cellShading(
         opacity: quelle.opacity,
         alphaTest: quelle.alphaTest,
         side: quelle.side,
+        emissive: new THREE.Color(leuchten > 0 ? 0xffffff : 0x000000),
+        emissiveMap: leuchten > 0 ? (quelle.emissiveMap ?? quelle.map ?? null) : null,
+        emissiveIntensity: leuchten,
       });
       materialNeu.clippingPlanes = clippingPlanes;
       materialNeu.clipShadows = clippingPlanes.length > 0;
@@ -231,30 +290,60 @@ function kulisseEinpassen(objekt: THREE.Object3D, zusaetzlicheDrehung: number) {
 }
 
 /**
- * Denselben Baustein als Gebäude auf ein Rasterfeld stellen.
+ * Einen Baustein als Gebäude auf ein Rasterfeld stellen.
  *
- * Im Straßenzug liegt ein Baustein längs an der Fahrbahnkante; auf dem
- * Stadtplan steht er auf einem Feld und darf nicht darüber hinausragen -
- * sonst stünde die Nachbarstraße in seiner Wand.
+ * Damit aus Feldern eine Straße wird und keine Reihe einzeln stehender
+ * Klötze, geschieht dreierlei:
+ *
+ * 1. Das Haus dreht sich zur Straße. Die Bausteine schauen in ihrer Datei
+ *    nach +z; `richtung` ist der Weg zum Nachbarfeld mit Fahrbahn.
+ * 2. Es wird so skaliert, dass seine Breite entlang der Straße genau ein
+ *    Feld füllt - dann stoßen benachbarte Häuser ohne Lücke aneinander und
+ *    ergeben eine geschlossene Häuserzeile.
+ * 3. Seine Vorderkante rückt an die Feldgrenze zur Straße. Was es in die
+ *    Tiefe braucht, wächst nach hinten, nicht in die Fahrbahn.
  */
-function aufFeldEinpassen(objekt: THREE.Object3D, drehung: number) {
-  objekt.updateMatrixWorld(true);
-  const roh = new THREE.Box3().setFromObject(objekt);
-  const groesse = roh.getSize(new THREE.Vector3());
-  const platz = FELD_GROESSE * 0.94;
-  objekt.scale.multiplyScalar(
-    Math.min(
-      11 / Math.max(0.001, groesse.y),
-      platz / Math.max(0.001, groesse.x, groesse.z),
-    ),
-  );
-  objekt.rotation.y = THREE.MathUtils.degToRad(drehung);
+function aufFeldEinpassen(
+  objekt: THREE.Object3D,
+  richtung: { x: number; z: number } | null,
+  drehung: number,
+) {
+  const blick = richtung ? Math.atan2(richtung.x, richtung.z) : 0;
+  objekt.rotation.y = blick + THREE.MathUtils.degToRad(drehung);
   objekt.updateMatrixWorld(true);
   const gedreht = new THREE.Box3().setFromObject(objekt);
-  const mitte = gedreht.getCenter(new THREE.Vector3());
-  objekt.position.x -= mitte.x;
-  objekt.position.z -= mitte.z;
-  objekt.position.y -= gedreht.min.y;
+  const groesse = gedreht.getSize(new THREE.Vector3());
+  // Quer zur Blickrichtung liegt die Straßenfront, längs die Bautiefe.
+  const laengsX = Math.abs(richtung?.x ?? 0) > Math.abs(richtung?.z ?? 0);
+  const front = laengsX ? groesse.z : groesse.x;
+  const tiefe = laengsX ? groesse.x : groesse.z;
+  objekt.scale.multiplyScalar(
+    Math.min(
+      FELD_GROESSE / Math.max(0.001, front),
+      // Ein sehr tiefer Baustein würde sonst durch die Rückseite des
+      // Nachbarfeldes stoßen.
+      (FELD_GROESSE * 1.4) / Math.max(0.001, tiefe),
+      16 / Math.max(0.001, groesse.y),
+    ),
+  );
+  objekt.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(objekt);
+  const mitte = box.getCenter(new THREE.Vector3());
+  objekt.position.y -= box.min.y;
+  // Quer zur Straße mittig, zur Straße hin bündig an die Feldkante.
+  const kante = FELD_GROESSE / 2 - 0.55;
+  if (!richtung) {
+    objekt.position.x -= mitte.x;
+    objekt.position.z -= mitte.z;
+    return;
+  }
+  if (laengsX) {
+    objekt.position.z -= mitte.z;
+    objekt.position.x += Math.sign(richtung.x) * kante - (richtung.x > 0 ? box.max.x : box.min.x);
+  } else {
+    objekt.position.x -= mitte.x;
+    objekt.position.z += Math.sign(richtung.z) * kante - (richtung.z > 0 ? box.max.z : box.min.z);
+  }
 }
 
 function KapitelCanvas({
@@ -404,10 +493,12 @@ function KapitelCanvas({
         : strassentyp === "sand"
           ? 0xb59468
           : tageszeit === "nacht"
-            ? 0x30404a
-            : wetter === "regen"
-              ? 0x46605c
-              : 0x7d9472
+            ? 0x1d2732
+            : tageszeit === "abend"
+              ? 0x5a4a55
+              : wetter === "regen"
+                ? 0x3f4c52
+                : 0x6b7166
       : strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
@@ -417,11 +508,14 @@ function KapitelCanvas({
     boden.position.z = stadtplan ? 0 : -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    const asphalt =
+      stadtplan && strassentyp === "asphalt" ? asphaltTextur(tageszeit === "nacht") : null;
+    if (asphalt) ressourcen.add(asphalt);
     const fahrbahnMaterial = new THREE.MeshToonMaterial({
-      map: strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : null,
+      map: strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : asphalt,
       color: strassentyp !== "asphalt"
         ? wetter === "regen" ? 0xb1a18a : 0xffffff
-        : wetter === "regen" ? 0x263a4a : tageszeit === "nacht" ? 0x202b3c : stadtplan ? 0x3a4553 : 0x52606c,
+        : wetter === "regen" ? 0x263a4a : stadtplan ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
       gradientMap: gradient,
     });
     if (stadtplan) {
@@ -430,16 +524,65 @@ function KapitelCanvas({
       // Fahrbahn, wo im Plan eine steht.
       const feldGeometrie = new THREE.PlaneGeometry(FELD_GROESSE, FELD_GROESSE);
       ressourcen.add(feldGeometrie);
-      // Ein heller Punkt in der Feldmitte macht Kreuzungen und Verläufe
-      // lesbar, ohne dass irgendetwas blinkt.
-      const markeGeometrie = new THREE.PlaneGeometry(0.5, 0.5);
-      const markeMaterial = new THREE.MeshBasicMaterial({
-        color: strassentyp === "asphalt" ? 0x74eaff : 0xcfd8c8,
-        transparent: true,
-        opacity: 0.5,
+      /*
+       * Was aus einer Fläche eine Straße macht: ein Bordstein dort, wo die
+       * Fahrbahn aufhört, und eine Mittellinie, wo sie geradeaus weiterläuft.
+       * Beides kostet fast nichts und trägt fast alles - ohne sie sieht das
+       * Raster aus wie ein Parkplatz.
+       */
+      const bordGeometrie = new THREE.BoxGeometry(FELD_GROESSE, 0.34, 1.1);
+      const bordMaterial = new THREE.MeshToonMaterial({
+        color: strassentyp === "schnee" ? 0xdae8f2 : tageszeit === "nacht" ? 0x4a5464 : 0xb9bfae,
+        gradientMap: gradient,
       });
-      ressourcen.add(markeGeometrie);
-      ressourcen.add(markeMaterial);
+      const strichGeometrie = new THREE.PlaneGeometry(0.16, 2.2);
+      const strichMaterial = new THREE.MeshBasicMaterial({
+        color: strassentyp === "asphalt" ? 0xe8e2b8 : 0xdfe7ea,
+        transparent: true,
+        opacity: 0.65,
+      });
+      for (const geo of [bordGeometrie, strichGeometrie]) ressourcen.add(geo);
+      for (const mat of [bordMaterial, strichMaterial]) ressourcen.add(mat);
+
+      /*
+       * Straßenlaternen.
+       *
+       * Sie tragen die Nacht: ein dunkler Mast, ein leuchtender Kopf und ein
+       * weicher Lichtteppich auf dem Asphalt. Echte Lichtquellen wären für
+       * ein Handy zu teuer - das hier kostet drei kleine Meshes je Laterne
+       * und sieht auf dem Bildschirm genauso aus.
+       */
+      const nachts = tageszeit === "nacht" || tageszeit === "abend";
+      const mastGeometrie = new THREE.CylinderGeometry(0.07, 0.09, 3.4, 6);
+      const mastMaterial = new THREE.MeshToonMaterial({ color: 0x2b3440, gradientMap: gradient });
+      const kopfGeometrie = new THREE.BoxGeometry(0.5, 0.18, 0.32);
+      const kopfMaterial = new THREE.MeshBasicMaterial({ color: nachts ? 0xffe6ae : 0xdfe4e8 });
+      const scheinGeometrie = new THREE.CircleGeometry(2.6, 18);
+      const scheinMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffd79a,
+        transparent: true,
+        opacity: tageszeit === "nacht" ? 0.16 : tageszeit === "abend" ? 0.09 : 0,
+        depthWrite: false,
+      });
+      for (const geo of [mastGeometrie, kopfGeometrie, scheinGeometrie]) ressourcen.add(geo);
+      for (const mat of [mastMaterial, kopfMaterial, scheinMaterial]) ressourcen.add(mat);
+      const laterne = (x: number, z: number, nach: { x: number; z: number }) => {
+        const mast = new THREE.Mesh(mastGeometrie, mastMaterial);
+        mast.position.set(x, 1.7, z);
+        mast.castShadow = true;
+        scene.add(mast);
+        const kopf = new THREE.Mesh(kopfGeometrie, kopfMaterial);
+        kopf.position.set(x - nach.x * 0.35, 3.35, z - nach.z * 0.35);
+        kopf.rotation.y = Math.atan2(nach.x, nach.z);
+        scene.add(kopf);
+        if (scheinMaterial.opacity > 0) {
+          const schein = new THREE.Mesh(scheinGeometrie, scheinMaterial);
+          schein.rotation.x = -Math.PI / 2;
+          schein.position.set(x - nach.x * 1.1, 0.05, z - nach.z * 1.1);
+          scene.add(schein);
+        }
+      };
+
       for (const feld of strassenFelder(stadtplan)) {
         const mitte = feldMitte(stadtplan, feld.x, feld.z);
         const flaeche = new THREE.Mesh(feldGeometrie, fahrbahnMaterial);
@@ -447,10 +590,52 @@ function KapitelCanvas({
         flaeche.position.set(mitte.x, 0.012, mitte.z);
         flaeche.receiveShadow = true;
         scene.add(flaeche);
-        const marke = new THREE.Mesh(markeGeometrie, markeMaterial);
-        marke.rotation.x = -Math.PI / 2;
-        marke.position.set(mitte.x, 0.03, mitte.z);
-        scene.add(marke);
+
+        const nachbarn = {
+          nord: istStrasse(stadtplan, feld.x, feld.z - 1),
+          sued: istStrasse(stadtplan, feld.x, feld.z + 1),
+          west: istStrasse(stadtplan, feld.x - 1, feld.z),
+          ost: istStrasse(stadtplan, feld.x + 1, feld.z),
+        };
+        // Bordstein an jeder Kante ohne Fahrbahn dahinter.
+        const kante = FELD_GROESSE / 2 - 0.4;
+        for (const [seite, offen] of Object.entries(nachbarn)) {
+          if (offen) continue;
+          const bord = new THREE.Mesh(bordGeometrie, bordMaterial);
+          bord.castShadow = true;
+          bord.receiveShadow = true;
+          if (seite === "nord" || seite === "sued") {
+            bord.position.set(mitte.x, 0.17, mitte.z + (seite === "sued" ? kante : -kante));
+          } else {
+            bord.rotation.y = Math.PI / 2;
+            bord.position.set(mitte.x + (seite === "ost" ? kante : -kante), 0.17, mitte.z);
+          }
+          scene.add(bord);
+          // Jede zweite Ecke bekommt eine Laterne - dichter wäre Kirmes.
+          if ((feld.x + feld.z) % 2 === 0) {
+            const nach =
+              seite === "nord" ? { x: 0, z: -1 }
+                : seite === "sued" ? { x: 0, z: 1 }
+                  : seite === "ost" ? { x: 1, z: 0 }
+                    : { x: -1, z: 0 };
+            laterne(mitte.x + nach.x * kante, mitte.z + nach.z * kante, nach);
+          }
+        }
+        // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen.
+        const laengs = nachbarn.nord && nachbarn.sued && !nachbarn.west && !nachbarn.ost;
+        const quer = nachbarn.west && nachbarn.ost && !nachbarn.nord && !nachbarn.sued;
+        if (laengs || quer) {
+          for (const versatz of [-2.4, 0, 2.4]) {
+            const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
+            strich.rotation.x = -Math.PI / 2;
+            if (laengs) strich.position.set(mitte.x, 0.03, mitte.z + versatz);
+            else {
+              strich.rotation.z = Math.PI / 2;
+              strich.position.set(mitte.x + versatz, 0.03, mitte.z);
+            }
+            scene.add(strich);
+          }
+        }
       }
     } else {
       const fahrbahn = new THREE.Mesh(
@@ -611,29 +796,28 @@ function KapitelCanvas({
         kulissenFehler = ergebnisse.some((ergebnis) => ergebnis.status === "rejected");
         for (const ergebnis of ergebnisse) {
           if (ergebnis.status !== "fulfilled") continue;
-          cellShading(ergebnis.value.szene, gradient);
+          cellShading(ergebnis.value.szene, gradient, [], LEUCHTEN[tageszeit] ?? 0);
           registrieren(ergebnis.value.szene);
           geladen.set(ergebnis.value.id, ergebnis.value.szene);
         }
         for (const feld of felder) {
           const vorlage = geladen.get(feld.id);
           if (!vorlage) continue;
+          // Zu welcher Straße schaut das Haus? Die erste, die danebenliegt.
+          const nachbar = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+            .map(([dx, dz]) => ({ x: dx, z: dz }))
+            .find((weg) => istStrasse(stadtplan, feld.x + weg.x, feld.z + weg.z)) ?? null;
           const haus = vorlage.clone(true);
-          aufFeldEinpassen(haus, feld.drehung);
+          aufFeldEinpassen(haus, nachbar, feld.drehung);
           const mitte = feldMitte(stadtplan, feld.x, feld.z);
           const block = new THREE.Group();
           block.add(haus);
           block.position.set(mitte.x, 0, mitte.z);
           scene.add(block);
           // Steht hier die Tankstelle, liegt ihr Stellplatz auf der Straße davor.
-          if (tankstelle && feld.id === tankstelle.id && tankPlatz === null) {
-            const nachbar = [[0, 1], [0, -1], [1, 0], [-1, 0]]
-              .map(([dx, dz]) => ({ x: feld.x + dx, z: feld.z + dz }))
-              .find((nach) => istStrasse(stadtplan, nach.x, nach.z));
-            if (nachbar) {
-              const platz = feldMitte(stadtplan, nachbar.x, nachbar.z);
-              tankPlatz = new THREE.Vector3(platz.x, 0, platz.z);
-            }
+          if (tankstelle && feld.id === tankstelle.id && tankPlatz === null && nachbar) {
+            const platz = feldMitte(stadtplan, feld.x + nachbar.x, feld.z + nachbar.z);
+            tankPlatz = new THREE.Vector3(platz.x, 0, platz.z);
           }
         }
       } else {
@@ -645,7 +829,7 @@ function KapitelCanvas({
       const vorlagen = kulissen.flatMap((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
-        cellShading(vorlage, gradient);
+        cellShading(vorlage, gradient, [], LEUCHTEN[tageszeit] ?? 0);
         registrieren(vorlage);
         const ort = locationEintraege[index];
         const ausmass = kulisseEinpassen(vorlage, locationDrehungen[ort.id] ?? 0);
