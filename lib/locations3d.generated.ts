@@ -11,6 +11,11 @@ export const GENERIERTE_3D_LOCATIONS = [
     "datei": "/3d_locations/boulderbeach-web.glb"
   },
   {
+    "id": "donki2",
+    "name": "Donki2",
+    "datei": "/3d_locations/donki2-web.glb"
+  },
+  {
     "id": "residential",
     "name": "Residential",
     "datei": "/3d_locations/residential-web.glb"
@@ -24,6 +29,11 @@ export const GENERIERTE_3D_LOCATIONS = [
     "id": "tokyo1",
     "name": "Tokyo1",
     "datei": "/3d_locations/tokyo1-web.glb"
+  },
+  {
+    "id": "tokyocanal",
+    "name": "Tokyocanal",
+    "datei": "/3d_locations/tokyocanal-web.glb"
   },
   {
     "id": "waterfront",

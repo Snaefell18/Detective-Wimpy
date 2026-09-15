@@ -8,3 +8,5 @@ out
 next-env.d.ts
 .DS_Store
 .next-build
+public/3d_locations/*.glb
+!public/3d_locations/*-web.glb
