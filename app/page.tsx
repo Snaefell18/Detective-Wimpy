@@ -41,6 +41,8 @@ import { arcAbspann, type Arc } from "@/lib/arcTypen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
 import { dreiDFuerSagaFall } from "@/lib/saga3dSync";
+import { dreiDDateien, jagdDateien, vorladen } from "@/lib/vorladen";
+import { dreiDFuerKapitel } from "@/lib/sagaTypen";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
@@ -357,6 +359,47 @@ export default function Home() {
 
   const laufendesDreiDKapitel = saga.stand && stand.fall
     ? dreiDFuerSagaFall(saga.stand.saga, stand.fall.id) : null;
+
+  /*
+   * Die großen 3D-Dateien holen, solange noch gelesen wird.
+   *
+   * Vorspann, Auftakt und Erzählertext dauern zusammen gut eine Minute -
+   * genug, um eine ganze Stadt samt Figuren zu laden. Angestoßen wird das,
+   * sobald feststeht, welches Kapitel als Nächstes drankommt; die Szene
+   * findet die Dateien später im Zwischenspeicher und baut sofort auf.
+   */
+  const sagaId = saga.stand?.saga.id;
+  const laufPhase = saga.stand?.lauf.phase;
+  const laufKapitel = saga.stand?.lauf.kapitel;
+  useEffect(() => {
+    const stand3d = saga.stand;
+    if (!stand3d) return;
+    const { saga: sagaDaten, lauf } = stand3d;
+    const finale = lauf.phase === "finale" || lauf.phase === "finale-erzaehler" || lauf.phase === "verhandlung";
+    const index = finale ? sagaDaten.vorgaben.kapitelAnzahl : lauf.kapitel;
+    const konfiguration = dreiDFuerKapitel(sagaDaten.vorgaben, index);
+    if (konfiguration) {
+      const besetzung = finale
+        ? sagaDaten.finale?.fall?.besetzung
+        : sagaDaten.kapitel[index]?.fall?.besetzung;
+      void vorladen(dreiDDateien(konfiguration, besetzung ?? []));
+    }
+    // Steht als Nächstes eine Verfolgungsjagd an, gilt dasselbe für die Wagen.
+    if (lauf.phase === "verfolgung") {
+      const jagd = verfolgungNach(sagaDaten.vorgaben, lauf.kapitel);
+      const mitModell = (id: string) => {
+        const stueck = zubehoer.find((eintrag) => eintrag.id === id) as { modell?: string } | undefined;
+        return typeof stueck?.modell === "string" ? [{ modell: stueck.modell }] : [];
+      };
+      const wagen = [
+        ...mitModell(geld.beutel.autoId ?? ""),
+        ...mitModell(jagd?.fluchtAutoId ?? "auto-sport"),
+      ];
+      void vorladen(jagdDateien(wagen, sagaBesetzung(sagaDaten).find((c) => c.istDetektiv)));
+    }
+    // Die Fall-Id ändert sich mitten im Kapitel nicht - der Rest genügt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sagaId, laufPhase, laufKapitel]);
 
   /**
    * Das Geschenk nach einem gelösten Kapitel.

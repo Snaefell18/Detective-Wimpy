@@ -8,6 +8,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import { kapitelPosition } from "@/lib/saga3dLayout";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
+import { vergessen } from "@/lib/vorladen";
 import {
   STILLSTAND,
   angeeckt,
@@ -790,12 +791,25 @@ function KapitelCanvas({
     let aktiveAktion: THREE.AnimationAction | null = null;
     let letzteNaehe = "";
 
+    /*
+     * Der Zwischenspeicher von Three.js.
+     *
+     * Wurde eine Datei schon während des Vorspanns geholt (lib/vorladen.ts),
+     * liegt sie hier und geht nicht ein zweites Mal durch die Leitung.
+     * Ausgepackt wird sie trotzdem frisch - nur so darf die Szene beim
+     * Verlassen alles wieder freigeben, ohne einem späteren Aufbau die
+     * Geometrie unter den Füßen wegzuziehen.
+     */
+    THREE.Cache.enabled = true;
     const modelle = new Map<string, ReturnType<typeof loader.loadAsync>>();
     const laden = (datei: string) => {
       let ladung = modelle.get(datei);
       if (!ladung) {
         ladung = loader.loadAsync(datei).then((gltf) => {
           registrieren(gltf.scene);
+          // Die Rohdaten haben ihren Dienst getan; behalten würde nur Speicher
+          // kosten, den ein Handy woanders braucht.
+          void vergessen(datei);
           if (beendet) freigeben();
           return gltf;
         });
