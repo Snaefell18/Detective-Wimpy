@@ -36,11 +36,13 @@ import {
   istStrasse,
   planAusmass,
   planGueltig,
+  sichtFelder,
   startFeld,
   strassenFelder,
   verteilen,
   type Stadtplan,
 } from "@/lib/stadtplan";
+import { REGEL_START, leistungsProfil, nachregeln } from "@/lib/dreiDLeistung";
 import type { DreiDStrassentyp, DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
 import type { Character, PublicCase } from "@/lib/types";
 import type { Fund } from "@/lib/useGame";
@@ -473,6 +475,79 @@ function KapitelCanvas({
       if (kind instanceof THREE.SkinnedMesh) ressourcen.add(kind.skeleton);
     });
     const freigeben = () => { ressourcen.forEach((r) => r.dispose()); ressourcen.clear(); };
+    /*
+     * Zwei Bauweisen, dieselbe Stadt.
+     *
+     * Ohne Plan bleibt alles wie gehabt: ein Straßenzug, 9 Meter breit, an
+     * dem die Bausteine aufgereiht sind. Mit Plan wird Feld für Feld gelegt.
+     */
+    const stadtplan = planGueltig(bauplan.plan) ? bauplan.plan : null;
+    /*
+     * Und noch bevor das erste Haus steht: Was verträgt dieses Gerät? Eine
+     * selbst gelegte Stadt aus vierzig Bausteinen ist auf dem MacBook ein
+     * Spiel und auf dem iPhone ein Absturz - also entscheidet lib/dreiDLeistung
+     * vorab über Sichtweite, Schatten, Auflösung und Texturgröße.
+     */
+    const profil = leistungsProfil(stadtplan);
+    /*
+     * Texturen kleinrechnen.
+     *
+     * Hier steckt der Absturz. Ein Baustein bringt drei Texturen mit, und
+     * eine 2048er Textur belegt entpackt 16 Megabyte - einmal auf der
+     * Grafikkarte und noch einmal daneben, solange das geladene Bild selbst
+     * herumliegt. Fünf Bauarten sind so ein halbes Gigabyte, und dann macht
+     * Safari den Tab zu. Verkleinert und das Original geschlossen bleibt
+     * davon ein Bruchteil - und auf einem Handybildschirm sieht man den
+     * Unterschied nicht.
+     */
+    const texturenVerkleinern = (objekt: THREE.Object3D, grenze: number) => {
+      const erledigt = new Set<THREE.Texture>();
+      objekt.traverse((kind) => {
+        if (!(kind instanceof THREE.Mesh)) return;
+        for (const material of Array.isArray(kind.material) ? kind.material : [kind.material]) {
+          for (const wert of Object.values(material)) {
+            if (!(wert instanceof THREE.Texture) || erledigt.has(wert)) continue;
+            erledigt.add(wert);
+            const bild = wert.image as { width?: number; height?: number } | null;
+            const breite = Number(bild?.width) || 0;
+            const hoehe = Number(bild?.height) || 0;
+            if (!breite || !hoehe || Math.max(breite, hoehe) <= grenze) continue;
+            const faktor = grenze / Math.max(breite, hoehe);
+            const leinwand = document.createElement("canvas");
+            leinwand.width = Math.max(1, Math.round(breite * faktor));
+            leinwand.height = Math.max(1, Math.round(hoehe * faktor));
+            const stift = leinwand.getContext("2d");
+            if (!stift) continue;
+            try {
+              stift.drawImage(bild as CanvasImageSource, 0, 0, leinwand.width, leinwand.height);
+            } catch {
+              continue;
+            }
+            if (typeof ImageBitmap !== "undefined" && bild instanceof ImageBitmap) bild.close();
+            wert.image = leinwand;
+            wert.needsUpdate = true;
+          }
+        }
+      });
+    };
+    /*
+     * Was auf dem Stadtplan feldweise gebaut wird, bleibt auch feldweise
+     * ansprechbar: ein Eintrag je Haus und je Straßenschmuck. Daraus lebt
+     * beides - das Wegblenden dessen, was der Kamera im Weg steht, und das
+     * Weglassen dessen, was ohnehin im Nebel steht.
+     */
+    const stadtBloecke: {
+      gruppe: THREE.Object3D;
+      mitte: THREE.Vector3;
+      /** Nur Häuser: eigene Materialien, um eines allein wegblenden zu können. */
+      materialien: THREE.Material[];
+      /** Nur Häuser: auf welchem Rasterfeld es steht. */
+      feld: { x: number; z: number } | null;
+      /** 1 = voll da, 0 = weggeblendet. */
+      sicht: number;
+    }[] = [];
+    /** Auf welchen Feldern tatsächlich ein Haus steht - "x,z". */
+    const hausFelder = new Set<string>();
     const scene = new THREE.Scene();
     const himmel = {
       morgen: 0xf3a979,
@@ -485,19 +560,30 @@ function KapitelCanvas({
     const nebel = dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
     // Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m entfernt).
-    scene.fog = new THREE.Fog(nebel, dunst ? 17 : wetter === "regen" ? 13 : 20, dunst ? 36 : wetter === "regen" ? 48 : 68);
+    const nebelNah = dunst ? 17 : wetter === "regen" ? 13 : 20;
+    const nebelFern = dunst ? 36 : wetter === "regen" ? 48 : 68;
+    /*
+     * Auf dem Stadtplan endet der Nebel spätestens dort, wo das Gerät
+     * aufhört zu zeichnen. Dann verschwindet ein Haus im Dunst, statt vor
+     * den Augen wegzuspringen - und der Nebel steht ohnehin gut in einer
+     * Stadt, in der die Laternen an sind.
+     */
+    const nebelGrenze = stadtplan ? Math.min(nebelFern, profil.sichtweite) : nebelFern;
+    scene.fog = new THREE.Fog(nebel, Math.min(nebelNah, nebelGrenze * 0.45), nebelGrenze);
     const gradient = gradientTextur();
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 120);
+    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, Math.min(120, nebelGrenze + 35));
     camera.position.set(-9.5, 5.1, 13.8);
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer = new THREE.WebGLRenderer({ antialias: profil.kantenglaettung, alpha: false });
     } catch {
       setLadeFehler("3D konnte nicht gestartet werden. Bitte erneut versuchen.");
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, profil.pixelGrenze));
+    // Schatten sind ein zweiter Durchgang durch die halbe Stadt. Auf dem
+    // Handy ist das genau der Durchgang, der zu viel ist.
+    renderer.shadowMap.enabled = profil.schatten;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
@@ -516,16 +602,9 @@ function KapitelCanvas({
       wetter === "sonne" ? 5.2 : dunst ? 0.9 : wetter === "regen" || schneeWetter ? 1.5 : 2.8,
     );
     licht.position.set(-8, 14, 9);
-    licht.castShadow = true;
+    licht.castShadow = profil.schatten;
     licht.shadow.mapSize.set(1024, 1024);
     scene.add(licht);
-    /*
-     * Zwei Bauweisen, dieselbe Stadt.
-     *
-     * Ohne Plan bleibt alles wie gehabt: ein Straßenzug, 9 Meter breit, an
-     * dem die Bausteine aufgereiht sind. Mit Plan wird Feld für Feld gelegt.
-     */
-    const stadtplan = planGueltig(bauplan.plan) ? bauplan.plan : null;
     // Der Straßenzug behält seinen gewohnten Boden; der Stadtplan bekommt
     // genau seine Rasterfläche plus einen Rand, damit nichts abbricht.
     const ausmass = stadtplan
@@ -611,20 +690,22 @@ function KapitelCanvas({
       });
       for (const geo of [mastGeometrie, kopfGeometrie, scheinGeometrie]) ressourcen.add(geo);
       for (const mat of [mastMaterial, kopfMaterial, scheinMaterial]) ressourcen.add(mat);
-      const laterne = (x: number, z: number, nach: { x: number; z: number }) => {
+      // x und z sind feldlokal: Laternen hängen an der Gruppe ihres Feldes
+      // und verschwinden mit ihr, sobald das Feld zu weit weg ist.
+      const laterne = (eltern: THREE.Object3D, x: number, z: number, nach: { x: number; z: number }) => {
         const mast = new THREE.Mesh(mastGeometrie, mastMaterial);
         mast.position.set(x, 1.7, z);
         mast.castShadow = true;
-        scene.add(mast);
+        eltern.add(mast);
         const kopf = new THREE.Mesh(kopfGeometrie, kopfMaterial);
         kopf.position.set(x - nach.x * 0.35, 3.35, z - nach.z * 0.35);
         kopf.rotation.y = Math.atan2(nach.x, nach.z);
-        scene.add(kopf);
+        eltern.add(kopf);
         if (scheinMaterial.opacity > 0) {
           const schein = new THREE.Mesh(scheinGeometrie, scheinMaterial);
           schein.rotation.x = -Math.PI / 2;
           schein.position.set(x - nach.x * 1.1, 0.05, z - nach.z * 1.1);
-          scene.add(schein);
+          eltern.add(schein);
         }
       };
 
@@ -638,6 +719,11 @@ function KapitelCanvas({
         flaeche.position.set(mitte.x, 0.012, mitte.z);
         flaeche.receiveShadow = true;
         scene.add(flaeche);
+        // Laternen und Striche eines Feldes hängen zusammen an einer Gruppe.
+        // Die Fahrbahn selbst bleibt liegen - sie kostet zwei Dreiecke und
+        // trägt den Boden, auch wenn das Feld im Nebel steht.
+        const schmuck = new THREE.Group();
+        schmuck.position.set(mitte.x, 0, mitte.z);
 
         const nachbarn = {
           nord: istStrasse(stadtplan, feld.x, feld.z - 1),
@@ -661,7 +747,7 @@ function KapitelCanvas({
               : seite === "sued" ? { x: 0, z: 1 }
                 : seite === "ost" ? { x: 1, z: 0 }
                   : { x: -1, z: 0 };
-          laterne(mitte.x + nach.x * kante, mitte.z + nach.z * kante, nach);
+          laterne(schmuck, nach.x * kante, nach.z * kante, nach);
         }
         // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen.
         const laengs = nachbarn.nord && nachbarn.sued && !nachbarn.west && !nachbarn.ost;
@@ -670,13 +756,23 @@ function KapitelCanvas({
           for (const versatz of [-2.4, 0, 2.4]) {
             const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
             strich.rotation.x = -Math.PI / 2;
-            if (laengs) strich.position.set(mitte.x, 0.03, mitte.z + versatz);
+            if (laengs) strich.position.set(0, 0.03, versatz);
             else {
               strich.rotation.z = Math.PI / 2;
-              strich.position.set(mitte.x + versatz, 0.03, mitte.z);
+              strich.position.set(versatz, 0.03, 0);
             }
-            scene.add(strich);
+            schmuck.add(strich);
           }
+        }
+        if (schmuck.children.length) {
+          scene.add(schmuck);
+          stadtBloecke.push({
+            gruppe: schmuck,
+            mitte: new THREE.Vector3(mitte.x, 1.5, mitte.z),
+            materialien: [],
+            feld: null,
+            sicht: 1,
+          });
         }
       }
     } else {
@@ -864,6 +960,7 @@ function KapitelCanvas({
         kulissenFehler = ergebnisse.some((ergebnis) => ergebnis.status === "rejected");
         for (const ergebnis of ergebnisse) {
           if (ergebnis.status !== "fulfilled") continue;
+          texturenVerkleinern(ergebnis.value.szene, profil.texturGrenze);
           cellShading(ergebnis.value.szene, gradient, [], LEUCHTEN[tageszeit] ?? 0);
           registrieren(ergebnis.value.szene);
           geladen.set(ergebnis.value.id, ergebnis.value.szene);
@@ -882,6 +979,37 @@ function KapitelCanvas({
           block.add(haus);
           block.position.set(mitte.x, 0, mitte.z);
           scene.add(block);
+          /*
+           * Jeder Block bekommt eigene Materialien. Geometrie und Texturen
+           * teilen sich die Kopien weiterhin - das kostet also so gut wie
+           * nichts - aber nur so lässt sich ein einzelnes Haus wegblenden,
+           * ohne dass alle gleichen Häuser mitverschwinden.
+           *
+           * Durchscheinfähig sind sie von Anfang an. Das im Spiel
+           * umzuschalten hieße, den Shader neu zu bauen, und zwar genau in
+           * dem Moment, in dem die Kamera ohnehin schon in der Wand steht.
+           */
+          const materialien: THREE.Material[] = [];
+          haus.traverse((kind) => {
+            if (!(kind instanceof THREE.Mesh)) return;
+            const mehrfach = Array.isArray(kind.material);
+            const eigen = (mehrfach ? kind.material : [kind.material]).map((material: THREE.Material) => {
+              const kopie = material.clone();
+              kopie.transparent = true;
+              kopie.depthWrite = true;
+              return kopie;
+            });
+            kind.material = mehrfach ? eigen : eigen[0];
+            materialien.push(...eigen);
+          });
+          stadtBloecke.push({
+            gruppe: block,
+            mitte: new THREE.Vector3(mitte.x, STADT_HOEHE / 2, mitte.z),
+            materialien,
+            feld: { x: feld.x, z: feld.z },
+            sicht: 1,
+          });
+          hausFelder.add(`${feld.x},${feld.z}`);
           // Steht hier die Tankstelle, liegt ihr Stellplatz auf der Straße davor.
           if (tankstelle && feld.id === tankstelle.id && tankPlatz === null && nachbar) {
             const platz = feldMitte(stadtplan, feld.x + nachbar.x, feld.z + nachbar.z);
@@ -897,6 +1025,7 @@ function KapitelCanvas({
       const vorlagen = kulissen.flatMap((ergebnis, index) => {
         if (ergebnis.status !== "fulfilled") return [];
         const vorlage = ergebnis.value.scene;
+        texturenVerkleinern(vorlage, profil.texturGrenze);
         cellShading(vorlage, gradient, [], LEUCHTEN[tageszeit] ?? 0);
         registrieren(vorlage);
         const ort = locationEintraege[index];
@@ -1116,8 +1245,20 @@ function KapitelCanvas({
 
     let letzter = performance.now();
     const zielKamera = new THREE.Vector3();
+    /** Die Leistungsregelung und die Sichtweite, mit der sie gerade fährt. */
+    let regel = REGEL_START;
+    let sichtweite = profil.sichtweite;
+    /** Wie viel vom vollen Kameraabstand gerade übrig ist: 1 = ganz hinten. */
+    let naeher = 1;
     const zeichnen = (jetzt: number) => {
-      const dt = Math.min(0.035, Math.max(0.001, (jetzt - letzter) / 1000));
+      /*
+       * Zwei Zeitmaße: Für alles, was sich bewegt, ist die Schrittweite
+       * gedeckelt - ein Tabwechsel darf niemanden durch eine Hauswand
+       * schieben. Die Leistungsregelung dagegen will gerade wissen, wann ein
+       * Bild zu lange gebraucht hat, und bekommt die rohe Zeit.
+       */
+      const rohDt = (jetzt - letzter) / 1000;
+      const dt = Math.min(0.035, Math.max(0.001, rohDt));
       letzter = jetzt;
       if (!element.clientWidth || !element.clientHeight || document.hidden) {
         stoppen();
@@ -1341,7 +1482,25 @@ function KapitelCanvas({
        */
       const flott = amSteuer ? Math.min(1, Math.abs(fahrt.tempo) / amSteuer.werte.hoechst) : 0;
       const weite = amSteuer ? 1.22 + flott * 0.5 : 1;
-      zielKamera.set(spieler.position.x - 9.5 * weite, 5.1 * weite, spieler.position.z + 13.8 * weite);
+      const vollX = spieler.position.x - 9.5 * weite;
+      const vollZ = spieler.position.z + 13.8 * weite;
+      /*
+       * In einer Rasterstadt steht die Kamera regelmäßig in einem Haus. Dann
+       * rückt sie heran und ein Stück höher, statt hinter der Fassade zu
+       * bleiben - gemessen aber immer an der vollen, ungekürzten Position.
+       * Sonst schaukelte es sich auf: nah genug für freie Sicht, also wieder
+       * zurück, also wieder verdeckt, also wieder heran.
+       */
+      if (stadtplan && hausFelder.size) {
+        const verdeckt = sichtFelder(stadtplan, spieler.position.x, spieler.position.z, vollX, vollZ)
+          .filter((feld) => hausFelder.has(`${feld.x},${feld.z}`)).length;
+        naeher = THREE.MathUtils.damp(naeher, verdeckt >= 2 ? 0.6 : verdeckt === 1 ? 0.78 : 1, 3, dt);
+      }
+      zielKamera.set(
+        spieler.position.x + (vollX - spieler.position.x) * naeher,
+        5.1 * weite + (1 - naeher) * 1.8,
+        spieler.position.z + (vollZ - spieler.position.z) * naeher,
+      );
       camera.position.lerp(zielKamera, 1 - Math.exp(-(amSteuer ? 3.4 : 5) * dt));
       const voraus = flott * 5.5;
       camera.lookAt(
@@ -1349,6 +1508,48 @@ function KapitelCanvas({
         1.05,
         spieler.position.z + 0.7 + Math.cos(fahrt.winkel) * voraus,
       );
+      /*
+       * Und dann wird aufgeräumt, jedes Bild neu. Zweierlei auf einmal:
+       *
+       * Was zu weit weg ist, wird gar nicht erst gezeichnet - dort steht
+       * ohnehin nur Nebel, und ein einziger Baustein sind 180.000 Dreiecke.
+       * Wie weit "zu weit" ist, verhandelt die Regelung laufend mit dem
+       * Gerät: Wer ruckelt, sieht ein Stück weniger Stadt, und wer wieder
+       * Luft hat, bekommt sie zurück.
+       *
+       * Und was zwischen Kamera und Wimpy steht, blendet sich weg. Die
+       * Kamera sitzt siebzehn Meter schräg hinter ihm, im Raster also gern
+       * einmal mitten in einem Haus; ohne das schaut man beim Spielen auf
+       * eine Fassade. Weggeblendet wird weich über eine gute Zehntelsekunde
+       * - nichts springt, nichts blitzt.
+       */
+      if (stadtBloecke.length) {
+        // Nach einem Tabwechsel liegen Sekunden zwischen zwei Bildern. Das
+        // ist kein Ruckeln, das ist eine Pause - die zählt nicht.
+        if (rohDt < 0.5) regel = nachregeln(regel, rohDt);
+        sichtweite += (profil.sichtweite * regel.faktor - sichtweite) * Math.min(1, dt * 0.7);
+        if (scene.fog instanceof THREE.Fog) {
+          const fern = Math.min(nebelFern, sichtweite);
+          scene.fog.far = fern;
+          scene.fog.near = Math.min(nebelNah, fern * 0.45);
+        }
+        const imWeg = stadtplan
+          ? sichtFelder(stadtplan, spieler.position.x, spieler.position.z, camera.position.x, camera.position.z)
+          : [];
+        for (const eintrag of stadtBloecke) {
+          const feld = eintrag.feld;
+          if (feld) {
+            const ziel = imWeg.some((vor) => vor.x === feld.x && vor.z === feld.z) ? 0 : 1;
+            if (eintrag.sicht !== ziel) {
+              eintrag.sicht = THREE.MathUtils.damp(eintrag.sicht, ziel, 9, dt);
+              if (Math.abs(eintrag.sicht - ziel) < 0.012) eintrag.sicht = ziel;
+              for (const material of eintrag.materialien) material.opacity = eintrag.sicht;
+            }
+          }
+          eintrag.gruppe.visible =
+            eintrag.sicht > 0.02 && eintrag.mitte.distanceTo(camera.position) < sichtweite;
+        }
+      }
       renderer.render(scene, camera);
       frame = requestAnimationFrame(zeichnen);
     };

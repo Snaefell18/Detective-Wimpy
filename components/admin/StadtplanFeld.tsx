@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DREI_D_LOCATIONS } from "@/lib/pursuit3d";
+import { artenWarnung } from "@/lib/dreiDLeistung";
 import {
   HOEHE_GRENZEN,
   PLAN_MASSE,
@@ -171,6 +172,13 @@ export function StadtplanFeld({
             );
           })}
         </div>
+      )}
+
+      {/* Speicher, nicht Rechenleistung, lässt ein Handy abstürzen - und den
+          füllt jede zusätzliche Bauart mit ihren eigenen Texturen. Dieselbe
+          zehnmal zu setzen ist dagegen umsonst. */}
+      {artenWarnung(gebaeudeArten(plan).length) && (
+        <p className="hinweis warnung klein">{artenWarnung(gebaeudeArten(plan).length)}</p>
       )}
 
       <p className="leise klein">

@@ -178,6 +178,37 @@ export function begehbar(plan: Stadtplan, weltX: number, weltZ: number, radius =
   return true;
 }
 
+/**
+ * Welche Felder eine Sichtlinie überquert.
+ *
+ * Gebraucht wird das für die Kamera. Sie steht siebzehn Meter schräg hinter
+ * Wimpy, und in einer Rasterstadt heißt das regelmäßig: mitten in einem Haus.
+ * Statt am Modell entlang zu strahlen - ein Baustein hat 180.000 Dreiecke -
+ * wird im Raster nachgesehen, welche Felder zwischen Kamera und Wimpy liegen.
+ * Was dort steht, blendet die Szene aus, und man sieht wieder das Spiel statt
+ * einer Hauswand.
+ *
+ * Abgetastet wird in Vierteln einer Feldbreite; enger als ein Feld kann dabei
+ * nichts durchrutschen. Start- und Zielfeld sind mit dabei.
+ */
+export function sichtFelder(
+  plan: Stadtplan,
+  vonX: number,
+  vonZ: number,
+  zuX: number,
+  zuZ: number,
+): { x: number; z: number }[] {
+  const strecke = Math.hypot(zuX - vonX, zuZ - vonZ);
+  const schritte = Math.max(1, Math.ceil(strecke / (FELD_GROESSE / 4)));
+  const felder: { x: number; z: number }[] = [];
+  for (let i = 0; i <= schritte; i++) {
+    const t = i / schritte;
+    const feld = feldBei(plan, vonX + (zuX - vonX) * t, vonZ + (zuZ - vonZ) * t);
+    if (!felder.some((vorher) => vorher.x === feld.x && vorher.z === feld.z)) felder.push(feld);
+  }
+  return felder;
+}
+
 /** Alle begehbaren Felder - in fester Reihenfolge. */
 export function strassenFelder(plan: Stadtplan): { x: number; z: number }[] {
   const felder: { x: number; z: number }[] = [];
