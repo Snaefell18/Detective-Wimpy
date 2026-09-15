@@ -186,6 +186,8 @@ export const CharacterSchema = z.object({
   istDetektiv: z.boolean(),
   /** Dämonenform - siehe Character.istDaemon. */
   istDaemon: z.boolean().optional(),
+  /** Festes 3D-Modell aus den Stammdaten - siehe Character.modell3d. */
+  modell3d: z.string().max(80).optional(),
   beruf: z.string().max(200).optional(),
   sprachstil: z.string().max(800).optional(),
   auftrittTon: z.string().max(200).optional(),

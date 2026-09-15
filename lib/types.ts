@@ -47,6 +47,16 @@ export type Character = {
    */
   istDaemon?: boolean;
   /**
+   * Das 3D-Modell dieses Tiers - eine Id aus /public/animations.
+   *
+   * Gilt überall dort, wo das Tier in einem 3D-Kapitel auftritt, ohne dass
+   * man es je Kapitel neu zuordnen müsste. Ein Kapitel darf trotzdem etwas
+   * anderes bestimmen: Dessen eigene Zuordnung geht vor. Leer heißt wie
+   * bisher: Das Spiel sucht selbst ein passendes Modell (erst über den
+   * Namen, sonst der Reihe nach).
+   */
+  modell3d?: string;
+  /**
    * Was dieses Tier beruflich macht - freier Text ("Bäckerin", "Nachtwächter
    * am Hafen"). Färbt Alibis, Spuren und Gesprächsthemen. Leer heißt: das
    * Modell denkt sich etwas Passendes aus.

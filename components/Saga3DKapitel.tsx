@@ -7,6 +7,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { kapitelPosition } from "@/lib/saga3dLayout";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
+import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
 import { AUTO_MODELLE, START_AUTO_ID, type Auto } from "@/lib/autos";
 import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
@@ -62,7 +63,6 @@ export type FahrzeugBefehl = {
 
 export const LEERER_FAHRZEUGBEFEHL: FahrzeugBefehl = { faehrt: null, abgeben: false };
 
-const normal = (wert: string) => wert.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
 
 function TouchJoystick({ setzen }: { setzen: (x: number, z: number) => void }) {
   const knauf = useRef<HTMLSpanElement>(null);
@@ -106,16 +106,6 @@ function TouchJoystick({ setzen }: { setzen: (x: number, z: number) => void }) {
     onPointerCancel={stoppen} onLostPointerCapture={stoppen}>
     <span className="saga3d-joystick-knauf" ref={knauf} aria-hidden="true" />
   </div>;
-}
-
-function modellFuer(charakter: Character, index: number, modellId?: string): AnimationsModell | undefined {
-  const schluessel = [charakter.id, charakter.name, charakter.tierart].map(normal);
-  return (
-    ANIMATIONS_MODELLE.find((modell) => modell.id === modellId) ??
-    ANIMATIONS_MODELLE.find((modell) =>
-      schluessel.some((wert) => wert && (normal(modell.id).includes(wert) || wert.includes(normal(modell.id)))),
-    ) ?? ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy")[index % Math.max(1, ANIMATIONS_MODELLE.length - 1)]
-  );
 }
 
 function gradientTextur() {
@@ -593,11 +583,11 @@ function KapitelCanvas({
        * Beides kommt aus einem Topf, damit niemand auf einem Beweisstück steht.
        */
       const plaetze = stadtplan
-        ? verteilen(stadtplan, fall.besetzung.filter((c) => !c.istDetektiv).length + spuren.length)
+        ? verteilen(stadtplan, besetzung.filter((c) => !c.istDetektiv).length + spuren.length)
         : [];
       const platzFuer = (art: "tier" | "spur", index: number, fallback: { x: number; z: number }) => {
         if (!stadtplan) return fallback;
-        const versatz = art === "tier" ? 0 : fall.besetzung.filter((c) => !c.istDetektiv).length;
+        const versatz = art === "tier" ? 0 : besetzung.filter((c) => !c.istDetektiv).length;
         return plaetze[versatz + index] ?? fallback;
       };
       if (stadtplan) {
@@ -693,9 +683,11 @@ function KapitelCanvas({
         registrieren(ring);
       }
 
-      const wimpy = ANIMATIONS_MODELLE.find((modell) => modell.id === "wimpy");
+      // Auch die Spielfigur nimmt, was in den Stammdaten bei ihr steht.
+      const detektiv = besetzung.find((c) => c.istDetektiv);
+      const wimpy = spielerModell(detektiv);
       if (wimpy) {
-        const geladen = await figurLaden(wimpy, 2.05 * groessenFaktor("wimpy"));
+        const geladen = await figurLaden(wimpy, 2.05 * groessenFaktor(detektiv?.id ?? "wimpy"));
         if (beendet) return;
         spieler.add(geladen.figur);
         wimpyFigur = geladen.figur;
@@ -711,7 +703,7 @@ function KapitelCanvas({
       const tiere = besetzung.filter((charakter) => !charakter.istDetektiv);
       const npcLadungen = await Promise.allSettled(
         tiere.map((charakter, index) => {
-          const modell = modellFuer(charakter, index, charakterModelle[charakter.id]);
+          const modell = modellFuerTier(charakter, index, charakterModelle[charakter.id]);
           return modell ? figurLaden(modell, 1.8 * groessenFaktor(charakter.id)) : Promise.reject(new Error("Kein Modell"));
         }),
       );

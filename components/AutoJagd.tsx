@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
+import { spielerModell } from '@/lib/tiermodelle';
 import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
@@ -92,8 +92,10 @@ type Wolke = {
 /** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
 const RAD_NAME = /wheel|rad\b|reifen|tyre|tire|felge/i;
 
-function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, onBereit, onPhase }: {
+function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, onEnde, onFehler, onBereit, onPhase }: {
   auto: Auto; flucht: Auto; spur: React.MutableRefObject<number>;
+  /** Wimpys 3D-Modell aus den Stammdaten - fehlt es, steht niemand am Rand. */
+  figur?: { datei: string };
   /** Zusätzliche Drehung des Fluchtwagens in Grad - live veränderbar. */
   drehung: React.MutableRefObject<number>;
   onStand: (speed: number, abstand: number, treffer: boolean) => void;
@@ -190,9 +192,8 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
     let stehen: THREE.AnimationAction | null = null;
     let gehen: THREE.AnimationAction | null = null;
     async function figurLaden() {
-      const modell = ANIMATIONS_MODELLE.find(m => m.id === 'wimpy');
-      if (!modell) return;
-      const gltf = await loader.loadAsync(modell.datei);
+      if (!figurModell) return;
+      const gltf = await loader.loadAsync(figurModell.datei);
       sammeln(gltf.scene);
       if (beendet) { ressourcen.forEach(r => r.dispose()); return; }
       const figur = gltf.scene;
@@ -488,7 +489,7 @@ function RennCanvas({ auto, flucht, spur, drehung, onStand, onEnde, onFehler, on
       mixer?.stopAllAction();
       sammeln(scene); ressourcen.forEach(r => r.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [auto, flucht, spur, drehung]);
+  }, [auto, flucht, spur, drehung, figurModell]);
   return <div className="jagd-canvas" ref={host} aria-label="Wimpy verfolgt den Fluchtwagen auf drei Spuren" />;
 }
 
@@ -511,6 +512,9 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   const drehung = useRef(fluchtDrehung);
   const faehrt = phase === 'anfahrt' || phase === 'jagd';
   const fliehender = stammdaten.charaktere.find(c => c.id === vorgabe.fliehenderId);
+  // Am Straßenrand steht Wimpy in dem Modell, das ihm in den Stammdaten
+  // zugeordnet ist - dasselbe wie in den 3D-Kapiteln.
+  const figur = spielerModell(stammdaten.charaktere.find(c => c.istDetektiv));
   const verfuegbar = autos.filter(a => vorschau || a.id === START_AUTO_ID || besitz[a.id]);
   const drehen = (schritt: number) => {
     const grad = (((fluchtDrehung + schritt) % 360) + 360) % 360;
@@ -526,7 +530,7 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   return <div className="jagd" data-treffer={stand.treffer}>
     {faehrt && rennen && !fehler ? <>
       {vorgabe.musik && phase === 'jagd' && <Hintergrundmusik stueck={vorgabe.musik} />}
-      <RennCanvas {...rennen} spur={spur} drehung={drehung} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
+      <RennCanvas {...rennen} spur={spur} drehung={drehung} figur={figur} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
       {!bereit && <div className="auto-jagd-laden" role="status">Die Wagen werden bereitgestellt …</div>}
       {bereit && phase === 'anfahrt' && <div className="auto-jagd-anfahrt" role="status"><strong>{vorgabe.name}</strong><span>Tippen überspringt</span></div>}
       {phase === 'jagd' && <>

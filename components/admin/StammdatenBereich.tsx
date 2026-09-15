@@ -20,6 +20,7 @@ import {
   speichereOrt,
 } from "@/lib/db";
 import { erfindeDing } from "@/lib/erfinden";
+import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
 import { stammdatenAktualisieren, useStammdaten } from "@/lib/stammdaten";
 import { LEERE_BEZIEHUNGEN } from "@/lib/types";
 import { vervollstaendigen } from "@/lib/stammdatenIds";
@@ -804,6 +805,27 @@ function CharakterFormular({
           onChange={(e) => aendern({ istDetektiv: e.target.checked })}
         />
         <span>Ist der Detektiv (die Spielfigur)</span>
+      </label>
+
+      {/* Das 3D-Modell gehört zum Tier, nicht zum Kapitel: Einmal hier
+          gewählt, tritt es in jedem 3D-Kapitel so auf. Ein Kapitel darf
+          trotzdem etwas anderes bestimmen. */}
+      <label className="feld">
+        <span className="leise">
+          3D-Modell <span className="klein">· gilt in allen 3D-Kapiteln</span>
+        </span>
+        <select
+          value={entwurf.modell3d ?? ""}
+          onChange={(e) => aendern({ modell3d: e.target.value })}
+        >
+          <option value="">Automatisch wählen (über den Namen)</option>
+          {ANIMATIONS_MODELLE.map((modell) => (
+            <option key={modell.id} value={modell.id}>
+              {modell.name}
+              {modell.animationen.length ? ` · ${modell.animationen.length} Animationen` : " · ohne Animation"}
+            </option>
+          ))}
+        </select>
       </label>
 
       {/* Eine Dämonenform läuft nicht in der Stadt herum: Sie wird in keine

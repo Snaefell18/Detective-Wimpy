@@ -797,7 +797,7 @@ export function SagaVorgabenFelder({
                     ))}
                   </div>
                   <span className="leise klein">3D-Modelle der Tiere</span>
-                  <span className="leise klein">Nur fest eingeplante Kapiteltiere. Bei einem noch unbekannten Twist-Drahtzieher erfolgt die Modellwahl nach der Generierung.</span>
+                  <span className="leise klein">Nur fest eingeplante Kapiteltiere. Bei einem noch unbekannten Twist-Drahtzieher erfolgt die Modellwahl nach der Generierung. Das Modell aus den Stammdaten gilt von selbst - hier steht nur, was in diesem Kapitel anders sein soll.</span>
                   <div className="probe-charakter-zuordnung">
                     {sichere3DTiere(vorgaben, stammdaten.charaktere, i).map((charakter) => (
                       <label className="feld" key={charakter.id}>
@@ -813,7 +813,14 @@ export function SagaVorgabenFelder({
                             dreiDSetzen(i, { charakterModelle });
                           }}
                         >
-                          <option value="">Automatisch nach Name/Tierart</option>
+                          {/* Was in den Stammdaten beim Tier steht, gilt
+                              überall - hier steht nur, was für dieses eine
+                              Kapitel davon abweichen soll. */}
+                          <option value="">
+                            {charakter.modell3d
+                              ? `Aus den Stammdaten: ${ANIMATIONS_MODELLE.find((m) => m.id === charakter.modell3d)?.name ?? charakter.modell3d}`
+                              : "Automatisch nach Name/Tierart"}
+                          </option>
                           {ANIMATIONS_MODELLE.filter((modell) => modell.id !== "wimpy").map((modell) => (
                             <option key={modell.id} value={modell.id}>{modell.name}</option>
                           ))}
