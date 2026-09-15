@@ -17,18 +17,32 @@ const RAV4 = /rav\s*-?\s*4/i;
 const huebsch = (name: string) =>
   name.replace(/[-_]+/g, ' ').replace(/\b\p{L}/gu, (buchstabe) => buchstabe.toLocaleUpperCase('de'));
 
-/*
- * Jedes 3D-Modell steht anders in seiner Datei. Gefahren wird in Richtung +z:
- * Der Ferrari zeigt dort von Haus aus hin, der Lambo liegt quer und muss um
- * 270 Grad gedreht werden - bei 90 Grad fuhr er rückwärts voraus. Ein neues
- * Modell fängt bei 0 an; fährt es verkehrt herum, stellt man es im
- * Autokatalog (`drehung`) oder für eine einzelne Jagd in der
- * Verfolgungsjagd selbst gerade.
+/**
+ * Wie ein Modell gedreht werden muss, damit es vorwärts fährt.
+ *
+ * Gefahren wird in Richtung +z. Der Build misst beim Erzeugen des Katalogs,
+ * ob ein Wagen quer in seiner Datei liegt (`quer`) - das ist die halbe
+ * Antwort. Ob die Schnauze dann nach vorn oder nach hinten zeigt, sieht man
+ * erst im Bild: Der Lambo braucht 270 Grad, der RAV4 genau die andere
+ * Vierteldrehung. Für die mitgelieferten Wagen steht das Ergebnis deshalb
+ * hier; alles Neue fängt bei der gemessenen Achse an.
+ *
+ * Fährt ein eigenes Modell trotzdem rückwärts: einmal im Autokatalog
+ * („Modelldrehung") oder für eine einzelne Jagd in der Verfolgungsjagd
+ * selbst geraderücken - dort sieht man die Wirkung sofort.
  */
-const drehungFuer = (modell: { name: string } | undefined) =>
-  modell && /lambo/i.test(modell.name) ? 270 : 0;
+const NACHGESEHEN: { muster: RegExp; grad: number }[] = [
+  { muster: /rav\s*-?\s*4/i, grad: 90 },
+  { muster: /lambo/i, grad: 270 },
+];
 
-type Modell = { id: string; name: string };
+const drehungFuer = (modell: { name: string; quer?: boolean } | undefined) => {
+  const bekannt = NACHGESEHEN.find((eintrag) => eintrag.muster.test(modell?.name ?? ""));
+  if (bekannt) return bekannt.grad;
+  return modell?.quer ? 270 : 0;
+};
+
+type Modell = { id: string; name: string; quer?: boolean };
 
 const auto = (
   id: string,

@@ -130,12 +130,16 @@ console.log("\n2b. Der Fluchtwagen lässt sich drehen");
   pruefe("ein unmöglicher Wert wird zu 0 statt zum Fehler", unsinn.data?.verfolgungsjagden[0]?.fluchtDrehung === 0);
   pruefe("und die Jagd bleibt erhalten", unsinn.data?.verfolgungsjagden.length === 1);
 
-  // Gefahren wird in Richtung +z. Der Ferrari zeigt dort von Haus aus hin,
-  // der Lambo liegt quer - bei 90 Grad fuhr er rückwärts voraus.
-  const lambo = STANDARD_AUTOS.find((a) => /lambo/i.test(a.name));
-  pruefe("der Lambo steht nicht mehr falsch herum", lambo?.drehung === 270);
-  pruefe("Wimpys Ferrari bleibt ungedreht", STANDARD_AUTOS[0].drehung === 0);
-  pruefe("beide Wagen bleiben gültig", STANDARD_AUTOS.every(autoGueltig));
+  /*
+   * Gefahren wird in Richtung +z. Der Ferrari zeigt dort von Haus aus hin,
+   * Lambo und RAV4 liegen quer in ihrer Datei - jeder in seine Richtung.
+   * Nachgesehen wurde das im Bild, nicht geraten.
+   */
+  const nach = (muster) => STANDARD_AUTOS.find((a) => muster.test(a.modell))?.drehung;
+  pruefe("der Lambo steht nicht mehr falsch herum", nach(/lambo/i) === 270);
+  pruefe("der Ferrari bleibt ungedreht", nach(/ferrari/i) === 0);
+  pruefe("und ein vorhandener RAV4 fährt vorwärts", nach(/rav/i) === undefined || nach(/rav/i) === 90);
+  pruefe("alle Standardwagen bleiben gültig", STANDARD_AUTOS.every(autoGueltig));
 }
 
 console.log("\n3. Nach dem Fang gibt es immer ein Statement");
