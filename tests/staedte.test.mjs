@@ -39,7 +39,7 @@ const gebaut = () => {
   plan = feldSetzen(plan, 0, 0, haus);
   plan = feldSetzen(plan, 4, 0, zweitesHaus);
   plan = feldSetzen(plan, 0, 4, haus);
-  return { ...neueStadt(plan), name: "Neonviertel", tankstelleId: zweitesHaus, tageszeit: "nacht", wetter: "regen" };
+  return { ...neueStadt(plan), name: "Neonviertel", tankstelleId: zweitesHaus, polizeiId: haus, tageszeit: "nacht", wetter: "regen" };
 };
 
 console.log("\n1. Eine Stadt gilt erst, wenn man sie betreten kann");
@@ -64,6 +64,8 @@ console.log("\n2. Aus der Datenbank kommt nur Brauchbares zurück");
   pruefe("mit Namen", gelesen?.name === "Neonviertel");
   pruefe("mit allen Feldern", gelesen?.plan.felder.length === 25);
   pruefe("mit Tankstelle, Licht und Wetter", gelesen?.tankstelleId === zweitesHaus && gelesen?.tageszeit === "nacht" && gelesen?.wetter === "regen");
+  pruefe("und mit der Polizeiwache", gelesen?.polizeiId === haus);
+  pruefe("eine kaputte Wache wird zu keiner", stadtLesen({ ...stadt, polizeiId: 42 })?.polizeiId === "");
 
   pruefe("ohne Plan: nichts", stadtLesen({ id: "a", name: "X" }) === null);
   pruefe("mit falscher Feldzahl: nichts", stadtLesen({ ...stadt, plan: { ...stadt.plan, felder: ["strasse"] } }) === null);
@@ -90,8 +92,9 @@ console.log("\n3. Auswählen heißt abschreiben");
     vorgabe.locations.includes(haus) && vorgabe.locations.includes(zweitesHaus),
     vorgabe.locations.join(", "));
   pruefe("keine Straße in der Bausteinliste", !vorgabe.locations.includes(STRASSE));
-  pruefe("Tankstelle, Belag und Licht kommen mit",
-    vorgabe.tankstelleId === zweitesHaus && vorgabe.tageszeit === "nacht" && vorgabe.wetter === "regen");
+  pruefe("Tankstelle, Wache, Belag und Licht kommen mit",
+    vorgabe.tankstelleId === zweitesHaus && vorgabe.polizeiId === haus
+    && vorgabe.tageszeit === "nacht" && vorgabe.wetter === "regen");
 
   // Und jetzt der Punkt: Das Kapitel trägt danach seinen eigenen Plan.
   const gespeichert = SagaVorgabenSchema.safeParse({
@@ -102,6 +105,7 @@ console.log("\n3. Auswählen heißt abschreiben");
       plan: vorgabe.plan,
       locations: vorgabe.locations,
       tankstelleId: vorgabe.tankstelleId,
+      polizeiId: vorgabe.polizeiId,
       strassentyp: vorgabe.strassentyp,
       tageszeit: vorgabe.tageszeit,
       wetter: vorgabe.wetter,
@@ -110,6 +114,7 @@ console.log("\n3. Auswählen heißt abschreiben");
   pruefe("die übernommene Stadt kommt durch die Saga-Prüfung", gespeichert.success, gespeichert.error?.issues[0]?.message);
   pruefe("und liegt danach im Kapitel", gespeichert.data?.kapitel3d[0].plan?.felder.length === 25);
   pruefe("mit ihrer Tankstelle", gespeichert.data?.kapitel3d[0].tankstelleId === zweitesHaus);
+  pruefe("und ihrer Wache", gespeichert.data?.kapitel3d[0].polizeiId === haus);
   pruefe("und ihrem Licht", gespeichert.data?.kapitel3d[0].tageszeit === "nacht");
 }
 

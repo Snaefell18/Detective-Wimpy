@@ -3,7 +3,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Nav } from "../components/Nav.tsx";
 import { kapitelPosition } from "../lib/saga3dLayout.ts";
-import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D, tankstelleAus } from "../lib/pursuit3d.ts";
+import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D, polizeiAus, tankstelleAus } from "../lib/pursuit3d.ts";
 import { STANDARD_SAGA_VORGABEN, dreiDFuerKapitel } from "../lib/sagaTypen.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { POST } from "../app/api/search/route.ts";
@@ -124,12 +124,35 @@ assert.equal((await suchen({})).spur.itemId, "beweis-a", "Normale 2D-Suche bleib
     "Ein unbekannter Baustein wird nicht einfach erfunden",
   );
 
+  /* --- Und dasselbe für die Polizeiwache --------------------------- */
+  const wache = ids.find((id) => /polizei|police|revier|wache/i.test(id));
+  assert.equal(
+    polizeiAus(ids)?.id ?? null,
+    wache ?? null,
+    "Ohne Wahl wird die Wache am Namen erkannt - oder es gibt eben keine",
+  );
+  assert.equal(polizeiAus(ids, ids[0])?.id, ids[0], "Die gewählte Wache wird genommen");
+  assert.equal(
+    polizeiAus(ids.filter((id) => !/polizei|police|revier|wache|kommissariat|koban/i.test(id)))?.id ?? null,
+    null,
+    "Ohne passenden Namen gibt es keine Wache",
+  );
+  // Tankstelle und Wache dürfen nebeneinander stehen, ohne sich zu stören.
+  if (wache && getauft[0]) {
+    assert.notEqual(
+      tankstelleAus(ids)?.id,
+      polizeiAus(ids)?.id,
+      "Tankstelle und Wache sind nicht dasselbe Haus",
+    );
+  }
+
   // Und die Wahl übersteht Speichern und Erzeugung.
   const gespeichert = SagaVorgabenSchema.safeParse({
     ...STANDARD_SAGA_VORGABEN,
-    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, tankstelleId: ids[0] }],
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, tankstelleId: ids[0], polizeiId: ids[1] ?? ids[0] }],
   });
   assert.equal(gespeichert.data?.kapitel3d[0].tankstelleId, ids[0], "Die Tankstelle bleibt gespeichert");
+  assert.equal(gespeichert.data?.kapitel3d[0].polizeiId, ids[1] ?? ids[0], "Und die Wache auch");
   const alt3d = SagaVorgabenSchema.safeParse({
     ...STANDARD_SAGA_VORGABEN,
     kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, tankstelleId: undefined }],

@@ -23,7 +23,7 @@ import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { DREI_D_LOCATIONS, locationsFuer3D, tankstelleAus } from "@/lib/pursuit3d";
+import { DREI_D_LOCATIONS, locationsFuer3D, polizeiAus, tankstelleAus } from "@/lib/pursuit3d";
 import {
   FELD_GROESSE,
   STADT_HOEHE,
@@ -40,6 +40,7 @@ import {
   startFeld,
   strassenFelder,
   verteilen,
+  vorDerTuer,
   type Stadtplan,
 } from "@/lib/stadtplan";
 import { REGEL_START, leistungsProfil, nachregeln } from "@/lib/dreiDLeistung";
@@ -57,6 +58,7 @@ type Naehe =
   | { art: "tier"; id: string; name: string }
   | { art: "spur"; id: string; ortId: string; name: string }
   | { art: "tankstelle"; id: string; name: string }
+  | { art: "polizei"; id: string; name: string }
   | { art: "wagen"; id: string; name: string };
 
 /**
@@ -408,6 +410,7 @@ function KapitelCanvas({
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   tankstelleId,
+  polizeiId,
   plan,
   fahrzeug,
   onNaehe,
@@ -428,6 +431,8 @@ function KapitelCanvas({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Welcher die Polizeiwache ist; leer = am Namen erkennen. */
+  polizeiId?: string;
   /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
   plan?: Stadtplan | null;
   /** Wimpys Auto - siehe FahrzeugBefehl. */
@@ -445,11 +450,11 @@ function KapitelCanvas({
   const [versuch, setVersuch] = useState(0);
   const position = useRef(new THREE.Vector3());
   // Wertgleiche Props (insbesondere [] in der Probe) dürfen keine Szene neu laden.
-  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen, tankstelleId: tankstelleId ?? "", plan: plan ?? null });
+  const bauplanText = JSON.stringify({ besetzung: fall.besetzung, locations, spuren, charakterModelle, charakterGroessen, locationDrehungen, tankstelleId: tankstelleId ?? "", polizeiId: polizeiId ?? "", plan: plan ?? null });
   const bauplan = useMemo(() => JSON.parse(bauplanText) as {
     besetzung: Character[]; locations: string[]; spuren: SpurVorschau[];
     charakterModelle: Record<string, string>; locationDrehungen: Record<string, number>;
-    charakterGroessen: Record<string, number>; tankstelleId: string; plan: Stadtplan | null;
+    charakterGroessen: Record<string, number>; tankstelleId: string; polizeiId: string; plan: Stadtplan | null;
   }, [bauplanText]);
 
   useEffect(() => {
@@ -847,8 +852,15 @@ function KapitelCanvas({
      */
     const gebaut = stadtplan ? gebaeudeArten(stadtplan) : bauplan.locations;
     const tankstelle = tankstelleAus(gebaut, bauplan.tankstelleId);
-    /** Wo der Wagen steht und wo Wimpy einsteigt - erst beim Aufbau bekannt. */
+    const polizei = polizeiAus(gebaut, bauplan.polizeiId);
+    /**
+     * Die beiden Häuser, an denen etwas passiert: An der Tankstelle steigt
+     * Wimpy ins Auto, auf der Wache spricht er die Beschuldigung aus. Wo
+     * genau man dafür stehen muss, steht erst fest, wenn die Stadt gebaut
+     * ist - deshalb erst hier, und erst dann der Ring dazu.
+     */
     let tankPlatz: THREE.Vector3 | null = null;
+    let polizeiPlatz: THREE.Vector3 | null = null;
     /** Der Wagen, der gerade gefahren wird, und der, der irgendwo parkt. */
     let amSteuer: { id: string; name: string; gruppe: THREE.Group; werte: FahrWerte } | null = null;
     /** Wie schnell der Wagen gerade fährt und wie schräg er dabei steht. */
@@ -1010,10 +1022,20 @@ function KapitelCanvas({
             sicht: 1,
           });
           hausFelder.add(`${feld.x},${feld.z}`);
-          // Steht hier die Tankstelle, liegt ihr Stellplatz auf der Straße davor.
-          if (tankstelle && feld.id === tankstelle.id && tankPlatz === null && nachbar) {
-            const platz = feldMitte(stadtplan, feld.x + nachbar.x, feld.z + nachbar.z);
-            tankPlatz = new THREE.Vector3(platz.x, 0, platz.z);
+          /*
+           * Steht hier eine Anlaufstelle, liegt ihr Platz direkt davor - am
+           * Bordstein, nicht in der Mitte der Straße dahinter. Weiter als
+           * knapp zwei Meter vom Haus weg sucht man den Ring, statt ihn zu
+           * sehen; näher heran ginge nicht, dort steht die Wand.
+           */
+          if (nachbar && (feld.id === tankstelle?.id || feld.id === polizei?.id)) {
+            const tuer = vorDerTuer(stadtplan, feld.x, feld.z, nachbar);
+            if (feld.id === tankstelle?.id && tankPlatz === null) {
+              tankPlatz = new THREE.Vector3(tuer.x, 0, tuer.z);
+            }
+            if (feld.id === polizei?.id && polizeiPlatz === null) {
+              polizeiPlatz = new THREE.Vector3(tuer.x, 0, tuer.z);
+            }
           }
         }
       } else {
@@ -1040,26 +1062,35 @@ function KapitelCanvas({
         block.add(eintrag.vorlage.clone(true));
         block.position.z = cursorZ - eintrag.laenge / 2;
         scene.add(block);
-        // Die erste aufgebaute Tankstelle ist Wimpys Garage.
+        // Die erste aufgebaute Tankstelle ist Wimpys Garage, die erste
+        // Wache die, auf der beschuldigt wird. Beide stehen am rechten
+        // Straßenrand; der Platz davor liegt dicht an ihrer Kante.
         if (tankstelle && eintrag.id === tankstelle.id && tankPlatz === null) {
-          tankPlatz = new THREE.Vector3(2.7, 0, block.position.z);
+          tankPlatz = new THREE.Vector3(3.2, 0, block.position.z);
+        }
+        if (polizei && eintrag.id === polizei.id && polizeiPlatz === null) {
+          polizeiPlatz = new THREE.Vector3(3.2, 0, block.position.z);
         }
         cursorZ -= eintrag.laenge + 1.1;
         i++;
       }
       }
-      if (tankPlatz) {
-        /*
-         * Ein ruhiger Ring auf dem Boden zeigt, wo Wimpy einsteigen kann.
-         * Er leuchtet nicht und blinkt nicht - er liegt einfach da, wie ein
-         * aufgemalter Stellplatz.
-         */
+      /*
+       * Ein ruhiger Ring auf dem Boden zeigt, wo etwas geht. Er leuchtet
+       * nicht und blinkt nicht - er liegt einfach da, wie aufgemalt. Gelb an
+       * der Tankstelle, blau vor der Wache.
+       */
+      for (const [platz, farbe] of [
+        [tankPlatz, 0xf6c667],
+        [polizeiPlatz, 0x7ab6ff],
+      ] as const) {
+        if (!platz) continue;
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(0.75, 1.15, 28),
-          new THREE.MeshBasicMaterial({ color: 0xf6c667, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+          new THREE.MeshBasicMaterial({ color: farbe, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
         );
         ring.rotation.x = -Math.PI / 2;
-        ring.position.set(tankPlatz.x, 0.04, tankPlatz.z);
+        ring.position.set(platz.x, 0.04, platz.z);
         scene.add(ring);
         registrieren(ring);
       }
@@ -1465,9 +1496,18 @@ function KapitelCanvas({
       if (tankPlatz && tankstelle) {
         const distanz = tankPlatz.distanceTo(spieler.position);
         // Im Auto zählt nur die Tankstelle, zu Fuß gewinnt das nächste Ziel.
-        if (distanz < 3.2 && (amSteuer || distanz < abstand)) {
+        if (distanz < 2.6 && (amSteuer || distanz < abstand)) {
           abstand = distanz;
           nah = { gruppe: spieler, info: { art: "tankstelle", id: tankstelle.id, name: tankstelle.name } };
+        }
+      }
+      // Auf die Wache geht Wimpy zu Fuß - aus dem Auto heraus beschuldigt
+      // niemand.
+      if (polizeiPlatz && polizei && !amSteuer) {
+        const distanz = polizeiPlatz.distanceTo(spieler.position);
+        if (distanz < 2.6 && distanz < abstand) {
+          abstand = distanz;
+          nah = { gruppe: spieler, info: { art: "polizei", id: polizei.id, name: polizei.name } };
         }
       }
       const nahesZiel = nah as { gruppe: THREE.Group; info: Naehe } | null;
@@ -1637,6 +1677,7 @@ export function Saga3DKapitel({
   charakterGroessen = STANDARD_GROESSEN,
   locationDrehungen,
   tankstelleId,
+  polizeiId,
   plan,
   gefundeneSpuren,
   kapitel,
@@ -1647,6 +1688,7 @@ export function Saga3DKapitel({
   onSpur,
   onAufnehmen,
   onAutoWaehlen,
+  onBeschuldigen,
 }: {
   pausiert?: boolean;
   fall: PublicCase;
@@ -1660,6 +1702,8 @@ export function Saga3DKapitel({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Welcher die Polizeiwache ist; leer = am Namen erkennen. */
+  polizeiId?: string;
   /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
   plan?: Stadtplan | null;
   gefundeneSpuren: string[];
@@ -1673,6 +1717,12 @@ export function Saga3DKapitel({
   onAufnehmen: (mittel: Beweismittel, statt?: string) => void;
   /** Welcher Wagen zuletzt gefahren wurde - der fährt auch in der Jagd. */
   onAutoWaehlen?: (id: string) => void;
+  /**
+   * Auf der Wache wird beschuldigt. Fehlt der Rückruf - oder steht in der
+   * Stadt gar keine Wache -, bleibt die Beschuldigung dort, wo sie immer
+   * war: im Menü.
+   */
+  onBeschuldigen?: () => void;
 }) {
   const steuerung = useRef<Richtung>({ x: 0, z: 0 });
   const [nah, setNah] = useState<Naehe | null>(null);
@@ -1765,6 +1815,10 @@ export function Saga3DKapitel({
       setGarageOffen(true);
       return;
     }
+    if (nah.art === "polizei") {
+      onBeschuldigen?.();
+      return;
+    }
     if (nah.art === "wagen") {
       const auto = meineAutos.find((a) => a.id === nah.id);
       if (auto) einsteigen(auto);
@@ -1801,6 +1855,7 @@ export function Saga3DKapitel({
         charakterGroessen={charakterGroessen}
         locationDrehungen={locationDrehungen}
         tankstelleId={tankstelleId}
+        polizeiId={polizeiId}
         plan={plan}
         fahrzeug={fahrzeug}
         spuren={spuren}
@@ -1890,6 +1945,7 @@ export function Saga3DProbeSzene({
   modellIds,
   locationDrehungen,
   tankstelleId,
+  polizeiId,
   plan,
   onZurueck,
   onSchliessen,
@@ -1902,6 +1958,8 @@ export function Saga3DProbeSzene({
   locationDrehungen: Record<string, number>;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId?: string;
+  /** Welcher die Polizeiwache ist; leer = am Namen erkennen. */
+  polizeiId?: string;
   /** Selbst gelegter Stadtplan; ohne ihn entsteht der Straßenzug wie bisher. */
   plan?: Stadtplan | null;
   onZurueck: () => void;
@@ -1999,6 +2057,7 @@ export function Saga3DProbeSzene({
         charakterModelle={modellZuordnung}
         locationDrehungen={locationDrehungen}
         tankstelleId={tankstelleId}
+        polizeiId={polizeiId}
         plan={plan}
         fahrzeug={fahrzeug}
         onTempo={setTempo}
@@ -2028,6 +2087,17 @@ export function Saga3DProbeSzene({
         >
           <small>{nah.name.toUpperCase()}</small>
           <strong>{amSteuer ? "⛽ WAGEN ABGEBEN" : "⛽ INS AUTO STEIGEN"}</strong>
+        </button>
+      )}
+      {/* In der Probewelt gibt es keinen Fall, also auch niemanden zu
+          beschuldigen - geprüft wird hier nur, ob man die Wache findet. */}
+      {nah?.art === "polizei" && (
+        <button
+          className="experiment-ansprechen"
+          onClick={() => { setzen(0, 0); setMeldung(`${nah.name} ist erreichbar - im Spiel wird hier beschuldigt.`); }}
+        >
+          <small>{nah.name.toUpperCase()}</small>
+          <strong>🚔 WACHE BETRETEN</strong>
         </button>
       )}
       {nah?.art === "wagen" && !amSteuer && (

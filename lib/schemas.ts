@@ -422,6 +422,8 @@ export const SagaVorgabenSchema = z.object({
           .default({}),
         // Welcher Baustein die Tankstelle ist. Leer = am Namen erkennen.
         tankstelleId: z.string().max(80).default("").catch(""),
+        // Und welcher die Polizeiwache - dort wird beschuldigt.
+        polizeiId: z.string().max(80).default("").catch(""),
         /*
          * Der selbst gelegte Stadtplan. Kaputte Pläne werden zu null - dann
          * entsteht die Stadt wie bisher als Straßenzug, statt dass ein

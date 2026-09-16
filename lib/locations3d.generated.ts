@@ -16,6 +16,16 @@ export const GENERIERTE_3D_LOCATIONS = [
     "datei": "/3d_locations/donki2-web.glb"
   },
   {
+    "id": "kabukicho",
+    "name": "Kabukicho",
+    "datei": "/3d_locations/kabukicho-web.glb"
+  },
+  {
+    "id": "kikanbooffen",
+    "name": "Kikanbooffen",
+    "datei": "/3d_locations/kikanbooffen-web.glb"
+  },
+  {
     "id": "residential",
     "name": "Residential",
     "datei": "/3d_locations/residential-web.glb"
@@ -39,6 +49,11 @@ export const GENERIERTE_3D_LOCATIONS = [
     "id": "tokyocanal",
     "name": "Tokyocanal",
     "datei": "/3d_locations/tokyocanal-web.glb"
+  },
+  {
+    "id": "tokyopolizei",
+    "name": "Tokyopolizei",
+    "datei": "/3d_locations/tokyopolizei-web.glb"
   },
   {
     "id": "waterfront",

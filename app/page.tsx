@@ -41,6 +41,8 @@ import { arcAbspann, type Arc } from "@/lib/arcTypen";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
 import { dreiDFuerSagaFall } from "@/lib/saga3dSync";
+import { polizeiAus } from "@/lib/pursuit3d";
+import { anDerStrasse, gebaeudeArten, planGueltig } from "@/lib/stadtplan";
 import { dreiDDateien, jagdDateien, vorladen } from "@/lib/vorladen";
 import { dreiDFuerKapitel } from "@/lib/sagaTypen";
 import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
@@ -359,6 +361,28 @@ export default function Home() {
 
   const laufendesDreiDKapitel = saga.stand && stand.fall
     ? dreiDFuerSagaFall(saga.stand.saga, stand.fall.id) : null;
+
+  /*
+   * Steht in der 3D-Stadt eine Polizeiwache, wird dort beschuldigt - dann
+   * hat der Knopf in der Leiste nichts mehr zu suchen. Fehlt sie, bleibt er,
+   * wo er war: Sonst käme man in dieser Stadt nie zur Auflösung.
+   */
+  const dreiDPlan = planGueltig(laufendesDreiDKapitel?.plan) ? laufendesDreiDKapitel.plan : null;
+  const dreiDWacheBaustein = laufendesDreiDKapitel
+    ? polizeiAus(
+        dreiDPlan ? gebaeudeArten(dreiDPlan) : laufendesDreiDKapitel.locations,
+        laufendesDreiDKapitel.polizeiId,
+      )
+    : null;
+  /*
+   * Und sie zählt nur, wenn man auch hinkommt: Eine Wache mitten im Block
+   * hat keine Straße davor und damit keinen Platz zum Stehen. Dann bleibt
+   * der Knopf in der Leiste, sonst gäbe es gar keine Beschuldigung mehr.
+   */
+  const dreiDWache = dreiDWacheBaustein
+    && (!dreiDPlan || anDerStrasse(dreiDPlan, dreiDWacheBaustein.id))
+    ? dreiDWacheBaustein
+    : null;
 
   /*
    * Die großen 3D-Dateien holen, solange noch gelesen wird.
@@ -1413,7 +1437,9 @@ export default function Home() {
               charakterGroessen={laufendesDreiDKapitel.charakterGroessen ?? LEERE_DREI_D_DREHUNGEN}
               locationDrehungen={laufendesDreiDKapitel.locationDrehungen ?? LEERE_DREI_D_DREHUNGEN}
               tankstelleId={laufendesDreiDKapitel.tankstelleId ?? ""}
+              polizeiId={laufendesDreiDKapitel.polizeiId ?? ""}
               plan={laufendesDreiDKapitel.plan ?? null}
+              onBeschuldigen={() => { setFehler(null); setBeschuldigenOffen(true); }}
               besitz={geld.beutel.vorrat}
               onAutoWaehlen={geld.autoWaehlen}
               gefundeneSpuren={stand.gefundeneSpuren}
@@ -1498,7 +1524,9 @@ export default function Home() {
       )}
 
       <Nav
-        onBeschuldigen={laufendesDreiDKapitel ? () => { setFehler(null); setBeschuldigenOffen(true); } : undefined}
+        onBeschuldigen={laufendesDreiDKapitel && !dreiDWache
+          ? () => { setFehler(null); setBeschuldigenOffen(true); }
+          : undefined}
         aktiv={tab}
         onWechsel={setTab}
         spurenAnzahl={tasche.inhalt.length}

@@ -87,6 +87,7 @@ export function StaedteBereich({ onMeldung, onFehler }: BereichProps) {
         modellIds={["wimpy"]}
         locationDrehungen={{}}
         tankstelleId={probe.tankstelleId}
+        polizeiId={probe.polizeiId}
         plan={probe.plan}
         onZurueck={() => setProbe(null)}
         onSchliessen={() => setProbe(null)}
@@ -164,6 +165,21 @@ export function StaedteBereich({ onMeldung, onFehler }: BereichProps) {
               onChange={(e) => aendern({ tankstelleId: e.target.value })}
             >
               <option value="">Automatisch erkennen (Name enthält „Tank“)</option>
+              {bausteine.map((id) => (
+                <option key={id} value={id}>
+                  {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="feld">
+            <span className="leise klein">Polizeiwache · hier beschuldigt Wimpy</span>
+            <select
+              value={entwurf.polizeiId}
+              onChange={(e) => aendern({ polizeiId: e.target.value })}
+            >
+              <option value="">Automatisch erkennen (Name enthält „Polizei“)</option>
               {bausteine.map((id) => (
                 <option key={id} value={id}>
                   {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}

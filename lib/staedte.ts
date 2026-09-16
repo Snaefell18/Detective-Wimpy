@@ -33,6 +33,8 @@ export type Stadt = {
   plan: Stadtplan;
   /** Welcher Baustein die Tankstelle ist; leer = am Namen erkennen. */
   tankstelleId: string;
+  /** Und welcher die Polizeiwache - dort wird beschuldigt. */
+  polizeiId: string;
   strassentyp: DreiDStrassentyp;
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
@@ -44,6 +46,7 @@ export type StadtVorgabe = {
   plan: Stadtplan;
   locations: string[];
   tankstelleId: string;
+  polizeiId: string;
   strassentyp: DreiDStrassentyp;
   tageszeit: DreiDTageszeit;
   wetter: DreiDWetter;
@@ -62,6 +65,7 @@ export const neueStadt = (plan?: Stadtplan | null): Stadt => ({
   // begehbar, und man baut die Häuser daran entlang statt ins Leere.
   plan: planGueltig(plan) ? plan : beispielPlan(7, 7),
   tankstelleId: "",
+  polizeiId: "",
   strassentyp: "asphalt",
   tageszeit: "tag",
   wetter: "klar",
@@ -94,6 +98,7 @@ export function stadtLesen(roh: unknown): Stadt | null {
     beschreibung: typeof wert.beschreibung === "string" ? wert.beschreibung.slice(0, 400) : "",
     plan,
     tankstelleId: typeof wert.tankstelleId === "string" ? wert.tankstelleId.slice(0, 80) : "",
+    polizeiId: typeof wert.polizeiId === "string" ? wert.polizeiId.slice(0, 80) : "",
     strassentyp: ausWahl(wert.strassentyp, STRASSENTYPEN, "asphalt"),
     tageszeit: ausWahl(wert.tageszeit, TAGESZEITEN, "tag"),
     wetter: ausWahl(wert.wetter, WETTERLAGEN, "klar"),
@@ -142,6 +147,7 @@ export const stadtVorgabe = (stadt: Stadt): StadtVorgabe => ({
   plan: stadt.plan,
   locations: gebaeudeArten(stadt.plan),
   tankstelleId: stadt.tankstelleId,
+  polizeiId: stadt.polizeiId,
   strassentyp: stadt.strassentyp,
   tageszeit: stadt.tageszeit,
   wetter: stadt.wetter,

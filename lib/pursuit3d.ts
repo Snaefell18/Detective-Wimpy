@@ -28,6 +28,14 @@ export type Kapitel3DVorgabe = {
    */
   tankstelleId?: string;
   /**
+   * Welcher Baustein die Polizeiwache ist - dort spricht Wimpy die
+   * Beschuldigung aus.
+   *
+   * Leer heißt wie bei der Tankstelle: am Namen erkannt. Steht in der Stadt
+   * keine Wache, bleibt die Beschuldigung dort, wo sie immer war - im Menü.
+   */
+  polizeiId?: string;
+  /**
    * Ein selbst gelegter Stadtplan statt des gereihten Straßenzugs.
    *
    * Fehlt er oder hat er keine Straße, entsteht die Stadt wie bisher: Die
@@ -74,6 +82,7 @@ export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   charakterGroessen: {},
   locationDrehungen: {},
   tankstelleId: "",
+  polizeiId: "",
   plan: null,
 };
 
@@ -91,24 +100,37 @@ export const dateienFuer3D = (ids: string[] | undefined): string[] =>
 
 /** Woran eine Tankstelle ohne ausdrückliche Wahl zu erkennen ist. */
 const TANK_NAME = /tank|zapf|benzin|sprit|garage|werkstatt/i;
+/** Und woran eine Polizeiwache. */
+const POLIZEI_NAME = /polizei|police|revier|wache|kommissariat|koban/i;
+
+export type DreiDBaustein = { id: string; name: string; datei: string };
 
 /**
- * Die Tankstelle unter den gewählten Bausteinen - oder nichts.
+ * Ein besonderer Baustein unter den gewählten - oder nichts.
  *
- * Gewählt schlägt erkannt: Steht im Kapitel ausdrücklich eine Tankstelle und
- * ist sie auch aufgebaut, gilt sie. Sonst entscheidet der Name, damit eine
- * frisch hinzugefügte Datei ohne weiteres Zutun funktioniert.
+ * Gewählt schlägt erkannt: Steht im Kapitel ausdrücklich einer und ist er
+ * auch aufgebaut, gilt er. Sonst entscheidet der Name, damit eine frisch
+ * hinzugefügte Datei ohne weiteres Zutun funktioniert.
  */
-export function tankstelleAus(
+function bausteinAus(
   ids: string[] | undefined,
-  gewaehlt?: string,
-): { id: string; name: string; datei: string } | null {
+  gewaehlt: string | undefined,
+  muster: RegExp,
+): DreiDBaustein | null {
   const gebaut = locationsFuer3D(ids);
   if (gewaehlt) {
     const genau = gebaut.find((ort) => ort.id === gewaehlt);
     if (genau) return genau;
   }
-  return gebaut.find((ort) => TANK_NAME.test(ort.id) || TANK_NAME.test(ort.name)) ?? null;
+  return gebaut.find((ort) => muster.test(ort.id) || muster.test(ort.name)) ?? null;
 }
+
+/** Die Tankstelle: Dort steigt Wimpy in sein Auto. */
+export const tankstelleAus = (ids: string[] | undefined, gewaehlt?: string): DreiDBaustein | null =>
+  bausteinAus(ids, gewaehlt, TANK_NAME);
+
+/** Die Polizeiwache: Dort spricht er die Beschuldigung aus. */
+export const polizeiAus = (ids: string[] | undefined, gewaehlt?: string): DreiDBaustein | null =>
+  bausteinAus(ids, gewaehlt, POLIZEI_NAME);
 
 export const TOKYO_FASSADEN = DREI_D_LOCATIONS.map((ort) => ort.datei);

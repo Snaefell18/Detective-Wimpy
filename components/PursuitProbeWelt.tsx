@@ -34,6 +34,8 @@ export function PursuitProbeWelt({
   const [drehungen, setDrehungen] = useState<Record<string, number>>({});
   /** Welcher Baustein hier die Tankstelle ist - leer heißt: am Namen erkennen. */
   const [tankstelle, setTankstelle] = useState("");
+  /** Und welcher die Polizeiwache - dort wird im Spiel beschuldigt. */
+  const [polizei, setPolizei] = useState("");
   /** Optionaler eigener Stadtplan statt des Straßenzugs. */
   const [plan, setPlan] = useState<Stadtplan | null>(null);
 
@@ -47,6 +49,7 @@ export function PursuitProbeWelt({
         modellIds={["wimpy", ...modelle]}
         locationDrehungen={drehungen}
         tankstelleId={tankstelle}
+        polizeiId={polizei}
         plan={plan}
         onZurueck={() => setSpielt(false)}
         onSchliessen={onSchliessen}
@@ -91,6 +94,7 @@ export function PursuitProbeWelt({
             setPlan(vorgabe.plan);
             if (vorgabe.locations.length) setLocations(vorgabe.locations);
             setTankstelle(vorgabe.tankstelleId);
+            setPolizei(vorgabe.polizeiId);
             setStrassentyp(vorgabe.strassentyp);
             setTageszeit(vorgabe.tageszeit);
             setWetter(vorgabe.wetter);
@@ -102,6 +106,18 @@ export function PursuitProbeWelt({
         <label className="feld">
           <select value={tankstelle} onChange={(e) => setTankstelle(e.target.value)}>
             <option value="">Automatisch erkennen (Name enthält „Tank“)</option>
+            {locations.map((id) => (
+              <option key={id} value={id}>
+                {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <h3>Polizeiwache <span className="leise">· hier beschuldigt Wimpy</span></h3>
+        <label className="feld">
+          <select value={polizei} onChange={(e) => setPolizei(e.target.value)}>
+            <option value="">Automatisch erkennen (Name enthält „Polizei“)</option>
             {locations.map((id) => (
               <option key={id} value={id}>
                 {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}

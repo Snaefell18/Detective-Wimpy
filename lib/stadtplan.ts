@@ -179,6 +179,52 @@ export function begehbar(plan: Stadtplan, weltX: number, weltZ: number, radius =
 }
 
 /**
+ * Wie weit vor der Hauskante man steht, um mit ihm zu tun zu haben.
+ *
+ * Ein Feld ist neun Meter, das Haus füllt es aus - seine Vorderkante liegt
+ * also 4,5 Meter von der Feldmitte entfernt. Knapp zwei Meter davor steht man
+ * direkt vor der Tür. Näher ginge nicht: Dort ist die Wand, und Wimpy braucht
+ * seine Schulterbreite.
+ */
+export const TUER_ABSTAND = 1.7;
+
+/**
+ * Der Platz vor einem Gebäude - dort, wo Tankstelle und Wache ihren Ring
+ * bekommen.
+ *
+ * `richtung` ist der Weg zum Nachbarfeld mit Straße, also die Seite, an der
+ * das Haus seine Front hat. Herausgekommen ist die Mitte des Feldes plus
+ * knapp die halbe Feldbreite - nicht die Mitte der Straße dahinter: Einen
+ * Ring, der neun Meter weiter hinten liegt, sucht man, statt ihn zu sehen.
+ */
+export function vorDerTuer(
+  plan: Stadtplan,
+  x: number,
+  z: number,
+  richtung: { x: number; z: number },
+): { x: number; z: number } {
+  const mitte = feldMitte(plan, x, z);
+  const weg = FELD_GROESSE / 2 + TUER_ABSTAND;
+  return { x: mitte.x + richtung.x * weg, z: mitte.z + richtung.z * weg };
+}
+
+/**
+ * Steht dieser Baustein irgendwo an einer Straße?
+ *
+ * Wichtig für Tankstelle und Wache: Ihr Platz liegt auf der Fahrbahn vor
+ * ihnen. Ein Haus mitten im Block hat keine, und dann gibt es dort auch
+ * nichts zu tun - wer das nicht prüft, nimmt dem Spieler die Beschuldigung
+ * weg, ohne ihm eine andere zu geben.
+ */
+export function anDerStrasse(plan: Stadtplan, id: string): boolean {
+  return gebaeudeFelder(plan).some(
+    (feld) =>
+      feld.id === id &&
+      [[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dz]) => istStrasse(plan, feld.x + dx, feld.z + dz)),
+  );
+}
+
+/**
  * Welche Felder eine Sichtlinie überquert.
  *
  * Gebraucht wird das für die Kamera. Sie steht siebzehn Meter schräg hinter

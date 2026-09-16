@@ -29,6 +29,9 @@ import {
   startFeld,
   strassenFelder,
   verteilen,
+  vorDerTuer,
+  anDerStrasse,
+  TUER_ABSTAND,
 } from "../lib/stadtplan.ts";
 import { DREI_D_LOCATIONS, STANDARD_KAPITEL_3D } from "../lib/pursuit3d.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
@@ -191,6 +194,51 @@ console.log("\n5. Der Plan übersteht Speichern und Erzeugung");
   });
   pruefe("ein kaputter Plan wirft das Kapitel nicht weg", kaputt.success);
   pruefe("er wird einfach zu keinem Plan", kaputt.data?.kapitel3d[0].plan === null);
+}
+
+console.log("\n9. Der Platz vor der Tür");
+{
+  // Ein Kreuz mit einem Haus daneben: Das Haus schaut nach Westen auf die
+  // Straße, der Platz davor muss dort liegen - nicht neun Meter weiter.
+  const plan = feldSetzen(beispielPlan(7, 7), 4, 3, DREI_D_LOCATIONS[0].id);
+  const nachWesten = { x: -1, z: 0 };
+  const tuer = vorDerTuer(plan, 4, 3, nachWesten);
+  const hausMitte = feldMitte(plan, 4, 3);
+  const strasseMitte = feldMitte(plan, 3, 3);
+
+  pruefe("er liegt auf der Seite der Straße", tuer.x < hausMitte.x);
+  pruefe("und quer dazu genau vor dem Haus", Math.abs(tuer.z - hausMitte.z) < 0.001);
+  pruefe(
+    "näher am Haus als die Mitte der Straße davor",
+    Math.abs(tuer.x - hausMitte.x) < Math.abs(strasseMitte.x - hausMitte.x),
+    `${Math.abs(tuer.x - hausMitte.x).toFixed(1)} m statt ${Math.abs(strasseMitte.x - hausMitte.x).toFixed(1)} m`,
+  );
+  pruefe(
+    "knapp zwei Meter vor der Hauskante",
+    Math.abs(Math.abs(tuer.x - hausMitte.x) - (FELD_GROESSE / 2 + TUER_ABSTAND)) < 0.001,
+  );
+  // Ein Haus mitten im Block hat keine Straße - und damit keinen Platz.
+  const eingebaut = feldSetzen(leererPlan(5, 5), 2, 2, DREI_D_LOCATIONS[0].id);
+  pruefe("ein Haus an der Straße wird erkannt", anDerStrasse(plan, DREI_D_LOCATIONS[0].id));
+  pruefe("eines ohne Straße nicht", !anDerStrasse(eingebaut, DREI_D_LOCATIONS[0].id));
+  pruefe("und ein gar nicht gesetztes erst recht nicht", !anDerStrasse(plan, "gibt-es-nicht"));
+
+  // Und das Wichtigste: Wimpy kommt dort auch hin.
+  pruefe("Wimpy kann dort stehen", begehbar(plan, tuer.x, tuer.z, 0.7));
+  pruefe(
+    "aber nicht mehr direkt an der Wand",
+    !begehbar(plan, hausMitte.x - FELD_GROESSE / 2 + 0.2, hausMitte.z, 0.7),
+  );
+
+  // In alle vier Richtungen dasselbe.
+  for (const [name, weg] of [["Norden", { x: 0, z: -1 }], ["Süden", { x: 0, z: 1 }], ["Osten", { x: 1, z: 0 }]]) {
+    const punkt = vorDerTuer(plan, 3, 3, weg);
+    const feld = feldMitte(plan, 3, 3);
+    pruefe(
+      `nach ${name} liegt er genauso weit weg`,
+      Math.abs(Math.hypot(punkt.x - feld.x, punkt.z - feld.z) - (FELD_GROESSE / 2 + TUER_ABSTAND)) < 0.001,
+    );
+  }
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles sauber.\n" : `\n${fehlgeschlagen} Fehler.\n`);

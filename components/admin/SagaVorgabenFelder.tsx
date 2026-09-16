@@ -743,6 +743,7 @@ export function SagaVorgabenFelder({
                       plan: stadt.plan,
                       ...(stadt.locations.length ? { locations: stadt.locations } : {}),
                       tankstelleId: stadt.tankstelleId,
+                      polizeiId: stadt.polizeiId,
                       strassentyp: stadt.strassentyp,
                       tageszeit: stadt.tageszeit,
                       wetter: stadt.wetter,
@@ -761,6 +762,26 @@ export function SagaVorgabenFelder({
                       onChange={(e) => dreiDSetzen(i, { tankstelleId: e.target.value })}
                     >
                       <option value="">Automatisch erkennen (Name enthält „Tank“)</option>
+                      {(vorgaben.kapitel3d?.[i]?.locations?.length
+                        ? vorgaben.kapitel3d[i].locations
+                        : STANDARD_KAPITEL_3D.locations
+                      ).map((id) => (
+                        <option key={id} value={id}>
+                          {DREI_D_LOCATIONS.find((ort) => ort.id === id)?.name ?? id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {/* Steht eine Wache in der Stadt, wird dort beschuldigt -
+                      und nur dort. Ohne Wache bleibt der Knopf in der
+                      Leiste, sonst käme man nie zur Auflösung. */}
+                  <label className="feld">
+                    <span className="leise klein">Polizeiwache · hier beschuldigt Wimpy</span>
+                    <select
+                      value={vorgaben.kapitel3d?.[i]?.polizeiId ?? ""}
+                      onChange={(e) => dreiDSetzen(i, { polizeiId: e.target.value })}
+                    >
+                      <option value="">Automatisch erkennen (Name enthält „Polizei“)</option>
                       {(vorgaben.kapitel3d?.[i]?.locations?.length
                         ? vorgaben.kapitel3d[i].locations
                         : STANDARD_KAPITEL_3D.locations
