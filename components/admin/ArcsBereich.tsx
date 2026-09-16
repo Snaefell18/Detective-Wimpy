@@ -616,8 +616,12 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
 
               {arc.finale.art === "kampf" && (
                 <KampfFeld
-                  arc={arc}
                   kampf={arc.finale.kampf ?? STANDARD_KAMPF}
+                  gegnerId={arc.culprit.charakterId}
+                  gegnerWort={arc.culprit.wort}
+                  ohneGegner="Für diesen Arc steht noch kein Culprit fest. Oben unter „Der Culprit“ eintragen - sonst kämpft Wimpy gegen ein geratenes Tier."
+                  titel={arc.name}
+                  einleitung="Der Arc endet im Kampf: Wimpy gegen den Culprit, live in 3D und mit dem Daumen gesteuert. Danach läuft der Abschlusstext weiter unten wie bei jedem anderen Finale - der Kampf ersetzt ihn nicht, er geht ihm voraus."
                   onAendern={(kampf) =>
                     void sichern({ ...arc, finale: { ...arc.finale, kampf } })
                   }

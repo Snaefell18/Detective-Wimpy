@@ -1,10 +1,12 @@
 /**
- * Der Endkampf eines Arcs - alles, was im Admin-Menü daran eingestellt wird.
+ * Der Endkampf - alles, was im Admin-Menü daran eingestellt wird.
  *
- * Ein Arc lief bisher in einen Text, ein Video oder einen Abspann. Das hier
- * ist die vierte Art, ihn zu beenden: Wimpy steht dem Culprit gegenüber, und
- * zwar wirklich - in einer Arena, die man sich selbst baut, gegen einen
- * Gegner, der läuft, ausholt und zuschlägt.
+ * Ein Arc lief bisher in einen Text, ein Video oder einen Abspann, eine Saga
+ * in einen Finalfall oder in den Gerichtssaal. Das hier ist der andere Weg:
+ * Wimpy steht dem Culprit (oder dem Drahtzieher) gegenüber, und zwar
+ * wirklich - in einer Arena, die man sich selbst baut, gegen einen Gegner,
+ * der läuft, ausholt und zuschlägt. Dieselbe Vorgabe gilt an drei Stellen:
+ * im Arc-Finale, im Saga-Finale und im 3D-Labor.
  *
  * Die Arena ist bewusst nichts Neues: Sie ist ein ganz normaler Stadtplan
  * (lib/stadtplan.ts). Dieselben Straßen, dieselben Bausteine, derselbe
@@ -235,3 +237,17 @@ function jagdLesen(roh: unknown): VerfolgungVorgabe | null {
 export const kampfSpruch = (vorgabe: KampfVorgabe, name: string): string =>
   vorgabe.spruch.trim() ||
   `Du hast gewonnen, kleiner Detektiv. Aber vergiss nicht: Jahrelang hat niemand ${name} gesehen - auch du nicht.`;
+
+/**
+ * Die Arena einer Saga - oder nichts.
+ *
+ * Dasselbe wie arcKampf() für den Arc, nur eine Ebene tiefer: Steht die
+ * Finale-Art auf „Showdown“ und ist die Arena spielbar, wird gekämpft. Sonst
+ * endet die Saga genau wie eine klassische, und niemand merkt etwas davon.
+ */
+export const sagaKampf = (
+  vorgaben: { finaleArt?: string; kampf?: KampfVorgabe } | undefined,
+): KampfVorgabe | null => {
+  if (vorgaben?.finaleArt !== "kampf") return null;
+  return kampfSpielbar(vorgaben.kampf) ? vorgaben.kampf : null;
+};

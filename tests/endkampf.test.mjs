@@ -51,8 +51,12 @@ import {
   kampfSpruch,
   kampfZeile,
   neueKampfJagd,
+  sagaKampf,
 } from "../lib/endkampf.ts";
 import { arcKampf, leererArc } from "../lib/arcTypen.ts";
+import { FINALE_ARTEN, mitAnklage, mitVerhandlung } from "../lib/sagaFinale.ts";
+import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
+import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { ANIMATIONS_MODELLE } from "../lib/animations.generated.ts";
 import { STRASSE, beispielPlan, feldSetzen, leererPlan, strassenFelder } from "../lib/stadtplan.ts";
 
@@ -302,6 +306,44 @@ console.log("\n12. Der Arc fällt nie in ein leeres Finale");
     kampfSpruch(STANDARD_KAMPF, "Hut").includes("Hut"));
   pruefe("ein eigenes bleibt, wie es ist",
     kampfSpruch({ ...STANDARD_KAMPF, spruch: "Nie!" }, "Hut") === "Nie!");
+}
+
+console.log("\n13. Auch eine Saga darf im Kampf enden");
+{
+  const arena = { ...STANDARD_KAMPF, plan: arenaPlan(9, 9) };
+  pruefe("die Art steht zur Wahl", FINALE_ARTEN.some((a) => a.id === "kampf"));
+  pruefe("sie führt nicht in den Saal", !mitVerhandlung("kampf") && !mitAnklage("kampf"));
+  pruefe("ohne die Art kein Kampf", sagaKampf({ finaleArt: "klassisch", kampf: arena }) === null);
+  pruefe("mit Art, aber ohne Arena auch nicht", sagaKampf({ finaleArt: "kampf" }) === null);
+  pruefe("mit beidem schon", sagaKampf({ finaleArt: "kampf", kampf: arena }) === arena);
+  pruefe("und alte Sagas ohne alles stören nicht", sagaKampf(undefined) === null);
+
+  // Die Vorgaben gehen als Ganzes durchs Schema, bevor sie gespeichert werden.
+  // Was dort nicht steht, fällt heraus - die Arena darf das nicht passieren.
+  const geprueft = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    finaleArt: "kampf",
+    kampf: { ...arena, jagd: neueKampfJagd("hut", "Die Glocken") },
+  });
+  pruefe("das Schema nimmt die Arena an", geprueft.success, geprueft.error?.issues?.[0]?.message);
+  pruefe("und gibt sie unverändert zurück",
+    sagaKampf(geprueft.data)?.plan?.breite === 9 && geprueft.data?.kampf?.stufe === "mittel");
+  pruefe("samt der Jagd davor", geprueft.data?.kampf?.jagd?.fliehenderId === "hut");
+  pruefe("eine kaputte Arena nimmt es auch, macht sie aber unspielbar",
+    SagaVorgabenSchema.safeParse({
+      ...STANDARD_SAGA_VORGABEN,
+      finaleArt: "kampf",
+      kampf: { ...arena, plan: { breite: 99, tiefe: 2, felder: [] } },
+    }).success &&
+      sagaKampf(
+        SagaVorgabenSchema.parse({
+          ...STANDARD_SAGA_VORGABEN,
+          finaleArt: "kampf",
+          kampf: { ...arena, plan: { breite: 99, tiefe: 2, felder: [] } },
+        }),
+      ) === null);
+  pruefe("eine Saga ohne Kampf bleibt, wie sie war",
+    SagaVorgabenSchema.parse(STANDARD_SAGA_VORGABEN).kampf === undefined);
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles sauber.\n" : `\n${fehlgeschlagen} Fehler.\n`);

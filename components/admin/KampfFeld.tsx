@@ -3,7 +3,6 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
-import type { Arc } from "@/lib/arcTypen";
 import {
   GROESSE_GRENZEN,
   MINDEST_FELDER,
@@ -22,36 +21,58 @@ import {
 } from "@/lib/pursuit3d";
 import { gebaeudeArten, strassenFelder } from "@/lib/stadtplan";
 import { useStammdaten } from "@/lib/stammdaten";
-import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
 import { useAutos } from "@/lib/useAutos";
 import { SongWahl } from "./SongFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
 import { StadtWahl } from "./StadtWahl";
 
-const Endkampf = dynamic(() => import("../Endkampf").then((modul) => modul.Endkampf), {
+const Showdown = dynamic(() => import("../Showdown").then((modul) => modul.Showdown), {
   ssr: false,
 });
 
 /**
- * Der Showdown im Admin-Menü.
+ * Der Showdown, überall dort, wo man ihn einstellt.
  *
- * Alles an einer Stelle: die Arena (ein Stadtplan wie jeder andere), das
- * Licht, in dem sie steht, der Gegner, die Stufe - und die Verfolgungsjagd
- * davor, die man einrichten oder weglassen kann.
+ * Dieselben Felder braucht man an drei Stellen: im Finale eines Arcs, im
+ * Finale einer Saga und im 3D-Labor. Drei Kopien wären drei Baustellen -
+ * deshalb liegen sie hier, und nur der Gegner wird hereingereicht: im Arc der
+ * Culprit, in der Saga der Drahtzieher, im Labor niemand (dort zählt allein
+ * das gewählte Modell).
  *
  * Wichtig ist der Knopf ganz unten: „Showdown proben“ spielt den Kampf
- * genauso, wie er im Arc laufen wird. Ein Kampf lässt sich nicht ausdenken,
- * man muss ihn spielen - ob die Arena zu eng ist, ob der Gegner zu groß
- * geraten ist und ob die Stufe passt, merkt man in zehn Sekunden.
+ * genauso, wie er später laufen wird - samt Verfolgungsjagd davor, wenn eine
+ * eingerichtet ist. Ein Kampf lässt sich nicht ausdenken, man muss ihn
+ * spielen: ob die Arena zu eng ist, ob der Gegner zu groß geraten ist und ob
+ * die Stufe passt, merkt man in zehn Sekunden.
  */
 export function KampfFeld({
-  arc,
   kampf,
   onAendern,
+  gegnerId = "",
+  gegnerWort = "",
+  ohneGegner = "",
+  titel,
+  einleitung = "",
+  probeText = "⚔️ Showdown proben",
+  spielerModellId,
+  onSpielerModell,
 }: {
-  arc: Arc;
   kampf: KampfVorgabe;
   onAendern: (kampf: KampfVorgabe) => void;
+  /** Charakter-Id des Gegners. Leer heißt: steht noch nicht fest. */
+  gegnerId?: string;
+  /** Wie er genannt wird, solange er kein Tier aus den Stammdaten ist. */
+  gegnerWort?: string;
+  /** Was dasteht, wenn kein Gegner feststeht. Leer = gar nichts (Labor). */
+  ohneGegner?: string;
+  /** Überschrift für den Titel der Jagd und für die Probe. */
+  titel: string;
+  /** Ein Satz darüber, was dieser Kampf im Spiel bedeutet. */
+  einleitung?: string;
+  probeText?: string;
+  /** Nur im Labor: Wimpy einmal mit einem anderen Modell ausprobieren. */
+  spielerModellId?: string;
+  onSpielerModell?: (id: string) => void;
 }) {
   const stammdaten = useStammdaten();
   const { autos } = useAutos();
@@ -63,21 +84,13 @@ export function KampfFeld({
     setzen({ jagd: { ...kampf.jagd, ...teil } });
   };
 
-  const culprit = stammdaten.charaktere.find((c) => c.id === arc.culprit.charakterId);
-  const name = culprit?.name || arc.culprit.wort.trim() || "der Culprit";
-  const detektiv = stammdaten.charaktere.find((c) => c.istDetektiv);
-  const gegnerModell = culprit
-    ? modellFuerTier(culprit, 0, kampf.gegnerModell || undefined)
-    : ANIMATIONS_MODELLE.find((modell) => modell.id === kampf.gegnerModell);
+  const gegner = gegnerId ? stammdaten.charaktere.find((c) => c.id === gegnerId) : undefined;
+  const name = gegner?.name || gegnerWort.trim() || "der Gegner";
   const felder = kampf.plan ? strassenFelder(kampf.plan).length : 0;
 
   return (
     <div className="kampf-feld">
-      <p className="leise klein">
-        Der Arc endet im Kampf: Wimpy gegen {name}, live in 3D und mit dem
-        Daumen gesteuert. Danach läuft der Abschlusstext weiter unten wie bei
-        jedem anderen Finale - der Kampf ersetzt ihn nicht, er geht ihm voraus.
-      </p>
+      {einleitung && <p className="leise klein">{einleitung}</p>}
 
       <h4 className="unter-abschnitt">
         Die Arena <span className="leise">· eine 3D-Stadt wie jede andere</span>
@@ -86,7 +99,7 @@ export function KampfFeld({
       {!kampfSpielbar(kampf) && (
         <p className="hinweis warnung klein">
           Ohne Arena mit mindestens {MINDEST_FELDER} Straßenfeldern findet kein Kampf
-          statt - der Arc endet dann still mit seinem Abschlusstext.
+          statt - dann geht alles weiter, als hätte man keinen Showdown gewählt.
           {felder > 0 && felder < MINDEST_FELDER ? ` Gerade sind es ${felder}.` : ""}
         </p>
       )}
@@ -161,12 +174,7 @@ export function KampfFeld({
       <h4 className="unter-abschnitt">
         Der Gegner <span className="leise">· {name}</span>
       </h4>
-      {!culprit && (
-        <p className="hinweis warnung klein">
-          Für diesen Arc steht noch kein Culprit fest. Oben unter „Der Culprit“
-          eintragen - sonst kämpft Wimpy gegen ein geratenes Tier.
-        </p>
-      )}
+      {!gegner && ohneGegner && <p className="hinweis warnung klein">{ohneGegner}</p>}
       <label className="feld">
         <span className="leise klein">
           3D-Modell · leer heißt: das Modell aus den Stammdaten des Tieres
@@ -183,6 +191,21 @@ export function KampfFeld({
           ))}
         </select>
       </label>
+      {/* Im Labor gibt es keine Stammdaten, an denen Wimpys Modell hängt -
+          dort wird auch er ausgewählt. */}
+      {onSpielerModell && (
+        <label className="feld">
+          <span className="leise klein">Wimpys Modell · nur zum Ausprobieren</span>
+          <select value={spielerModellId ?? ""} onChange={(e) => onSpielerModell(e.target.value)}>
+            <option value="">Wie in den Stammdaten</option>
+            {ANIMATIONS_MODELLE.map((modell) => (
+              <option key={modell.id} value={modell.id}>
+                {modell.name} · {modell.animationen.length} Animationen
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {/* Ein Endgegner darf größer sein als ein Tier von der Straße - zu groß
           passt er allerdings nicht mehr zwischen die Häuser. */}
       <div className="stadtplan-hoehe">
@@ -261,7 +284,7 @@ export function KampfFeld({
           className="knopf klein"
           onClick={() =>
             setzen({
-              jagd: kampf.jagd ? null : neueKampfJagd(arc.culprit.charakterId, arc.name),
+              jagd: kampf.jagd ? null : neueKampfJagd(gegnerId, titel),
             })
           }
         >
@@ -346,28 +369,21 @@ export function KampfFeld({
           disabled={!kampfSpielbar(kampf)}
           onClick={() => setProbe(true)}
         >
-          ⚔️ Showdown proben
+          {probeText}
         </button>
       </div>
 
       {probe && kampfSpielbar(kampf) && (
         <div className="jagd-vorschau">
-          <Endkampf
+          {/* Geprobt wird der ganze Ablauf - mit Jagd davor, wenn eine steht. */}
+          <Showdown
             vorschau
-            plan={kampf.plan!}
-            strassentyp={kampf.strassentyp}
-            tageszeit={kampf.tageszeit}
-            wetter={kampf.wetter}
-            stufe={kampf.stufe}
-            musik={kampf.musik}
-            gegnerName={name}
-            gegnerSpruch={kampfSpruch(kampf, name)}
-            spielerModell={spielerModell(detektiv)}
-            gegnerModell={gegnerModell}
-            gegnerGroesse={kampf.gegnerGroesse}
-            titel={`${arc.name || "Der Showdown"} · Probe`}
-            onGewonnen={() => setProbe(false)}
-            onAufgeben={() => setProbe(false)}
+            kampf={kampf}
+            gegnerId={gegnerId}
+            name={name}
+            titel={`${titel || "Der Showdown"} · Probe`}
+            spielerModellId={spielerModellId}
+            onFertig={() => setProbe(false)}
           />
           <button
             type="button"

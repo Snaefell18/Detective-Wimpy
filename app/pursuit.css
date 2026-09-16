@@ -788,3 +788,7 @@
   .kampf-leben span { height: 11px; }
   .kampf-aktionen { bottom: max(76px, calc(var(--safe-bottom) + 64px)); }
 }
+
+/* Modus V im Labor: Der Kampf füllt den Bildschirm wie im Spiel. */
+.kampf-labor { position: absolute; inset: 0; z-index: 600; }
+.probe-panel .kampf-feld { margin-top: 4px; }

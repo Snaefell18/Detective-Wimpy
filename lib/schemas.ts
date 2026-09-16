@@ -383,6 +383,76 @@ const WETTER_WAHL: ("" | Wetterlage)[] = [
   ...WETTERLAGEN.map((w) => w.id),
 ];
 
+/*
+ * Ein selbst gelegter Stadtplan.
+ *
+ * Kaputte Pläne werden zu null - dann entsteht die Stadt wie bisher als
+ * Straßenzug, statt dass ein verrutschtes Feld ein ganzes Kapitel unbrauchbar
+ * macht. Dieselbe Prüfung gilt für die Arena des Showdowns: Es ist derselbe
+ * Plan, nur wird darin gekämpft statt ermittelt.
+ */
+const PlanSchema = z
+  .object({
+    breite: z.number().int().min(3).max(14),
+    tiefe: z.number().int().min(3).max(14),
+    felder: z.array(z.string().max(80)).max(196),
+    drehungen: z.record(z.string().max(12), z.number().int().min(0).max(270)).default({}),
+    // Höhenfaktor je Baustein - siehe Stadtplan.hoehen.
+    hoehen: z.record(z.string().max(80), z.number().min(0.6).max(3)).default({}),
+  })
+  .nullable()
+  .default(null)
+  .catch(null);
+
+/** Die Verfolgungsjagd - zwischen zwei Kapiteln wie vor dem Showdown. */
+const JagdSchema = z.object({
+  id: z.string().min(1).max(80),
+  nachKapitel: z.number().min(0).max(7),
+  name: z.string().min(1).max(120),
+  fliehenderId: z.string().min(1).max(40),
+  fluchtAutoId: z.string().max(100).optional(),
+  // Wie das Modell des Fluchtwagens in dieser Jagd gedreht wird. Ein
+  // unsinniger Wert wird zu 0 - lieber ungedreht als gar keine Jagd.
+  fluchtDrehung: z.number().int().min(0).max(359).default(0).catch(0),
+  verfolger: z
+    .tuple([
+      z.object({ charakterId: z.string().min(1).max(40), modell: z.enum(["schaf", "yeti"]) }),
+      z.object({ charakterId: z.string().min(1).max(40), modell: z.enum(["schaf", "yeti"]) }),
+    ])
+    .default([
+      { charakterId: "wimpy", modell: "schaf" },
+      { charakterId: "wimpy", modell: "yeti" },
+    ]),
+  musik: z.string().max(200).default(""),
+  fluchtgrund: z.string().max(800).default(""),
+  statement: z.string().max(1200).default(""),
+});
+
+/**
+ * Die Arena des Showdowns.
+ *
+ * Alles daran darf fehlen: Was hier nicht steht, bekommt seinen Standardwert,
+ * und eine Saga ohne brauchbare Arena endet einfach wie eine klassische.
+ * Deshalb steht überall ein .catch() - ein verrutschter Wert darf niemandem
+ * das Finale nehmen.
+ */
+export const KampfVorgabeSchema = z.object({
+  plan: PlanSchema,
+  locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(24).default([]),
+  strassentyp: z.enum(["asphalt", "sand", "schnee"]).default("asphalt").catch("asphalt"),
+  tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("nacht").catch("nacht"),
+  wetter: z
+    .enum(["klar", "sonne", "regen", "schnee", "schneesturm", "nebel"])
+    .default("klar")
+    .catch("klar"),
+  gegnerModell: z.string().max(80).default("").catch(""),
+  gegnerGroesse: z.number().min(0.6).max(2.5).default(1.35).catch(1.35),
+  stufe: z.enum(["sanft", "mittel", "hart"]).default("mittel").catch("mittel"),
+  musik: z.string().max(200).default("").catch(""),
+  spruch: z.string().max(1200).default("").catch(""),
+  jagd: JagdSchema.nullable().default(null).catch(null),
+});
+
 export const SagaVorgabenSchema = z.object({
   name: z.string().max(120),
   thema: z.string().max(2000),
@@ -429,18 +499,7 @@ export const SagaVorgabenSchema = z.object({
          * entsteht die Stadt wie bisher als Straßenzug, statt dass ein
          * verrutschtes Feld das ganze Kapitel unbrauchbar macht.
          */
-        plan: z
-          .object({
-            breite: z.number().int().min(3).max(14),
-            tiefe: z.number().int().min(3).max(14),
-            felder: z.array(z.string().max(80)).max(196),
-            drehungen: z.record(z.string().max(12), z.number().int().min(0).max(270)).default({}),
-            // Höhenfaktor je Baustein - siehe Stadtplan.hoehen.
-            hoehen: z.record(z.string().max(80), z.number().min(0.6).max(3)).default({}),
-          })
-          .nullable()
-          .default(null)
-          .catch(null),
+        plan: PlanSchema,
       }),
     )
     .max(9)
@@ -461,34 +520,9 @@ export const SagaVorgabenSchema = z.object({
     )
     .max(7)
     .default([]),
-  verfolgungsjagden: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(80),
-        nachKapitel: z.number().min(1).max(7),
-        name: z.string().min(1).max(120),
-        fliehenderId: z.string().min(1).max(40),
-        fluchtAutoId: z.string().max(100).optional(),
-        // Wie das Modell des Fluchtwagens in dieser Jagd gedreht wird. Ein
-        // unsinniger Wert wird zu 0 - lieber ungedreht als gar keine Jagd.
-        fluchtDrehung: z.number().int().min(0).max(359).default(0).catch(0),
-        verfolger: z.tuple([
-          z.object({
-            charakterId: z.string().min(1).max(40),
-            modell: z.enum(["schaf", "yeti"]),
-          }),
-          z.object({
-            charakterId: z.string().min(1).max(40),
-            modell: z.enum(["schaf", "yeti"]),
-          }),
-        ]).default([{ charakterId: "wimpy", modell: "schaf" }, { charakterId: "wimpy", modell: "yeti" }]),
-        musik: z.string().max(200).default(""),
-        fluchtgrund: z.string().max(800).default(""),
-        statement: z.string().max(1200).default(""),
-      }),
-    )
-    .max(7)
-    .default([]),
+  // Zwischen zwei Kapiteln liegt eine Jagd immer hinter einem echten Kapitel;
+  // die Jagd vor dem Showdown hängt dagegen am Finale und trägt die 0.
+  verfolgungsjagden: z.array(JagdSchema.extend({ nachKapitel: z.number().min(1).max(7) })).max(7).default([]),
   stadt: z.string().max(60),
   staedteWechseln: z.boolean(),
   charaktere: z.array(z.string().max(40)).max(24),
@@ -525,6 +559,8 @@ export const SagaVorgabenSchema = z.object({
     )
     .default({}),
   finaleArt: ausAuswahl(FINALE_ARTEN.map((f) => f.id)).default("klassisch"),
+  /** Die Arena, wenn die Saga im Showdown endet. Fehlt sie, endet sie klassisch. */
+  kampf: KampfVorgabeSchema.optional(),
   gerichtTon: z.string().max(200).default(""),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
