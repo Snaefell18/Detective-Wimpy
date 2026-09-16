@@ -103,7 +103,7 @@ export function StartScreen({
         {ladenBekannt && (
           <button className="knopf glas schmal" onClick={onLaden}>
             <span className="symbol">🧰</span>
-            <span className="zeilen-text">Detektiv-Zubehör</span>
+            <span className="zeilen-text">Shop</span>
             <span className="zeilen-meta">{yen(yenImBeutel)}</span>
           </button>
         )}
