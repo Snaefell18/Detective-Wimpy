@@ -46,6 +46,10 @@ const ZIELE: Record<FinaleArt, string> = {
     "Wimpy will den Angeklagten überführen. Am Ende soll er zugeben, was er getan hat.",
   gericht:
     "Alle ahnen, dass der Angeklagte es war - beweisen konnte es niemand. Wimpy soll ihn so weit bringen, dass er sich selbst verrät.",
+  // Er weiß, dass er nach dem Urteil rennt - das macht ihn nicht lauter,
+  // sondern ruhiger. Der Saal merkt davon nichts.
+  "gericht-kampf":
+    "Alle ahnen, dass der Angeklagte es war - beweisen konnte es niemand. Wimpy soll ihn so weit bringen, dass er sich selbst verrät. Der Angeklagte bleibt dabei auffällig gelassen: Er rechnet nicht damit, dass ein Urteil für ihn das Letzte ist, was in diesem Saal geschieht.",
   "gericht-daemon":
     "Auf der Bank sitzt nicht mehr das Tier, das alle kannten, sondern das Wesen, das in ihm steckte. Es ist älter, kälter und spielt mit dem Saal. Wimpy soll es festnageln.",
   "gericht-wimpy":

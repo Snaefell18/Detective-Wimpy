@@ -185,6 +185,29 @@ danach noch einmal, diesmal in der Arena. Erst dann kommt der Epilog. Wer den
 Finalfall nicht löst, sieht keinen Kampf; und brach im Täter eine Gestalt
 hervor, steht sie in der Arena, nicht ihr Wirt.
 
+#### Gericht & Flucht: Urteil, Jagd, Kampf
+
+Die Finale-Art **„Gericht & Flucht“** ist beides zusammen. Sie beginnt wie
+„Gerichtssaal“: Der Drahtzieher spielt die ganze Saga über mit Wimpy, im Saal
+klagt man ihn selbst an, legt vor, was in der Beweismitteltasche liegt, und Öhö
+spricht das Urteil. Nur lässt sich der Verurteilte nicht abführen - Stühle
+fallen, eine Tür schlägt, draußen springt ein Motor an. Was folgt, ist die
+Verfolgungsjagd und danach der Kampf in derselben Arena wie beim Showdown; der
+Knopf unter dem Urteil heißt dann auch nicht „Weiter“, sondern „Ihm nach“.
+
+Die Texte wissen davon: Schon in den Kapiteln steht beiläufig herum, dass er
+vorgesorgt hat - ein Wagen, der immer fahrbereit dasteht, ein Weg, den nur er
+kennt. Im Saal ist er dafür auffällig gelassen. Und der Epilog wird für die
+Zeit **nach** Jagd und Kampf geschrieben: Er erzählt, wie es ausging, und
+nennt weder Sieger noch Verlierer - beides ist möglich.
+
+Platzt das Verfahren, wird nicht gekämpft: Dann geht der Angeklagte ganz ruhig
+durch die Vordertür, und es kommt der Epilog. Dasselbe gilt, wenn keine
+brauchbare Arena eingerichtet ist - dann endet die Saga nach dem Urteil, so wie
+ein gewöhnliches Gerichtsfinale. Der Twist verträgt sich damit so wenig wie mit
+jedem anderen Gerichtsfinale: Wer vor Gericht mit Wimpy spielt, kann nicht
+zugleich unsichtbar bleiben.
+
 Geprobt wird an zwei Stellen: „Showdown proben“ im Editor spielt den Kampf
 genau so, wie er später laufen wird, samt Jagd davor und ohne dass dafür etwas
 gespeichert werden muss - und im Admin-Menü unter **Pursuit · 3D-Labor** gibt
@@ -211,6 +234,15 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
   Verfolger werden das Schaf-mit-Schal- und das Zottel-Yeti-Modell zugeordnet.
   Nach dem Fang spricht das fliehende Tier das im Editor hinterlegte Statement;
   anschließend läuft die Saga mit dem nächsten Kapitel weiter.
+
+  **Die Verhaftung** steht dazwischen: Ist der Wagen eingeholt, gehen beide mit
+  quietschenden Reifen in die Eisen, der Fluchtwagen stellt sich quer, alle vier
+  Räder qualmen - und dann geht die Tür auf. Der Flüchtige steigt aus, tritt vom
+  Wagen weg und dreht sich zur Kamera um; erst da sieht man, wer gefahren ist.
+  Sein Modell ist dasselbe wie überall (Stammdaten, vor dem Showdown das des
+  Kampfes). Tippen überspringt, wie vor der Jagd auch, und wenn das Modell nicht
+  geladen werden konnte, halten die Wagen trotzdem - nur die Enthüllung fällt
+  dann aus.
 
 Der Editor verhindert, dass Versammlung und Verfolgungsjagd dieselbe Lücke
 belegen. Die Jagd besitzt dort außerdem eine spielbare **3D-Vorschau**, einen
@@ -376,6 +408,12 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
 - **Wetter am Schauplatz** (Admin → Spiel): Regen, Nebel, Schnee, Nacht oder
   „Zufall“ - eine Lage je Fall, damit sie nicht mitten im Herumlaufen
   umschlägt. Alles reines CSS, keine zusätzlichen Dateien.
+- **Wetter in der 3D-Welt** (Städte, 3D-Kapitel, Arena, Probewelt): klar,
+  Sonne, Regen, Schneefall, Schneesturm, **Sandsturm** oder Nebel. Der
+  Sandsturm färbt Dunst, Licht und Boden ocker, legt Sand auf die Fahrbahn und
+  treibt die Körner waagerecht und böig durchs Bild - Stadt und Kampfarena
+  rechnen dafür mit denselben Zahlen (`components/stadtBau.ts`), damit man in
+  beiden im selben Sturm steht.
 - **Verdacht in Bewegung.** Ändert sich ein Verdacht, fährt rechts kurz eine
   Meldung herein - ohne Knopf und ohne Berührungen zu schlucken.
 - **Titelkarten.** Vor jedem Kapitel steht zwei Sekunden „Kapitel II“ und der
@@ -647,6 +685,15 @@ einchecken will, liest die Tabelle im Admin-Menü unter **Orte** ein.
    eine eventuell entdeckte Spur und die Änderung des Verdachtswerts.
 4. **Auflösen** (`POST /api/accuse`): Zwei Versuche. Ob die Beschuldigung stimmt,
    entscheidet der Server - Claude erzählt nur die Auflösung.
+
+Ist der Fall das **Kapitel einer Saga**, löst die Auflösung genau diesen Fall
+und nicht die ganze Reihe: Stücke mit Fernwirkung gehen ohne ihre Bedeutung in
+den Prompt („gehört nicht zu diesem Fall“), und der Drahtzieher wird dort weder
+benannt noch erklärt - offen enden darf so ein Kapitel ausdrücklich. Was
+trotzdem durchrutscht, streicht der Server danach satzweise, wie es der
+Vorspann längst tut (`lib/namenSchutz.ts`): Nur wo Name und Enttarnung im
+selben Satz stehen, fällt der Satz. Im Einzelfall und im Finale einer Saga
+bleibt dagegen alles, wie es war - dort gehört die ganze Wahrheit hin.
 
 ### Warum man den Täter nicht in den Dev-Tools nachlesen kann
 

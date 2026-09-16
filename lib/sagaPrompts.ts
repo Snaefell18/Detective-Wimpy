@@ -1,6 +1,6 @@
 import { besessenheitsRegeln } from "./gestaltStimme";
 import { characterBrief } from "./characters";
-import type { FinaleArt } from "./sagaFinale";
+import { mitAnklage, type FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
 import { URTEILS_REGEL } from "./urteil";
 import { besessen, falscheFaehrteVon, type SagaVorgaben } from "./sagaTypen";
@@ -51,7 +51,13 @@ export function finaleArtRegeln(args: {
 }): string {
   const { art, taeterName, detektivName, daemonName, ausfuehrlich, abKapitel = 1 } = args;
 
-  if (art === "gericht") {
+  if (art === "gericht" || art === "gericht-kampf") {
+    const flucht =
+      art === "gericht-kampf"
+        ? `
+- UND ER HAT EINEN AUSWEG. Vor Gericht gestellt zu werden, ist für ihn nicht das Ende: Er hat vorgesorgt - ein Wagen, ein Weg hinaus, ein Ort, an dem ihn niemand holt. Gesagt wird das nirgends. Man sieht es nur: Er ist zu ruhig für jemanden, dem es an den Kragen geht.
+- Streu in die Kapitel zwei, drei Kleinigkeiten, die später dazu passen: ein Wagen, der immer fahrbereit dasteht; ein Weg, den nur er kennt; jemand, der für ihn wartet. Als Beiläufigkeit, nie als Ankündigung.`
+        : "";
     return `
 DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
 - Man weiß früh, wer es war: ${taeterName} ${
@@ -61,7 +67,7 @@ DAS FINALE DIESER SAGA IST EIN GERICHTSVERFAHREN (Columbo-Regel)
     } ist freundlich, hilfsbereit, immer zur Stelle - und spielt mit ${detektivName}.
 - Er weiß, dass ${detektivName} es weiß. Er sagt es nie, aber jede Begegnung hat einen doppelten Boden: eine Bemerkung zu viel, ein Wissen, das er nicht haben dürfte, ein freundlicher Rat, der eine Warnung ist.
 - Was fehlt, ist nicht der Verdacht, sondern der Beweis. Jedes Kapitel lässt genau EIN hartes, benennbares Stück zurück, das später vor Gericht etwas wert ist: ein Zettel, eine Uhrzeit, ein Abdruck, eine Quittung, eine Zeugin, ein Geruch an der falschen Stelle.
-- ${taeterName} ist in den Kapiteln trotzdem nie der Täter des jeweiligen Falls. Er steht daneben, hilft mit, und geht als Erster wieder.${
+- ${taeterName} ist in den Kapiteln trotzdem nie der Täter des jeweiligen Falls. Er steht daneben, hilft mit, und geht als Erster wieder.${flucht}${
       ausfuehrlich
         ? `
 - Der Klappentext darf das Katz-und-Maus-Spiel andeuten, ohne ${taeterName} zu benennen.
@@ -468,6 +474,9 @@ function verhandlungsZiel(args: {
   detektivName: string;
 }): string {
   const { art, angeklagter, detektivName } = args;
+  if (art === "gericht-kampf") {
+    return `${angeklagter} sitzt auf der Anklagebank. Alle ahnen seit Langem, dass er es war; was fehlte, war der Beweis. Jetzt legt ${detektivName} vor, was er über die ganze Saga gesammelt hat. Und ${angeklagter} hört zu, als ginge ihn das alles wenig an - denn er hat nicht vor, das Urteil abzuwarten: Sobald es gesprochen ist, ist er durch die Tür. Was dann kommt, entscheidet kein Gericht mehr.`;
+  }
   return art === "gericht-daemon"
     ? `${angeklagter} sitzt auf der Anklagebank - so, wie ihn alle kennen. Was in ihm steckt, kommt erst heraus, wenn ${detektivName} ihn wirklich benennt. Danach führt ${detektivName} den Beweis gegen das, was dann dasteht.`
     : art === "gericht-wimpy"
@@ -525,6 +534,8 @@ export function buildVerhandlungPrompt(args: {
 }): string {
   const { art, angeklagter, richter, detektivName, besessenheit } = args;
   const ziel = verhandlungsZiel(args);
+  // Wo der Spieler selbst anklagt, darf der Name vorher nirgends stehen.
+  const angeklagtWird = mitAnklage(art);
 
   return `${kopf(args, ziel)}
 
@@ -533,7 +544,7 @@ Entwirf, was in diesem Saal GESPROCHEN wird. Die Beweisstücke kommen in einem z
 WEITERES
 - Die Frage steht groß über dem Saal (z.B. "Reicht das, was du hast?").
 - Der Erzählertext davor führt in den Saal: kurze Zeilen, Atmosphäre, keine Anrede. Er verrät nicht, wie es ausgeht.${
-    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy"
+    angeklagtWird
       ? `\n- WICHTIG: Weder die Frage noch der Erzählertext noch die Eröffnung nennen ${angeklagter} beim Namen oder umschreiben ihn erkennbar. ${detektivName} muss selbst benennen, wen er anklagt - stünde der Name schon vorher da, wäre das ganze Finale entwertet. Erst die Texte NACH der Anklage dürfen ihn nennen.`
       : ""
   }
@@ -543,10 +554,21 @@ WEITERES
       ? " - es endet mit einem Freispruch und benennt die wirkliche Ursache."
       : art === "wimpy"
         ? ` - es spricht ${detektivName} schuldig, und der Saal weiß nicht, wohin mit sich.`
+        : art === "gericht-kampf"
+          ? ` - es spricht ${angeklagter} schuldig, und es endet damit, dass er nicht mehr auf seinem Platz sitzt: Stühle fallen, eine Tür schlägt, draußen springt ein Motor an. Der letzte Satz gehört ${richter}, und er sagt sinngemäß, dass ${detektivName} ihn holen soll.`
         : ` - es spricht ${angeklagter} schuldig.`
   }
-- Das Urteil beim Scheitern lässt ${art === "ohne-taeter" ? "den Falschen verurteilt zurück" : art === "wimpy" ? "die Sache ungeklärt und " + detektivName + " mit seinem Wissen allein" : angeklagter + " gehen - freundlich, mit einem letzten Satz, der wehtut"}.
-- Der Epilog kommt nach dem Urteil und darf alles aussprechen.
+- Das Urteil beim Scheitern lässt ${art === "ohne-taeter" ? "den Falschen verurteilt zurück" : art === "wimpy" ? "die Sache ungeklärt und " + detektivName + " mit seinem Wissen allein" : angeklagter + " gehen - freundlich, mit einem letzten Satz, der wehtut"}${
+    art === "gericht-kampf"
+      ? ". Er geht ganz ruhig durch die Vordertür - er muss ja nicht rennen"
+      : ""
+  }.
+- Der Epilog kommt nach dem Urteil und darf alles aussprechen.${
+    art === "gericht-kampf"
+      ? `
+- ACHTUNG BEIM EPILOG: Zwischen Urteil und Epilog liegen die Verfolgungsjagd und der Kampf - ${detektivName} stellt ${angeklagter} danach selbst, weit weg vom Saal. Der Epilog steht also nach alldem: Er erzählt, wie es ausging, nicht wie es im Gericht endete, und er nennt weder Sieger noch Verlierer des Kampfes (beides ist möglich). Ein, zwei Sätze dürfen darauf anspielen, dass ein Urteil nur ein Satz ist, solange niemand ihn durchsetzt.`
+      : ""
+  }
 - Alles auf Deutsch.${
     besessenheit
       ? `\n${verwandlungsRegeln(besessenheit.wirt, besessenheit.daemon)}`
@@ -555,7 +577,7 @@ WEITERES
 
 DIE ANKLAGE
 ${
-    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy"
+    angeklagtWird
       ? `- ${detektivName} muss zu Beginn selbst benennen, wen er anklagt. Trifft er es, wird der Saal still (anklageRichtig). Trifft er daneben, weist ${richter} die Anklage ab - freundlich, ohne Spott, und ohne zu verraten, wer es stattdessen war (anklageFalsch).`
       : `- Hier klagt niemand jemanden an; die beiden Anklagetexte bleiben kurz und allgemein.`
   }
