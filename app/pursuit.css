@@ -792,3 +792,14 @@
 /* Modus V im Labor: Der Kampf füllt den Bildschirm wie im Spiel. */
 .kampf-labor { position: absolute; inset: 0; z-index: 600; }
 .probe-panel .kampf-feld { margin-top: 4px; }
+
+/* Die Showdown-Karte im Labor: violett wie der Kampf, damit sie auffällt. */
+.pursuit-moduskarte[data-modus="showdown"] {
+  color: #fff;
+  background:
+    radial-gradient(circle at 78% 16%, rgba(255,255,255,.22) 0 22%, transparent 23%),
+    linear-gradient(145deg, #2a1440, #6b2bd6 58%, #c45cff);
+  box-shadow: 9px 11px 0 #172337;
+  transform: rotate(-1deg);
+}
+.pursuit-moduskarte[data-modus="showdown"]:hover { transform: translate(-3px, -4px) rotate(-1.6deg); }
