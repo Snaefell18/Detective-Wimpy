@@ -1,43 +1,50 @@
 /**
  * Wie sich Wimpys Wagen in der 3D-Stadt fährt.
  *
- * Bisher war das Auto ein schnellerer Fußgänger: Stick in eine Richtung, und
- * der Wagen stand sofort dort. Ein Auto soll sich aber wie ein Auto anfühlen -
- * es zieht an, es trägt, es rutscht in die Kurve und es braucht einen Moment,
- * bis es steht. Genau das steht hier, und zwar als reine Rechnung ohne
- * Three.js: So lässt sich das Fahrgefühl prüfen, ohne eine Grafikkarte zu
- * starten - und nachstellen, ohne die Szene anzufassen.
+ * Gesteuert wird er genau wie Wimpy zu Fuß: Der Stick zeigt, wohin es gehen
+ * soll, und dorthin geht es. Kein Lenkrad, kein Rückwärtsgang, kein
+ * Umschalten zwischen Gas und Bremse - wer nach links will, hält nach links.
  *
- * Die Steuerung ist mit Absicht arcadig und nicht simuliert: Der Stick zeigt,
- * wohin es gehen soll, der Wagen dreht sich dorthin und gibt Gas. Wer den
- * Stick nach hinten drückt, bremst - erst wenn der Wagen steht, setzt er
- * zurück. Das ist auf einem Handy mit dem Daumen zu treffen; ein echtes
- * Lenkrad wäre es nicht.
+ * Der Unterschied zum Laufen ist die Masse. Ein Auto steht nicht sofort auf
+ * Tempo und hört nicht sofort auf; und je schneller es ist, desto weiter ist
+ * der Bogen, den es braucht, um einer neuen Richtung zu folgen. Im
+ * Schritttempo dreht es fast auf der Stelle - da fühlt es sich an wie zu Fuß.
+ * Mit Tempo zieht es Kurven, und wer den Stick quer legt, geht dabei
+ * automatisch vom Gas.
+ *
+ * Deshalb gibt es zwei Winkel: den Kurs, auf dem der Wagen tatsächlich rollt,
+ * und den Winkel, in dem die Karosserie dazu steht. Normalerweise hinkt sie
+ * dem Kurs ein wenig hinterher - das ist es, was man als Kurve sieht. Mit
+ * angezogener Handbremse dreht sie zum Stick, während der Wagen noch
+ * geradeaus weiterschiebt: quer durch die Kurve.
+ *
+ * Das Ganze ist reine Rechnung ohne Three.js. So lässt sich das Fahrgefühl
+ * prüfen, ohne eine Grafikkarte zu starten.
  */
 
 export type Fahrzustand = {
-  /** Wohin der Wagen schaut, in Radiant (0 = nach +z). */
+  /** Wohin die Karosserie schaut, in Radiant (0 = nach +z). */
   winkel: number;
-  /** Tempo entlang der Blickrichtung, in Metern je Sekunde. */
+  /** Wohin der Wagen tatsächlich rollt, in Radiant. */
+  kurs: number;
+  /** Tempo entlang des Kurses, in Metern je Sekunde. Nie negativ. */
   tempo: number;
-  /** Seitliches Rutschen in Metern je Sekunde - das ist der Drift. */
+  /** Wie schräg die Karosserie zum Kurs steht, in Radiant - der Drift. */
   drift: number;
 };
 
-export const STILLSTAND: Fahrzustand = { winkel: 0, tempo: 0, drift: 0 };
+export const STILLSTAND: Fahrzustand = { winkel: 0, kurs: 0, tempo: 0, drift: 0 };
 
 export type FahrWerte = {
   /** Höchstgeschwindigkeit in Metern je Sekunde. */
   hoechst: number;
   /** Wie kräftig er anzieht, in m/s². */
   schub: number;
-  /** Wie hart die Bremse zupackt. */
+  /** Wie hart er verzögert, wenn der Stick etwas anderes will. */
   bremse: number;
-  /** Wie schnell er rückwärts fährt. */
-  rueckwaerts: number;
-  /** Wie schnell er sich dreht, in Radiant je Sekunde. */
-  lenkung: number;
-  /** Wie gut die Reifen halten - klein heißt: rutscht lange. */
+  /** Wie schnell der Kurs dem Stick folgt, in Radiant je Sekunde. */
+  kurve: number;
+  /** Wie schnell sich die Karosserie wieder in den Kurs legt. */
   griff: number;
 };
 
@@ -61,12 +68,15 @@ export function fahrwerte(auto: { speed: number; beschleunigung: number }): Fahr
     // Von null auf Höchsttempo in gut zwei bis vier Sekunden - arcadig, nicht
     // realistisch: Wer Gas gibt, soll es sofort merken.
     schub: hoechst / (2.6 - zieht * 1.2),
-    bremse: hoechst * 1.35,
-    rueckwaerts: Math.min(6, hoechst * 0.38),
-    // Schwere, schnelle Wagen lenken träger - das macht den Unterschied
-    // zwischen "wendig" und "Rakete" spürbar.
-    lenkung: 3.4 - schnell * 1.1,
-    griff: 5.2 - schnell * 1.6,
+    bremse: hoechst * 1.6,
+    /*
+     * Wie schnell der Kurs dem Stick folgt. Im Stand ist das so gut wie
+     * sofort; mit Tempo bleibt davon ein Bogen übrig, der noch in eine
+     * Kreuzung passt. Schwere, schnelle Wagen ziehen weitere Bögen - das
+     * macht den Unterschied zwischen "wendig" und "Rakete" spürbar.
+     */
+    kurve: 9.5 - schnell * 2.2,
+    griff: 6.5 - schnell * 2,
   };
 }
 
@@ -85,6 +95,9 @@ export type FahrEingabe = {
   handbremse?: boolean;
 };
 
+/** Ab hier zählt der Stick als gedrückt - darunter ist es Daumenzittern. */
+const TOTBEREICH = 0.08;
+
 /**
  * Ein Zeitschritt.
  *
@@ -100,65 +113,70 @@ export function fahrSchritt(
 ): { zustand: Fahrzustand; bewegung: { x: number; z: number } } {
   const schritt = Math.min(0.05, Math.max(0.001, dt));
   const staerke = Math.min(1, Math.hypot(eingabe.x, eingabe.z));
-  let { winkel, tempo, drift } = zustand;
+  const gedrueckt = staerke > TOTBEREICH;
+  const handbremse = eingabe.handbremse === true;
+  let { winkel, kurs, tempo } = zustand;
+  const flott = klemm(tempo / werte.hoechst, 0, 1);
 
-  if (staerke > 0.08) {
-    const ziel = Math.atan2(eingabe.x, eingabe.z);
-    const differenz = winkelDifferenz(winkel, ziel);
-    const zurueck = Math.abs(differenz) > 2.2;
-
-    if (zurueck && tempo > 0.6) {
-      // Der Stick zeigt nach hinten, der Wagen fährt noch vorwärts: bremsen.
-      tempo = Math.max(0, tempo - werte.bremse * staerke * schritt);
-    } else if (zurueck) {
-      // Steht er, geht es rückwärts - langsam, wie es sich gehört.
-      tempo = Math.max(-werte.rueckwaerts, tempo - werte.schub * 0.6 * staerke * schritt);
-    } else {
-      /*
-       * Gas. Der Schub lässt oben spürbar nach, damit sich die letzten
-       * Stundenkilometer nach etwas anfühlen, statt einfach dazuzukommen.
-       */
-      const anteil = klemm(Math.abs(tempo) / werte.hoechst, 0, 1);
-      tempo += werte.schub * staerke * (1 - anteil * 0.55) * schritt;
-    }
-
+  let zielTempo = 0;
+  let zielKurs = kurs;
+  if (gedrueckt) {
+    zielKurs = Math.atan2(eingabe.x, eingabe.z);
+    const ab = winkelDifferenz(kurs, zielKurs);
     /*
-     * Lenken. Langsam dreht er fast auf der Stelle, schnell zieht er weite
-     * Bögen - und rückwärts andersherum, sonst stimmt das Gefühl nicht.
+     * Eine Kurve kostet Tempo: Wer den Stick quer legt, geht von selbst vom
+     * Gas und zieht dadurch enger ein. Mit Handbremse deutlich weniger -
+     * genau dafür ist sie da.
      */
-    if (!zurueck || tempo < 0) {
-      const flott = klemm(Math.abs(tempo) / werte.hoechst, 0, 1);
-      const rate = werte.lenkung * (1 - flott * 0.55) * (eingabe.handbremse ? 1.45 : 1);
-      // Im Stand lenkt niemand - aber schon das Anfahren soll gehorchen.
-      const wirkung = klemm(Math.abs(tempo) / 1.6, 0, 1);
-      const drehung = klemm(differenz, -rate * schritt, rate * schritt) * wirkung * Math.sign(tempo || 1);
-      winkel += drehung;
-      /*
-       * Was der Wagen an Richtung gewinnt, verliert er einen Moment lang zur
-       * Seite: Er rutscht. Das ist der ganze Zauber an einer Arcade-Kurve -
-       * und mit Handbremse bricht er richtig aus.
-       */
-      drift += drehung * Math.abs(tempo) * (eingabe.handbremse ? 2.6 : 0.85);
-    }
-  } else {
-    // Kein Gas: Er rollt aus, statt stehen zu bleiben.
-    const rollen = werte.schub * 0.45 * schritt;
-    tempo = tempo > 0 ? Math.max(0, tempo - rollen) : Math.min(0, tempo + rollen);
+    const geradeaus = Math.max(0, Math.cos(ab));
+    const boden = handbremse ? 0.75 : 0.45;
+    zielTempo = staerke * werte.hoechst * (boden + (1 - boden) * geradeaus);
+    /*
+     * Und der Kurs dreht zum Stick. Im Schritttempo fast sofort - da fährt
+     * sich der Wagen wie Wimpy zu Fuß -, mit Tempo nur noch im Bogen. Mit
+     * Handbremse verlieren die Reifen den Halt und er schiebt weiter
+     * geradeaus, während die Karosserie schon quer steht.
+     */
+    const rate = werte.kurve * (1 - flott * 0.62) * (handbremse ? 0.5 : 1);
+    kurs += klemm(ab, -rate * schritt, rate * schritt);
   }
 
-  tempo = klemm(tempo, -werte.rueckwaerts, werte.hoechst);
-  // Die Reifen finden wieder Halt - mit gezogener Handbremse langsamer.
-  const halt = werte.griff * (eingabe.handbremse ? 0.3 : 1);
-  drift -= drift * Math.min(1, halt * schritt);
-  if (Math.abs(drift) < 0.01) drift = 0;
+  /*
+   * Tempo. Anziehen kostet Zeit, und oben lässt der Schub nach, damit sich
+   * die letzten Stundenkilometer nach etwas anfühlen. Ohne Stick rollt er
+   * aus, statt stehen zu bleiben; mit Stick in eine andere Richtung bremst
+   * er richtig.
+   */
+  if (tempo < zielTempo) {
+    tempo = Math.min(zielTempo, tempo + werte.schub * (1 - flott * 0.45) * schritt);
+  } else {
+    tempo = Math.max(zielTempo, tempo - (gedrueckt ? werte.bremse : werte.schub * 0.4) * schritt);
+  }
+  tempo = klemm(tempo, 0, werte.hoechst);
 
-  const vor = { x: Math.sin(winkel), z: Math.cos(winkel) };
-  const quer = { x: Math.cos(winkel), z: -Math.sin(winkel) };
+  /*
+   * Zuletzt die Karosserie. Sie legt sich in den Kurs, bleibt dabei aber
+   * einen Moment zurück - dieses Nachhängen ist die Kurve, die man sieht.
+   * Mit Handbremse schaut sie dorthin, wo der Stick hinzeigt, und der Wagen
+   * rutscht darunter weg.
+   */
+  const koerperZiel = handbremse && gedrueckt ? zielKurs : kurs;
+  /*
+   * Nachgezogen wird weich, nicht mit fester Rate: Solange der Kurs sich
+   * dreht, bleibt die Karosserie dabei um einen kleinen Winkel zurück, und
+   * genau der ist die Schräglage, die man in der Kurve sieht. Steht der Kurs
+   * still, holt sie ihn in einem Wimpernschlag ein.
+   */
+  const koerperRate = werte.griff * (handbremse ? 4 : 3);
+  const nach = winkelDifferenz(winkel, koerperZiel);
+  winkel += nach * (1 - Math.exp(-koerperRate * schritt));
+  const drift = winkelDifferenz(kurs, winkel);
+
   return {
-    zustand: { winkel, tempo, drift },
+    zustand: { winkel, kurs, tempo, drift },
     bewegung: {
-      x: (vor.x * tempo + quer.x * drift) * schritt,
-      z: (vor.z * tempo + quer.z * drift) * schritt,
+      x: Math.sin(kurs) * tempo * schritt,
+      z: Math.cos(kurs) * tempo * schritt,
     },
   };
 }

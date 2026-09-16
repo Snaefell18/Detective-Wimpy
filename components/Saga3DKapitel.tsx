@@ -1219,7 +1219,7 @@ function KapitelCanvas({
       if (geparkt?.id === id) geparkt = null;
       amSteuer = { id, name, gruppe, werte };
       // Er startet aus dem Stand, blickt aber dorthin, wo Wimpy stand.
-      fahrt = { winkel: spieler.rotation.y, tempo: 0, drift: 0 };
+      fahrt = { winkel: spieler.rotation.y, kurs: spieler.rotation.y, tempo: 0, drift: 0 };
     };
 
     /**
@@ -1340,8 +1340,8 @@ function KapitelCanvas({
 
       if (amSteuer) {
         /*
-         * Am Steuer wird nicht geschoben, sondern gefahren: Der Stick sagt,
-         * wohin es gehen soll, und der Wagen zieht an, trägt, rutscht in die
+         * Am Steuer ist der Stick dasselbe wie zu Fuß: Er zeigt, wohin es
+         * gehen soll. Nur zieht der Wagen erst an, trägt, legt sich in die
          * Kurve und braucht einen Moment zum Stehen. Die Rechnung dazu steht
          * in lib/autofahrt.ts.
          */
@@ -1358,7 +1358,8 @@ function KapitelCanvas({
         bewegt = Math.hypot(ziel.x - vorherX, ziel.z - vorherZ) > 0.0001;
         spieler.rotation.y = fahrt.winkel;
         // Die Karosserie legt sich in die Kurve - so sieht man den Drift.
-        const schraeg = THREE.MathUtils.clamp(-fahrt.drift * 0.05, -0.26, 0.26);
+        // fahrt.drift ist der Winkel, in dem sie zum Kurs steht.
+        const schraeg = THREE.MathUtils.clamp(-fahrt.drift * 0.42, -0.3, 0.3);
         spieler.rotation.z = THREE.MathUtils.damp(spieler.rotation.z, schraeg, 8, dt);
         const tacho = angezeigtesTempo(fahrt, amSteuer.werte, { speed: befehl.faehrt?.speed ?? 120 });
         if (tacho !== letzterTacho) {
@@ -1502,11 +1503,13 @@ function KapitelCanvas({
         spieler.position.z + (vollZ - spieler.position.z) * naeher,
       );
       camera.position.lerp(zielKamera, 1 - Math.exp(-(amSteuer ? 3.4 : 5) * dt));
+      // Vorausgeschaut wird entlang des Kurses, nicht entlang der
+      // Karosserie: Im Drift steht die quer, gefahren wird trotzdem dorthin.
       const voraus = flott * 5.5;
       camera.lookAt(
-        spieler.position.x + Math.sin(fahrt.winkel) * voraus,
+        spieler.position.x + Math.sin(fahrt.kurs) * voraus,
         1.05,
-        spieler.position.z + 0.7 + Math.cos(fahrt.winkel) * voraus,
+        spieler.position.z + 0.7 + Math.cos(fahrt.kurs) * voraus,
       );
       /*
        * Und dann wird aufgeräumt, jedes Bild neu. Zweierlei auf einmal:
