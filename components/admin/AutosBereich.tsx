@@ -1,9 +1,13 @@
 "use client";
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { useAutos } from '@/lib/useAutos';
 import { AUTO_MODELLE, autoGueltig, START_AUTO_ID, type Auto } from '@/lib/autos';
 import { speichereZubehoer } from '@/lib/db';
 import type { BereichProps } from './typen';
+
+// three.js gehört nicht in das Bündel, das jeder Admin-Reiter mitschleppt.
+const AutoVorschau = dynamic(() => import('./AutoVorschau').then(m => m.AutoVorschau), { ssr: false });
 export function AutosBereich({ onMeldung, onFehler }: BereichProps) {
   const { autos, laden, fehler } = useAutos();
   const [entwurf, setEntwurf] = useState<Auto | null>(null);
@@ -25,7 +29,10 @@ export function AutosBereich({ onMeldung, onFehler }: BereichProps) {
     {entwurf && <div className="kapitel-block">
       <label className="feld">Name<input maxLength={80} value={entwurf.name} onChange={e => setEntwurf({ ...entwurf, name: e.target.value })} /></label>
       <label className="feld">3D-Modell<select value={entwurf.modell} onChange={e => setEntwurf({ ...entwurf, modell: e.target.value })}>{AUTO_MODELLE.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
-      {(['speed', 'beschleunigung', 'preis', 'drehung'] as const).map(feld => <label className="feld" key={feld}>{({ speed: 'Speed (60–320 km/h)', beschleunigung: 'Beschleunigung (5–100 km/h pro Sekunde)', preis: 'Preis in Yen', drehung: 'Modelldrehung in Grad' })[feld]}<input type="number" disabled={feld === 'preis' && entwurf.id === START_AUTO_ID} value={entwurf[feld]} onChange={e => setEntwurf({ ...entwurf, [feld]: Number(e.target.value) })} /></label>)}
+      {(['speed', 'beschleunigung', 'preis'] as const).map(feld => <label className="feld" key={feld}>{({ speed: 'Speed (60–320 km/h)', beschleunigung: 'Beschleunigung (5–100 km/h pro Sekunde)', preis: 'Preis in Yen' })[feld]}<input type="number" disabled={feld === 'preis' && entwurf.id === START_AUTO_ID} value={entwurf[feld]} onChange={e => setEntwurf({ ...entwurf, [feld]: Number(e.target.value) })} /></label>)}
+      {/* Statt einer geratenen Gradzahl: hinsehen. */}
+      <span className="leise klein">Ausrichtung · {entwurf.drehung}°</span>
+      <AutoVorschau modell={entwurf.modell} drehung={entwurf.drehung} onDrehen={grad => setEntwurf({ ...entwurf, drehung: grad })} />
       <label className="feld">Beschreibung<textarea maxLength={600} value={entwurf.beschreibung} onChange={e => setEntwurf({ ...entwurf, beschreibung: e.target.value })} /></label>
       {entwurf.id !== START_AUTO_ID && <label><input type="checkbox" checked={entwurf.versteckt ?? false} onChange={e => setEntwurf({ ...entwurf, versteckt: e.target.checked })} /> Aus dem Verkauf nehmen (Besitz bleibt erhalten)</label>}
       <button className="knopf aktion" disabled={speichert} onClick={() => void speichern()}>Speichern</button><button className="knopf" onClick={() => setEntwurf(null)}>Abbrechen</button>

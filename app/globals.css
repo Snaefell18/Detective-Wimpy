@@ -9043,3 +9043,28 @@ a.zurueck {
   touch-action: manipulation;
 }
 .saga3d-drift:active { background: #f6a14b; }
+
+/* --- Die Auto-Vorschau im Admin-Menü ------------------------------- */
+
+.auto-vorschau {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+/* Feste Höhe: Ohne sie hat die Leinwand beim ersten Bild keine und bleibt
+   für immer leer. */
+.auto-vorschau-bild {
+  width: 100%;
+  height: 210px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #12161f;
+}
+
+.auto-vorschau-bild canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

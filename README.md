@@ -405,28 +405,61 @@ bleibt erhalten.
 
 **3D-Bausteine (Straßen, Häuser, Tankstelle).** Die rohen `.glb` aus dem
 Modellierer bleiben auf deinem Rechner - `.gitignore` lässt aus
-`public/3d_locations/` nur die Webfassungen durch. Aus `tankstelle.glb` wird
-mit
+`public/3d_locations/` nur die Webfassungen (`*-web.glb`) durch. Schritt für
+Schritt:
+
+1. **Rohdatei ablegen.** Die große Datei aus Meshy & Co. nach
+   `public/3d_locations/` legen, unter dem Namen, den der Baustein im Spiel
+   tragen soll - zum Beispiel `tankstelle.glb`. Ohne `-web` im Namen; die
+   Endung hängt der nächste Schritt selbst an.
+
+2. **Abspecken.**
+
+   ```bash
+   npm run locations3d:optimieren
+   ```
+
+   Daraus entsteht `tankstelle-web.glb`: Geometrie auf rund 220.000 Dreiecke
+   heruntergerechnet, Texturen auf 1024 Pixel und WebP, alles
+   meshopt-komprimiert. Aus vier Millionen Dreiecken und 35 MB werden so
+   typischerweise ein paar hundertausend und 2-3 MB, ohne dass man es dem
+   Haus ansieht. Am Ende steht im Protokoll, was herausgekommen ist:
+
+   ```
+   tankstelle.glb: 35.5 MB -> 6.7 MB · 4.726.530 -> 492.050 Dreiecke
+   ```
+
+   Reicht das noch nicht, geht es eine Stufe schärfer - halb so große
+   Texturen, halbes Dreiecksbudget:
+
+   ```bash
+   npm run locations3d:klein
+   ```
+
+3. **Ins Repository.** Nur die `-web.glb` gehört dorthin, die Rohdatei nicht
+   (darum kümmert sich `.gitignore` von allein).
+
+   - **Unter 25 MB** - über die GitHub-Weboberfläche: im Repo nach
+     `public/3d_locations/` gehen, *Add file → Upload files*, die
+     `-web.glb` hineinziehen, unten eine kurze Beschreibung, *Commit
+     changes*. Achtung: **auf den richtigen Branch** committen, nicht auf
+     `main`, wenn gerade ein Zweig läuft.
+   - **Darüber** - per `git push` statt über den Browser; dort liegt die
+     Grenze bei 100 MB je Datei.
+
+4. **Fertig.** Nach dem Deploy taucht der Baustein von selbst überall auf, wo
+   man Bausteine wählt - der Build liest den Ordner neu ein. Heißt die Datei
+   „tankstelle", erkennt das Spiel sie ohne weiteres Zutun als Wimpys Garage.
+
+**Und wenn die Rohdatei weg ist?** Dann rechnet
 
 ```bash
-npm run locations3d:optimieren     # macht aus name.glb eine name-web.glb
-npm run locations3d:klein          # dasselbe noch einmal kleiner
+npm run locations3d:abspecken
 ```
 
-eine `tankstelle-web.glb` mit Meshopt-Komprimierung und WebP-Texturen, und
-nur die kommt ins Repository. Der Befehl schreibt am Ende hin, wie groß sie
-geworden ist:
-
-- **unter 25 MB** - die GitHub-Weboberfläche nimmt sie an (Add file →
-  Upload files).
-- **darüber** - entweder `npm run locations3d:klein` (halb so große Texturen,
-  stärker vereinfachte Geometrie), oder ganz normal per `git push` statt über
-  den Browser: Dort liegt die Grenze bei 100 MB je Datei, und so ist auch die
-  27 MB große `donki2-web.glb` ins Repo gekommen.
-
-Nach dem Deploy taucht der Baustein von selbst überall auf, wo man Bausteine
-wählt - der Build liest den Ordner neu ein. Heißt die Datei „tankstelle",
-erkennt das Spiel sie ohne weiteres Zutun als Wimpys Garage.
+die schon eingecheckten `-web.glb` noch einmal durch - es nimmt sie selbst
+als Quelle. Ein zweiter Durchlauf ändert danach nichts mehr; was schon klein
+genug ist, bleibt unangetastet.
 
 ### 2. Zum Ausprobieren: im Admin-Menü
 
@@ -653,6 +686,7 @@ Die Architektur ist darauf vorbereitet:
 | `npm run import:orte`| Städte und Orte aus der CSV neu einlesen    |
 | `npm run bilder:optimieren` | Bilder in public/ handytauglich verkleinern |
 | `npm run locations3d:optimieren` | Aus 3D-Rohdateien spielbare `-web.glb` machen |
+| `npm run locations3d:abspecken` | Eingecheckte `-web.glb` nachträglich kleinrechnen |
 | `npm run locations3d:klein` | Dasselbe mit kleineren Texturen, für zu große Dateien |
 | `npm run firebase:rules` | Sicherheitsregeln und Indizes veröffentlichen |
 | `npm run lint`       | Linter                                      |
