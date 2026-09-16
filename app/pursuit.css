@@ -595,6 +595,14 @@
 .auto-jagd-anfahrt { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 16px; right: 16px; display: grid; gap: 4px; justify-items: start; padding: 14px 16px; background: #132238cc; color: #fff; border-left: 5px solid #f4ecda; pointer-events: none; }
 .auto-jagd-anfahrt strong { font-size: 17px; letter-spacing: 0.04em; }
 .auto-jagd-anfahrt span { font-size: 13px; opacity: 0.75; }
+/* Die Verhaftung: die Wagen stehen quer, und der Flüchtige steigt aus. Der
+   Zug von unten hält das Bild frei - dort spielt sich gerade alles ab. */
+.auto-jagd-verhaftung { position: absolute; left: 16px; right: 16px; bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px)); display: grid; gap: 4px; justify-items: start; padding: 14px 16px; background: #132238cc; color: #fff; border-left: 5px solid #ff6b6b; pointer-events: none; animation: verhaftung-auf .5s ease both; }
+.auto-jagd-verhaftung strong { font-size: 19px; letter-spacing: 0.08em; }
+.auto-jagd-verhaftung span { font-size: 13px; opacity: 0.75; }
+.auto-jagd-verhaftung small { font-size: 11px; letter-spacing: 0.06em; opacity: 0.5; }
+@keyframes verhaftung-auf { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
 /* Nur in der Vorschau: den Fluchtwagen drehen, bis er richtig herum fährt. */
 .auto-jagd-drehen { position: absolute; bottom: max(110px, calc(env(safe-area-inset-bottom) + 108px)); left: 20px; right: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #fff; }
 .auto-jagd-drehen span { padding: 6px 12px; background: #132238e8; border-radius: 999px; font-size: 13px; }

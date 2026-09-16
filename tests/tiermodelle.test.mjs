@@ -55,7 +55,29 @@ console.log("\n1. Die Reihenfolge");
   );
 }
 
-console.log("\n2. Die Spielfigur");
+console.log("\n2. Wer aus dem Fluchtwagen steigt");
+{
+  /*
+   * Am Ende der Verfolgungsjagd hält der Wagen, und der Flüchtige steigt
+   * aus - das ist die Enthüllung. Vor dem Showdown muss dabei derselbe
+   * dastehen, der gleich in der Arena kämpft: Dort ist oft ein eigenes
+   * Modell gewählt, und zwei verschiedene Gestalten wären zwei Personen.
+   */
+  pruefe(
+    "vor dem Showdown gilt das Modell des Kampfes",
+    modellFuerTier(tier({ modell3d: ersteFremde }), 0, zweiteFremde)?.id === zweiteFremde,
+  );
+  pruefe(
+    "zwischen zwei Kapiteln bleibt es das Modell aus den Stammdaten",
+    modellFuerTier(tier({ modell3d: ersteFremde }), 0, undefined)?.id === ersteFremde,
+  );
+  pruefe(
+    "und ohne alles steigt trotzdem jemand aus",
+    Boolean(modellFuerTier(tier({ id: "fremdling", name: "Fremdling", tierart: "Unbekannt" }), 0)),
+  );
+}
+
+console.log("\n3. Die Spielfigur");
 {
   pruefe("ohne Zuordnung bleibt es Wimpy", spielerModell(tier({ istDetektiv: true }))?.id === "wimpy");
   pruefe(
@@ -67,7 +89,7 @@ console.log("\n2. Die Spielfigur");
     spielerModell(tier({ istDetektiv: true, modell3d: "gibtsnicht" }))?.id === "wimpy");
 }
 
-console.log("\n3. Die Zuordnung übersteht das Versiegeln");
+console.log("\n4. Die Zuordnung übersteht das Versiegeln");
 {
   const geprueft = CharacterSchema.safeParse(tier({ modell3d: ersteFremde }));
   pruefe("ein Tier mit Modell kommt durch", geprueft.success, geprueft.error?.issues[0]?.message);

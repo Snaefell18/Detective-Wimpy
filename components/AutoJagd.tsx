@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { spielerModell } from '@/lib/tiermodelle';
+import { modellFuerTier, spielerModell } from '@/lib/tiermodelle';
+import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
 import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
@@ -37,6 +38,31 @@ const STANDPLATZ = { x: -10, z: 3 };
  * rutscht. Wem das zu lang ist, der tippt ins Bild und ist sofort drin.
  */
 const ANFAHRT = { vorbei: 2.9, einsteigen: 4.9, losfahren: 6.6 };
+
+/**
+ * Der Ablauf der Verhaftung in Sekunden.
+ *
+ * Eingeholt war der Wagen bisher mit einer Zahl: Der Abstand fiel auf null,
+ * das Bild verschwand, und auf der Karte stand ein Name. Wer da eigentlich
+ * gefahren ist, hat man nie gesehen.
+ *
+ * Jetzt endet die Jagd, wie sie es verdient: Beide gehen in die Eisen, der
+ * Fluchtwagen stellt sich quer, der Staub steht in der Luft - und dann steigt
+ * der Flüchtige aus und dreht sich um. Das ist der Moment, für den man
+ * gefahren ist, deshalb hat er seine eigene Zeit.
+ */
+const VERHAFTUNG = { bremsen: 1.35, staub: 2.3, aussteigen: 4.0, umdrehen: 4.9, fertig: 6.6 };
+
+/** Wo die beiden Wagen zum Stehen kommen - quer und der Weg versperrt. */
+const HALTEPLATZ = {
+  flucht: { x: -1.3, z: 5.6, winkel: -0.62 },
+  wimpy: { x: 1.6, z: 0.9, winkel: 0.46 },
+};
+/** Und wo der Flüchtige aussteigt: auf der Seite, auf die die Kamera sieht. */
+const AUSSTIEG = { x: -3.9, z: 4.5 };
+
+/** Die Kamera der Verhaftung: tiefer, näher, auf die Fahrertür. */
+const KAMERA_VERHAFTUNG = { pos: [-9.4, 2.1, 11.2], ziel: [-2.6, 1.05, 5.0], fov: 40 } as const;
 
 /** Nur so weit vor Wimpy, dass der Fluchtwagen im Bild bleibt. */
 const FLUCHT_NAH = 3.8;
@@ -104,18 +130,72 @@ type Wolke = {
   staerke: number;
 };
 
+/**
+ * Quietschende Reifen - gerechnet, nicht geladen.
+ *
+ * Eine Tondatei dafür gibt es nicht, und eine nachzuliefern hieße, für
+ * anderthalb Sekunden Krawall ein weiteres Stück durch die Leitung zu
+ * schicken. Also entsteht das Quietschen im Browser: gefiltertes Rauschen,
+ * dessen Tonhöhe absackt, wie es ein blockierender Reifen tut.
+ *
+ * Alles daran darf schiefgehen: Wo der Browser keinen Ton erlaubt oder das
+ * Gerät stummgeschaltet ist, bleibt die Verhaftung eben still - sie ist ein
+ * Bild, kein Geräusch.
+ */
+function reifenQuietschen(): void {
+  try {
+    const Hersteller =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Hersteller) return;
+    const kontext = new Hersteller();
+    const dauer = 1.15;
+    const laenge = Math.floor(kontext.sampleRate * dauer);
+    const puffer = kontext.createBuffer(1, laenge, kontext.sampleRate);
+    const daten = puffer.getChannelData(0);
+    for (let i = 0; i < laenge; i++) daten[i] = Math.random() * 2 - 1;
+    const rauschen = kontext.createBufferSource();
+    rauschen.buffer = puffer;
+    // Ein schmales Band macht aus Rauschen ein Quietschen; es rutscht nach
+    // unten, weil der Wagen dabei langsamer wird.
+    const filter = kontext.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.value = 14;
+    filter.frequency.setValueAtTime(2300, kontext.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(680, kontext.currentTime + dauer);
+    const laut = kontext.createGain();
+    laut.gain.setValueAtTime(0.0001, kontext.currentTime);
+    laut.gain.exponentialRampToValueAtTime(0.16, kontext.currentTime + 0.08);
+    laut.gain.exponentialRampToValueAtTime(0.0001, kontext.currentTime + dauer);
+    rauschen.connect(filter).connect(laut).connect(kontext.destination);
+    rauschen.start();
+    rauschen.onended = () => void kontext.close().catch(() => {});
+  } catch {
+    // Kein Ton - kein Problem.
+  }
+}
+
 /** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
 const RAD_NAME = /wheel|rad\b|reifen|tyre|tire|felge/i;
 
-function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, onEnde, onFehler, onBereit, onPhase }: {
+function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig: fluechtigModell, onStand, onEnde, onFehler, onBereit, onPhase }: {
   auto: Auto; flucht: Auto; spur: React.MutableRefObject<number>;
   /** Wimpys 3D-Modell aus den Stammdaten - fehlt es, steht niemand am Rand. */
   figur?: { datei: string };
+  /**
+   * Das Modell dessen, der im Fluchtwagen sitzt.
+   *
+   * Es kommt erst bei der Verhaftung ins Bild - bis dahin ist der Fahrer
+   * hinter getönten Scheiben genauso unkenntlich wie bisher. Fehlt es,
+   * halten die Wagen trotzdem dramatisch an; nur aussteigen tut dann
+   * niemand.
+   */
+  fluechtig?: { datei: string };
   /** Zusätzliche Drehung des Fluchtwagens in Grad - live veränderbar. */
   drehung: React.MutableRefObject<number>;
   onStand: (speed: number, abstand: number, treffer: boolean) => void;
   onEnde: (gefangen: boolean) => void; onFehler: (text: string) => void;
-  onBereit: () => void; onPhase: (phase: 'anfahrt' | 'jagd') => void;
+  onBereit: () => void; onPhase: (phase: 'anfahrt' | 'jagd' | 'verhaftung') => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onStand, onEnde, onFehler, onBereit, onPhase });
@@ -167,13 +247,16 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       kulisse.push(baum);
     }
     const spieler = new THREE.Group(), gegner = new THREE.Group(), wimpy = new THREE.Group();
+    /** Der Flüchtige selbst - unsichtbar, bis er aussteigt. */
+    const fluechtiger = new THREE.Group();
+    fluechtiger.visible = false;
     spieler.position.set(PARKPLATZ.x, 0, PARKPLATZ.z); spieler.rotation.y = PARKPLATZ.winkel;
     // Vor der Vorbeifahrt steht der Fluchtwagen weit außerhalb des Bildes.
     gegner.position.set(0, 0, -60);
     wimpy.position.set(STANDPLATZ.x, 0, STANDPLATZ.z);
     // Die Figuren schauen bei rotation.y = 0 nach +z; Wimpy blickt zur Straße.
     wimpy.rotation.y = Math.PI / 2;
-    scene.add(spieler, gegner, wimpy);
+    scene.add(spieler, gegner, wimpy, fluechtiger);
     const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
     async function laden(wagen: Auto, gruppe: THREE.Group) {
       const modell = AUTO_MODELLE.find(m => m.id === wagen.modell);
@@ -237,9 +320,51 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       gehen = gehClip ? mixer.clipAction(gehClip) : null;
       stehen?.play();
     }
+    /*
+     * Und der, der da vorne fährt.
+     *
+     * Sein Modell wird nebenher geholt, nicht abgewartet: Gebraucht wird es
+     * erst am Ende der Jagd, und bis dahin ist eine halbe Minute vergangen.
+     * Kommt es nicht an, hält der Wagen trotzdem quer - es steigt dann nur
+     * niemand aus.
+     */
+    let taeterMixer: THREE.AnimationMixer | null = null;
+    let taeterStehen: THREE.AnimationAction | null = null;
+    let taeterGehen: THREE.AnimationAction | null = null;
+    let taeterDa = false;
+    /**
+     * Ob er schon steht.
+     *
+     * Wieder ein Schalter statt isRunning(): fadeOut hält eine Aktion nicht
+     * an - genau wie oben bei Wimpy am Straßenrand.
+     */
+    let taeterSteht = false;
+    async function fluechtigenLaden() {
+      if (!fluechtigModell) return;
+      const gltf = await loader.loadAsync(fluechtigModell.datei);
+      sammeln(gltf.scene);
+      if (beendet) { ressourcen.forEach(r => r.dispose()); return; }
+      const figur = gltf.scene;
+      figur.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(figur);
+      const groesse = box.getSize(new THREE.Vector3());
+      figur.scale.multiplyScalar(1.7 / Math.max(0.001, groesse.y));
+      figur.updateMatrixWorld(true);
+      const neu = new THREE.Box3().setFromObject(figur);
+      const mitte = neu.getCenter(new THREE.Vector3());
+      figur.position.set(-mitte.x, -neu.min.y, -mitte.z);
+      fluechtiger.add(figur);
+      taeterMixer = new THREE.AnimationMixer(figur);
+      const ruheClip = gltf.animations.find(c => /idle|rest/i.test(c.name)) ?? gltf.animations[0];
+      const gehClip = gltf.animations.find(c => /walk/i.test(c.name)) ?? gltf.animations.find(c => /run/i.test(c.name));
+      taeterStehen = ruheClip ? taeterMixer.clipAction(ruheClip) : null;
+      taeterGehen = gehClip ? taeterMixer.clipAction(gehClip) : null;
+      taeterDa = true;
+    }
     void Promise.all([laden(auto, spieler), laden(flucht, gegner)]).then(async () => {
       await figurLaden().catch(() => undefined);
       if (!beendet) { bereit = true; callbacks.current.onBereit(); }
+      await fluechtigenLaden().catch(() => undefined);
     }).catch(() => { if (!beendet) callbacks.current.onFehler('Ein Automodell konnte nicht geladen werden. Bitte erneut starten.'); });
     /* --- Was Tempo sichtbar macht ------------------------------------ */
     const raeder: THREE.Object3D[] = [];
@@ -344,7 +469,9 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
     const hindernisse = Array.from({ length: 5 }, (_, i) => ({
       obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * HINDERNIS_ABSTAND), getroffen: false,
     }));
-    let phase: 'anfahrt' | 'jagd' = 'anfahrt', anfahrtZeit = 0;
+    let phase: 'anfahrt' | 'jagd' | 'verhaftung' = 'anfahrt', anfahrtZeit = 0, verhaftungZeit = 0;
+    /** Wie die beiden standen und wie schnell sie waren, als die Jagd endete. */
+    const halt = { tempo: 0, spielerX: 0, spielerZ: 0, gegnerX: 0, gegnerZ: 0 };
     let speed = 0, fluchtSpeed = 0, abstand = ABSTAND_START, zeit = 0, ausgabe = 0, unverwundbar = 0, letzter = performance.now();
     /** Straße und Kulisse ziehen vorbei - in der Anfahrt wie in der Jagd. */
     const weltBewegen = (weg: number) => {
@@ -378,12 +505,16 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
     const taste = (e: KeyboardEvent) => {
       if (e.repeat || (e.target instanceof HTMLElement && e.target.closest('input,select,textarea'))) return;
       if (phase === 'anfahrt') { e.preventDefault(); losfahren(); return; }
+      if (phase === 'verhaftung') { e.preventDefault(); verhaftungEnde(); return; }
       const delta = ['ArrowLeft', 'ArrowUp', 'a', 'w'].includes(e.key) ? -1 : ['ArrowRight', 'ArrowDown', 'd', 's'].includes(e.key) ? 1 : 0;
       if (delta) { e.preventDefault(); spur.current = THREE.MathUtils.clamp(spur.current + delta, -1, 1); }
     };
     window.addEventListener('keydown', taste);
     // Ein Tipp aufs Bild überspringt die Anfahrt - niemand will sie zehnmal sehen.
-    const tippen = () => { if (phase === 'anfahrt' && bereit) losfahren(); };
+    const tippen = () => {
+      if (phase === 'anfahrt' && bereit) losfahren();
+      else if (phase === 'verhaftung') verhaftungEnde();
+    };
     renderer.domElement.addEventListener('pointerdown', tippen);
     const resize = () => {
       if (!element.clientWidth || !element.clientHeight) return;
@@ -497,6 +628,145 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       wolkenBewegen(fahne, dt);
       if (t >= ANFAHRT.losfahren) losfahren();
     }
+
+    /** Und weiter zur Karte mit dem Namen und dem, was er zu sagen hat. */
+    const verhaftungEnde = () => {
+      if (phase !== 'verhaftung' || !bereit) return;
+      bereit = false;
+      callbacks.current.onEnde(true);
+    };
+
+    /** Aus der Jagd in die Verhaftung - der Abstand ist auf null. */
+    const stellen = () => {
+      if (phase !== 'jagd') return;
+      phase = 'verhaftung';
+      halt.tempo = speed;
+      halt.spielerX = spieler.position.x;
+      halt.spielerZ = spieler.position.z;
+      halt.gegnerX = gegner.position.x;
+      halt.gegnerZ = gegner.position.z;
+      reifenQuietschen();
+      callbacks.current.onStand(0, 0, false);
+      callbacks.current.onPhase('verhaftung');
+    };
+
+    /**
+     * Die Verhaftung: bremsen, quer stellen, aussteigen, umdrehen.
+     *
+     * Gefahren wird hier nichts mehr - die Welt steht still, sobald die
+     * Wagen stehen, und die Kamera gleitet von der Verfolgungsansicht auf
+     * die Fahrertür des Fluchtwagens. Wer keine Figur geladen bekommen hat,
+     * sieht denselben Halt und danach dieselbe Karte; nur die Enthüllung
+     * fällt aus.
+     */
+    function verhaftung(dt: number) {
+      verhaftungZeit += dt;
+      const t = verhaftungZeit;
+
+      // 1. Beide gehen in die Eisen. Der Fluchtwagen bricht dabei aus und
+      //    steht am Ende quer über der Fahrbahn.
+      const bremsen = weich(THREE.MathUtils.clamp(t / VERHAFTUNG.bremsen, 0, 1));
+      speed = halt.tempo * (1 - bremsen);
+      weltBewegen(speed / 3.6 * dt);
+      gegner.position.x = THREE.MathUtils.lerp(halt.gegnerX, HALTEPLATZ.flucht.x, bremsen);
+      gegner.position.z = THREE.MathUtils.lerp(halt.gegnerZ, HALTEPLATZ.flucht.z, bremsen);
+      gegner.rotation.y = THREE.MathUtils.degToRad(drehung.current) + HALTEPLATZ.flucht.winkel * bremsen;
+      spieler.position.x = THREE.MathUtils.lerp(halt.spielerX, HALTEPLATZ.wimpy.x, bremsen);
+      spieler.position.z = THREE.MathUtils.lerp(halt.spielerZ, HALTEPLATZ.wimpy.z, bremsen);
+      spieler.rotation.y = HALTEPLATZ.wimpy.winkel * bremsen;
+      spieler.rotation.z = 0;
+      // Die Karosserien tauchen vorn ein und wippen einmal zurück.
+      const nicken = Math.sin(THREE.MathUtils.clamp(t / VERHAFTUNG.bremsen, 0, 1) * Math.PI) * 0.07;
+      spieler.rotation.x = nicken;
+      gegner.rotation.x = nicken * 0.8;
+      spieler.position.y = 0;
+      gegner.position.y = 0;
+
+      // 2. Und dabei qualmen alle vier Räder. Danach steht der Staub nur
+      //    noch in der Luft und zieht ab.
+      if (t < VERHAFTUNG.bremsen) {
+        fahneUhr -= dt;
+        if (fahneUhr <= 0) {
+          fahneUhr = 0.03;
+          for (const wagen of [spieler, gegner]) {
+            for (const seite of [0.85, -0.85]) {
+              qualmen(fahne, wagen, seite, -0.6, 1.5, 0.12 + Math.random() * 0.2, {
+                streuung: 0.8, wuchs: 2.6, steigen: 0.5, dichte: 2.6, farbe: 0x9aa7b2,
+              });
+            }
+          }
+        }
+        rauchUhr -= dt;
+        if (rauchUhr <= 0) {
+          rauchUhr = 0.06;
+          for (const wagen of [spieler, gegner]) {
+            qualmen(rauch, wagen, 0.5, -1, 1.4, 0.45, { wuchs: 1.6, streuung: 0.6, dichte: 1.2 });
+          }
+        }
+      }
+      wolkenBewegen(rauch, dt);
+      wolkenBewegen(fahne, dt);
+
+      // 3. Die Kamera kommt herunter und schaut auf die Fahrertür.
+      const schwenk = weich(THREE.MathUtils.clamp(t / VERHAFTUNG.staub, 0, 1));
+      const naeher = weich(THREE.MathUtils.clamp((t - VERHAFTUNG.aussteigen) / 1.8, 0, 1)) * 0.16;
+      camera.position.set(
+        THREE.MathUtils.lerp(KAMERA_JAGD.pos[0], KAMERA_VERHAFTUNG.pos[0], schwenk + naeher),
+        THREE.MathUtils.lerp(KAMERA_JAGD.pos[1], KAMERA_VERHAFTUNG.pos[1], schwenk + naeher),
+        THREE.MathUtils.lerp(KAMERA_JAGD.pos[2], KAMERA_VERHAFTUNG.pos[2], schwenk + naeher),
+      );
+      camera.lookAt(
+        THREE.MathUtils.lerp(KAMERA_JAGD.ziel[0], KAMERA_VERHAFTUNG.ziel[0], schwenk),
+        THREE.MathUtils.lerp(KAMERA_JAGD.ziel[1], KAMERA_VERHAFTUNG.ziel[1], schwenk),
+        THREE.MathUtils.lerp(KAMERA_JAGD.ziel[2], KAMERA_VERHAFTUNG.ziel[2], schwenk),
+      );
+      camera.fov = THREE.MathUtils.lerp(KAMERA_JAGD.fov, KAMERA_VERHAFTUNG.fov, schwenk);
+      camera.updateProjectionMatrix();
+
+      // 4. Die Tür geht auf: Er steigt aus, tritt vom Wagen weg - und dreht
+      //    sich um. Erst da sieht man, wer die ganze Zeit gefahren ist.
+      if (taeterDa && t > VERHAFTUNG.staub) {
+        const raus = THREE.MathUtils.clamp(
+          (t - VERHAFTUNG.staub) / (VERHAFTUNG.aussteigen - VERHAFTUNG.staub), 0, 1,
+        );
+        if (!fluechtiger.visible) {
+          fluechtiger.visible = true;
+          (taeterGehen ?? taeterStehen)?.reset().play();
+        }
+        const tuer = { x: gegner.position.x - 1.15, z: gegner.position.z - 0.35 };
+        fluechtiger.position.set(
+          THREE.MathUtils.lerp(tuer.x, AUSSTIEG.x, weich(raus)),
+          0,
+          THREE.MathUtils.lerp(tuer.z, AUSSTIEG.z, weich(raus)),
+        );
+        // Aus dem Wagen heraus wächst er auf seine Größe: erst der Kopf,
+        // dann steht er. Eine eigene Ausstiegsanimation bringt kein Modell
+        // mit, und so sieht es aus, als käme er hinter der Tür hervor.
+        fluechtiger.scale.setScalar(THREE.MathUtils.lerp(0.55, 1, weich(Math.min(1, raus * 1.6))));
+        if (raus < 1) {
+          // Er geht vom Wagen weg - also dorthin, wohin er schaut.
+          fluechtiger.rotation.y = Math.atan2(AUSSTIEG.x - tuer.x, AUSSTIEG.z - tuer.z);
+        } else {
+          // Und dann dreht er sich zur Kamera um.
+          if (!taeterSteht) {
+            taeterSteht = true;
+            if (taeterStehen && taeterGehen) {
+              taeterGehen.fadeOut(0.3);
+              taeterStehen.reset().fadeIn(0.3).play();
+            }
+          }
+          const zurKamera = Math.atan2(
+            camera.position.x - fluechtiger.position.x,
+            camera.position.z - fluechtiger.position.z,
+          );
+          fluechtiger.rotation.y = THREE.MathUtils.damp(fluechtiger.rotation.y, zurKamera, 4, dt);
+        }
+        taeterMixer?.update(dt);
+      }
+
+      if (t >= (taeterDa ? VERHAFTUNG.fertig : VERHAFTUNG.staub + 0.8)) verhaftungEnde();
+    }
+
     function zeichnen(jetzt: number) {
       if (beendet) return;
       frame = requestAnimationFrame(zeichnen);
@@ -506,6 +776,7 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       // im laufenden Bild ändern, ohne die Szene neu zu bauen.
       gegner.rotation.y = THREE.MathUtils.degToRad(drehung.current);
       if (phase === 'anfahrt') { anfahrt(dt); renderer.render(scene, camera); return; }
+      if (phase === 'verhaftung') { verhaftung(dt); renderer.render(scene, camera); return; }
       zeit += dt; unverwundbar = Math.max(0, unverwundbar - dt);
       speed = Math.min(auto.speed, speed + auto.beschleunigung * dt);
       const weg = speed / 3.6 * dt;
@@ -598,7 +869,9 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       ausgabe += dt;
       if (ausgabe > 0.12 || treffer) { callbacks.current.onStand(Math.round(speed), Math.max(0, Math.round(abstand)), unverwundbar > 0); ausgabe = 0; }
       renderer.render(scene, camera);
-      if (abstand <= 0 || abstand > ABSTAND_VERLOREN || zeit > 180) { bereit = false; callbacks.current.onEnde(abstand <= 0); }
+      // Eingeholt heißt nicht sofort vorbei: Jetzt kommt die Verhaftung.
+      if (abstand <= 0) stellen();
+      else if (abstand > ABSTAND_VERLOREN || zeit > 180) { bereit = false; callbacks.current.onEnde(false); }
     }
     frame = requestAnimationFrame(zeichnen);
     return () => {
@@ -606,14 +879,24 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       renderer.domElement.removeEventListener('pointerdown', tippen);
       renderer.domElement.removeEventListener('webglcontextlost', verloren);
       mixer?.stopAllAction();
+      taeterMixer?.stopAllAction();
       sammeln(scene); ressourcen.forEach(r => r.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
   }, [auto, flucht, spur, drehung, figurModell]);
   return <div className="jagd-canvas" ref={host} aria-label="Wimpy verfolgt den Fluchtwagen auf drei Spuren" />;
 }
 
-export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = false, onDrehung }: {
+export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = false, fluechtigModell, onDrehung }: {
   vorgabe: VerfolgungVorgabe; onFertig: () => void; autoId?: string; besitz?: Record<string, number>; vorschau?: boolean;
+  /**
+   * Womit der Flüchtige bei der Verhaftung aussteigt.
+   *
+   * Vor dem Showdown ist das wichtig: Dort ist für den Gegner oft ein
+   * eigenes Modell gewählt (größer, finsterer), und wer aus dem Wagen
+   * steigt, muss derselbe sein, der gleich in der Arena steht. Leer heißt:
+   * das Modell aus den Stammdaten.
+   */
+  fluechtigModell?: string;
   /** Nur in der Vorschau: die gefundene Drehung des Fluchtwagens zurückgeben. */
   onDrehung?: (grad: number) => void;
 }) {
@@ -622,18 +905,32 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   const [wahl, setWahl] = useState(autoId ?? START_AUTO_ID);
   const [fluchtId, setFluchtId] = useState(vorgabe.fluchtAutoId ?? 'auto-sport');
   const [rennen, setRennen] = useState<{ auto: Auto; flucht: Auto } | null>(null);
-  const [phase, setPhase] = useState<'bereit' | 'anfahrt' | 'jagd' | 'gefangen' | 'entkommen'>('bereit');
+  const [phase, setPhase] = useState<'bereit' | 'anfahrt' | 'jagd' | 'verhaftung' | 'gefangen' | 'entkommen'>('bereit');
   const [fehler, setFehler] = useState('');
   const [bereit, setBereit] = useState(false);
   const [stand, setStand] = useState({ speed: 0, abstand: ABSTAND_START, treffer: false });
   const [fluchtDrehung, setFluchtDrehung] = useState(vorgabe.fluchtDrehung ?? 0);
   const spur = useRef(0);
   const drehung = useRef(fluchtDrehung);
-  const faehrt = phase === 'anfahrt' || phase === 'jagd';
+  // Die Verhaftung läuft in derselben Szene weiter: Wer sie abbricht, sähe
+  // die Wagen nie halten.
+  const faehrt = phase === 'anfahrt' || phase === 'jagd' || phase === 'verhaftung';
   const fliehender = stammdaten.charaktere.find(c => c.id === vorgabe.fliehenderId);
   // Am Straßenrand steht Wimpy in dem Modell, das ihm in den Stammdaten
   // zugeordnet ist - dasselbe wie in den 3D-Kapiteln.
   const figur = spielerModell(stammdaten.charaktere.find(c => c.istDetektiv));
+  /*
+   * Und wer im Fluchtwagen sitzt, steht erst am Ende der Jagd im Bild.
+   *
+   * Steht das Tier in den Stammdaten, gilt sein Modell - dasselbe wie in den
+   * 3D-Kapiteln. In der Probe gibt es oft gar kein Tier; dann steigt
+   * irgendwer aus, nur eben nicht Wimpy selbst.
+   */
+  const fluechtig = fliehender
+    ? modellFuerTier(fliehender, 0, fluechtigModell)
+    : ANIMATIONS_MODELLE.find(m => m.id === fluechtigModell)
+      ?? ANIMATIONS_MODELLE.find(m => m.id !== figur?.id)
+      ?? ANIMATIONS_MODELLE[0];
   const verfuegbar = autos.filter(a => vorschau || a.id === START_AUTO_ID || besitz[a.id]);
   const drehen = (schritt: number) => {
     const grad = (((fluchtDrehung + schritt) % 360) + 360) % 360;
@@ -648,14 +945,17 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   };
   return <div className="jagd" data-treffer={stand.treffer}>
     {faehrt && rennen && !fehler ? <>
-      {vorgabe.musik && phase === 'jagd' && <Hintergrundmusik stueck={vorgabe.musik} />}
-      <RennCanvas {...rennen} spur={spur} drehung={drehung} figur={figur} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
+      {vorgabe.musik && (phase === 'jagd' || phase === 'verhaftung') && <Hintergrundmusik stueck={vorgabe.musik} />}
+      <RennCanvas {...rennen} spur={spur} drehung={drehung} figur={figur} fluechtig={fluechtig} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
       {!bereit && <div className="auto-jagd-laden" role="status">Die Wagen werden bereitgestellt …</div>}
       {bereit && phase === 'anfahrt' && <div className="auto-jagd-anfahrt" role="status"><strong>{vorgabe.name}</strong><span>Tippen überspringt</span></div>}
       {phase === 'jagd' && <>
         <div className="auto-jagd-hud"><strong>WIMPY · {rennen.auto.name}</strong><span>{stand.speed} km/h · Abstand {stand.abstand} m</span>{stand.treffer && <b>REMPLER! TEMPO VERLOREN</b>}</div>
         <div className="auto-jagd-steuerung"><button aria-label="Eine Spur nach links" onClick={() => { spur.current = Math.max(-1, spur.current - 1); }}>◀</button><button aria-label="Eine Spur nach rechts" onClick={() => { spur.current = Math.min(1, spur.current + 1); }}>▶</button></div>
       </>}
+      {/* Die Verhaftung spielt sich im Bild ab - hier steht nur, was gerade
+          geschieht, und kein Knopf, den man dabei drücken müsste. */}
+      {phase === 'verhaftung' && <div className="auto-jagd-verhaftung" role="status"><strong>GESTELLT!</strong><span>Quer über der Fahrbahn - und die Tür geht auf.</span><small>Tippen überspringt</small></div>}
       {vorschau && <div className="auto-jagd-drehen"><button type="button" onClick={() => drehen(-90)} aria-label="Fluchtwagen nach links drehen">↺</button><span>Fluchtwagen {fluchtDrehung}°</span><button type="button" onClick={() => drehen(90)} aria-label="Fluchtwagen nach rechts drehen">↻</button></div>}
     </> : <div className="jagd-start auto-jagd-auswahl"><article className="jagd-startkarte">
       <span className="jagd-kicker">WIMPY · PURSUIT</span><h1>{phase === 'gefangen' ? 'EINGEHOLT!' : phase === 'entkommen' ? 'ENTKOMMEN!' : vorgabe.name}</h1>
