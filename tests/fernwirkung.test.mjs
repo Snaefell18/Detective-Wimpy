@@ -7,7 +7,8 @@
  * leeren Händen in den Saal - deshalb wird die Fernwirkung ausdrücklich
  * bestellt und danach geprüft.
  */
-import { buildSpurenPrompt } from "../lib/prompts.ts";
+import { buildAccusePrompt, buildSpurenPrompt } from "../lib/prompts.ts";
+import { ohneEnttarnung } from "../lib/namenSchutz.ts";
 import { fernwirkungPruefen } from "../lib/fallReparieren.ts";
 import { makeSpurenSchema } from "../lib/schemas.ts";
 
@@ -153,6 +154,68 @@ console.log("\n7. Die Prüfung danach");
     !fernwirkungPruefen([spur("zettel", { fernwirkung: true })], "").fehlt,
   );
   pruefe("eine leere Liste fehlt", fernwirkungPruefen([], "hut").fehlt);
+}
+
+console.log("\n8. Die Auflösung eines Kapitels verrät die Saga nicht");
+{
+  /*
+   * Am Ende eines Kapitels wird gesagt, was die Funde bedeutet haben - und
+   * genau dort flog der Drahtzieher regelmäßig auf: Die Bedeutung eines
+   * Stücks mit Fernwirkung nennt ihn beim Namen, und das Modell erklärte
+   * sie pflichtschuldig mit. Jetzt bekommt es sie gar nicht erst zu lesen.
+   */
+  const spur = (itemId, bedeutung, extra = {}) => ({
+    itemId, ortId: "o1", beobachtung: "", vermutung: "", bedeutung,
+    zeigtAufCharakterId: "nala", fuehrtInDieIrre: false, ...extra,
+  });
+  const fall = {
+    titel: "Der Fall", tatbeschreibung: "Etwas fehlt", motiv: "Geld",
+    tathergang: "So war es", besetzung, taeterId: "nala", orte: [], items,
+    spuren: [
+      spur("lupe", "Nala war am Tatort."),
+      spur("zettel", "Die Handschrift gehört Herr Hut, dem Kopf der ganzen Serie.", { fernwirkung: true }),
+    ],
+    sagaSpur: sagaVorgabe,
+  };
+  const bauen = (teil) =>
+    buildAccusePrompt({
+      fall: { ...fall, ...teil },
+      charakterId: "nala",
+      begruendung: "",
+      gefundeneSpuren: ["lupe", "zettel"],
+    });
+
+  const kapitel = bauen({});
+  pruefe("die Bedeutung des Fernwirkungsstücks bleibt draußen",
+    !kapitel.includes("dem Kopf der ganzen Serie"));
+  pruefe("stattdessen steht dort ein Verbot", kapitel.includes("nicht auflösen"));
+  pruefe("die Spur dieses Falls bleibt erklärt", kapitel.includes("Nala war am Tatort."));
+  pruefe("und es steht als Regel da", kapitel.includes("DIESER FALL IST EIN KAPITEL"));
+  pruefe("der Drahtzieher wird nicht ausgewiesen",
+    kapitel.includes("Herr Hut wird in der Auflösung NICHT als der Verantwortliche"));
+  pruefe("das Ende darf offen bleiben", kapitel.includes("größeren Frage"));
+
+  // Wo der Schuldige das Geheimnis der Saga ist, fällt auch hier kein Name.
+  const geheim = bauen({ sagaSpur: { ...sagaVorgabe, drahtzieherName: "", drahtzieherId: "" } });
+  pruefe("ohne Namen wird niemand genannt", !geheim.includes("Herr Hut wird in der Auflösung"));
+  pruefe("aber die Reihe bleibt ungelöst", geheim.includes("weder als Person noch als Ursache"));
+
+  // Ein einzelner Fall und das Finale einer Saga lösen wie bisher alles auf.
+  const einzeln = bauen({ sagaSpur: null });
+  pruefe("ein einzelner Fall bleibt, wie er war", !einzeln.includes("DIESER FALL IST EIN KAPITEL"));
+  pruefe("und legt jede Bedeutung offen", einzeln.includes("dem Kopf der ganzen Serie"));
+}
+
+console.log("\n9. Und was doch durchrutscht, wird gestrichen");
+{
+  // Dasselbe Netz wie im Vorspann: Nur wo Name und Enttarnung im selben
+  // Satz stehen, fliegt der Satz - der Name allein bleibt.
+  const weg = (t) => ohneEnttarnung(t, "Herr Hut");
+  pruefe("die Enttarnung fliegt",
+    weg("Nala hat den Schlüssel genommen. Dahinter steckt Herr Hut. Der Fall ist gelöst.") ===
+      "Nala hat den Schlüssel genommen. Der Fall ist gelöst.");
+  pruefe("sein Auftritt bleibt",
+    weg("Herr Hut stand daneben und sagte nichts.") === "Herr Hut stand daneben und sagte nichts.");
 }
 
 console.log(fehlgeschlagen ? `\n${fehlgeschlagen} Prüfung(en) fehlgeschlagen.` : "\nAlles gut.");

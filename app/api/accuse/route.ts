@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ergebnisAus, fehlerText, istZeitueberschreitung, sauberText } from "@/lib/antwort";
 import { MODEL, budget, getAnthropic } from "@/lib/anthropic";
 import { buildAccusePrompt, buildWorldPrompt } from "@/lib/prompts";
+import { ohneEnttarnung } from "@/lib/namenSchutz";
 import { AccuseSchema } from "@/lib/schemas";
 import type * as z from "zod/v4";
 import { unseal } from "@/lib/seal";
@@ -99,10 +100,40 @@ export async function POST(request: Request) {
       ? (fall.besetzung.find((c) => c.id === gestalt.wirtId) ?? null)
       : null;
 
+    /*
+     * Ein Kapitel löst seinen Fall, nicht die Saga.
+     *
+     * Im Prompt steht das ausdrücklich, und meistens hält sich das Modell
+     * daran. "Meistens" reicht hier nicht: Ein einziger Satz - "und dahinter
+     * steckte Herr Hut" - nimmt einer Reihe von fünf Abenden ihr Ende.
+     * Gestrichen wird darum nachträglich und satzweise, und zwar nur, wo
+     * Name und Enttarnung zusammen stehen (siehe lib/namenSchutz.ts). Der
+     * Drahtzieher darf in der Auflösung vorkommen - er tritt in vielen
+     * Kapiteln auf. Er darf dort nur nicht auffliegen.
+     *
+     * Ist er der Täter dieses Kapitels, gilt nichts davon: Dann ist er
+     * gerade überführt worden, und das ist die Auflösung.
+     */
+    const drahtzieherName = fall.sagaSpur?.drahtzieherName?.trim() ?? "";
+    const drahtzieherId = fall.sagaSpur?.drahtzieherId ?? "";
+    const selbstUeberfuehrt =
+      Boolean(drahtzieherId) &&
+      (drahtzieherId === fall.taeterId || drahtzieherId === mittaeterId);
+    const ohneVerrat = (text: string, ersatz: string) => {
+      if (!drahtzieherName || selbstUeberfuehrt) return text;
+      const gekuerzt = ohneEnttarnung(text, drahtzieherName).trim();
+      // Bestand der ganze Text aus Enttarnung, bleibt lieber ein karger Satz
+      // stehen als das Ende der Saga.
+      return gekuerzt || ersatz;
+    };
+
     const ergebnis: AccuseResult & { taeterId: string } = {
       richtig,
-      aufloesung: sauberText(aufloesung.aufloesung),
-      reaktion: sauberText(aufloesung.reaktion),
+      aufloesung: ohneVerrat(
+        sauberText(aufloesung.aufloesung),
+        "Damit ist dieser Fall gelöst. Was darüber hinausreicht, bleibt vorerst offen.",
+      ),
+      reaktion: ohneVerrat(sauberText(aufloesung.reaktion), "Ich sage dazu nichts mehr."),
       taeterId: fall.taeterId,
       mittaeterId: mittaeterId || undefined,
       verwandlung: gestalt
