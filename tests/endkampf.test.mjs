@@ -1,0 +1,308 @@
+/**
+ * Der Showdown: Wimpy gegen den Culprit.
+ *
+ * Geprüft wird die Rechnung, nicht das Bild - genau deshalb liegt sie in
+ * lib/kampf.ts und nicht in der Szene. Vier Dinge müssen stimmen, sonst ist
+ * der Kampf entweder unfair oder langweilig:
+ *
+ *   1. Nichts trifft ohne Ansage: Der Gegner holt sichtbar aus, und erst am
+ *      Ende der Ausholzeit tut es weh.
+ *   2. Ausweichen wird belohnt: Rolle und Schutzzeit machen unverwundbar,
+ *      und wer sauber spielt, teilt mehr aus.
+ *   3. Der Kampf endet - und zwar in beide Richtungen.
+ *   4. Die Arena aus dem Editor überlebt den Weg durch die Datenbank.
+ */
+import {
+  BETAEUBT_ZEIT,
+  GEGNER_SCHLAG_TREFFER,
+  KAMPF_STUFEN,
+  ROLLE_DAUER,
+  SCHLAG_REICHWEITE,
+  SCHUSS_PAUSE,
+  SCHUTZ_ZEIT,
+  ZAUBER_REICHWEITE,
+  angriffSchaden,
+  angriffWaehlen,
+  ausholFortschritt,
+  darfRollen,
+  darfSchiessen,
+  darfSchlagen,
+  gegnerDenken,
+  gegnerTempo,
+  gegnerTreffen,
+  kampfClips,
+  neuerKampf,
+  rolleGesetzt,
+  salvenBreite,
+  schlagGesetzt,
+  schussGesetzt,
+  uhrWeiter,
+  werteFuer,
+  wimpyTreffen,
+  wucht,
+} from "../lib/kampf.ts";
+import {
+  GROESSE_GRENZEN,
+  MINDEST_FELDER,
+  STANDARD_KAMPF,
+  arenaPlan,
+  kampfLesen,
+  kampfSpielbar,
+  kampfSpruch,
+  kampfZeile,
+  neueKampfJagd,
+} from "../lib/endkampf.ts";
+import { arcKampf, leererArc } from "../lib/arcTypen.ts";
+import { ANIMATIONS_MODELLE } from "../lib/animations.generated.ts";
+import { STRASSE, beispielPlan, feldSetzen, leererPlan, strassenFelder } from "../lib/stadtplan.ts";
+
+let fehlgeschlagen = 0;
+const pruefe = (name, ok, zusatz = "") => {
+  console.log(`  ${ok ? "ok  " : "FEHL"}  ${name}${zusatz ? `   (${zusatz})` : ""}`);
+  if (!ok) fehlgeschlagen++;
+};
+
+/** Ein Kampf auf mittlerer Stufe - der gedachte Normalfall. */
+const frisch = (stufe = "mittel") => neuerKampf(werteFuer(stufe));
+
+/** Die Uhr so weit vorstellen, bis etwas passiert - in Schritten wie im Spiel. */
+const laufen = (stand, sekunden, dt = 1 / 60) => {
+  let jetzt = stand;
+  for (let i = 0; i < Math.round(sekunden / dt); i++) jetzt = uhrWeiter(jetzt, dt);
+  return jetzt;
+};
+
+console.log("\n1. Die Stufen: sanft ist wirklich sanfter");
+{
+  pruefe("es gibt drei", KAMPF_STUFEN.length === 3);
+  const sanft = werteFuer("sanft");
+  const hart = werteFuer("hart");
+  pruefe("der harte Gegner hält mehr aus", hart.gegnerLeben > sanft.gegnerLeben);
+  pruefe("und schlägt härter zu", hart.gegnerSchlag > sanft.gegnerSchlag);
+  pruefe("dafür hat man sanft mehr Zeit zum Ausweichen", sanft.ausholen > hart.ausholen);
+  pruefe("Wimpy ist immer schneller als der Gegner", sanft.wimpyTempo > hart.gegnerTempo);
+  pruefe("eine unbekannte Stufe fällt auf Mittel zurück", werteFuer(undefined).gegnerLeben === werteFuer("mittel").gegnerLeben);
+}
+
+console.log("\n2. Nichts trifft ohne Ansage");
+{
+  let stand = frisch();
+  // Die Anfangspause läuft ab, der Gegner steht in Schlagweite.
+  stand = laufen(stand, 2);
+  const entschluss = gegnerDenken(stand, { abstand: 2.5, zufall: () => 0.9 });
+  pruefe("er holt aus, statt sofort zu treffen", entschluss.stand.gegner.zustand === "ausholen");
+  pruefe("und dabei fliegt noch nichts", entschluss.ausloesen === null);
+  pruefe("ausgeholt wird auf einen Schlag", entschluss.stand.gegner.angriff === "schlag");
+  pruefe("der Fortschritt fängt bei null an", ausholFortschritt(entschluss.stand) < 0.05);
+
+  // Mitten im Ausholen: immer noch nichts.
+  const halb = laufen(entschluss.stand, werteFuer("mittel").ausholen / 2);
+  pruefe("auf halbem Weg passiert nichts", gegnerDenken(halb, { abstand: 2.5 }).ausloesen === null);
+  pruefe("die Warnung ist aber sichtbar fortgeschritten", ausholFortschritt(halb) > 0.4 && ausholFortschritt(halb) < 0.6);
+
+  // Und am Ende schlägt es ein.
+  const fertig = laufen(halb, werteFuer("mittel").ausholen);
+  const schlag = gegnerDenken(fertig, { abstand: 2.5 });
+  pruefe("erst am Ende der Ausholzeit trifft es", schlag.ausloesen === "schlag");
+  pruefe("danach steht er einen Moment offen", schlag.stand.gegner.zustand === "nachhall");
+  pruefe("und wartet vor dem nächsten Angriff", schlag.stand.gegner.pause > 0);
+  pruefe("wer ausholt, bleibt stehen", gegnerTempo(entschluss.stand) === 0);
+  pruefe("wer jagt, läuft", gegnerTempo(stand) > 0);
+}
+
+console.log("\n3. Was er sich aussucht");
+{
+  pruefe("dicht davor wird geschlagen", angriffWaehlen(1, 2, () => 0.5) === "schlag");
+  pruefe("in der ersten Phase nie gestampft", angriffWaehlen(1, 2, () => 0.01) === "schlag");
+  pruefe("wütend kommt auch die Welle", angriffWaehlen(2, 2, () => 0.01) === "stampf");
+  pruefe("auf mittlerer Entfernung wird gezaubert", angriffWaehlen(1, ZAUBER_REICHWEITE - 1, () => 0.5) === "zauber");
+  pruefe("ganz weit weg läuft er erst einmal", angriffWaehlen(1, ZAUBER_REICHWEITE + 5, () => 0.5) === null);
+  pruefe("die Schlaggrenze liegt unter der Zaubergrenze", GEGNER_SCHLAG_TREFFER < ZAUBER_REICHWEITE);
+
+  const stand = frisch();
+  pruefe("eine Salve ist anfangs eine Kugel", salvenBreite(stand) === 1);
+  const wuetend = { ...stand, gegner: { ...stand.gegner, phase: 2 } };
+  pruefe("und wütend sind es drei", salvenBreite(wuetend) === 3);
+  pruefe("wütend läuft er schneller", gegnerTempo(wuetend) > gegnerTempo(stand));
+  pruefe("ein Stampfer tut mehr weh als eine Kugel",
+    angriffSchaden(stand, "stampf") > angriffSchaden(stand, "zauber"));
+}
+
+console.log("\n4. Ausweichen wird belohnt");
+{
+  let stand = frisch();
+  pruefe("rollen darf man sofort", darfRollen(stand));
+  stand = rolleGesetzt(stand);
+  pruefe("in der Rolle ist man unverwundbar", stand.wimpy.schutz >= ROLLE_DAUER);
+  const daneben = wimpyTreffen(stand, 30);
+  pruefe("ein Treffer in der Rolle geht ins Leere", !daneben.getroffen && daneben.stand.wimpy.leben === stand.wimpy.leben);
+  pruefe("und zweimal hintereinander rollt niemand", !darfRollen(stand));
+
+  // Nach der Rolle ist der Schutz weg, der Treffer sitzt.
+  const spaeter = laufen(stand, ROLLE_DAUER + 0.1);
+  const sitzt = wimpyTreffen(spaeter, 12);
+  pruefe("danach trifft es", sitzt.getroffen && sitzt.stand.wimpy.leben === stand.wimpy.maxLeben - 12);
+  pruefe("und man blinkt kurz", sitzt.stand.wimpy.schutz === SCHUTZ_ZEIT);
+  pruefe("ein zweiter Treffer im Blinken zählt nicht", !wimpyTreffen(sitzt.stand, 12).getroffen);
+}
+
+console.log("\n5. Die Kombo: sauber spielen lohnt sich");
+{
+  let stand = frisch();
+  pruefe("ohne Kombo volle, aber einfache Wucht", wucht(stand) === 1);
+  for (let i = 0; i < 12; i++) stand = gegnerTreffen(stand, "schuss").stand;
+  pruefe("zwölf Treffer am Stück zählen", stand.wimpy.kombo === 12);
+  pruefe("und teilen mehr aus", wucht(stand) > 1.2);
+  pruefe("mehr als anderthalbfach wird es nie", wucht({ ...stand, wimpy: { ...stand.wimpy, kombo: 999 } }) === 1.5);
+  const getroffen = wimpyTreffen(stand, 10).stand;
+  pruefe("ein Treffer setzt die Kombo zurück", getroffen.wimpy.kombo === 0);
+  pruefe("die beste bleibt aber stehen", getroffen.wimpy.besteKombo === 12);
+}
+
+console.log("\n6. Der Wutausbruch auf halbem Weg");
+{
+  let stand = frisch("sanft");
+  let wechsel = false;
+  // So lange draufhalten, bis die Hälfte weg ist.
+  for (let i = 0; i < 40 && !wechsel; i++) {
+    const treffer = gegnerTreffen(stand, "schlag");
+    stand = treffer.stand;
+    wechsel = treffer.phaseWechsel;
+  }
+  pruefe("bei der Hälfte kippt er in die zweite Phase", wechsel && stand.gegner.phase === 2);
+  pruefe("und taumelt erst einmal", stand.gegner.zustand === "betaeubt" && stand.gegner.rest === BETAEUBT_ZEIT);
+  pruefe("ein Taumelnder holt nicht aus", gegnerDenken(stand, { abstand: 2 }).ausloesen === null);
+  const doppelt = gegnerTreffen(stand, "schuss").schaden;
+  const einfach = gegnerTreffen({ ...stand, gegner: { ...stand.gegner, zustand: "jagen" } }, "schuss").schaden;
+  // Auf ganze Zahlen gerundet wird einmal vor und einmal nach der Verdopplung -
+  // um ein Pünktchen darf das auseinandergehen.
+  pruefe("im Taumeln steckt er doppelt ein", Math.abs(doppelt - einfach * 2) <= 1, `${doppelt} statt ${einfach}`);
+  pruefe("ein zweiter Wutausbruch kommt nicht", !gegnerTreffen(stand, "schlag").phaseWechsel);
+}
+
+console.log("\n7. Der Kampf endet - in beide Richtungen");
+{
+  let stand = frisch("sanft");
+  let runden = 0;
+  while (stand.ergebnis === "laeuft" && runden < 200) {
+    stand = gegnerTreffen(stand, "schlag").stand;
+    runden++;
+  }
+  pruefe("genug Schläge gewinnen ihn", stand.ergebnis === "gewonnen", `${runden} Schläge`);
+  pruefe("das dauert eine Weile", runden > 5);
+  pruefe("ein gewonnener Kampf nimmt keinen Schaden mehr", gegnerTreffen(stand, "schuss").schaden === 0);
+
+  let verloren = frisch("hart");
+  runden = 0;
+  while (verloren.ergebnis === "laeuft" && runden < 200) {
+    verloren = wimpyTreffen(laufen(verloren, SCHUTZ_ZEIT + 0.05), verloren.werte.gegnerSchlag).stand;
+    runden++;
+  }
+  pruefe("genug Treffer verlieren ihn", verloren.ergebnis === "verloren", `${runden} Treffer`);
+  pruefe("aber auf der harten Stufe hält man mehr als fünf aus", runden > 5);
+}
+
+console.log("\n8. Die Knöpfe: Pausen und Reichweiten");
+{
+  let stand = frisch();
+  pruefe("zaubern geht sofort", darfSchiessen(stand));
+  stand = schussGesetzt(stand);
+  pruefe("danach kurz nicht mehr", !darfSchiessen(stand));
+  pruefe("aber wirklich nur kurz", darfSchiessen(laufen(stand, SCHUSS_PAUSE + 0.02)));
+
+  const nah = frisch();
+  pruefe("aus der Ferne wird nicht geschlagen", !darfSchlagen(nah, SCHLAG_REICHWEITE + 1));
+  pruefe("direkt davor schon", darfSchlagen(nah, SCHLAG_REICHWEITE - 0.5));
+  const geschlagen = schlagGesetzt(nah);
+  pruefe("nach dem Schlag ist der Nahkampf zu", !darfSchlagen(geschlagen, 1));
+  pruefe("und der Zauber auch kurz gesperrt", !darfSchiessen(geschlagen));
+  pruefe("ein Schlag tut mehr weh als eine Kugel", nah.werte.schlag > nah.werte.schuss);
+  pruefe("in der Rolle kämpft man nicht", !darfSchiessen(rolleGesetzt(nah)));
+}
+
+console.log("\n9. Welche Animation wozu passt");
+{
+  const wimpy = ANIMATIONS_MODELLE.find((m) => m.id === "wimpy");
+  const clips = kampfClips(wimpy?.animationen ?? []);
+  pruefe("Wimpy wirft mit dem Baseballwurf", clips.wurf === "baseball_pitching", String(clips.wurf));
+  pruefe("er läuft mit einem Laufclip", /run/i.test(clips.lauf ?? ""), String(clips.lauf));
+  pruefe("er steht mit einem Idle", /idle|rest/i.test(clips.ruhe ?? ""), String(clips.ruhe));
+  pruefe("und tanzt nach dem Sieg", /danc|shake|funny/i.test(clips.jubel ?? ""), String(clips.jubel));
+
+  const yeti = kampfClips(ANIMATIONS_MODELLE.find((m) => m.id === "yeti")?.animationen ?? []);
+  pruefe("der Yeti stampft auf", yeti.schlag === "Angry_Ground_Stomp", String(yeti.schlag));
+
+  const karg = kampfClips(["Armature|Unreal Take|baselayer"]);
+  pruefe("ein Modell mit nur einem Clip friert nicht ein",
+    karg.lauf === "Armature|Unreal Take|baselayer" && karg.schlag === karg.lauf && karg.jubel === karg.lauf);
+  const leer = kampfClips([]);
+  pruefe("und ganz ohne Clips gibt es keinen Absturz", leer.lauf === null && leer.wurf === null);
+}
+
+console.log("\n10. Die Arena");
+{
+  const plan = arenaPlan(9, 9);
+  pruefe("die Mitte ist frei begehbar", strassenFelder(plan).length === 49, `${strassenFelder(plan).length} Felder`);
+  pruefe("und der Rand zugebaut", plan.felder[0] !== STRASSE && plan.felder[0] !== "");
+  pruefe("sie ist damit spielbar", kampfSpielbar({ ...STANDARD_KAMPF, plan }));
+  pruefe("höchstens zwei Bauarten - das Handy dankt",
+    new Set(plan.felder.filter((f) => f && f !== STRASSE)).size <= 2);
+
+  pruefe("ohne Plan wird nicht gekämpft", !kampfSpielbar(STANDARD_KAMPF));
+  pruefe("und auf einer Briefmarke auch nicht",
+    !kampfSpielbar({ ...STANDARD_KAMPF, plan: feldSetzen(feldSetzen(leererPlan(3, 3), 1, 1, STRASSE), 1, 2, STRASSE) }));
+  const gerade = beispielPlan(7, 7);
+  pruefe("eine Kreuzung reicht dagegen",
+    kampfSpielbar({ ...STANDARD_KAMPF, plan: gerade }) && strassenFelder(gerade).length >= MINDEST_FELDER);
+  pruefe("die Zeile sagt, was dasteht", kampfZeile({ ...STANDARD_KAMPF, plan }).includes("9×9"));
+  pruefe("ohne Arena sagt sie das auch", kampfZeile(STANDARD_KAMPF).includes("Noch keine Arena"));
+}
+
+console.log("\n11. Der Weg durch die Datenbank");
+{
+  const gespeichert = {
+    plan: arenaPlan(9, 9),
+    strassentyp: "schnee",
+    tageszeit: "nacht",
+    wetter: "schneesturm",
+    gegnerModell: "yeti",
+    gegnerGroesse: 1.8,
+    stufe: "hart",
+    musik: "teufel",
+    spruch: "Das war erst der Anfang.",
+    jagd: neueKampfJagd("hut", "Der Schattenkanzler"),
+  };
+  const gelesen = kampfLesen(JSON.parse(JSON.stringify(gespeichert)));
+  pruefe("alles kommt heil zurück",
+    gelesen?.stufe === "hart" && gelesen.gegnerModell === "yeti" && gelesen.wetter === "schneesturm");
+  pruefe("die Arena auch", kampfSpielbar(gelesen));
+  pruefe("die Bausteinliste kommt aus dem Plan", (gelesen?.locations.length ?? 0) > 0);
+  pruefe("die Jagd bleibt am Finale hängen", gelesen?.jagd?.nachKapitel === 0 && gelesen.jagd.fliehenderId === "hut");
+
+  const mist = kampfLesen({ plan: { breite: "viel", felder: 3 }, stufe: "unmöglich", gegnerGroesse: 99 });
+  pruefe("Unsinn wird zu einer leeren, unspielbaren Vorgabe", mist !== null && !kampfSpielbar(mist));
+  pruefe("und die Stufe fällt zurück", mist?.stufe === "mittel");
+  pruefe("die Größe bleibt im Rahmen", mist?.gegnerGroesse === GROESSE_GRENZEN.max);
+  pruefe("gar nichts bleibt gar nichts", kampfLesen(null) === null && kampfLesen("hm") === null);
+  pruefe("eine Jagd ohne Fliehenden ist keine", kampfLesen({ jagd: { name: "leer" } })?.jagd === null);
+}
+
+console.log("\n12. Der Arc fällt nie in ein leeres Finale");
+{
+  const arc = leererArc();
+  pruefe("ohne Kampf-Art kein Kampf", arcKampf({ ...arc, finale: { ...arc.finale, art: "text" } }) === null);
+  pruefe("mit Art, aber ohne Arena auch nicht",
+    arcKampf({ ...arc, finale: { ...arc.finale, art: "kampf" } }) === null);
+  const fertig = {
+    ...arc,
+    finale: { ...arc.finale, art: "kampf", kampf: { ...STANDARD_KAMPF, plan: arenaPlan(9, 9) } },
+  };
+  pruefe("mit Arena schon", arcKampf(fertig)?.plan !== undefined);
+  pruefe("ein leeres Statement bekommt einen Satz",
+    kampfSpruch(STANDARD_KAMPF, "Hut").includes("Hut"));
+  pruefe("ein eigenes bleibt, wie es ist",
+    kampfSpruch({ ...STANDARD_KAMPF, spruch: "Nie!" }, "Hut") === "Nie!");
+}
+
+console.log(fehlgeschlagen === 0 ? "\nAlles sauber.\n" : `\n${fehlgeschlagen} Fehler.\n`);
+process.exit(fehlgeschlagen === 0 ? 0 : 1);

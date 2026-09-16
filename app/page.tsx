@@ -7,6 +7,7 @@ import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcCredits } from "@/components/ArcCredits";
+import { ArcShowdown } from "@/components/ArcShowdown";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
@@ -115,6 +116,15 @@ export default function Home() {
    * weiter.
    */
   const [arcRuht, setArcRuht] = useState(false);
+  /**
+   * Der Showdown des Arcs ist geschafft (oder abgebrochen).
+   *
+   * Er steht vor dem Abschlusstext, nicht an seiner Stelle: Erst der Kampf,
+   * dann das letzte Wort des Erzählers. Gemerkt wird das nur für diesen
+   * Bildschirm - wer die Seite mitten im Kampf neu lädt, fängt ihn noch
+   * einmal an, und das ist bei einem Kampf auch richtig so.
+   */
+  const [showdownDurch, setShowdownDurch] = useState(false);
   /** Wer gleich zum ersten Mal mitspielt - wird vor dem Kapitel angekündigt. */
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
   /** Die Reaktion des Beschuldigten - steht zwischen Beschuldigung und Urteil. */
@@ -192,7 +202,13 @@ export default function Home() {
   const sagaSetzePhase = saga.setzePhase;
   const sagaAuftakt = useCallback(() => sagaSetzePhase("auftakt"), [sagaSetzePhase]);
   const arcSetzePhase = arc.setzePhase;
+  const arcBeendenRoh = arc.beenden;
   const arcUebersicht = useCallback(() => arcSetzePhase("uebersicht"), [arcSetzePhase]);
+  /** Der Arc ist zu Ende - der nächste Durchgang beginnt wieder beim Kampf. */
+  const arcBeenden = useCallback(() => {
+    setShowdownDurch(false);
+    arcBeendenRoh();
+  }, [arcBeendenRoh]);
 
   /**
    * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
@@ -604,6 +620,8 @@ export default function Home() {
     setArcsOffen(false);
     setArcMeldung(null);
     setArcRuht(false);
+    // Wer einen Arc noch einmal spielt, kämpft auch noch einmal.
+    setShowdownDurch(false);
 
     const weiter = !vonVorn && arc.stand?.arc.id === gewaehlt.id;
     if (!weiter) {
@@ -892,6 +910,26 @@ export default function Home() {
     }
 
     if (lauf.phase === "finale") {
+      /*
+       * Der Showdown: Wimpy gegen den Culprit, live in 3D.
+       *
+       * Er ersetzt den Abschluss nicht, er geht ihm voraus - danach läuft
+       * der Erzählertext wie bei jedem anderen Finale. Steht keine spielbare
+       * Arena dahinter, meldet sich der Showdown sofort fertig und man
+       * merkt nichts davon.
+       */
+      if (arcDaten.finale.art === "kampf" && !showdownDurch) {
+        return (
+          <main className="app">
+            <ArcShowdown
+              arc={arcDaten}
+              autoId={geld.beutel.autoId}
+              besitz={geld.beutel.vorrat}
+              onFertig={() => setShowdownDurch(true)}
+            />
+          </main>
+        );
+      }
       if (arcDaten.finale.art === "credits") {
         return (
           <main className="app">
@@ -899,7 +937,7 @@ export default function Home() {
               titel={arcDaten.name}
               text={arcDaten.finale.erzaehler.text}
               song={arcDaten.finale.creditsSong ?? ""}
-              onFertig={arc.beenden}
+              onFertig={arcBeenden}
             />
           </main>
         );
@@ -911,7 +949,7 @@ export default function Home() {
       if (abspann) {
         return (
           <main className="app">
-            <VideoSzene quelle={abspann} onFertig={arc.beenden} />
+            <VideoSzene quelle={abspann} onFertig={arcBeenden} />
           </main>
         );
       }
@@ -931,7 +969,7 @@ export default function Home() {
               titel={`${arcDaten.name} - Ende`}
               weiterText="Zum Hauptmenü ›"
               musik="jubel"
-              onWeiter={arc.beenden}
+              onWeiter={arcBeenden}
             />
           </main>
         );
@@ -944,7 +982,7 @@ export default function Home() {
             titel={`${arcDaten.name} - Finale`}
             weiterText="Zum Hauptmenü ›"
             musik="jubel"
-            onWeiter={arc.beenden}
+            onWeiter={arcBeenden}
           />
         </main>
       );

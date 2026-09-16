@@ -16,6 +16,7 @@ import { anmelden, getDb } from "./firebase";
 import type { Saga } from "./sagaTypen";
 import { bereinigteSaga3D } from "./saga3dSync";
 import type { Arc } from "./arcTypen";
+import { kampfLesen } from "./endkampf";
 import type { Zubehoer } from "./zubehoer";
 import type { Character, Item, Kampagne, Location } from "./types";
 import { stadtLesen, type Stadt } from "./staedte";
@@ -196,7 +197,26 @@ export const loescheSaga = (id: string) => loesche("sagen", id);
 
 /* --- Arcs: mehrere Sagen unter einem Dach -------------------------- */
 
-export const ladeArcs = () => alle<Arc>("arcs");
+/**
+ * Arcs laden - und dabei den Showdown geradeziehen.
+ *
+ * Die Kampfvorgabe kam später dazu und liegt in derselben Sammlung wie alles
+ * andere. Was dort steht, kann aus einer älteren Fassung stammen oder halb
+ * ausgefüllt sein; kampfLesen macht daraus entweder eine brauchbare Vorgabe
+ * oder nichts. Ohne diesen Schritt stünde die Prüfung der Arena erst in der
+ * Szene an - also genau dann, wenn man nichts mehr retten kann.
+ */
+export async function ladeArcs(): Promise<Abfrage<Arc>> {
+  const ergebnis = await alle<Arc>("arcs");
+  return {
+    ...ergebnis,
+    daten: ergebnis.daten.map((arc) => {
+      if (arc.finale?.art !== "kampf") return arc;
+      const kampf = kampfLesen(arc.finale.kampf);
+      return kampf ? { ...arc, finale: { ...arc.finale, kampf } } : arc;
+    }),
+  };
+}
 
 export async function speichereArc(arc: Arc): Promise<void> {
   await anmelden();
@@ -211,6 +231,18 @@ export async function speichereArc(arc: Arc): Promise<void> {
       finale: {
         ...arc.finale,
         creditsSong: kuerze(arc.finale.creditsSong ?? "", 200),
+        // Der Showdown bringt eigene Texte mit - auch sie werden gekürzt,
+        // bevor Firestore sie ablehnt.
+        ...(arc.finale.kampf
+          ? {
+              kampf: {
+                ...arc.finale.kampf,
+                gegnerModell: kuerze(arc.finale.kampf.gegnerModell, 80),
+                musik: kuerze(arc.finale.kampf.musik, 200),
+                spruch: kuerze(arc.finale.kampf.spruch, 1200),
+              },
+            }
+          : {}),
       },
     }),
   );

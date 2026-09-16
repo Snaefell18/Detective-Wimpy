@@ -6,6 +6,19 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { kapitelPosition } from "@/lib/saga3dLayout";
+import { TouchJoystick } from "./TouchJoystick";
+import {
+  LEUCHTEN,
+  cellShading,
+  einpassen,
+  fahrbahnMaterial,
+  gradientTextur,
+  haeuserBauen,
+  schneeflockenTextur,
+  strassenBauen,
+  texturenVerkleinern,
+  type StadtBlock,
+} from "./stadtBau";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
 import { vergessen } from "@/lib/vorladen";
@@ -25,22 +38,15 @@ import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
 import { DREI_D_LOCATIONS, locationsFuer3D, polizeiAus, tankstelleAus } from "@/lib/pursuit3d";
 import {
-  FELD_GROESSE,
-  STADT_HOEHE,
-  gebaeudeArten,
-  hoeheFuer,
   begehbar,
-  feldAn,
   feldMitte,
+  gebaeudeArten,
   gebaeudeFelder,
-  istStrasse,
   planAusmass,
   planGueltig,
   sichtFelder,
   startFeld,
-  strassenFelder,
   verteilen,
-  vorDerTuer,
   type Stadtplan,
 } from "@/lib/stadtplan";
 import { REGEL_START, leistungsProfil, nachregeln } from "@/lib/dreiDLeistung";
@@ -91,206 +97,6 @@ export type FahrzeugBefehl = {
 export const LEERER_FAHRZEUGBEFEHL: FahrzeugBefehl = { faehrt: null, abgeben: false };
 
 
-function TouchJoystick({ setzen }: { setzen: (x: number, z: number) => void }) {
-  const knauf = useRef<HTMLSpanElement>(null);
-  const finger = useRef<number | null>(null);
-  const aktuell = useRef(setzen);
-  aktuell.current = setzen;
-  const stoppen = () => {
-    finger.current = null;
-    aktuell.current(0, 0);
-    if (knauf.current) knauf.current.style.transform = "translate(0, 0)";
-  };
-  useEffect(() => {
-    window.addEventListener("blur", stoppen);
-    document.addEventListener("visibilitychange", stoppen);
-    return () => {
-      window.removeEventListener("blur", stoppen);
-      document.removeEventListener("visibilitychange", stoppen);
-      aktuell.current(0, 0);
-    };
-  }, []);
-  const bewegen = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (finger.current !== e.pointerId) return;
-    const box = e.currentTarget.getBoundingClientRect();
-    const radius = box.width * 0.3;
-    const dx = e.clientX - box.left - box.width / 2;
-    const dz = e.clientY - box.top - box.height / 2;
-    const distanz = Math.hypot(dx, dz);
-    const faktor = Math.min(1, radius / Math.max(1, distanz));
-    if (knauf.current) knauf.current.style.transform = `translate(${dx * faktor}px, ${dz * faktor}px)`;
-    const staerke = Math.max(0, (Math.min(1, distanz / radius) - 0.12) / 0.88);
-    const x = dx / Math.max(1, distanz) * staerke;
-    const z = dz / Math.max(1, distanz) * staerke;
-    // Die Stickrichtung folgt dem Bildschirm trotz schräger Kamera.
-    const kameraLaenge = Math.hypot(13.8, 9.5);
-    aktuell.current((x * 13.8 - z * 9.5) / kameraLaenge, (x * 9.5 + z * 13.8) / kameraLaenge);
-  };
-  return <div className="saga3d-joystick" role="group" aria-label="Wimpy steuern: Joystick in die gewünschte Richtung ziehen"
-    onPointerDown={(e) => { if (finger.current !== null) return; finger.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); bewegen(e); }}
-    onPointerMove={bewegen}
-    onPointerUp={(e) => { if (finger.current === e.pointerId) stoppen(); }}
-    onPointerCancel={stoppen} onLostPointerCapture={stoppen}>
-    <span className="saga3d-joystick-knauf" ref={knauf} aria-hidden="true" />
-  </div>;
-}
-
-function gradientTextur() {
-  const textur = new THREE.DataTexture(
-    new Uint8Array([65, 155, 255]),
-    3,
-    1,
-    THREE.RedFormat,
-  );
-  textur.needsUpdate = true;
-  textur.magFilter = THREE.NearestFilter;
-  textur.minFilter = THREE.NearestFilter;
-  return textur;
-}
-
-function naturStrassenTextur(schnee: boolean) {
-  const breite = 128, laenge = 512;
-  const pixel = new Uint8Array(breite * laenge * 4);
-  for (let y = 0; y < laenge; y++) {
-    for (let x = 0; x < breite; x++) {
-      const u = x / (breite - 1);
-      const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-      const korn = (rauschen - Math.floor(rauschen) - 0.5) * 14;
-      const spur = [0.22, 0.38, 0.62, 0.78].reduce((summe, mitte) =>
-        summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / 0.027) ** 2)), 0);
-      const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
-      const riffeln = Math.sin(y * 0.7 + u * 22) * 3;
-      const basis = schnee ? [222, 236, 244] : [199, 160, 105];
-      const farbe = basis.map((v) => THREE.MathUtils.clamp(v + korn + riffeln - spur * (schnee ? 44 : 29) + rand * (schnee ? 10 : -22), 0, 255));
-      pixel.set([...farbe, 255], (y * breite + x) * 4);
-    }
-  }
-  const textur = new THREE.DataTexture(pixel, breite, laenge, THREE.RGBAFormat);
-  textur.colorSpace = THREE.SRGBColorSpace;
-  textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
-  textur.repeat.set(1, 6);
-  textur.magFilter = THREE.LinearFilter;
-  textur.needsUpdate = true;
-  return textur;
-}
-
-/**
- * Asphalt fürs Stadtraster.
- *
- * Eine glatte Farbfläche verrät sofort, dass hier nichts weiter ist als ein
- * Rechteck. Ein wenig Korn, ein paar Flicken und Risse kosten nichts - sie
- * werden hier gerechnet, nicht geladen - und geben der Straße eine Oberfläche,
- * auf der das Licht etwas zu tun hat.
- */
-function asphaltTextur(nacht: boolean) {
-  const kante = 256;
-  const pixel = new Uint8Array(kante * kante * 4);
-  const zufall = (x: number, y: number) => {
-    const wert = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-    return wert - Math.floor(wert);
-  };
-  const basis = nacht ? [34, 42, 56] : [78, 86, 94];
-  for (let y = 0; y < kante; y++) {
-    for (let x = 0; x < kante; x++) {
-      /*
-       * Nur Korn und grobe Flecken - keine Wellen, keine Sinuslinien.
-       * Alles Regelmäßige legt sich über ein gekacheltes Feld sofort als
-       * Muster, und dann sieht die Straße aus wie ein Teppich.
-       */
-      const korn = (zufall(x, y) - 0.5) * 16;
-      const flicken = (zufall(Math.floor(x / 32), Math.floor(y / 32)) - 0.5) * 9;
-      const feiner = (zufall(Math.floor(x / 7), Math.floor(y / 7)) - 0.5) * 5;
-      const farbe = basis.map((wert) =>
-        THREE.MathUtils.clamp(wert + korn + flicken + feiner, 0, 255),
-      );
-      pixel.set([...farbe, 255], (y * kante + x) * 4);
-    }
-  }
-  const textur = new THREE.DataTexture(pixel, kante, kante, THREE.RGBAFormat);
-  textur.colorSpace = THREE.SRGBColorSpace;
-  textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
-  textur.repeat.set(1.7, 1.7);
-  textur.magFilter = THREE.LinearFilter;
-  textur.needsUpdate = true;
-  return textur;
-}
-
-function schneeflockenTextur() {
-  const pixel = new Uint8Array(32 * 32 * 4);
-  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
-    const radius = Math.hypot(x - 15.5, y - 15.5) / 15.5;
-    pixel.set([255, 255, 255, Math.round(Math.max(0, 1 - radius) ** 0.6 * 255)], (y * 32 + x) * 4);
-  }
-  const textur = new THREE.DataTexture(pixel, 32, 32, THREE.RGBAFormat);
-  textur.magFilter = THREE.LinearFilter;
-  textur.needsUpdate = true;
-  return textur;
-}
-
-/**
- * Wie stark die Kulisse aus sich selbst leuchtet.
- *
- * Die Stadtbausteine bringen kein Leuchten mit - ihre Neonschilder sind nur
- * aufgemalt und bleiben deshalb nachts genauso dunkel wie eine Hauswand.
- * Darum wird die Farbtextur zusätzlich als Leuchttextur gesetzt: Helle
- * Stellen (Schilder, Fenster, Lampen) geben dann Licht ab, dunkle kaum. Das
- * kostet nichts und macht aus einer flachen Nacht eine Stadt.
- */
-const LEUCHTEN: Record<DreiDTageszeit, number> = {
-  nacht: 0.62,
-  abend: 0.34,
-  morgen: 0.12,
-  tag: 0,
-};
-
-function cellShading(
-  objekt: THREE.Object3D,
-  gradient: THREE.Texture,
-  clippingPlanes: THREE.Plane[] = [],
-  /** 0 = gar nicht, 1 = volle Eigenhelligkeit. Nur für Kulissen. */
-  leuchten = 0,
-) {
-  objekt.traverse((kind) => {
-    if (!(kind instanceof THREE.Mesh)) return;
-    kind.castShadow = true;
-    kind.receiveShadow = true;
-    // Animierte Meshy-Skelette überschreiten ihre Bounding-Sphere der Ruhepose.
-    if (kind instanceof THREE.SkinnedMesh) kind.frustumCulled = false;
-    const mehrfach = Array.isArray(kind.material);
-    const materialien: THREE.Material[] = mehrfach ? kind.material : [kind.material];
-    const toon = materialien.map((material: THREE.Material) => {
-      const quelle = material as THREE.MeshStandardMaterial;
-      const materialNeu = new THREE.MeshToonMaterial({
-        color: quelle.color?.clone() ?? new THREE.Color(0xffffff),
-        map: quelle.map ?? null,
-        gradientMap: gradient,
-        transparent: quelle.transparent,
-        opacity: quelle.opacity,
-        alphaTest: quelle.alphaTest,
-        side: quelle.side,
-        emissive: new THREE.Color(leuchten > 0 ? 0xffffff : 0x000000),
-        emissiveMap: leuchten > 0 ? (quelle.emissiveMap ?? quelle.map ?? null) : null,
-        emissiveIntensity: leuchten,
-      });
-      materialNeu.clippingPlanes = clippingPlanes;
-      materialNeu.clipShadows = clippingPlanes.length > 0;
-      return materialNeu;
-    });
-    kind.material = mehrfach ? toon : toon[0];
-  });
-}
-
-function einpassen(objekt: THREE.Object3D, hoehe: number) {
-  objekt.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(objekt);
-  const groesse = box.getSize(new THREE.Vector3());
-  objekt.scale.multiplyScalar(hoehe / Math.max(0.001, groesse.y));
-  objekt.updateMatrixWorld(true);
-  const neu = new THREE.Box3().setFromObject(objekt);
-  const mitte = neu.getCenter(new THREE.Vector3());
-  objekt.position.set(-mitte.x, -neu.min.y, -mitte.z);
-}
-
 const STRASSENRAND_X = 4.6;
 
 /**
@@ -317,84 +123,6 @@ function kulisseEinpassen(objekt: THREE.Object3D, zusaetzlicheDrehung: number) {
   objekt.position.z -= mitte.z;
   objekt.updateMatrixWorld(true);
   return new THREE.Box3().setFromObject(objekt).getSize(new THREE.Vector3());
-}
-
-/**
- * Einen Baustein als Gebäude auf ein Rasterfeld stellen.
- *
- * Damit aus Feldern eine Straße wird und keine Reihe einzeln stehender
- * Klötze, geschieht dreierlei:
- *
- * 1. Das Haus dreht sich zur Straße. Die Bausteine schauen in ihrer Datei
- *    nach +z; `richtung` ist der Weg zum Nachbarfeld mit Fahrbahn.
- * 2. Es wird so skaliert, dass seine Breite entlang der Straße genau ein
- *    Feld füllt - dann stoßen benachbarte Häuser ohne Lücke aneinander und
- *    ergeben eine geschlossene Häuserzeile.
- * 3. Seine Vorderkante rückt an die Feldgrenze zur Straße. Was es in die
- *    Tiefe braucht, wächst nach hinten, nicht in die Fahrbahn.
- */
-function aufFeldEinpassen(
-  objekt: THREE.Object3D,
-  richtung: { x: number; z: number } | null,
-  drehung: number,
-  /** Höhenfaktor aus dem Editor: 1 = Stadthöhe, 2 = doppelt so hoch. */
-  hoehe = 1,
-) {
-  const blick = richtung ? Math.atan2(richtung.x, richtung.z) : 0;
-  objekt.rotation.y = blick + THREE.MathUtils.degToRad(drehung);
-  objekt.updateMatrixWorld(true);
-  const gedreht = new THREE.Box3().setFromObject(objekt);
-  const groesse = gedreht.getSize(new THREE.Vector3());
-  // Quer zur Blickrichtung liegt die Straßenfront, längs die Bautiefe.
-  const laengsX = Math.abs(richtung?.x ?? 0) > Math.abs(richtung?.z ?? 0);
-  const front = laengsX ? groesse.z : groesse.x;
-  const tiefe = laengsX ? groesse.x : groesse.z;
-  objekt.scale.multiplyScalar(
-    Math.min(
-      FELD_GROESSE / Math.max(0.001, front),
-      // Ein sehr tiefer Baustein würde sonst durch die Rückseite des
-      // Nachbarfeldes stoßen.
-      (FELD_GROESSE * 1.4) / Math.max(0.001, tiefe),
-    ),
-  );
-  objekt.updateMatrixWorld(true);
-  /*
-   * Und jetzt die Höhe.
-   *
-   * Passt man einen Baustein nur in die Feldbreite ein, wird aus einem
-   * vierstöckigen Haus schnell ein Bungalow: Die Bausteine zeigen ganze
-   * Häuserzeilen, und was in der Breite auf neun Meter schrumpft, schrumpft
-   * in der Höhe mit. Neben einem Tier von zwei Metern sieht das aus wie eine
-   * Spielzeugstadt. Deshalb wird nur die Höhe nachgezogen - die Straßenfront
-   * bleibt unangetastet, sonst risse die Häuserzeile auf.
-   */
-  const jetzt = new THREE.Box3().setFromObject(objekt).getSize(new THREE.Vector3());
-  const streckung = THREE.MathUtils.clamp(
-    (STADT_HOEHE * hoehe) / Math.max(0.001, jetzt.y),
-    // Nach unten darf der Faktor alles, nach oben bleibt die Dehnung im Rahmen:
-    // Ein Haus auf das Dreifache zu ziehen, sieht man ihm an.
-    hoehe < 1 ? 0.35 : 1,
-    2.6,
-  );
-  objekt.scale.y *= streckung;
-  objekt.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(objekt);
-  const mitte = box.getCenter(new THREE.Vector3());
-  objekt.position.y -= box.min.y;
-  // Quer zur Straße mittig, zur Straße hin bündig an die Feldkante.
-  const kante = FELD_GROESSE / 2 - 0.55;
-  if (!richtung) {
-    objekt.position.x -= mitte.x;
-    objekt.position.z -= mitte.z;
-    return;
-  }
-  if (laengsX) {
-    objekt.position.z -= mitte.z;
-    objekt.position.x += Math.sign(richtung.x) * kante - (richtung.x > 0 ? box.max.x : box.min.x);
-  } else {
-    objekt.position.x -= mitte.x;
-    objekt.position.z += Math.sign(richtung.z) * kante - (richtung.z > 0 ? box.max.z : box.min.z);
-  }
 }
 
 function KapitelCanvas({
@@ -495,62 +223,12 @@ function KapitelCanvas({
      */
     const profil = leistungsProfil(stadtplan);
     /*
-     * Texturen kleinrechnen.
-     *
-     * Hier steckt der Absturz. Ein Baustein bringt drei Texturen mit, und
-     * eine 2048er Textur belegt entpackt 16 Megabyte - einmal auf der
-     * Grafikkarte und noch einmal daneben, solange das geladene Bild selbst
-     * herumliegt. Fünf Bauarten sind so ein halbes Gigabyte, und dann macht
-     * Safari den Tab zu. Verkleinert und das Original geschlossen bleibt
-     * davon ein Bruchteil - und auf einem Handybildschirm sieht man den
-     * Unterschied nicht.
-     */
-    const texturenVerkleinern = (objekt: THREE.Object3D, grenze: number) => {
-      const erledigt = new Set<THREE.Texture>();
-      objekt.traverse((kind) => {
-        if (!(kind instanceof THREE.Mesh)) return;
-        for (const material of Array.isArray(kind.material) ? kind.material : [kind.material]) {
-          for (const wert of Object.values(material)) {
-            if (!(wert instanceof THREE.Texture) || erledigt.has(wert)) continue;
-            erledigt.add(wert);
-            const bild = wert.image as { width?: number; height?: number } | null;
-            const breite = Number(bild?.width) || 0;
-            const hoehe = Number(bild?.height) || 0;
-            if (!breite || !hoehe || Math.max(breite, hoehe) <= grenze) continue;
-            const faktor = grenze / Math.max(breite, hoehe);
-            const leinwand = document.createElement("canvas");
-            leinwand.width = Math.max(1, Math.round(breite * faktor));
-            leinwand.height = Math.max(1, Math.round(hoehe * faktor));
-            const stift = leinwand.getContext("2d");
-            if (!stift) continue;
-            try {
-              stift.drawImage(bild as CanvasImageSource, 0, 0, leinwand.width, leinwand.height);
-            } catch {
-              continue;
-            }
-            if (typeof ImageBitmap !== "undefined" && bild instanceof ImageBitmap) bild.close();
-            wert.image = leinwand;
-            wert.needsUpdate = true;
-          }
-        }
-      });
-    };
-    /*
      * Was auf dem Stadtplan feldweise gebaut wird, bleibt auch feldweise
      * ansprechbar: ein Eintrag je Haus und je Straßenschmuck. Daraus lebt
      * beides - das Wegblenden dessen, was der Kamera im Weg steht, und das
      * Weglassen dessen, was ohnehin im Nebel steht.
      */
-    const stadtBloecke: {
-      gruppe: THREE.Object3D;
-      mitte: THREE.Vector3;
-      /** Nur Häuser: eigene Materialien, um eines allein wegblenden zu können. */
-      materialien: THREE.Material[];
-      /** Nur Häuser: auf welchem Rasterfeld es steht. */
-      feld: { x: number; z: number } | null;
-      /** 1 = voll da, 0 = weggeblendet. */
-      sicht: number;
-    }[] = [];
+    const stadtBloecke: StadtBlock[] = [];
     /** Auf welchen Feldern tatsächlich ein Haus steht - "x,z". */
     const hausFelder = new Set<string>();
     const scene = new THREE.Scene();
@@ -642,148 +320,28 @@ function KapitelCanvas({
     boden.position.z = stadtplan ? 0 : -8;
     boden.receiveShadow = true;
     scene.add(boden);
-    const asphalt =
-      stadtplan && strassentyp === "asphalt" ? asphaltTextur(tageszeit === "nacht") : null;
-    if (asphalt) ressourcen.add(asphalt);
-    const fahrbahnMaterial = new THREE.MeshToonMaterial({
-      map: strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : asphalt,
-      color: strassentyp !== "asphalt"
-        ? wetter === "regen" ? 0xb1a18a : 0xffffff
-        : wetter === "regen" ? 0x263a4a : stadtplan ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
-      gradientMap: gradient,
+    const belag = fahrbahnMaterial({
+      gradient,
+      strassentyp,
+      tageszeit,
+      wetter,
+      imRaster: Boolean(stadtplan),
+      merken: (wert) => ressourcen.add(wert),
     });
     if (stadtplan) {
-      // Jedes Straßenfeld bekommt seine eigene Fläche. Kreuzungen, Ecken und
-      // Sackgassen entstehen dabei von allein - es liegt eben nur dort
-      // Fahrbahn, wo im Plan eine steht.
-      const feldGeometrie = new THREE.PlaneGeometry(FELD_GROESSE, FELD_GROESSE);
-      ressourcen.add(feldGeometrie);
-      /*
-       * Was aus einer Fläche eine Straße macht: ein Bordstein dort, wo die
-       * Fahrbahn aufhört, und eine Mittellinie, wo sie geradeaus weiterläuft.
-       * Beides kostet fast nichts und trägt fast alles - ohne sie sieht das
-       * Raster aus wie ein Parkplatz.
-       */
-      const strichGeometrie = new THREE.PlaneGeometry(0.16, 2.2);
-      const strichMaterial = new THREE.MeshBasicMaterial({
-        color: strassentyp === "asphalt" ? 0xe8e2b8 : 0xdfe7ea,
-        transparent: true,
-        opacity: 0.65,
-      });
-      ressourcen.add(strichGeometrie);
-      ressourcen.add(strichMaterial);
-
-      /*
-       * Straßenlaternen.
-       *
-       * Sie tragen die Nacht: ein dunkler Mast, ein leuchtender Kopf und ein
-       * weicher Lichtteppich auf dem Asphalt. Echte Lichtquellen wären für
-       * ein Handy zu teuer - das hier kostet drei kleine Meshes je Laterne
-       * und sieht auf dem Bildschirm genauso aus.
-       */
-      const nachts = tageszeit === "nacht" || tageszeit === "abend";
-      const mastGeometrie = new THREE.CylinderGeometry(0.07, 0.09, 3.4, 6);
-      const mastMaterial = new THREE.MeshToonMaterial({ color: 0x2b3440, gradientMap: gradient });
-      const kopfGeometrie = new THREE.BoxGeometry(0.5, 0.18, 0.32);
-      const kopfMaterial = new THREE.MeshBasicMaterial({ color: nachts ? 0xffe6ae : 0xdfe4e8 });
-      const scheinGeometrie = new THREE.CircleGeometry(2.6, 18);
-      const scheinMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffd79a,
-        transparent: true,
-        opacity: tageszeit === "nacht" ? 0.16 : tageszeit === "abend" ? 0.09 : 0,
-        depthWrite: false,
-      });
-      for (const geo of [mastGeometrie, kopfGeometrie, scheinGeometrie]) ressourcen.add(geo);
-      for (const mat of [mastMaterial, kopfMaterial, scheinMaterial]) ressourcen.add(mat);
-      // x und z sind feldlokal: Laternen hängen an der Gruppe ihres Feldes
-      // und verschwinden mit ihr, sobald das Feld zu weit weg ist.
-      const laterne = (eltern: THREE.Object3D, x: number, z: number, nach: { x: number; z: number }) => {
-        const mast = new THREE.Mesh(mastGeometrie, mastMaterial);
-        mast.position.set(x, 1.7, z);
-        mast.castShadow = true;
-        eltern.add(mast);
-        const kopf = new THREE.Mesh(kopfGeometrie, kopfMaterial);
-        kopf.position.set(x - nach.x * 0.35, 3.35, z - nach.z * 0.35);
-        kopf.rotation.y = Math.atan2(nach.x, nach.z);
-        eltern.add(kopf);
-        if (scheinMaterial.opacity > 0) {
-          const schein = new THREE.Mesh(scheinGeometrie, scheinMaterial);
-          schein.rotation.x = -Math.PI / 2;
-          schein.position.set(x - nach.x * 1.1, 0.05, z - nach.z * 1.1);
-          eltern.add(schein);
-        }
-      };
-
-      for (const feld of strassenFelder(stadtplan)) {
-        const mitte = feldMitte(stadtplan, feld.x, feld.z);
-        const flaeche = new THREE.Mesh(feldGeometrie, fahrbahnMaterial);
-        flaeche.rotation.x = -Math.PI / 2;
-        // Viertelweise gedreht: Derselbe Belag wiederholt sich dadurch nicht
-        // sichtbar von Feld zu Feld.
-        flaeche.rotation.z = ((feld.x * 3 + feld.z * 7) % 4) * (Math.PI / 2);
-        flaeche.position.set(mitte.x, 0.012, mitte.z);
-        flaeche.receiveShadow = true;
-        scene.add(flaeche);
-        // Laternen und Striche eines Feldes hängen zusammen an einer Gruppe.
-        // Die Fahrbahn selbst bleibt liegen - sie kostet zwei Dreiecke und
-        // trägt den Boden, auch wenn das Feld im Nebel steht.
-        const schmuck = new THREE.Group();
-        schmuck.position.set(mitte.x, 0, mitte.z);
-
-        const nachbarn = {
-          nord: istStrasse(stadtplan, feld.x, feld.z - 1),
-          sued: istStrasse(stadtplan, feld.x, feld.z + 1),
-          west: istStrasse(stadtplan, feld.x - 1, feld.z),
-          ost: istStrasse(stadtplan, feld.x + 1, feld.z),
-        };
-        /*
-         * Kein Bordstein. Eine umlaufende Steinkante macht aus jeder Straße
-         * eine Rennbahn und aus der Stadt ein Modell - die Häuser stehen
-         * jetzt ohnehin direkt an der Fahrbahn, und dort, wo eine Straße
-         * endet, sieht man das an den Häusern.
-         *
-         * Was bleibt, ist die Laterne an jeder zweiten Ecke.
-         */
-        const kante = FELD_GROESSE / 2 - 0.4;
-        for (const [seite, offen] of Object.entries(nachbarn)) {
-          if (offen || (feld.x + feld.z) % 2 !== 0) continue;
-          const nach =
-            seite === "nord" ? { x: 0, z: -1 }
-              : seite === "sued" ? { x: 0, z: 1 }
-                : seite === "ost" ? { x: 1, z: 0 }
-                  : { x: -1, z: 0 };
-          laterne(schmuck, nach.x * kante, nach.z * kante, nach);
-        }
-        // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen.
-        const laengs = nachbarn.nord && nachbarn.sued && !nachbarn.west && !nachbarn.ost;
-        const quer = nachbarn.west && nachbarn.ost && !nachbarn.nord && !nachbarn.sued;
-        if (laengs || quer) {
-          for (const versatz of [-2.4, 0, 2.4]) {
-            const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
-            strich.rotation.x = -Math.PI / 2;
-            if (laengs) strich.position.set(0, 0.03, versatz);
-            else {
-              strich.rotation.z = Math.PI / 2;
-              strich.position.set(versatz, 0.03, 0);
-            }
-            schmuck.add(strich);
-          }
-        }
-        if (schmuck.children.length) {
-          scene.add(schmuck);
-          stadtBloecke.push({
-            gruppe: schmuck,
-            mitte: new THREE.Vector3(mitte.x, 1.5, mitte.z),
-            materialien: [],
-            feld: null,
-            sicht: 1,
-          });
-        }
-      }
+      stadtBloecke.push(...strassenBauen({
+        scene,
+        plan: stadtplan,
+        gradient,
+        belag,
+        strassentyp,
+        tageszeit,
+        merken: (wert) => ressourcen.add(wert),
+      }));
     } else {
       const fahrbahn = new THREE.Mesh(
         new THREE.PlaneGeometry(9.2, 90),
-        fahrbahnMaterial,
+        belag,
       );
       fahrbahn.rotation.x = -Math.PI / 2;
       fahrbahn.position.set(0, 0.012, -8);
@@ -957,8 +515,7 @@ function KapitelCanvas({
          * Derselbe Baustein darf beliebig oft vorkommen - geladen wird er
          * trotzdem nur einmal und danach nur noch kopiert.
          */
-        const felder = gebaeudeFelder(stadtplan);
-        const gebraucht = [...new Set(felder.map((feld) => feld.id))];
+        const gebraucht = [...new Set(gebaeudeFelder(stadtplan).map((feld) => feld.id))];
         const geladen = new Map<string, THREE.Object3D>();
         const ergebnisse = await Promise.allSettled(
           gebraucht.map(async (id) => {
@@ -977,67 +534,15 @@ function KapitelCanvas({
           registrieren(ergebnis.value.szene);
           geladen.set(ergebnis.value.id, ergebnis.value.szene);
         }
-        for (const feld of felder) {
-          const vorlage = geladen.get(feld.id);
-          if (!vorlage) continue;
-          // Zu welcher Straße schaut das Haus? Die erste, die danebenliegt.
-          const nachbar = [[0, 1], [0, -1], [1, 0], [-1, 0]]
-            .map(([dx, dz]) => ({ x: dx, z: dz }))
-            .find((weg) => istStrasse(stadtplan, feld.x + weg.x, feld.z + weg.z)) ?? null;
-          const haus = vorlage.clone(true);
-          aufFeldEinpassen(haus, nachbar, feld.drehung, hoeheFuer(stadtplan, feld.id));
-          const mitte = feldMitte(stadtplan, feld.x, feld.z);
-          const block = new THREE.Group();
-          block.add(haus);
-          block.position.set(mitte.x, 0, mitte.z);
-          scene.add(block);
-          /*
-           * Jeder Block bekommt eigene Materialien. Geometrie und Texturen
-           * teilen sich die Kopien weiterhin - das kostet also so gut wie
-           * nichts - aber nur so lässt sich ein einzelnes Haus wegblenden,
-           * ohne dass alle gleichen Häuser mitverschwinden.
-           *
-           * Durchscheinfähig sind sie von Anfang an. Das im Spiel
-           * umzuschalten hieße, den Shader neu zu bauen, und zwar genau in
-           * dem Moment, in dem die Kamera ohnehin schon in der Wand steht.
-           */
-          const materialien: THREE.Material[] = [];
-          haus.traverse((kind) => {
-            if (!(kind instanceof THREE.Mesh)) return;
-            const mehrfach = Array.isArray(kind.material);
-            const eigen = (mehrfach ? kind.material : [kind.material]).map((material: THREE.Material) => {
-              const kopie = material.clone();
-              kopie.transparent = true;
-              kopie.depthWrite = true;
-              return kopie;
-            });
-            kind.material = mehrfach ? eigen : eigen[0];
-            materialien.push(...eigen);
-          });
-          stadtBloecke.push({
-            gruppe: block,
-            mitte: new THREE.Vector3(mitte.x, STADT_HOEHE / 2, mitte.z),
-            materialien,
-            feld: { x: feld.x, z: feld.z },
-            sicht: 1,
-          });
-          hausFelder.add(`${feld.x},${feld.z}`);
-          /*
-           * Steht hier eine Anlaufstelle, liegt ihr Platz direkt davor - am
-           * Bordstein, nicht in der Mitte der Straße dahinter. Weiter als
-           * knapp zwei Meter vom Haus weg sucht man den Ring, statt ihn zu
-           * sehen; näher heran ginge nicht, dort steht die Wand.
-           */
-          if (nachbar && (feld.id === tankstelle?.id || feld.id === polizei?.id)) {
-            const tuer = vorDerTuer(stadtplan, feld.x, feld.z, nachbar);
-            if (feld.id === tankstelle?.id && tankPlatz === null) {
-              tankPlatz = new THREE.Vector3(tuer.x, 0, tuer.z);
-            }
-            if (feld.id === polizei?.id && polizeiPlatz === null) {
-              polizeiPlatz = new THREE.Vector3(tuer.x, 0, tuer.z);
-            }
-          }
-        }
+        const gebaut = haeuserBauen({ scene, plan: stadtplan, vorlagen: geladen });
+        stadtBloecke.push(...gebaut.bloecke);
+        for (const feld of gebaut.hausFelder) hausFelder.add(feld);
+        // Der Platz vor Tankstelle und Wache steht jetzt fest - dort landet
+        // gleich der Ring, auf dem man einsteigt oder beschuldigt.
+        const tank = tankstelle ? gebaut.tuerPlaetze.get(tankstelle.id) : undefined;
+        if (tank) tankPlatz = new THREE.Vector3(tank.x, 0, tank.z);
+        const wache = polizei ? gebaut.tuerPlaetze.get(polizei.id) : undefined;
+        if (wache) polizeiPlatz = new THREE.Vector3(wache.x, 0, wache.z);
       } else {
 
       const locationEintraege = locationsFuer3D(locations);

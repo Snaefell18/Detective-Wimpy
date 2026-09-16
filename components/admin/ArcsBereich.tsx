@@ -34,7 +34,9 @@ import {
 import { useLaden } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
+import { STANDARD_KAMPF } from "@/lib/endkampf";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
+import { KampfFeld } from "./KampfFeld";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
 import { SagaVorgabenFelder } from "./SagaVorgabenFelder";
 import { SongFeld } from "./SongFeld";
@@ -116,6 +118,11 @@ const FINALE_ARTEN: { id: ArcFinaleArt; label: string; hinweis: string }[] = [
     id: "credits",
     label: "Credits",
     hinweis: "Abspann genau so lang wie der Credits-Song",
+  },
+  {
+    id: "kampf",
+    label: "Showdown",
+    hinweis: "Wimpy kämpft in 3D gegen den Culprit",
   },
 ];
 
@@ -605,6 +612,16 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                   Karte, die sagt, dass der Abspann noch kommt. Nachtragen kannst
                   du ihn jederzeit unten im Videofeld.
                 </p>
+              )}
+
+              {arc.finale.art === "kampf" && (
+                <KampfFeld
+                  arc={arc}
+                  kampf={arc.finale.kampf ?? STANDARD_KAMPF}
+                  onAendern={(kampf) =>
+                    void sichern({ ...arc, finale: { ...arc.finale, kampf } })
+                  }
+                />
               )}
 
               {arc.finale.art === "credits" && (
