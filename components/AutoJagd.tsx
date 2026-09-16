@@ -674,7 +674,9 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       spieler.position.x = THREE.MathUtils.lerp(halt.spielerX, HALTEPLATZ.wimpy.x, bremsen);
       spieler.position.z = THREE.MathUtils.lerp(halt.spielerZ, HALTEPLATZ.wimpy.z, bremsen);
       spieler.rotation.y = HALTEPLATZ.wimpy.winkel * bremsen;
-      spieler.rotation.z = 0;
+      // Die Seitenlage aus dem letzten Spurwechsel geht weich heraus, statt
+      // im ersten Bild der Verhaftung zu verschwinden.
+      spieler.rotation.z = THREE.MathUtils.damp(spieler.rotation.z, 0, 6, dt);
       // Die Karosserien tauchen vorn ein und wippen einmal zurück.
       const nicken = Math.sin(THREE.MathUtils.clamp(t / VERHAFTUNG.bremsen, 0, 1) * Math.PI) * 0.07;
       spieler.rotation.x = nicken;
