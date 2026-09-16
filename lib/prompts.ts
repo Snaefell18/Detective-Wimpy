@@ -270,7 +270,6 @@ Anforderungen:
 ${regeln(vorgaben)}`;
 }
 
-/** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
 function fernwirkungsRegeln(saga: FernwirkungsVorgabe): string {
   const ziel = saga.drahtzieherName
     ? `auf ${saga.drahtzieherName}, den Kopf hinter der ganzen Serie`
@@ -300,6 +299,7 @@ ${
   }`;
 }
 
+/** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
 export function buildSpurenPrompt(
   besetzung: Character[],
   taeterId: string,

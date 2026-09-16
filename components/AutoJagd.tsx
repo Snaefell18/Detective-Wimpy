@@ -51,7 +51,7 @@ const ANFAHRT = { vorbei: 2.9, einsteigen: 4.9, losfahren: 6.6 };
  * der Flüchtige aus und dreht sich um. Das ist der Moment, für den man
  * gefahren ist, deshalb hat er seine eigene Zeit.
  */
-const VERHAFTUNG = { bremsen: 1.35, staub: 2.3, aussteigen: 4.0, umdrehen: 4.9, fertig: 6.6 };
+const VERHAFTUNG = { bremsen: 1.35, staub: 2.3, aussteigen: 4.0, fertig: 6.6 };
 
 /** Wo die beiden Wagen zum Stehen kommen - quer und der Weg versperrt. */
 const HALTEPLATZ = {
@@ -168,6 +168,9 @@ function reifenQuietschen(): void {
     laut.gain.exponentialRampToValueAtTime(0.16, kontext.currentTime + 0.08);
     laut.gain.exponentialRampToValueAtTime(0.0001, kontext.currentTime + dauer);
     rauschen.connect(filter).connect(laut).connect(kontext.destination);
+    // Auf dem iPhone beginnt jeder Kontext angehalten. Getippt hat der
+    // Spieler längst - spätestens, um die Jagd zu starten.
+    if (kontext.state === "suspended") void kontext.resume().catch(() => {});
     rauschen.start();
     rauschen.onended = () => void kontext.close().catch(() => {});
   } catch {
