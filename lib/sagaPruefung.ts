@@ -1,5 +1,5 @@
 import { alsStaedte } from "./csv";
-import { angeklagterAus, mitVerhandlung, richterAus } from "./sagaFinale";
+import { angeklagterAus, mitAnklage, mitVerhandlung, richterAus } from "./sagaFinale";
 import { auftrittVon, besetzungFuerSaga, besessen, type SagaVorgaben } from "./sagaTypen";
 import type { Character, Location } from "./types";
 
@@ -221,7 +221,7 @@ export function pruefeVorgaben(args: {
   }
 
   // Columbo und der unsichtbare Drahtzieher schließen einander aus.
-  if ((art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy") && vorgaben.twist) {
+  if (mitAnklage(art) && vorgaben.twist) {
     probleme.push(
       "„Gerichtssaal“ und „Twist“ vertragen sich nicht: Im Gerichtsfinale tritt der Drahtzieher von Anfang an auf und spielt mit Wimpy, der Twist verlangt genau das Gegenteil.",
     );

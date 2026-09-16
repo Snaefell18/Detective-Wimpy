@@ -8,6 +8,7 @@ import {
   LEERER_VERHANDLUNGS_STAND,
   angeklagterAus,
   mitAnklage,
+  mitKampf,
   mitVerhandlung,
   noetigeBeweise,
   richterAus,
@@ -38,14 +39,35 @@ console.log("\n1. Klassisch bleibt klassisch");
 pruefe("Standardvorgaben laufen in den Finalfall", STANDARD_SAGA_VORGABEN.finaleArt === "klassisch");
 pruefe("und brauchen keine Verhandlung", mitVerhandlung("klassisch") === false);
 pruefe("alte Sagas ohne Feld ebenso", mitVerhandlung(undefined) === false);
-pruefe("es gibt sieben Arten", FINALE_ARTEN.length === 7);
-for (const art of ["gericht", "gericht-daemon", "gericht-wimpy", "ohne-taeter", "wimpy"]) {
+pruefe("es gibt acht Arten", FINALE_ARTEN.length === 8);
+for (const art of ["gericht", "gericht-daemon", "gericht-wimpy", "gericht-kampf", "ohne-taeter", "wimpy"]) {
   pruefe(`„${art}“ führt in den Saal`, mitVerhandlung(art) === true);
 }
 // Der Showdown ist eine klassische Saga mit einem anderen letzten Moment:
 // erst der Finalfall, dann die Arena - aber nie der Gerichtssaal.
 pruefe("der Showdown führt nicht in den Saal", mitVerhandlung("kampf") === false);
 pruefe("und klagt dort auch niemanden an", mitAnklage("kampf") === false);
+
+console.log("\n1b. Gericht & Flucht ist beides");
+pruefe("es wird verhandelt", mitVerhandlung("gericht-kampf") === true);
+pruefe("und angeklagt wie bei Columbo", mitAnklage("gericht-kampf") === true);
+pruefe("und danach gekämpft", mitKampf("gericht-kampf") === true);
+pruefe("der Showdown kämpft ebenfalls", mitKampf("kampf") === true);
+pruefe("das Gerichtsfinale allein nicht", mitKampf("gericht") === false);
+pruefe("und eine klassische Saga schon gar nicht", mitKampf("klassisch") === false);
+pruefe("alte Sagas ohne Feld auch nicht", mitKampf(undefined) === false);
+pruefe(
+  "auf der Bank sitzt der Drahtzieher",
+  angeklagterAus({ art: "gericht-kampf", besetzung, drahtzieherId: "nala" }) === "nala",
+);
+pruefe(
+  "und das Urteil ist nicht das Ende",
+  saalTexte("gericht-kampf").gewonnen === "Schuldig - und weg",
+);
+pruefe(
+  "ein geplatztes Verfahren bleibt eines",
+  saalTexte("gericht-kampf").verloren === saalTexte("gericht").verloren,
+);
 
 console.log("\n2. Wer wo sitzt");
 pruefe(

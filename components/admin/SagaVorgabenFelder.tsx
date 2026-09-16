@@ -21,7 +21,7 @@ import { useStammdaten } from "@/lib/stammdaten";
 import { sichere3DTiere } from "@/lib/saga3dSync";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
 import { STANDARD_KAMPF } from "@/lib/endkampf";
-import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
+import { FINALE_ARTEN, mitAnklage, mitKampf, type FinaleArt } from "@/lib/sagaFinale";
 import type { VersammlungVorgabe } from "@/lib/versammlung";
 import type { VerfolgungVorgabe } from "@/lib/verfolgung";
 import { TonFeld } from "./TonFeld";
@@ -154,10 +154,7 @@ export function SagaVorgabenFelder({
      * von selbst, und dann stünde man vor einer Meldung, die man gar nicht
      * verursacht hat.
      */
-    const ohneTwist =
-      neu === "gericht" || neu === "gericht-daemon" || neu === "gericht-wimpy"
-        ? { twist: false }
-        : {};
+    const ohneTwist = mitAnklage(neu) ? { twist: false } : {};
 
     if (neu === "wimpy" || neu === "gericht-wimpy") {
       onAendern({
@@ -183,8 +180,7 @@ export function SagaVorgabenFelder({
   };
 
   /** Vor Gericht gibt es keinen Twist - dann bleibt die Wahl auch gesperrt. */
-  const twistGesperrt =
-    art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy";
+  const twistGesperrt = mitAnklage(art);
 
   const namenVon = (id: string) =>
     stammdaten.charaktere.find((c) => c.id === id)?.name ?? id;
@@ -1544,15 +1540,20 @@ export function SagaVorgabenFelder({
       <p className="hinweis">{FINALE_ARTEN.find((e) => e.id === art)?.lang}</p>
 
       {/* Der Showdown: Wer den Drahtzieher überführt hat, muss ihn danach
-          auch noch stellen. Die Arena dafür steht hier. */}
-      {art === "kampf" && (
+          auch noch stellen. Die Arena dafür steht hier - beim Finale
+          „Gericht & Flucht“ genauso, nur beginnt sie dort im Saal. */}
+      {mitKampf(art) && (
         <KampfFeld
           kampf={vorgaben.kampf ?? STANDARD_KAMPF}
           gegnerId={vorgaben.drahtzieherId}
           gegnerWort={vorgaben.name}
           ohneGegner="Für diese Saga ist der Drahtzieher noch nicht gewählt - dann wird er zufällig gezogen. Gekämpft wird trotzdem gegen den Richtigen: Das Spiel nimmt den, der nach der Auflösung dasteht. Nur das Modell hier unten greift dann nicht."
           titel={vorgaben.name}
-          einleitung="Die Saga läuft wie eine klassische in ihren Finalfall - und danach wehrt sich der Überführte. Erst wenn Wimpy ihn gestellt hat, kommt der Epilog. Wer den Finalfall nicht löst, sieht keinen Kampf."
+          einleitung={
+            art === "gericht-kampf"
+              ? "Die Saga läuft in den Gerichtssaal - und wenn das Urteil gesprochen ist, rennt der Verurteilte. Dann kommt diese Arena, davor wahlweise die Verfolgungsjagd. Platzt das Verfahren, wird nicht gekämpft: Dann geht er ohnehin."
+              : "Die Saga läuft wie eine klassische in ihren Finalfall - und danach wehrt sich der Überführte. Erst wenn Wimpy ihn gestellt hat, kommt der Epilog. Wer den Finalfall nicht löst, sieht keinen Kampf."
+          }
           onAendern={(kampf) => setzen({ kampf })}
         />
       )}

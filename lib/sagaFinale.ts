@@ -29,12 +29,17 @@ import type { Character } from "./types";
  *   "kampf"       - der Showdown: wie "klassisch", aber der Drahtzieher lässt
  *                   sich nicht abführen. Nach der Auflösung steht er Wimpy in
  *                   einer selbst gebauten Arena gegenüber - live in 3D.
+ *   "gericht-kampf" - beides: erst der Gerichtssaal wie bei "gericht", und
+ *                   wenn das Urteil gesprochen ist, rennt der Verurteilte.
+ *                   Wimpy hinterher - erst im Wagen, dann zu Fuß in der
+ *                   Arena. Ein Urteil ist eben nur ein Satz.
  */
 export type FinaleArt =
   | "klassisch"
   | "gericht"
   | "gericht-daemon"
   | "gericht-wimpy"
+  | "gericht-kampf"
   | "ohne-taeter"
   | "wimpy"
   | "kampf";
@@ -71,6 +76,12 @@ export const FINALE_ARTEN: {
     lang: "Wimpy ist die ganze Saga über besessen. Im Gerichtssaal wählst du selbst, wen du anklagst. Erst wenn du Wimpy nennst, bricht die Gestalt aus ihm heraus und die Verhandlung geht gegen sie weiter.",
   },
   {
+    id: "gericht-kampf",
+    label: "Gericht & Flucht",
+    hinweis: "Urteil - und er rennt",
+    lang: "Erst der Gerichtssaal wie bei „Gerichtssaal“: Du klagst an, legst vor, und Öhö spricht das Urteil. Nur lässt sich der Verurteilte nicht abführen - er ist durch die Tür, bevor der letzte Satz verhallt ist. Was folgt, ist die Verfolgungsjagd und der Kampf in der Arena, die du selbst baust. Platzt das Verfahren, geht er ohnehin: Dann bleibt es beim Urteil, und es wird nicht gekämpft.",
+  },
+  {
     id: "ohne-taeter",
     label: "Kein Täter",
     hinweis: "es gab nie einen Schuldigen",
@@ -95,8 +106,20 @@ export const mitVerhandlung = (art: FinaleArt | undefined): boolean =>
   art === "gericht" ||
   art === "gericht-daemon" ||
   art === "gericht-wimpy" ||
+  art === "gericht-kampf" ||
   art === "ohne-taeter" ||
   art === "wimpy";
+
+/**
+ * Endet diese Saga im Kampf?
+ *
+ * Zwei Wege führen dorthin: der Showdown nach dem Finalfall und der
+ * Gerichtssaal, aus dem der Verurteilte davonläuft. Was danach passiert, ist
+ * dasselbe - deshalb steht die Frage hier einmal, statt an jeder Stelle nach
+ * zwei Arten zu fragen.
+ */
+export const mitKampf = (art: FinaleArt | undefined): boolean =>
+  art === "kampf" || art === "gericht-kampf";
 
 /**
  * Muss der Spieler vor der Verhandlung selbst benennen, wen er anklagt?
@@ -106,7 +129,10 @@ export const mitVerhandlung = (art: FinaleArt | undefined): boolean =>
  * gerade eben selbst enttarnt.
  */
 export const mitAnklage = (art: FinaleArt | undefined): boolean =>
-  art === "gericht" || art === "gericht-daemon" || art === "gericht-wimpy";
+  art === "gericht" ||
+  art === "gericht-daemon" ||
+  art === "gericht-wimpy" ||
+  art === "gericht-kampf";
 
 /** Ein Beweisstück, wie es der Spieler sieht - ohne jeden Hinweis darauf, ob es trägt. */
 export type Beweisstueck = {
@@ -327,6 +353,16 @@ export function saalTexte(art: FinaleArt): {
       titel: "Die Verhandlung",
       vorlegen: "Gegen mich vorlegen",
       gewonnen: "Schuldig",
+      verloren: "Das Verfahren platzt",
+    };
+  }
+  if (art === "gericht-kampf") {
+    // Hier ist das Urteil nicht das Ende, sondern der Startschuss: Wer
+    // schuldig gesprochen wird, rennt. Wer davonkommt, geht einfach.
+    return {
+      titel: "Die Verhandlung",
+      vorlegen: "Vorlegen",
+      gewonnen: "Schuldig - und weg",
       verloren: "Das Verfahren platzt",
     };
   }

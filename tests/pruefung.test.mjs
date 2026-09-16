@@ -152,6 +152,18 @@ pruefe(
   }).some((p) => p.includes("vertragen sich nicht")),
 );
 
+console.log("\n2c. Gericht & Flucht");
+pruefe(
+  "eine ganz normale Columbo-Saga",
+  probleme({ finaleArt: "gericht-kampf", drahtzieherId: "boss" }).length === 0,
+);
+pruefe(
+  "auch hier verträgt sich der Twist nicht",
+  probleme({ finaleArt: "gericht-kampf", drahtzieherId: "boss", twist: true }).some((p) =>
+    p.includes("vertragen sich nicht"),
+  ),
+);
+
 console.log("\n3. Wann sich ein zweiter Versuch lohnt");
 pruefe("abgeschnittene Antwort", lohntWiederholung(new Error("Die Antwort wurde abgeschnitten.")));
 pruefe("überlasteter Server", lohntWiederholung(new Error("overloaded_error")));

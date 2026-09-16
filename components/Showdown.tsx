@@ -139,6 +139,9 @@ export function Showdown({
           autoId={autoId}
           besitz={besitz}
           vorschau={vorschau}
+          // Wer am Ende der Jagd aussteigt, ist der, der gleich in der Arena
+          // steht - also gilt dort dasselbe Modell wie hier.
+          fluechtigModell={boese?.id}
           onFertig={() => setPhase("kampf")}
         />
         {/* Abwählbar bleibt die Jagd auch hier: Wer sie kennt oder wem sie zu

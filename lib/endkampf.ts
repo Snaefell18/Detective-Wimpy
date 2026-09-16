@@ -34,6 +34,7 @@ import {
   strassenFelder,
   type Stadtplan,
 } from "./stadtplan";
+import { mitKampf, type FinaleArt } from "./sagaFinale";
 import { STRASSENTYPEN, TAGESZEITEN, WETTERLAGEN } from "./staedte";
 import type { VerfolgungVorgabe } from "./verfolgung";
 
@@ -242,12 +243,15 @@ export const kampfSpruch = (vorgabe: KampfVorgabe, name: string): string =>
  * Die Arena einer Saga - oder nichts.
  *
  * Dasselbe wie arcKampf() für den Arc, nur eine Ebene tiefer: Steht die
- * Finale-Art auf „Showdown“ und ist die Arena spielbar, wird gekämpft. Sonst
- * endet die Saga genau wie eine klassische, und niemand merkt etwas davon.
+ * Finale-Art auf „Showdown“ oder „Gericht & Flucht“ und ist die Arena
+ * spielbar, wird gekämpft. Sonst endet die Saga genau wie eine klassische
+ * (oder nach dem Urteil), und niemand merkt etwas davon.
  */
 export const sagaKampf = (
   vorgaben: { finaleArt?: string; kampf?: KampfVorgabe } | undefined,
 ): KampfVorgabe | null => {
-  if (vorgaben?.finaleArt !== "kampf") return null;
-  return kampfSpielbar(vorgaben.kampf) ? vorgaben.kampf : null;
+  // Zwei Arten enden im Kampf: der Showdown nach dem Finalfall und das
+  // Gerichtsfinale, aus dem der Verurteilte davonläuft.
+  if (!mitKampf(vorgaben?.finaleArt as FinaleArt | undefined)) return null;
+  return kampfSpielbar(vorgaben?.kampf) ? vorgaben.kampf : null;
 };

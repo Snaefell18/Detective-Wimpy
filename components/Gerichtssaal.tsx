@@ -68,13 +68,27 @@ export function Gerichtssaal({
    * bleibt beim Fragen.
    */
   tasche: Beweismittel[];
-  /** Die Verhandlung ist durch - mit oder ohne Schuldspruch. */
-  onFertig: (geschafft: boolean) => void;
+  /**
+   * Die Verhandlung ist durch - mit oder ohne Schuldspruch.
+   *
+   * Wer verurteilt wurde, kommt mit: Beim Finale „Gericht & Flucht“ geht es
+   * danach gegen genau den weiter - und bei einer Besessenheit gegen die
+   * Gestalt, die im Saal aus ihm gebrochen ist, nicht gegen ihren Wirt.
+   */
+  onFertig: (geschafft: boolean, verurteilterId?: string) => void;
 }) {
   const finde = (id: string) => besetzung.find((c) => c.id === id);
   const worte = saalTexte(verhandlung.art);
   const richter = finde(verhandlung.richterId);
   const klagenNoetig = mitAnklage(verhandlung.art);
+  /**
+   * Läuft dieses Urteil in eine Flucht?
+   *
+   * Beim Finale „Gericht & Flucht“ ist der Schuldspruch nicht das Ende,
+   * sondern der Startschuss: Der Verurteilte wartet ihn nicht ab. Platzt das
+   * Verfahren, geht er ohnehin - dann bleibt es beim Urteil.
+   */
+  const nachjagd = verhandlung.art === "gericht-kampf";
 
   /* --- Zustand -------------------------------------------------------- */
 
@@ -233,11 +247,15 @@ export function Gerichtssaal({
           <button
             className="knopf aktion"
             onClick={() => {
-              if (urteil.geschafft) void spiele("jubel");
-              onFertig(urteil.geschafft);
+              // Wo es gleich weitergeht, gibt es noch nichts zu bejubeln:
+              // Der Verurteilte ist schon durch die Tür.
+              if (urteil.geschafft && !nachjagd) void spiele("jubel");
+              onFertig(urteil.geschafft, bank?.id);
             }}
           >
-            Weiter ›
+            {/* Nur nach einem Schuldspruch rennt jemand: Wer freikommt,
+                geht durch die Vordertür, und danach kommt der Epilog. */}
+            {nachjagd && urteil.geschafft ? "Ihm nach ›" : "Weiter ›"}
           </button>
         </div>
       </div>

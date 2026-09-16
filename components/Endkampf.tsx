@@ -52,11 +52,16 @@ import { Hintergrundmusik } from "./Hintergrundmusik";
 import { TouchJoystick } from "./TouchJoystick";
 import {
   LEUCHTEN,
+  SAND_KORN,
+  SAND_LICHT,
   cellShading,
   einpassen,
   fahrbahnMaterial,
   gradientTextur,
   haeuserBauen,
+  sandDunst,
+  sandKoerner,
+  sandTreiben,
   schneeflockenTextur,
   strassenBauen,
   texturenVerkleinern,
@@ -186,8 +191,12 @@ function ArenaCanvas({
       nacht: 0x070a16,
     }[tageszeit];
     const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
-    const dunst = wetter === "nebel" || wetter === "schneesturm";
-    const nebel = dunst || schneeWetter ? (nacht ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
+    // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
+    const sandSturm = wetter === "sandsturm";
+    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    const nebel = sandSturm
+      ? sandDunst(tageszeit)
+      : dunst || schneeWetter ? (nacht ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
     const nebelNah = dunst ? 17 : wetter === "regen" ? 13 : 20;
     const nebelFern = Math.min(dunst ? 36 : 68, profil.sichtweite);
@@ -219,8 +228,14 @@ function ArenaCanvas({
     const oben = nacht ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
     scene.add(new THREE.HemisphereLight(oben, nacht ? 0x160d2e : 0x455348, nacht ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
-      wetter === "sonne" ? 0xfff1b8 : tageszeit === "abend" ? 0xff9c72 : 0xb9ddff,
-      wetter === "sonne" ? 5.2 : dunst ? 0.9 : wetter === "regen" || schneeWetter ? 1.5 : 2.8,
+      wetter === "sonne"
+        ? 0xfff1b8
+        : sandSturm
+          ? SAND_LICHT
+          : tageszeit === "abend" ? 0xff9c72 : 0xb9ddff,
+      // Im Sandsturm steht die Sonne als warmer Fleck dahinter: heller als
+      // im Nebel, aber ohne harte Kanten.
+      wetter === "sonne" ? 5.2 : sandSturm ? 1.4 : dunst ? 0.9 : wetter === "regen" || schneeWetter ? 1.5 : 2.8,
     );
     licht.position.set(-8, 14, 9);
     licht.castShadow = profil.schatten;
@@ -231,7 +246,9 @@ function ArenaCanvas({
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite + 24, ausmass.tiefe + 24),
       new THREE.MeshToonMaterial({
-        color: strassentyp === "schnee" ? 0xe4eef5 : strassentyp === "sand" ? 0xb59468 : nacht ? 0x1d2732 : 0x6b7166,
+        color: sandSturm
+          ? nacht ? 0x3b2f1f : 0xa98a5c
+          : strassentyp === "schnee" ? 0xe4eef5 : strassentyp === "sand" ? 0xb59468 : nacht ? 0x1d2732 : 0x6b7166,
         gradientMap: gradient,
       }),
     );
@@ -255,26 +272,32 @@ function ArenaCanvas({
 
     /* --- Wetter: dieselben Flocken wie in der Stadt ------------------- */
     let regen: THREE.Points | null = null;
-    if (wetter === "regen" || schneeWetter) {
-      const anzahl = wetter === "schneesturm" ? 1200 : 700;
-      const positionen = new Float32Array(anzahl * 3);
-      for (let i = 0; i < anzahl; i++) {
-        positionen[i * 3] = Math.random() * 40 - 20;
-        positionen[i * 3 + 1] = Math.random() * 15;
-        positionen[i * 3 + 2] = Math.random() * 40 - 20;
+    if (wetter === "regen" || schneeWetter || sandSturm) {
+      const anzahl = sandSturm ? 1500 : wetter === "schneesturm" ? 1200 : 700;
+      const positionen = sandSturm
+        ? sandKoerner(anzahl, 40, 40)
+        : new Float32Array(anzahl * 3);
+      if (!sandSturm) {
+        for (let i = 0; i < anzahl; i++) {
+          positionen[i * 3] = Math.random() * 40 - 20;
+          positionen[i * 3 + 1] = Math.random() * 15;
+          positionen[i * 3 + 2] = Math.random() * 40 - 20;
+        }
       }
       const geometrie = new THREE.BufferGeometry();
       geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
-      const flocken = schneeWetter ? schneeflockenTextur() : null;
+      // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und
+      // in einem anderen Ton.
+      const flocken = schneeWetter || sandSturm ? schneeflockenTextur() : null;
       if (flocken) merken(flocken);
       regen = new THREE.Points(
         geometrie,
         new THREE.PointsMaterial({
           map: flocken,
-          color: schneeWetter ? 0xf3faff : 0xc6edff,
-          size: schneeWetter ? 0.18 : 0.075,
+          color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
+          size: sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
           transparent: true,
-          opacity: 0.85,
+          opacity: sandSturm ? SAND_KORN.deckkraft : 0.85,
           depthWrite: false,
         }),
       );
@@ -975,11 +998,15 @@ function ArenaCanvas({
       }
       if (regen) {
         const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
-        for (let i = 0; i < positionen.count; i++) {
-          const y = positionen.getY(i) - echt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
-          positionen.setY(i, y < 0 ? 15 : y);
+        if (sandSturm) {
+          sandTreiben(positionen, echt, jetzt, 40);
+        } else {
+          for (let i = 0; i < positionen.count; i++) {
+            const y = positionen.getY(i) - echt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
+            positionen.setY(i, y < 0 ? 15 : y);
+          }
+          positionen.needsUpdate = true;
         }
-        positionen.needsUpdate = true;
         regen.position.set(spieler.position.x, 0, spieler.position.z);
       }
       for (const werkzeug of mixer) werkzeug.update(dt);

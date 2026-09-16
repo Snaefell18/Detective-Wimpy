@@ -9,11 +9,20 @@ import type {
   Character,
   ChatTurn,
   Einstellungen,
+  FernwirkungsVorgabe,
   Location,
   Reifegrad,
   TalkMode,
   Vorgaben,
 } from "./types";
+
+/*
+ * Die Bestellung der Fernwirkung steht beim Fall selbst (lib/types.ts): Sie
+ * wird nicht nur beim Erzeugen gebraucht, sondern bleibt im Siegel liegen -
+ * daran erkennt die Auflösung später, dass dieser Fall nur ein Kapitel war.
+ * Hier bleibt sie ausgegeben, damit niemand seinen Import umschreiben muss.
+ */
+export type { FernwirkungsVorgabe };
 
 const TON_TEXT: Record<Einstellungen["ton"], string> = {
   kindgerecht:
@@ -261,39 +270,6 @@ Anforderungen:
 ${regeln(vorgaben)}`;
 }
 
-/** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
-/**
- * Was ein Kapitel einer Saga über sich hinaus hinterlassen muss.
- *
- * Ohne diese Ansage entsteht ein Kapitelfall, der in sich stimmt und nichts
- * für später übrig lässt - und genau davon lebt die Beweismitteltasche: Was
- * am Ende vor Gericht zählt, wurde unterwegs eingesammelt. Fehlt es in den
- * Kapiteln, steht Wimpy im Saal mit leeren Händen.
- */
-export type FernwirkungsVorgabe = {
-  /**
-   * Der Name des Drahtziehers - leer, wo er das Geheimnis der Saga wäre
-   * ("Kein Täter", "Wimpy selbst"). Dann zeigen die Stücke auf die Sache
-   * dahinter statt auf eine Person.
-   */
-  drahtzieherName: string;
-  /**
-   * Seine Id. Im Prompt taucht sie nie auf - sie ist für die Prüfung
-   * danach da: Fehlt das Häkchen, gilt eine ehrliche Spur auf ihn als
-   * Fernwirkung (siehe fernwirkungPruefen).
-   */
-  drahtzieherId: string;
-  /** Was dieses Kapitel preisgeben soll. */
-  enthuellung: string;
-  /** Läuft die Saga in eine Verhandlung? Dann ist es kein Beiwerk, sondern Pflicht. */
-  vorGericht: boolean;
-  /**
-   * Das Tier, auf das die ganze Saga über fälschlich alles zeigt - leer
-   * heißt: Es gibt keine durchgehende Fährte.
-   */
-  falscheFaehrteName?: string;
-};
-
 function fernwirkungsRegeln(saga: FernwirkungsVorgabe): string {
   const ziel = saga.drahtzieherName
     ? `auf ${saga.drahtzieherName}, den Kopf hinter der ganzen Serie`
@@ -323,6 +299,7 @@ ${
   }`;
 }
 
+/** Schritt 3: Die Gegenstände, die der Spieler an den Orten findet. */
 export function buildSpurenPrompt(
   besetzung: Character[],
   taeterId: string,
@@ -593,6 +570,14 @@ export function buildAccusePrompt(args: {
    * bleibt sie, wo sie ist, und niemand erfährt davon.
    */
   const gestalt = richtig && fall.besessenheit ? fall.besessenheit.daemon : null;
+  /*
+   * Ist dieser Fall nur eine Station?
+   *
+   * Dann endet er, wenn sein eigener Täter dasteht - und keinen Satz später.
+   * Woran die Saga insgesamt hängt, gehört ins Finale; hier wäre es die
+   * Auflösung von fünf Abenden auf einmal.
+   */
+  const kapitel = fall.sagaSpur ?? null;
   /** Der zweite Täter - er kommt mit heraus, sobald einer benannt ist. */
   const zweiter = fall.mittaeterId
     ? fall.besetzung.find((c) => c.id === fall.mittaeterId && c.id !== fall.taeterId)
@@ -619,6 +604,17 @@ ${
           .map((id) => {
             const spur = fall.spuren.find((s) => s.itemId === id);
             const name = fall.items?.find((i) => i.id === id)?.name ?? id;
+            /*
+             * Ein Stück mit Fernwirkung gehört nicht zu diesem Fall, sondern
+             * zur Saga - und seine Bedeutung nennt den Drahtzieher beim
+             * Namen. Sie hier mitzuliefern hieß bisher: Das Modell erklärt
+             * sie pflichtschuldig mit, und die Auflösung eines Kapitels
+             * verrät, worauf die ganze Reihe hinausläuft. Es bekommt sie
+             * deshalb gar nicht erst zu lesen.
+             */
+            if (kapitel && spur?.fernwirkung) {
+              return `- ${name}: (gehört NICHT zu diesem Fall - nicht auflösen, nicht erklären, nicht erwähnen)`;
+            }
             return `- ${name}: ${spur?.bedeutung ?? "(nichts hinterlegt)"}`;
           })
           .join("\n")
@@ -636,6 +632,21 @@ Schreibe:
 Setze richtig auf ${richtig}.
 
 - Kein Urteil und keine Strafe: Ein einzelner Fall endet damit, dass klar ist, was war. Was daraus folgt, entscheidet später ein Gericht - hier nicht.${
+    kapitel
+      ? `
+
+DIESER FALL IST EIN KAPITEL - DIE SAGA WIRD HIER NICHT AUFGELÖST
+- Aufgelöst wird ausschließlich dieser eine Fall: seine Tat, sein Täter, seine Spuren. Wer hinter der ganzen Reihe steckt, bleibt dem Finale vorbehalten.${
+          kapitel.drahtzieherName
+            ? `
+- ${kapitel.drahtzieherName} wird in der Auflösung NICHT als der Verantwortliche ausgewiesen: kein "dahinter steckt", kein "zieht die Fäden", kein "hat alles eingefädelt", kein "war es die ganze Zeit". Auch nicht angedeutet und auch nicht als Vermutung Wimpys.`
+            : `
+- Was wirklich hinter der Reihe steckt, wird nicht benannt und nicht erklärt - weder als Person noch als Ursache.`
+        }
+- Spuren, die über diesen Fall hinauszeigen, bleiben unerklärt. Wimpy darf höchstens merken, dass ein Fund hier nicht hineinpasst, und ihn einstecken - was er bedeutet, weiß er noch nicht.
+- Der letzte Satz darf offen bleiben: Etwas passt nicht, etwas fehlt, etwas geht weiter. Ein Kapitel endet mit einer gelösten Tat und einer größeren Frage.`
+      : ""
+  }${
     gestalt
       ? `
 

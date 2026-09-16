@@ -271,6 +271,38 @@ export type Reifegrad = "kindgerecht" | "jugendlich" | "erwachsen";
 /** Wie weit sich der Fall von der Wirklichkeit entfernen darf. */
 export type Absurditaet = "bodenstaendig" | "verspielt" | "absurd";
 
+/**
+ * Was ein Kapitel einer Saga über sich hinaus hinterlassen muss.
+ *
+ * Ohne diese Ansage entsteht ein Kapitelfall, der in sich stimmt und nichts
+ * für später übrig lässt - und genau davon lebt die Beweismitteltasche: Was
+ * am Ende vor Gericht zählt, wurde unterwegs eingesammelt. Fehlt es in den
+ * Kapiteln, steht Wimpy im Saal mit leeren Händen.
+ */
+export type FernwirkungsVorgabe = {
+  /**
+   * Der Name des Drahtziehers - leer, wo er das Geheimnis der Saga wäre
+   * ("Kein Täter", "Wimpy selbst"). Dann zeigen die Stücke auf die Sache
+   * dahinter statt auf eine Person.
+   */
+  drahtzieherName: string;
+  /**
+   * Seine Id. Im Prompt taucht sie nie auf - sie ist für die Prüfung
+   * danach da: Fehlt das Häkchen, gilt eine ehrliche Spur auf ihn als
+   * Fernwirkung (siehe fernwirkungPruefen).
+   */
+  drahtzieherId: string;
+  /** Was dieses Kapitel preisgeben soll. */
+  enthuellung: string;
+  /** Läuft die Saga in eine Verhandlung? Dann ist es kein Beiwerk, sondern Pflicht. */
+  vorGericht: boolean;
+  /**
+   * Das Tier, auf das die ganze Saga über fälschlich alles zeigt - leer
+   * heißt: Es gibt keine durchgehende Fährte.
+   */
+  falscheFaehrteName?: string;
+};
+
 /** Alles, was der Fall vorgibt. Wird beim Start einmal erzeugt. */
 export type CaseFile = {
   id: string;
@@ -330,6 +362,19 @@ export type CaseFile = {
    * niemand wissen, dass es sie gibt.
    */
   besessenheit?: { wirtId: string; daemon: Character };
+  /**
+   * Nur im Kapitel einer Saga: was dieses Kapitel über sich hinaus zeigt -
+   * und damit auch, wen die Auflösung noch nicht nennen darf.
+   *
+   * Bestellt wird damit die Spur mit Fernwirkung (siehe lib/prompts.ts).
+   * Dass es hier liegen bleibt, ist genauso wichtig: Am Ende des Kapitels
+   * weiß der Server dadurch, dass dieser Fall nur eine Station ist. Der
+   * Drahtzieher der Saga wird dann weder benannt noch erklärt - sonst wäre
+   * die Reihe vorbei, bevor sie zu Ende gespielt ist.
+   *
+   * Liegt ausschließlich im Siegel; der Browser sieht davon nichts.
+   */
+  sagaSpur?: FernwirkungsVorgabe | null;
   erstelltAm: number;
 };
 

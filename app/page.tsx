@@ -1188,7 +1188,26 @@ export default function Home() {
               frage={sagaDaten.finale.frage}
               einzugTon={sagaDaten.vorgaben.gerichtTon}
               tasche={tasche.inhalt}
-              onFertig={(geschafft) => saga.setzePhase("epilog", null, geschafft)}
+              onFertig={(geschafft, verurteilterId) => {
+                /*
+                 * „Gericht & Flucht“: Das Urteil ist nicht das Ende.
+                 *
+                 * Wer schuldig gesprochen wird, wartet es nicht ab - er
+                 * rennt, und Wimpy hinterher: erst im Wagen, dann in der
+                 * Arena. Gekämpft wird gegen den, der im Saal verurteilt
+                 * wurde; brach dort eine Gestalt hervor, gegen sie.
+                 *
+                 * Platzt das Verfahren oder taugt die Arena nichts, bleibt
+                 * alles wie bisher: Es geht in den Epilog.
+                 */
+                const arena = sagaKampf(sagaDaten.vorgaben);
+                if (geschafft && arena) {
+                  setShowdownGegner(verurteilterId ?? "");
+                  saga.setzePhase("showdown", null, true);
+                  return;
+                }
+                saga.setzePhase("epilog", null, geschafft);
+              }}
             />
           </main>
         );

@@ -143,6 +143,79 @@ export function schneeflockenTextur() {
   return textur;
 }
 
+/* --- Der Sandsturm -------------------------------------------------- */
+
+/**
+ * Der Sandsturm ist die einzige Lage, die der ganzen Szene ihre Farbe nimmt.
+ *
+ * Schnee und Nebel legen sich weiß-blau über die Stadt; Sand färbt sie ocker,
+ * schluckt das Licht und fliegt waagerecht. Damit die Straße im Kapitel und
+ * der Platz im Kampf im selben Sturm stehen, rechnen beide mit denselben
+ * Zahlen von hier - sonst wäre es zweimal ein anderes Wetter.
+ */
+
+/** Bis hierher steht der Sand in der Luft; darüber ist die Böe durch. */
+export const SAND_HOEHE = 9;
+
+/** Die Farbe von Dunst und Himmel - tagsüber ocker, nachts fast erloschen. */
+export const sandDunst = (tageszeit: DreiDTageszeit): number =>
+  tageszeit === "nacht" ? 0x2a2015 : tageszeit === "abend" ? 0x8a5330 : 0xc6a066;
+
+/** Die Sonne steht als warmer Fleck dahinter, statt zu scheinen. */
+export const SAND_LICHT = 0xffd49a;
+
+/** Wie die Körner selbst aussehen - feiner als Flocken und satter im Ton. */
+export const SAND_KORN = { farbe: 0xd8b273, groesse: 0.1, deckkraft: 0.72 };
+
+/**
+ * Ein Feld Sandkörner, gleichmäßig über der Fläche verteilt.
+ *
+ * `weite` und `tiefe` sind die Kanten des Ausschnitts, in dem der Sturm
+ * steht; `versatzZ` schiebt ihn dorthin, wo die Kamera hinsieht (im Kapitel
+ * liegt die Straße vor einem, in der Arena steht man mittendrin).
+ */
+export function sandKoerner(
+  anzahl: number,
+  weite: number,
+  tiefe: number,
+  versatzZ = 0,
+): Float32Array {
+  const positionen = new Float32Array(anzahl * 3);
+  for (let i = 0; i < anzahl; i++) {
+    positionen[i * 3] = Math.random() * weite - weite / 2;
+    // Unten dichter als oben: Das meiste, was ein Sturm trägt, trägt er knapp
+    // über dem Boden.
+    positionen[i * 3 + 1] = Math.random() ** 1.7 * SAND_HOEHE;
+    positionen[i * 3 + 2] = Math.random() * tiefe - tiefe / 2 + versatzZ;
+  }
+  return positionen;
+}
+
+/**
+ * Den Sand weitertreiben: quer durchs Bild, böig, kaum fallend.
+ *
+ * Wer hinten hinausfliegt, kommt vorne wieder herein - so bleibt der Sturm
+ * gleich dicht, ohne dass ständig neue Körner entstehen müssten.
+ */
+export function sandTreiben(
+  positionen: THREE.BufferAttribute,
+  dt: number,
+  jetzt: number,
+  weite: number,
+): void {
+  const halb = weite / 2;
+  for (let i = 0; i < positionen.count; i++) {
+    // Die Böe wechselt langsam; der Versatz je Korn macht aus einer Wand
+    // einzelne Schlieren.
+    const boe = 15 + Math.sin(jetzt * 0.0012 + i * 0.017) * 6;
+    const x = positionen.getX(i) + boe * dt;
+    positionen.setX(i, x > halb ? -halb : x);
+    const y = positionen.getY(i) - dt * (0.5 + Math.sin(jetzt * 0.002 + i) * 0.4);
+    positionen.setY(i, y < 0 ? SAND_HOEHE : y);
+  }
+  positionen.needsUpdate = true;
+}
+
 /**
  * Wie stark die Kulisse aus sich selbst leuchtet.
  *
@@ -343,7 +416,14 @@ export function fahrbahnMaterial(args: {
   if (natur) merken(natur);
   const material = new THREE.MeshToonMaterial({
     map: natur ?? asphalt,
-    color: strassentyp !== "asphalt"
+    /*
+     * Im Sandsturm liegt auf allem eine Schicht Sand - auch auf dem Asphalt.
+     * Ohne diesen Ton stünde eine blaugraue Straße in einer ockerfarbenen
+     * Luft, und der Sturm wirkte wie ein Filter über einem anderen Bild.
+     */
+    color: wetter === "sandsturm"
+      ? strassentyp === "asphalt" && !imRaster ? 0x6f6047 : 0xc2a878
+      : strassentyp !== "asphalt"
       ? wetter === "regen" ? 0xb1a18a : 0xffffff
       : wetter === "regen" ? 0x263a4a : imRaster ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
     gradientMap: gradient,

@@ -93,6 +93,30 @@ console.log("\n4. Bei „Gericht & Dämon“ steht die Verwandlung in beiden");
   }
 }
 
+console.log("\n4b. Bei „Gericht & Flucht“ ist das Urteil nicht das Ende");
+{
+  const args = {
+    art: "gericht-kampf", thema: "T", wahrheit: "W", angeklagter: "Hut", richter: "Öhö",
+    detektivName: "Wimpy", motiv: "M", kapitel: [{ name: "K", enthuellung: "E" }],
+  };
+  const saal = buildVerhandlungPrompt(args);
+  const beweise = buildBeweisePrompt(args);
+
+  pruefe("der Saal weiß, dass er nicht wartet", /nicht vor, das Urteil abzuwarten/.test(saal));
+  pruefe("das Urteil endet mit einem anlaufenden Motor", /springt ein Motor an/.test(saal));
+  pruefe("der Epilog kommt erst nach Jagd und Kampf",
+    /Zwischen Urteil und Epilog liegen die Verfolgungsjagd und der Kampf/.test(saal));
+  pruefe("und verrät nicht, wie der Kampf ausgeht", /nennt weder Sieger noch Verlierer/.test(saal));
+  pruefe("angeklagt wird trotzdem selbst", /muss zu Beginn selbst benennen/.test(saal));
+  pruefe("und der Name steht vorher nirgends", /Weder die Frage noch der Erzählertext/.test(saal));
+  pruefe("die Beweisstücke kennen denselben Abend", /nicht vor, das Urteil abzuwarten/.test(beweise));
+
+  // Beim gewöhnlichen Gerichtsfinale bleibt alles, wie es war.
+  const ohneFlucht = buildVerhandlungPrompt({ ...args, art: "gericht" });
+  pruefe("ein Gerichtsfinale ohne Flucht sagt davon nichts",
+    !/springt ein Motor an/.test(ohneFlucht) && !/Verfolgungsjagd/.test(ohneFlucht));
+}
+
 console.log("\n5. Eine Verhandlung ohne Beweise gilt als keine");
 {
   /*

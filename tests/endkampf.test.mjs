@@ -282,6 +282,8 @@ console.log("\n11. Der Weg durch die Datenbank");
   pruefe("die Arena auch", kampfSpielbar(gelesen));
   pruefe("die Bausteinliste kommt aus dem Plan", (gelesen?.locations.length ?? 0) > 0);
   pruefe("die Jagd bleibt am Finale hängen", gelesen?.jagd?.nachKapitel === 0 && gelesen.jagd.fliehenderId === "hut");
+  pruefe("auch im Sandsturm wird gekämpft",
+    kampfLesen({ ...gespeichert, wetter: "sandsturm", strassentyp: "sand" })?.wetter === "sandsturm");
 
   const mist = kampfLesen({ plan: { breite: "viel", felder: 3 }, stufe: "unmöglich", gegnerGroesse: 99 });
   pruefe("Unsinn wird zu einer leeren, unspielbaren Vorgabe", mist !== null && !kampfSpielbar(mist));
@@ -344,6 +346,28 @@ console.log("\n13. Auch eine Saga darf im Kampf enden");
       ) === null);
   pruefe("eine Saga ohne Kampf bleibt, wie sie war",
     SagaVorgabenSchema.parse(STANDARD_SAGA_VORGABEN).kampf === undefined);
+}
+
+console.log("\n14. Gericht & Flucht: erst der Saal, dann die Arena");
+{
+  const arena = { ...STANDARD_KAMPF, plan: arenaPlan(9, 9) };
+  pruefe("die Art steht zur Wahl", FINALE_ARTEN.some((a) => a.id === "gericht-kampf"));
+  pruefe("sie führt in den Saal", mitVerhandlung("gericht-kampf") && mitAnklage("gericht-kampf"));
+  pruefe("und danach in die Arena",
+    sagaKampf({ finaleArt: "gericht-kampf", kampf: arena }) === arena);
+  pruefe("ohne Arena bleibt es beim Urteil",
+    sagaKampf({ finaleArt: "gericht-kampf" }) === null);
+  pruefe("das Gerichtsfinale allein kämpft nicht",
+    sagaKampf({ finaleArt: "gericht", kampf: arena }) === null);
+
+  const geprueft = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    finaleArt: "gericht-kampf",
+    kampf: { ...arena, jagd: neueKampfJagd("hut", "Die Glocken") },
+  });
+  pruefe("das Schema nimmt die Art an", geprueft.success, geprueft.error?.issues?.[0]?.message);
+  pruefe("samt Arena und Jagd",
+    sagaKampf(geprueft.data)?.plan?.breite === 9 && geprueft.data?.kampf?.jagd?.fliehenderId === "hut");
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles sauber.\n" : `\n${fehlgeschlagen} Fehler.\n`);
