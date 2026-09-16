@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useLaden } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
+import { KampfFeld } from "./KampfFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
 import { StadtWahl } from "./StadtWahl";
 import { yen } from "@/lib/zubehoer";
@@ -19,6 +20,7 @@ import {
 import { useStammdaten } from "@/lib/stammdaten";
 import { sichere3DTiere } from "@/lib/saga3dSync";
 import { WETTERLAGEN, type Wetterlage } from "@/lib/types";
+import { STANDARD_KAMPF } from "@/lib/endkampf";
 import { FINALE_ARTEN, type FinaleArt } from "@/lib/sagaFinale";
 import type { VersammlungVorgabe } from "@/lib/versammlung";
 import type { VerfolgungVorgabe } from "@/lib/verfolgung";
@@ -1540,6 +1542,20 @@ export function SagaVorgabenFelder({
         ))}
       </div>
       <p className="hinweis">{FINALE_ARTEN.find((e) => e.id === art)?.lang}</p>
+
+      {/* Der Showdown: Wer den Drahtzieher überführt hat, muss ihn danach
+          auch noch stellen. Die Arena dafür steht hier. */}
+      {art === "kampf" && (
+        <KampfFeld
+          kampf={vorgaben.kampf ?? STANDARD_KAMPF}
+          gegnerId={vorgaben.drahtzieherId}
+          gegnerWort={vorgaben.name}
+          ohneGegner="Für diese Saga ist der Drahtzieher noch nicht gewählt - dann wird er zufällig gezogen. Gekämpft wird trotzdem gegen den Richtigen: Das Spiel nimmt den, der nach der Auflösung dasteht. Nur das Modell hier unten greift dann nicht."
+          titel={vorgaben.name}
+          einleitung="Die Saga läuft wie eine klassische in ihren Finalfall - und danach wehrt sich der Überführte. Erst wenn Wimpy ihn gestellt hat, kommt der Epilog. Wer den Finalfall nicht löst, sieht keinen Kampf."
+          onAendern={(kampf) => setzen({ kampf })}
+        />
+      )}
 
       {(art === "wimpy" || art === "gericht-wimpy") && (
         <>

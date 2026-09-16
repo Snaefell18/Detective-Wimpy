@@ -1,3 +1,4 @@
+import type { KampfVorgabe } from "./endkampf";
 import type { FinaleArt, Verhandlung } from "./sagaFinale";
 import type { VersammlungVorgabe } from "./versammlung";
 import type { VerfolgungVorgabe } from "./verfolgung";
@@ -229,6 +230,15 @@ export type SagaVorgaben = {
    * fest, weil es schon den Kern und jedes Kapitel färbt.
    */
   finaleArt: FinaleArt;
+  /**
+   * Die Arena für die Finale-Art „Showdown“ - Plan, Licht, Gegner und Stufe.
+   *
+   * Sie steht hier und nicht im erzeugten Finale, weil sie nichts mit dem
+   * Modell zu tun hat: Gebaut wird sie im Admin-Menü, und sie darf sich auch
+   * dann noch ändern, wenn die Saga längst erzeugt ist. Fehlt sie oder taugt
+   * die Arena nichts, endet die Saga wie eine klassische.
+   */
+  kampf?: KampfVorgabe;
   /**
    * Der Song zum Einzug des Gerichts - nur bei einem Verhandlungsfinale.
    * Die Ankündigung läuft genau so lange wie das Stück; leer heißt: eine
@@ -481,6 +491,8 @@ export type SagaLauf = {
     | "finale"
     /** Der Gerichtssaal statt eines Finalfalls. */
     | "verhandlung"
+    /** Der Showdown nach dem Finalfall: Wimpy gegen den Drahtzieher. */
+    | "showdown"
     | "epilog";
   /**
    * Id des Falls, der gerade zu dieser Saga läuft. Damit lässt sich ein

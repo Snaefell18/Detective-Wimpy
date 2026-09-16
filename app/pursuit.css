@@ -599,3 +599,207 @@
 .auto-jagd-drehen { position: absolute; bottom: max(110px, calc(env(safe-area-inset-bottom) + 108px)); left: 20px; right: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #fff; }
 .auto-jagd-drehen span { padding: 6px 12px; background: #132238e8; border-radius: 999px; font-size: 13px; }
 .auto-jagd-drehen button { width: 52px; height: 48px; border: 3px solid #172337; border-radius: 16px; background: #f4ecda; color: #172337; font-size: 22px; touch-action: manipulation; }
+
+/* --- Der Showdown: Wimpy gegen den Culprit ------------------------ */
+
+.kampf { background: #0b1020; }
+.kampf-canvas,
+.kampf-canvas canvas { width: 100%; height: 100%; display: block; }
+.kampf-canvas canvas { filter: saturate(1.15) contrast(1.06); }
+
+/* Der Rand färbt sich: violett, sobald der Gegner wütend wird, rot, wenn es
+   für Wimpy eng wird. Beides liegt über allem und nimmt keine Klicks an. */
+.kampf::before {
+  content: "";
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s ease;
+  box-shadow: inset 0 0 clamp(60px, 14vw, 150px) rgba(196, 92, 255, .75);
+}
+.kampf[data-phase="2"]::before { opacity: 1; }
+.kampf[data-getroffen="true"]::before {
+  opacity: 1;
+  box-shadow: inset 0 0 clamp(70px, 16vw, 180px) rgba(255, 64, 64, .8);
+  animation: kampf-puls 1.1s ease-in-out infinite;
+}
+@keyframes kampf-puls {
+  50% { box-shadow: inset 0 0 clamp(40px, 9vw, 110px) rgba(255, 64, 64, .55); }
+}
+
+/* Die beiden Lebensbalken - Wimpy links, der Culprit rechts. */
+.kampf-balken {
+  position: absolute;
+  z-index: 14;
+  top: max(20px, calc(var(--safe-top) + 8px));
+  left: clamp(16px, 3vw, 40px);
+  right: clamp(62px, 9vw, 96px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(8px, 2vw, 20px);
+  pointer-events: none;
+}
+.kampf-leben {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 4px solid #172337;
+  border-radius: 4px 16px 4px 16px;
+  background: rgba(255,255,255,.9);
+  box-shadow: 5px 6px 0 #172337;
+}
+.kampf-leben small {
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.kampf-leben span {
+  display: block;
+  height: 14px;
+  padding: 2px;
+  border: 3px solid #172337;
+  background: #dbeaf0;
+  transform: skewX(-9deg);
+}
+.kampf-leben i {
+  display: block;
+  height: 100%;
+  transition: width .18s ease-out;
+}
+.kampf-leben-wimpy i { background: linear-gradient(90deg, #35dfff, #7dffd0); }
+.kampf-leben-gegner { transform: rotate(.8deg); }
+.kampf-leben-gegner i { background: linear-gradient(90deg, #7b2bd6, #ff5ce1); }
+.kampf-leben-gegner[data-wuetend="true"] {
+  border-color: #b51b6f;
+  box-shadow: 5px 6px 0 #b51b6f;
+}
+
+/* Die Kombo fliegt kurz auf und bleibt dann stehen, solange sie hält. */
+.kampf-kombo {
+  position: absolute;
+  z-index: 15;
+  top: max(96px, calc(var(--safe-top) + 84px));
+  left: 50%;
+  padding: 6px 14px;
+  border: 4px solid #172337;
+  border-radius: 999px;
+  color: #172337;
+  font: 950 clamp(16px, 3.4vw, 26px)/1 var(--font-display), Impact, sans-serif;
+  letter-spacing: .04em;
+  background: #ffd84a;
+  box-shadow: 4px 5px 0 #172337;
+  pointer-events: none;
+  transform: translateX(-50%) rotate(-2deg);
+  animation: kampf-kombo-auf .22s ease-out;
+}
+@keyframes kampf-kombo-auf {
+  from { transform: translateX(-50%) rotate(-2deg) scale(1.5); }
+}
+
+/* Die beiden Knöpfe. Der Stick liegt rechts, also greift der linke Daumen an. */
+.kampf-aktionen {
+  position: absolute;
+  z-index: 16;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(88px, calc(var(--safe-bottom) + 76px));
+  display: grid;
+  gap: 10px;
+}
+.kampf-knopf {
+  width: clamp(92px, 24vw, 116px);
+  aspect-ratio: 1;
+  border: 5px solid #172337;
+  border-radius: 50%;
+  color: #172337;
+  font: 950 clamp(13px, 3vw, 17px)/1 var(--font-display), Impact, sans-serif;
+  letter-spacing: .06em;
+  background: radial-gradient(circle at 34% 26%, #fff, #7dffd0);
+  box-shadow: 4px 6px 0 #172337;
+  touch-action: manipulation;
+}
+.kampf-knopf:active { transform: translate(2px, 3px); box-shadow: 2px 3px 0 #172337; }
+.kampf-knopf-angriff[data-nah="true"] {
+  background: radial-gradient(circle at 34% 26%, #fff, #ffb43d);
+  animation: kampf-knopf-glueht 1s ease-in-out infinite;
+}
+@keyframes kampf-knopf-glueht {
+  50% { box-shadow: 4px 6px 0 #172337, 0 0 22px rgba(255, 180, 61, .9); }
+}
+.kampf-knopf-rolle {
+  width: clamp(74px, 19vw, 92px);
+  background: radial-gradient(circle at 34% 26%, #fff, #a7c8ff);
+}
+.kampf-knopf-rolle[data-bereit="false"] { opacity: .45; }
+
+.kampf-abbrechen {
+  position: absolute;
+  z-index: 16;
+  top: max(20px, calc(var(--safe-top) + 8px));
+  right: clamp(12px, 2.5vw, 20px);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 3px solid #172337;
+  border-radius: 50%;
+  color: #172337;
+  font-size: 22px;
+  line-height: 1;
+  background: rgba(255,255,255,.88);
+  box-shadow: 3px 4px 0 #172337;
+}
+
+/* Die Jagd davor lässt sich überspringen - im Spiel wie in der Probe. */
+.kampf-jagd { position: absolute; inset: 0; }
+.kampf-ueberspringen {
+  position: absolute;
+  z-index: 40;
+  left: 50%;
+  bottom: max(20px, calc(var(--safe-bottom) + 10px));
+  padding: 10px 16px;
+  border: 4px solid #172337;
+  border-radius: 4px 16px 4px 16px;
+  color: #172337;
+  font-size: 13px;
+  font-weight: 900;
+  background: rgba(255,255,255,.9);
+  box-shadow: 4px 5px 0 #172337;
+  transform: translateX(-50%);
+}
+
+.kampf-start { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.kampf-start .kampf-karte { margin: auto; }
+.kampf-karte .knopf { margin-right: 8px; }
+.kampf-karte[data-ende="gewonnen"] { box-shadow: 14px 15px 0 #172337, 21px 22px 0 #7dffd0; }
+.kampf-karte[data-ende="verloren"] { box-shadow: 14px 15px 0 #172337, 21px 22px 0 #ff8a8a; }
+
+/* Im Admin-Menü: der Showdown zwischen den anderen Finale-Einstellungen. */
+.kampf-feld { display: grid; gap: 8px; margin: 10px 0 4px; }
+.kampf-feld .stadtplan { margin: 4px 0; }
+
+@media (max-width: 640px) {
+  .kampf-balken { right: clamp(52px, 14vw, 72px); gap: 8px; }
+  .kampf-leben { padding: 6px 8px; border-width: 3px; box-shadow: 3px 4px 0 #172337; }
+  .kampf-leben span { height: 11px; }
+  .kampf-aktionen { bottom: max(76px, calc(var(--safe-bottom) + 64px)); }
+}
+
+/* Modus V im Labor: Der Kampf füllt den Bildschirm wie im Spiel. */
+.kampf-labor { position: absolute; inset: 0; z-index: 600; }
+.probe-panel .kampf-feld { margin-top: 4px; }
+
+/* Die Showdown-Karte im Labor: violett wie der Kampf, damit sie auffällt. */
+.pursuit-moduskarte[data-modus="showdown"] {
+  color: #fff;
+  background:
+    radial-gradient(circle at 78% 16%, rgba(255,255,255,.22) 0 22%, transparent 23%),
+    linear-gradient(145deg, #2a1440, #6b2bd6 58%, #c45cff);
+  box-shadow: 9px 11px 0 #172337;
+  transform: rotate(-1deg);
+}
+.pursuit-moduskarte[data-modus="showdown"]:hover { transform: translate(-3px, -4px) rotate(-1.6deg); }

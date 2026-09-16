@@ -7,6 +7,7 @@ import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcCredits } from "@/components/ArcCredits";
+import { Showdown } from "@/components/Showdown";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
 import { ChatOverlay } from "@/components/ChatOverlay";
@@ -37,7 +38,8 @@ import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { Versammlung } from "@/components/Versammlung";
 import { useAdmin } from "@/lib/adminStore";
 import { postJson } from "@/lib/api";
-import { arcAbspann, type Arc } from "@/lib/arcTypen";
+import { arcAbspann, arcKampf, type Arc } from "@/lib/arcTypen";
+import { sagaKampf } from "@/lib/endkampf";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
 import { dreiDFuerSagaFall } from "@/lib/saga3dSync";
@@ -115,6 +117,25 @@ export default function Home() {
    * weiter.
    */
   const [arcRuht, setArcRuht] = useState(false);
+  /**
+   * Der Showdown des Arcs ist geschafft (oder abgebrochen).
+   *
+   * Er steht vor dem Abschlusstext, nicht an seiner Stelle: Erst der Kampf,
+   * dann das letzte Wort des Erzählers. Gemerkt wird das nur für diesen
+   * Bildschirm - wer die Seite mitten im Kampf neu lädt, fängt ihn noch
+   * einmal an, und das ist bei einem Kampf auch richtig so.
+   */
+  const [showdownDurch, setShowdownDurch] = useState(false);
+  /**
+   * Wer im Showdown einer Saga gegenübersteht.
+   *
+   * Anders als im Arc steht das erst nach der Auflösung fest: Der Drahtzieher
+   * einer Saga liegt im Siegel, nicht in den Vorgaben, und steckte in ihm
+   * eine Gestalt, ist sie es, die sich wehrt. Gemerkt wird die Id genau in
+   * dem Moment, in dem der Fall abgeräumt wird - danach wüsste sie niemand
+   * mehr.
+   */
+  const [showdownGegner, setShowdownGegner] = useState("");
   /** Wer gleich zum ersten Mal mitspielt - wird vor dem Kapitel angekündigt. */
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
   /** Die Reaktion des Beschuldigten - steht zwischen Beschuldigung und Urteil. */
@@ -192,7 +213,13 @@ export default function Home() {
   const sagaSetzePhase = saga.setzePhase;
   const sagaAuftakt = useCallback(() => sagaSetzePhase("auftakt"), [sagaSetzePhase]);
   const arcSetzePhase = arc.setzePhase;
+  const arcBeendenRoh = arc.beenden;
   const arcUebersicht = useCallback(() => arcSetzePhase("uebersicht"), [arcSetzePhase]);
+  /** Der Arc ist zu Ende - der nächste Durchgang beginnt wieder beim Kampf. */
+  const arcBeenden = useCallback(() => {
+    setShowdownDurch(false);
+    arcBeendenRoh();
+  }, [arcBeendenRoh]);
 
   /**
    * Der gesprochene Prolog startet sofort im Klick - iOS erlaubt das Abspielen
@@ -604,6 +631,8 @@ export default function Home() {
     setArcsOffen(false);
     setArcMeldung(null);
     setArcRuht(false);
+    // Wer einen Arc noch einmal spielt, kämpft auch noch einmal.
+    setShowdownDurch(false);
 
     const weiter = !vonVorn && arc.stand?.arc.id === gewaehlt.id;
     if (!weiter) {
@@ -892,6 +921,29 @@ export default function Home() {
     }
 
     if (lauf.phase === "finale") {
+      /*
+       * Der Showdown: Wimpy gegen den Culprit, live in 3D.
+       *
+       * Er ersetzt den Abschluss nicht, er geht ihm voraus - danach läuft
+       * der Erzählertext wie bei jedem anderen Finale. Steht keine spielbare
+       * Arena dahinter, meldet sich der Showdown sofort fertig und man
+       * merkt nichts davon.
+       */
+      if (arcDaten.finale.art === "kampf" && !showdownDurch) {
+        return (
+          <main className="app">
+            <Showdown
+              kampf={arcKampf(arcDaten)}
+              gegnerId={arcDaten.culprit.charakterId}
+              name={arcDaten.culprit.wort}
+              titel={arcDaten.name || "Der Showdown"}
+              autoId={geld.beutel.autoId}
+              besitz={geld.beutel.vorrat}
+              onFertig={() => setShowdownDurch(true)}
+            />
+          </main>
+        );
+      }
       if (arcDaten.finale.art === "credits") {
         return (
           <main className="app">
@@ -899,7 +951,7 @@ export default function Home() {
               titel={arcDaten.name}
               text={arcDaten.finale.erzaehler.text}
               song={arcDaten.finale.creditsSong ?? ""}
-              onFertig={arc.beenden}
+              onFertig={arcBeenden}
             />
           </main>
         );
@@ -911,7 +963,7 @@ export default function Home() {
       if (abspann) {
         return (
           <main className="app">
-            <VideoSzene quelle={abspann} onFertig={arc.beenden} />
+            <VideoSzene quelle={abspann} onFertig={arcBeenden} />
           </main>
         );
       }
@@ -931,7 +983,7 @@ export default function Home() {
               titel={`${arcDaten.name} - Ende`}
               weiterText="Zum Hauptmenü ›"
               musik="jubel"
-              onWeiter={arc.beenden}
+              onWeiter={arcBeenden}
             />
           </main>
         );
@@ -944,7 +996,7 @@ export default function Home() {
             titel={`${arcDaten.name} - Finale`}
             weiterText="Zum Hauptmenü ›"
             musik="jubel"
-            onWeiter={arc.beenden}
+            onWeiter={arcBeenden}
           />
         </main>
       );
@@ -1143,6 +1195,32 @@ export default function Home() {
       }
     }
 
+    /*
+     * Der Showdown einer Saga: Der Überführte wehrt sich.
+     *
+     * Er steht zwischen Auflösung und Epilog - erst weiß man, wer es war,
+     * dann steht er einem gegenüber. Ist die Arena unbrauchbar oder gibt der
+     * Spieler auf, geht es genauso weiter wie sonst: in den Epilog, und der
+     * Finalfall bleibt gelöst.
+     */
+    if (lauf.phase === "showdown") {
+      return (
+        <main className="app">
+          <Showdown
+            kampf={sagaKampf(sagaDaten.vorgaben)}
+            gegnerId={showdownGegner}
+            // Wer neu lädt, während der Kampf läuft, hat die Id verloren -
+            // dann steht dort wenigstens, gegen wen es geht.
+            name="Der Drahtzieher"
+            titel={`${sagaDaten.name} - Showdown`}
+            autoId={geld.beutel.autoId}
+            besitz={geld.beutel.vorrat}
+            onFertig={() => saga.setzePhase("epilog", null, true)}
+          />
+        </main>
+      );
+    }
+
     if (lauf.phase === "epilog") {
       // 500 ¥ für eine ganze Saga - aber nur, wenn das Finale wirklich
       // geschafft ist. Verbucht wird über die Saga-Id, also genau einmal.
@@ -1290,9 +1368,29 @@ export default function Home() {
                   // Gleich läuft der nächste Erzählerteil - Freigabe erneuern.
                   void tonFreigeben();
                   if (saga.stand?.lauf.phase === "finale") {
-                    // Der Epilog kommt auch nach einer verlorenen Finalrunde -
-                    // die Siegermusik gehört dann aber nicht dazu.
-                    saga.setzePhase("epilog", null, stand.ergebnis?.richtig === true);
+                    const geschafft = stand.ergebnis?.richtig === true;
+                    /*
+                     * Der Drahtzieher lässt sich nicht abführen.
+                     *
+                     * Nur wenn der Finalfall wirklich gelöst ist: Wer
+                     * danebengegriffen hat, hat niemanden gestellt, der sich
+                     * wehren könnte. Gekämpft wird gegen den, der es war -
+                     * und wenn eine Gestalt aus ihm herausgebrochen ist,
+                     * gegen sie.
+                     */
+                    const arena = sagaKampf(saga.stand.saga.vorgaben);
+                    if (arena && geschafft) {
+                      setShowdownGegner(
+                        stand.ergebnis?.verwandlung?.daemon?.id ||
+                          stand.ergebnis?.taeterId ||
+                          "",
+                      );
+                      saga.setzePhase("showdown", null, true);
+                    } else {
+                      // Der Epilog kommt auch nach einer verlorenen Finalrunde -
+                      // die Siegermusik gehört dann aber nicht dazu.
+                      saga.setzePhase("epilog", null, geschafft);
+                    }
                   } else saga.kapitelGeschafft();
                   spiel.aufgeben();
                 }
@@ -1300,7 +1398,9 @@ export default function Home() {
           }
           weiterText={
             saga.stand?.lauf.phase === "finale"
-              ? "Epilog ›"
+              ? sagaKampf(saga.stand.saga.vorgaben) && stand.ergebnis?.richtig
+                ? "Er wehrt sich ›"
+                : "Epilog ›"
               : saga.stand &&
                   verfolgungNach(
                     saga.stand.saga.vorgaben,

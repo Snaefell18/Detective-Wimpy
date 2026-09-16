@@ -1,6 +1,7 @@
+import type { AnimationsModell } from "./animations.generated";
 import { AUTO_MODELLE } from "./autos";
 import { DREI_D_LOCATIONS, dateienFuer3D, type Kapitel3DVorgabe } from "./pursuit3d";
-import { gebaeudeArten, planGueltig } from "./stadtplan";
+import { gebaeudeArten, planGueltig, type Stadtplan } from "./stadtplan";
 import { modellFuerTier, spielerModell } from "./tiermodelle";
 import type { Character } from "./types";
 
@@ -88,6 +89,28 @@ export function dreiDDateien(
       .map((c, index) => modellFuerTier(c, index, konfiguration.charakterModelle?.[c.id])?.datei),
   ];
   return [...new Set([...stadt, ...figuren].filter((datei): datei is string => Boolean(datei)))];
+}
+
+/**
+ * Und was der Endkampf braucht: die Arena und die beiden Kämpfer.
+ *
+ * Gebraucht wird das Vorladen hier besonders: Vor dem Kampf steht oft noch
+ * eine Verfolgungsjagd, und die dauert lange genug, um die Häuser der Arena
+ * in aller Ruhe zu holen. Wer stattdessen erst beim Startknopf anfängt zu
+ * laden, lässt den Spieler genau im spannendsten Moment warten.
+ */
+export function kampfDateien(
+  plan: Stadtplan | null | undefined,
+  spieler?: AnimationsModell,
+  gegner?: AnimationsModell,
+): string[] {
+  const stadt = planGueltig(plan)
+    ? gebaeudeArten(plan).flatMap((id) => {
+        const ort = DREI_D_LOCATIONS.find((eintrag) => eintrag.id === id);
+        return ort ? [ort.datei] : [];
+      })
+    : [];
+  return [...new Set([...stadt, spieler?.datei, gegner?.datei].filter((datei): datei is string => Boolean(datei)))];
 }
 
 /** Und was eine Verfolgungsjagd braucht: zwei Wagen und Wimpy am Straßenrand. */

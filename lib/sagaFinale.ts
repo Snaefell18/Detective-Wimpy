@@ -26,6 +26,9 @@ import type { Character } from "./types";
  *   "gericht-wimpy" - wie "Gericht & Dämon", aber Wimpy ist der Wirt. Der
  *                   Spieler muss ihn selbst anklagen; erst dann zeigt sich
  *                   die Gestalt.
+ *   "kampf"       - der Showdown: wie "klassisch", aber der Drahtzieher lässt
+ *                   sich nicht abführen. Nach der Auflösung steht er Wimpy in
+ *                   einer selbst gebauten Arena gegenüber - live in 3D.
  */
 export type FinaleArt =
   | "klassisch"
@@ -33,7 +36,8 @@ export type FinaleArt =
   | "gericht-daemon"
   | "gericht-wimpy"
   | "ohne-taeter"
-  | "wimpy";
+  | "wimpy"
+  | "kampf";
 
 export const FINALE_ARTEN: {
   id: FinaleArt;
@@ -71,6 +75,12 @@ export const FINALE_ARTEN: {
     label: "Kein Täter",
     hinweis: "es gab nie einen Schuldigen",
     lang: "Alles deutete auf ein Tier - zu Unrecht. Hinter der Serie steckt etwas ganz anderes: eine Maschine, das Wetter, eine alte Uhr, eine Kette von Zufällen. Im Finale sitzt der Falsche auf der Anklagebank, und Wimpy muss mit dem Gesammelten beweisen, dass es keinen Täter gibt.",
+  },
+  {
+    id: "kampf",
+    label: "Showdown",
+    hinweis: "der Drahtzieher wehrt sich",
+    lang: "Wie „Klassisch“ - bis auf den letzten Moment: Der Drahtzieher lässt sich nicht abführen. Nach der Auflösung steht er Wimpy in einer Arena gegenüber, die du selbst baust wie eine 3D-Stadt, und der Kampf entscheidet es. Erzeugt wird die Saga dabei genau wie eine klassische; verlieren darf man auch, danach geht es so oder so in den Epilog.",
   },
   {
     id: "wimpy",

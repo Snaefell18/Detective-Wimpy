@@ -332,3 +332,42 @@ export const planAusmass = (plan: Stadtplan) => ({
   breite: plan.breite * FELD_GROESSE,
   tiefe: plan.tiefe * FELD_GROESSE,
 });
+
+/**
+ * Einen Plan aus der Datenbank lesen.
+ *
+ * Aus Firestore kommt, was irgendwann einmal hineingeschrieben wurde - ein
+ * halber Plan, ein Plan aus einer älteren Fassung, im schlimmsten Fall etwas
+ * ganz anderes. Hier wird daraus entweder ein brauchbarer Plan oder nichts.
+ * Nichts ist ausdrücklich in Ordnung: Wer keinen Plan hat, spielt die Stadt
+ * wie früher als Straßenzug.
+ */
+export function planLesen(roh: unknown): Stadtplan | null {
+  if (!roh || typeof roh !== "object") return null;
+  const wert = roh as Partial<Stadtplan>;
+  const breite = Math.round(Number(wert.breite));
+  const tiefe = Math.round(Number(wert.tiefe));
+  if (!Number.isFinite(breite) || !Number.isFinite(tiefe)) return null;
+  if (breite < PLAN_MASSE.min || tiefe < PLAN_MASSE.min) return null;
+  if (breite > PLAN_MASSE.max || tiefe > PLAN_MASSE.max) return null;
+  if (!Array.isArray(wert.felder) || wert.felder.length !== breite * tiefe) return null;
+  const plan: Stadtplan = {
+    breite,
+    tiefe,
+    felder: wert.felder.map((feld) => (typeof feld === "string" ? feld.slice(0, 80) : "")),
+    drehungen: zahlenWerte(wert.drehungen, 0, 270),
+    hoehen: zahlenWerte(wert.hoehen, 0.1, 5),
+  };
+  return planGueltig(plan) ? plan : null;
+}
+
+/** Nur Zahlen in vernünftigen Grenzen - alles andere fliegt still heraus. */
+export const zahlenWerte = (roh: unknown, min: number, max: number): Record<string, number> => {
+  if (!roh || typeof roh !== "object") return {};
+  const ergebnis: Record<string, number> = {};
+  for (const [schluessel, wert] of Object.entries(roh as Record<string, unknown>)) {
+    const zahl = Number(wert);
+    if (Number.isFinite(zahl) && zahl >= min && zahl <= max) ergebnis[schluessel.slice(0, 12)] = zahl;
+  }
+  return ergebnis;
+};

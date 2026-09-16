@@ -38,10 +38,14 @@ console.log("\n1. Klassisch bleibt klassisch");
 pruefe("Standardvorgaben laufen in den Finalfall", STANDARD_SAGA_VORGABEN.finaleArt === "klassisch");
 pruefe("und brauchen keine Verhandlung", mitVerhandlung("klassisch") === false);
 pruefe("alte Sagas ohne Feld ebenso", mitVerhandlung(undefined) === false);
-pruefe("es gibt sechs Arten", FINALE_ARTEN.length === 6);
+pruefe("es gibt sieben Arten", FINALE_ARTEN.length === 7);
 for (const art of ["gericht", "gericht-daemon", "gericht-wimpy", "ohne-taeter", "wimpy"]) {
   pruefe(`„${art}“ führt in den Saal`, mitVerhandlung(art) === true);
 }
+// Der Showdown ist eine klassische Saga mit einem anderen letzten Moment:
+// erst der Finalfall, dann die Arena - aber nie der Gerichtssaal.
+pruefe("der Showdown führt nicht in den Saal", mitVerhandlung("kampf") === false);
+pruefe("und klagt dort auch niemanden an", mitAnklage("kampf") === false);
 
 console.log("\n2. Wer wo sitzt");
 pruefe(

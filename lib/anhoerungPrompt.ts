@@ -40,6 +40,10 @@ export type SaalMittel = {
 const ZIELE: Record<FinaleArt, string> = {
   klassisch:
     "Wimpy will den Angeklagten überführen. Am Ende soll er zugeben, was er getan hat.",
+  // Der Showdown läuft nie durch den Saal - gekämpft wird nach dem Finalfall.
+  // Der Eintrag steht hier trotzdem, damit keine Art vergessen werden kann.
+  kampf:
+    "Wimpy will den Angeklagten überführen. Am Ende soll er zugeben, was er getan hat.",
   gericht:
     "Alle ahnen, dass der Angeklagte es war - beweisen konnte es niemand. Wimpy soll ihn so weit bringen, dass er sich selbst verrät.",
   "gericht-daemon":

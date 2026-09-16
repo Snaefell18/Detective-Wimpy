@@ -133,8 +133,10 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    Saga hat, taucht er im Spiel unter **Arcs** auf und lässt sich spielen. Die
    übrigen Stationen dürfen nachwachsen, während schon gespielt wird - der
    Spielstand liegt auf dem Gerät und liest den Arc bei jedem Start neu.
-5. Am Ende steht das große Finale. Gebaut ist bisher der Abschlusstext; die
-   Gerichtsverhandlung ist als Art schon vorgesehen und kommt später.
+5. Am Ende steht das große Finale. Zur Wahl stehen der Abschlusstext, ein
+   Video, ein Abspann - und der **Showdown**: ein spielbarer 3D-Kampf gegen
+   den Culprit (siehe unten). Die Gerichtsverhandlung ist als Art schon
+   vorgesehen und kommt später.
 
 Der Culprit ist dabei mehr als eine Notiz: Bis zur letzten Station bleibt er
 aus der Besetzung der erzeugten Sagas heraus - dort kommt er nur unter seinem
@@ -143,6 +145,59 @@ die Bühne.
 
 Ein Arc erzeugt keine eigenen Fälle - er verweist auf Sagas, die auch einzeln
 spielbar bleiben. Löscht man einen Arc, bleiben seine Sagas erhalten.
+
+### Der Showdown: Wimpy kämpft selbst
+
+Den Showdown gibt es an drei Stellen - als Finale-Art eines **Arcs** (gegen
+den Culprit), als Finale-Art einer **Saga** (gegen den Drahtzieher) und im
+**3D-Labor** zum Ausprobieren. Überall ist es derselbe Kampf, live in 3D und
+mit dem Daumen gesteuert:
+
+- **Die Arena** baut man wie eine 3D-Stadt: dasselbe Raster, dieselben
+  Bausteine, derselbe Editor. „Kampfplatz anlegen“ legt einen freien Platz mit
+  Häusern ringsum an; eine im Reiter **Städte** geplante Stadt lässt sich
+  ebenso übernehmen. Häuser sind Deckung: Zauberkugeln zerplatzen an ihnen,
+  und wer um die Ecke geht, ist erst einmal weg. Unter neun Straßenfeldern
+  findet kein Kampf statt - dann geht alles weiter, als hätte man keinen
+  Showdown gewählt, und der Editor sagt das auch.
+- **Gesteuert** wird wie im 3D-Kapitel: Daumenstick zum Laufen, ein Knopf für
+  den Zauberwurf (er wird von selbst zum Nahkampf, sobald man nah genug
+  steht), einer für die Ausweichrolle. Am Schreibtisch: WASD oder Pfeiltasten,
+  Leertaste, Umschalt.
+- **Der Gegner** läuft, holt aus und schlägt zu. Nichts davon trifft ohne
+  Ansage: Wer ausholt, bleibt stehen, und unter ihm wächst ein roter Ring.
+  Solange er wächst, kann man weg. Auf halbem Weg wird er wütend - taumelt
+  kurz, wird dann schneller, feuert dreifache Salven und stampft Schockwellen
+  in den Boden. Modell, Größe und Stufe (sanft, mittel, hart) stellt man im
+  Admin-Menü ein.
+- **Davor** kann die bekannte Verfolgungsjagd laufen, diesmal mit dem Gegner
+  im Fluchtwagen. Sie ist abwählbar: Wer sie im Editor nicht einrichtet, fängt
+  direkt in der Arena an, und im Spiel lässt sie sich überspringen.
+- **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
+  Ein Kind soll seine Geschichte nicht an einem Kampf verlieren.
+- Nach dem Kampf sagt der Gegner sein letztes Wort, und danach läuft das Ende
+  wie gewohnt weiter. Der Kampf ersetzt es nicht, er geht ihm voraus.
+
+**Im Arc** steht er zwischen der letzten Saga und dem Abschlusstext. **In
+einer Saga** wählt man ihn wie jede andere Finale-Art: Sie läuft dann wie eine
+klassische in ihren Finalfall - und wer den löst, stellt den Überführten
+danach noch einmal, diesmal in der Arena. Erst dann kommt der Epilog. Wer den
+Finalfall nicht löst, sieht keinen Kampf; und brach im Täter eine Gestalt
+hervor, steht sie in der Arena, nicht ihr Wirt.
+
+Geprobt wird an zwei Stellen: „Showdown proben“ im Editor spielt den Kampf
+genau so, wie er später laufen wird, samt Jagd davor und ohne dass dafür etwas
+gespeichert werden muss - und im Admin-Menü unter **Pursuit · 3D-Labor** gibt
+es ihn als eigenen **Modus V**: Arena bauen, Gegner und Wimpys Modell wählen,
+Stufe, Licht, Wetter, Musik, Jagd - und sofort losspielen, ganz ohne Saga oder
+Arc.
+
+Die Rechnung dahinter (Leben, Schaden, Pausen, was der Gegner als Nächstes
+vorhat) steht in `lib/kampf.ts` und ist ohne Grafikkarte prüfbar; die Szene in
+`components/Endkampf.tsx` zeichnet sie nur. Die Stadt darunter bauen Kapitel
+und Arena mit denselben Funktionen (`components/stadtBau.ts`), damit die Arena
+aussieht wie die Straßen, durch die man vorher gelaufen ist - und auf dem
+iPhone genauso wenig Speicher frisst.
 
 ### Zwischenereignisse
 

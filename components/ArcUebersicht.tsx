@@ -74,7 +74,10 @@ export function ArcUebersicht({
   // Endet der Arc mit einem Video, heißt sein Schluss auch so.
   const abspann = arc.finale.art === "video";
   const credits = arc.finale.art === "credits";
-  const schluss = credits ? "Credits" : abspann ? "Abspann" : "Finale";
+  // Der Showdown sagt vorher, was gleich passiert: Man soll wissen, dass
+  // jetzt gekämpft wird, und nicht ahnungslos in eine Arena laufen.
+  const kampf = arc.finale.art === "kampf";
+  const schluss = credits ? "Credits" : abspann ? "Abspann" : kampf ? "Showdown" : "Finale";
 
   return (
     <div className="overlay einblenden arc-uebersicht">
@@ -166,12 +169,20 @@ export function ArcUebersicht({
                     ? "Zurücklehnen - der Rest ist Kino"
                     : credits
                       ? "Besetzung und Abspann"
-                    : "Alles läuft zusammen"
+                      : kampf
+                        ? "Jetzt geht es um alles - Wimpy gegen ihn"
+                        : "Alles läuft zusammen"
                   : "Erst, wenn alle Sagen durch sind"}
               </span>
               {finale && (
                 <button className="knopf klein aktion" onClick={onFinale}>
-                  {credits ? "Credits ansehen" : abspann ? "Abspann ansehen" : "Zum Finale"}
+                  {credits
+                    ? "Credits ansehen"
+                    : abspann
+                      ? "Abspann ansehen"
+                      : kampf
+                        ? "In die Arena"
+                        : "Zum Finale"}
                 </button>
               )}
             </div>

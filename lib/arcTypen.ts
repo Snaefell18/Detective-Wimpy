@@ -1,3 +1,4 @@
+import { STANDARD_KAMPF, kampfSpielbar, type KampfVorgabe } from "./endkampf";
 import { LEERER_ERZAEHLER, type Erzaehlerteil, type Saga } from "./sagaTypen";
 
 /**
@@ -37,8 +38,13 @@ export type ArcTeil = {
  *                           einer Karte, die das sagt.
  *   "gerichtsverhandlung" - noch nicht gebaut, läuft vorerst als Text.
  *   "credits"             - Abspanntext, exakt so lang wie der gewählte Song.
+ *   "kampf"               - der Showdown: Wimpy gegen den Culprit, live in 3D,
+ *                           in einer selbst gebauten Arena und auf Wunsch mit
+ *                           einer Verfolgungsjagd davor. Danach läuft der
+ *                           Abschlusstext wie bei "text" - der Kampf ersetzt
+ *                           das Ende nicht, er geht ihm voraus.
  */
-export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung" | "credits";
+export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung" | "credits" | "kampf";
 
 /**
  * Das Video zum Abschluss eines Arcs - sofern es schon hinterlegt ist.
@@ -49,6 +55,19 @@ export type ArcFinaleArt = "text" | "video" | "gerichtsverhandlung" | "credits";
  */
 export const arcAbspann = (arc: Arc | undefined): string =>
   arc?.finale.art === "video" ? (arc.finale.erzaehler.video ?? "").trim() : "";
+
+/**
+ * Der Showdown dieses Arcs - oder nichts.
+ *
+ * Nichts kommt auch dann heraus, wenn die Art zwar auf "kampf" steht, aber
+ * keine spielbare Arena dahintersteht. Der Arc endet dann mit seinem
+ * Abschlusstext, und niemand landet in einer leeren Szene.
+ */
+export const arcKampf = (arc: Arc | undefined): KampfVorgabe | null => {
+  if (arc?.finale.art !== "kampf") return null;
+  const kampf = arc.finale.kampf ?? STANDARD_KAMPF;
+  return kampfSpielbar(kampf) ? kampf : null;
+};
 
 /**
  * Der eine, der hinter dem ganzen Arc steht.
@@ -113,6 +132,8 @@ export type Arc = {
     erzaehler: Erzaehlerteil;
     /** Nur bei Credits: Der Song bestimmt ihre exakte Laufzeit. */
     creditsSong?: string;
+    /** Nur beim Showdown: Arena, Gegner, Stufe und die Jagd davor. */
+    kampf?: KampfVorgabe;
   };
   erstelltAm: number;
 };

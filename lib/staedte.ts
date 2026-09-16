@@ -1,9 +1,9 @@
 import {
-  PLAN_MASSE,
   beispielPlan,
   gebaeudeArten,
   gebaeudeFelder,
   planGueltig,
+  planLesen,
   strassenFelder,
   type Stadtplan,
 } from "./stadtplan";
@@ -105,36 +105,6 @@ export function stadtLesen(roh: unknown): Stadt | null {
     erstelltAm: Number.isFinite(wert.erstelltAm) ? Number(wert.erstelltAm) : 0,
   };
 }
-
-/** Und derselbe Weg für den Plan allein. */
-function planLesen(roh: unknown): Stadtplan | null {
-  if (!roh || typeof roh !== "object") return null;
-  const wert = roh as Partial<Stadtplan>;
-  const breite = Math.round(Number(wert.breite));
-  const tiefe = Math.round(Number(wert.tiefe));
-  if (!Number.isFinite(breite) || !Number.isFinite(tiefe)) return null;
-  if (breite < PLAN_MASSE.min || tiefe < PLAN_MASSE.min) return null;
-  if (breite > PLAN_MASSE.max || tiefe > PLAN_MASSE.max) return null;
-  if (!Array.isArray(wert.felder) || wert.felder.length !== breite * tiefe) return null;
-  const plan: Stadtplan = {
-    breite,
-    tiefe,
-    felder: wert.felder.map((feld) => (typeof feld === "string" ? feld.slice(0, 80) : "")),
-    drehungen: zahlenWerte(wert.drehungen, 0, 270),
-    hoehen: zahlenWerte(wert.hoehen, 0.1, 5),
-  };
-  return planGueltig(plan) ? plan : null;
-}
-
-const zahlenWerte = (roh: unknown, min: number, max: number): Record<string, number> => {
-  if (!roh || typeof roh !== "object") return {};
-  const ergebnis: Record<string, number> = {};
-  for (const [schluessel, wert] of Object.entries(roh as Record<string, unknown>)) {
-    const zahl = Number(wert);
-    if (Number.isFinite(zahl) && zahl >= min && zahl <= max) ergebnis[schluessel.slice(0, 12)] = zahl;
-  }
-  return ergebnis;
-};
 
 /**
  * Was ein 3D-Kapitel von einer Stadt übernimmt.
