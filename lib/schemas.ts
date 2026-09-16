@@ -5,6 +5,11 @@ import { STIMMUNGEN } from "./zuordnen";
 import { AUFTRITTS_ARTEN } from "./sagaTypen";
 import { FINALE_ARTEN } from "./sagaFinale";
 import { DAEMON_HAEUFIGKEITEN, MITTAETER_HAEUFIGKEITEN, WETTERLAGEN } from "./types";
+import {
+  STRASSENTYPEN as STRASSENTYPEN_3D,
+  TAGESZEITEN as TAGESZEITEN_3D,
+  WETTERLAGEN as WETTERLAGEN_3D,
+} from "./staedte";
 import type { Haeufigkeit, Wetterlage } from "./types";
 import { GENERIERTE_3D_LOCATION_IDS } from "./locations3d.generated";
 import { ANIMATIONS_MODELLE } from "./animations.generated";
@@ -375,6 +380,19 @@ const luecken = <T extends z.ZodTypeAny>(feld: T, leer: z.infer<T>) =>
 const ausAuswahl = <T extends string>(ids: readonly T[]) =>
   z.enum(ids as unknown as [T, ...T[]]);
 
+/**
+ * Licht, Belag und Wetter der 3D-Welt - genau die Listen, die im Editor
+ * stehen.
+ *
+ * Abgeschrieben wurden sie hier früher von Hand, und jede neue Lage (zuletzt
+ * der Sandsturm) musste an drei Stellen nachgetragen werden. Wo eine davon
+ * fehlte, nahm das Schema die Wahl des Editors nicht an und ein Kapitel
+ * verlor beim Speichern sein Wetter.
+ */
+const DreiDTageszeitSchema = () => ausAuswahl(TAGESZEITEN_3D);
+const DreiDWetterSchema = () => ausAuswahl(WETTERLAGEN_3D);
+const DreiDStrassentypSchema = () => ausAuswahl(STRASSENTYPEN_3D);
+
 /** Die Wetterlagen, wie sie im Saga-Editor zur Wahl stehen. */
 const WETTER_WAHL: ("" | Wetterlage)[] = [
   "",
@@ -439,12 +457,9 @@ const JagdSchema = z.object({
 export const KampfVorgabeSchema = z.object({
   plan: PlanSchema,
   locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(24).default([]),
-  strassentyp: z.enum(["asphalt", "sand", "schnee"]).default("asphalt").catch("asphalt"),
-  tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("nacht").catch("nacht"),
-  wetter: z
-    .enum(["klar", "sonne", "regen", "schnee", "schneesturm", "nebel"])
-    .default("klar")
-    .catch("klar"),
+  strassentyp: DreiDStrassentypSchema().default("asphalt").catch("asphalt"),
+  tageszeit: DreiDTageszeitSchema().default("nacht").catch("nacht"),
+  wetter: DreiDWetterSchema().default("klar").catch("klar"),
   gegnerModell: z.string().max(80).default("").catch(""),
   gegnerGroesse: z.number().min(0.6).max(2.5).default(1.35).catch(1.35),
   stufe: z.enum(["sanft", "mittel", "hart"]).default("mittel").catch("mittel"),
@@ -477,9 +492,9 @@ export const SagaVorgabenSchema = z.object({
       z.object({
         aktiv: z.boolean().default(false),
         locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(24).default([]),
-        tageszeit: z.enum(["morgen", "tag", "abend", "nacht"]).default("tag"),
-        wetter: z.enum(["klar", "sonne", "regen", "schnee", "schneesturm", "nebel"]).default("klar"),
-        strassentyp: z.enum(["asphalt", "sand", "schnee"]).default("asphalt"),
+        tageszeit: DreiDTageszeitSchema().default("tag"),
+        wetter: DreiDWetterSchema().default("klar"),
+        strassentyp: DreiDStrassentypSchema().default("asphalt"),
         charakterGroessen: z.record(z.string().max(80), z.number().min(0.5).max(2.5)).default({}),
         charakterModelle: z
           .record(

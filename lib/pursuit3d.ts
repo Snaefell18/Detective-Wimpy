@@ -47,7 +47,14 @@ export type Kapitel3DVorgabe = {
 };
 
 export type DreiDTageszeit = "morgen" | "tag" | "abend" | "nacht";
-export type DreiDWetter = "klar" | "sonne" | "regen" | "schnee" | "schneesturm" | "nebel";
+export type DreiDWetter =
+  | "klar"
+  | "sonne"
+  | "regen"
+  | "schnee"
+  | "schneesturm"
+  | "sandsturm"
+  | "nebel";
 export type DreiDStrassentyp = "asphalt" | "sand" | "schnee";
 
 export const DREI_D_TAGESZEITEN: { id: DreiDTageszeit; name: string }[] = [
@@ -63,6 +70,7 @@ export const DREI_D_WETTER: { id: DreiDWetter; name: string }[] = [
   { id: "regen", name: "Regen" },
   { id: "schnee", name: "Schneefall" },
   { id: "schneesturm", name: "Schneechaos / Schneesturm" },
+  { id: "sandsturm", name: "Sandsturm" },
   { id: "nebel", name: "Nebel" },
 ];
 

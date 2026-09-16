@@ -54,7 +54,15 @@ export type StadtVorgabe = {
 
 export const STRASSENTYPEN: DreiDStrassentyp[] = ["asphalt", "sand", "schnee"];
 export const TAGESZEITEN: DreiDTageszeit[] = ["morgen", "tag", "abend", "nacht"];
-export const WETTERLAGEN: DreiDWetter[] = ["klar", "sonne", "regen", "schnee", "schneesturm", "nebel"];
+export const WETTERLAGEN: DreiDWetter[] = [
+  "klar",
+  "sonne",
+  "regen",
+  "schnee",
+  "schneesturm",
+  "sandsturm",
+  "nebel",
+];
 
 /** Eine neue, noch leere Stadt - mit einer Kreuzung zum Anfangen. */
 export const neueStadt = (plan?: Stadtplan | null): Stadt => ({

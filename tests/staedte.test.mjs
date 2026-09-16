@@ -77,6 +77,9 @@ console.log("\n2. Aus der Datenbank kommt nur Brauchbares zurück");
   pruefe("erfundene Einstellungen fallen auf den Standard zurück", wirr?.strassentyp === "asphalt" && wirr?.tageszeit === "tag" && wirr?.wetter === "klar");
   pruefe("und die erlaubten Werte sind es, die im Editor stehen",
     STRASSENTYPEN.includes("asphalt") && TAGESZEITEN.includes("nacht") && WETTERLAGEN.includes("schneesturm"));
+  pruefe("und der Sandsturm steht ebenfalls zur Wahl", WETTERLAGEN.includes("sandsturm"));
+  pruefe("eine Stadt im Sandsturm kommt heil zurück",
+    stadtLesen({ ...stadt, wetter: "sandsturm", strassentyp: "sand" })?.wetter === "sandsturm");
 
   const kaputteDrehung = stadtLesen({ ...stadt, plan: { ...stadt.plan, drehungen: { "0,0": 999, "1,1": 90 } } });
   pruefe("unmögliche Drehungen fallen weg, brauchbare bleiben",
