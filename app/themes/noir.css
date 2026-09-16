@@ -2923,3 +2923,17 @@
   font-size: 16.5px;
   color: var(--text-2);
 }
+
+/* Wimpys Garage an der Tankstelle. Im Noir ist auch sie nur Fläche und
+   Typografie: schwarzer Grund, dünne Linien, heller Name. */
+[data-theme="noir"] .saga3d-garage article {
+  background: var(--tief);
+  border-color: var(--linie);
+  border-radius: var(--radius);
+}
+
+[data-theme="noir"] .saga3d-wagenwahl {
+  background: var(--hover);
+  border-color: var(--linie);
+  border-radius: var(--radius);
+}
