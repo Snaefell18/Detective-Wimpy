@@ -37,6 +37,7 @@ export function ShopScreen({
 }) {
   const [regal, setRegal] = useState<Zubehoer[] | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
+  const [reiter, setReiter] = useState<"zubehoer" | "autos">("zubehoer");
 
   useEffect(() => {
     let sichtbar = true;
@@ -82,14 +83,33 @@ export function ShopScreen({
           ‹
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1>Detektiv-Zubehör</h1>
+          <h1>Shop</h1>
           <p className="unterzeile">Im Beutel: {yen(yenImBeutel)}</p>
         </div>
       </header>
 
+      <div className="reiter">
+        <button
+          data-aktiv={reiter === "zubehoer"}
+          onClick={() => setReiter("zubehoer")}
+        >
+          Detektivzubehör
+        </button>
+        <button
+          data-aktiv={reiter === "autos"}
+          onClick={() => setReiter("autos")}
+        >
+          Autos
+        </button>
+      </div>
+
       <div className="scroll">
         <div className="inhalt">
-          <AutoGarage yen={yenImBeutel} vorrat={vorrat} autoId={autoId} kaufen={onAutoKaufen} waehlen={onAutoWaehlen} />
+          {reiter === "autos" && (
+            <AutoGarage yen={yenImBeutel} vorrat={vorrat} autoId={autoId} kaufen={onAutoKaufen} waehlen={onAutoWaehlen} />
+          )}
+
+          {reiter === "zubehoer" && <>
           {meldung && <p className="hinweis erfolg">{meldung}</p>}
 
           {regal === null && <p className="leise">Der Laden schließt gerade auf …</p>}
@@ -137,6 +157,7 @@ export function ShopScreen({
             Verdient wird im Dienst: 100 ¥ für jeden gelösten Fall, 500 ¥ für eine
             ganze Saga.
           </p>
+          </>}
         </div>
       </div>
     </div>
