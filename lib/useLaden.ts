@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ladeZubehoer } from "./db";
+import { useAutos } from "./useAutos";
 import { GRUNDREGAL, type Zubehoer } from "./zubehoer";
 
 /**
@@ -37,4 +38,22 @@ export function useLaden(): Zubehoer[] {
   }, []);
 
   return laden;
+}
+
+/**
+ * Alles, was man verschenken kann - Zubehör UND Autos.
+ *
+ * Der Laden führt beides in getrennten Reihen: Das Zubehör kommt aus
+ * `zubehoer`, die Wagen aus demselben Ort, aber mit der Wirkung "auto", und
+ * der Laden zeigt sie in einem eigenen Reiter. Für ein Geschenk ist das
+ * einerlei - ein Auto nach einem gelösten Kapitel ist das schönste, was
+ * Wimpy passieren kann.
+ *
+ * Wer diese Liste benutzt, muss wissen: Ein Auto trägt `wirkung: "auto"` und
+ * gehört nicht in die Beweistasche, sondern in die Garage.
+ */
+export function useGeschenke(): Zubehoer[] {
+  const zubehoer = useLaden();
+  const { autos } = useAutos();
+  return useMemo(() => [...zubehoer, ...autos], [zubehoer, autos]);
 }

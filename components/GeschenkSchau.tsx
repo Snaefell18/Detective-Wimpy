@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bild } from "./Bild";
 import { spiele } from "@/lib/introAudio";
 import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
+import type { Auto } from "@/lib/autos";
 
 /**
  * Die Übergabe: Wimpy bekommt etwas geschenkt.
@@ -35,6 +36,11 @@ export function GeschenkSchau({
   const fertigRef = useRef(onFertig);
   fertigRef.current = onFertig;
   const wirkung = wirkungVon(stueck.wirkung);
+  /*
+   * Ein Auto ist kein Fläschchen: Es hat keine Wirkung im Gespräch, sondern
+   * Tempo - und es landet nicht in der Tasche, sondern in der Garage.
+   */
+  const wagen = stueck.wirkung === "auto" ? (stueck as Auto) : null;
 
   useEffect(() => {
     void spiele("jubel");
@@ -81,8 +87,19 @@ export function GeschenkSchau({
         </div>
 
         <strong className="geschenk-name">{stueck.name}</strong>
-        {wirkung && <p className="geschenk-wirkung">{wirkung.hinweis}</p>}
-        <span className="lohn-hinweis">Liegt jetzt in deiner Tasche · Tippen zum Weitermachen</span>
+        {wagen ? (
+          <p className="geschenk-wirkung">
+            {stueck.beschreibung?.trim() ||
+              `${wagen.speed} km/h · +${wagen.beschleunigung} km/h je Sekunde`}
+          </p>
+        ) : (
+          wirkung && <p className="geschenk-wirkung">{wirkung.hinweis}</p>
+        )}
+        <span className="lohn-hinweis">
+          {wagen
+            ? "Steht ab jetzt in deiner Garage - du fährst ihn sofort · Tippen zum Weitermachen"
+            : "Liegt jetzt in deiner Tasche · Tippen zum Weitermachen"}
+        </span>
       </div>
     </div>
   );

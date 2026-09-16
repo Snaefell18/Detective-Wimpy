@@ -99,13 +99,15 @@ export type SagaVorgaben = {
    */
   kapitelVideos: string[];
   /**
-   * Ein Geschenk nach einem gelösten Kapitel: die Id eines Zubehörs aus dem
-   * Laden, leer heißt "kein Geschenk". Wie bei den Städten steht das Finale
-   * an letzter Stelle.
+   * Ein Geschenk nach einem gelösten Kapitel: die Id von etwas aus dem Laden,
+   * leer heißt "kein Geschenk". Wie bei den Städten steht das Finale an
+   * letzter Stelle.
    *
-   * Alles daran ist freiwillig: Wer nichts einträgt, bekommt nichts, und
-   * einzelne Kapitel dürfen ausgelassen werden - auch nur das letzte. Gibt es
-   * den Gegenstand im Laden nicht mehr, bleibt die Übergabe schlicht aus.
+   * Zubehör oder Auto - beides ist erlaubt: Das eine landet in der Tasche,
+   * das andere in der Garage (und wird sofort gefahren). Alles daran ist
+   * freiwillig: Wer nichts einträgt, bekommt nichts, und einzelne Kapitel
+   * dürfen ausgelassen werden - auch nur das letzte. Gibt es den Gegenstand
+   * im Laden nicht mehr, bleibt die Übergabe schlicht aus.
    */
   kapitelGeschenke: string[];
   /**

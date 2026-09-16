@@ -250,6 +250,23 @@ frei wählbaren Song und eine kurze Comic-Mutprobe mit zwei langen
 Cognacflaschen, ohne
 dass die Saga dafür gespeichert oder erzeugt werden muss.
 
+### Geschenke nach einem Kapitel
+
+Zu jedem Kapitel einer Saga (und zum Finale) lässt sich eintragen, was Wimpy
+bekommt, wenn er es löst - freiwillig, und jede Lücke ist erlaubt. Zur Wahl
+steht alles aus dem Laden, in zwei Gruppen:
+
+- **Zubehör** landet in der Tasche und wirkt wie gekauft: Veritaserum,
+  Fingerabdruckset, was immer im Admin-Menü angelegt wurde.
+- **Autos** landen in der Garage. Ein geschenkter Wagen gehört Wimpy genau
+  einmal, kostet nichts - und wird sofort gefahren, so wie ein gekaufter auch.
+  Wer lieber beim alten bleibt, stellt das im Laden mit zwei Tippern um.
+
+Verbucht wird über Saga und Kapitelnummer: Dasselbe Kapitel noch einmal zu
+spielen bringt kein zweites Exemplar. Steht das Stück später nicht mehr im
+Laden, bleibt die Übergabe still aus - der Editor sagt das aber schon beim
+Erzeugen.
+
 ## Bilder erzeugen lassen
 
 Tiere, Schauplätze, Dinge und Ladenzubehör lassen sich im Admin-Menü malen

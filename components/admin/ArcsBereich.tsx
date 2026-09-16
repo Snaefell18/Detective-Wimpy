@@ -31,7 +31,7 @@ import {
   type Saga,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
-import { useLaden } from "@/lib/useLaden";
+import { useGeschenke } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { STANDARD_KAMPF } from "@/lib/endkampf";
@@ -141,7 +141,8 @@ const FINALE_ARTEN: { id: ArcFinaleArt; label: string; hinweis: string }[] = [
 export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
   const stammdaten = useStammdaten();
   /** Der Ladeninhalt - für die Prüfung der Kapitelgeschenke. */
-  const regal = useLaden();
+  // Geschenke dürfen Zubehör oder Autos sein - beides steht hier drin.
+  const regal = useGeschenke();
   const { daten: admin } = useAdmin();
   const [arcs, setArcs] = useState<Arc[] | null>(null);
   const [sagas, setSagas] = useState<Saga[]>([]);
