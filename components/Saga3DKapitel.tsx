@@ -19,6 +19,7 @@ import {
   sandDunst,
   sandKoerner,
   sandTreiben,
+  schneeLand,
   schneeflockenTextur,
   strassenBauen,
   texturenVerkleinern,
@@ -244,6 +245,8 @@ function KapitelCanvas({
       nacht: 0x070a16,
     }[tageszeit];
     const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
+    const schneeLand3D = strassentyp === "schnee";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
     const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
@@ -278,7 +281,14 @@ function KapitelCanvas({
     renderer.shadowMap.enabled = profil.schatten;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
+    /*
+     * Schnee ist die hellste Fläche, die es hier gibt. Wird sie auch noch
+     * überbelichtet, kippt sie im Filmlook ins Cremefarbene - dann sieht die
+     * Piste aus wie Sand. Deshalb steht die Blende im Schneeland enger.
+     */
+    renderer.toneMappingExposure = tageszeit === "nacht"
+      ? 0.82
+      : wetter === "sonne" ? (schneeLand3D ? 0.94 : 1.18) : schneeLand3D ? 0.9 : 0.98;
     element.appendChild(renderer.domElement);
     const kontextVerloren = (event: Event) => {
       event.preventDefault();
@@ -288,7 +298,15 @@ function KapitelCanvas({
     renderer.domElement.addEventListener("webglcontextlost", kontextVerloren);
 
     const oben = tageszeit === "nacht" ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
-    scene.add(new THREE.HemisphereLight(oben, tageszeit === "nacht" ? 0x160d2e : 0x455348, tageszeit === "nacht" ? 2.15 : 2.8));
+    /*
+     * Was von unten zurückkommt, ist der Boden - und Schnee wirft kaltes
+     * Licht zurück, kein olivgrünes. Ohne diesen Unterschied bekam die
+     * Schneestraße von unten einen erdigen Schimmer.
+     */
+    const unten = schneeLand3D
+      ? (tageszeit === "nacht" ? 0x24405e : 0xd3e6f4)
+      : tageszeit === "nacht" ? 0x160d2e : 0x455348;
+    scene.add(new THREE.HemisphereLight(oben, unten, tageszeit === "nacht" ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
       wetter === "sonne"
         ? 0xfff1b8
@@ -302,6 +320,22 @@ function KapitelCanvas({
     licht.position.set(-8, 14, 9);
     licht.castShadow = profil.schatten;
     licht.shadow.mapSize.set(1024, 1024);
+    /*
+     * Wohin der Schatten überhaupt fällt.
+     *
+     * Ohne diese Zeilen steht die Schattenkamera auf ihrem Standardmaß: ein
+     * Kasten von zehn Metern Kantenlänge um den Nullpunkt. Alles, was weiter
+     * weg steht, warf keinen Schatten - und was genau an der Grenze stand,
+     * einen abgeschnittenen. Im Schnee fällt das am meisten auf: Weiß auf
+     * Weiß ist nur dort zu erkennen, wo etwas einen Schatten wirft.
+     */
+    licht.shadow.camera.left = -26;
+    licht.shadow.camera.right = 26;
+    licht.shadow.camera.top = 26;
+    licht.shadow.camera.bottom = -26;
+    licht.shadow.camera.far = 70;
+    licht.shadow.bias = -0.0015;
+    licht.shadow.camera.updateProjectionMatrix();
     scene.add(licht);
     // Der Straßenzug behält seinen gewohnten Boden; der Stadtplan bekommt
     // genau seine Rasterfläche plus einen Rand, damit nichts abbricht.
@@ -318,7 +352,7 @@ function KapitelCanvas({
       ? tageszeit === "nacht" ? 0x3b2f1f : 0xa98a5c
       : stadtplan
       ? strassentyp === "schnee"
-        ? 0xe4eef5
+        ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff)
         : strassentyp === "sand"
           ? 0xb59468
           : tageszeit === "nacht"
@@ -328,7 +362,12 @@ function KapitelCanvas({
               : wetter === "regen"
                 ? 0x3f4c52
                 : 0x6b7166
-      : strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
+      /*
+       * Der unberührte Schnee neben der Straße ist heller als die Fahrbahn,
+       * nicht dunkler. Andersherum - und genau so war es - sieht die Straße
+       * aus wie eine helle Rampe, die durch graues Land führt.
+       */
+      : strassentyp === "schnee" ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff) : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
       new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
@@ -337,6 +376,27 @@ function KapitelCanvas({
     boden.position.z = stadtplan ? 0 : -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    /*
+     * Und wo Schnee liegt, liegt er auch neben der Straße: Wehen und
+     * verschneite Tannen, damit aus der weißen Fläche eine Landschaft wird.
+     * Auf dem Handy stehen weniger davon - jede ist ein eigenes Objekt.
+     */
+    if (schneeLand3D) {
+      schneeLand({
+        scene,
+        gradient,
+        merken: (wert) => ressourcen.add(wert),
+        ausmass,
+        mitteZ: stadtplan ? 0 : -8,
+        plan: stadtplan,
+        // Im Straßenzug steht der Schnee neben der Fahrbahn, auf dem
+        // Stadtplan auf den freien Feldern - beides ohne die Stelle, an der
+        // man selbst losläuft.
+        startPunkt: { x: 0, z: 0 },
+        menge: profil.schatten ? 30 : 16,
+        tageszeit,
+      });
+    }
     const belag = fahrbahnMaterial({
       gradient,
       strassentyp,

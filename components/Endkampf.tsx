@@ -62,6 +62,7 @@ import {
   sandDunst,
   sandKoerner,
   sandTreiben,
+  schneeLand,
   schneeflockenTextur,
   strassenBauen,
   texturenVerkleinern,
@@ -191,6 +192,8 @@ function ArenaCanvas({
       nacht: 0x070a16,
     }[tageszeit];
     const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
+    const schneeLand3D = strassentyp === "schnee";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
     const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
@@ -216,7 +219,10 @@ function ArenaCanvas({
     renderer.shadowMap.enabled = profil.schatten;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = nacht ? 0.86 : wetter === "sonne" ? 1.18 : 0.98;
+    // Im Schneeland steht die Blende enger - sonst wird aus Weiß Creme.
+    renderer.toneMappingExposure = nacht
+      ? 0.86
+      : wetter === "sonne" ? (schneeLand3D ? 0.94 : 1.18) : schneeLand3D ? 0.9 : 0.98;
     element.appendChild(renderer.domElement);
     const kontextVerloren = (event: Event) => {
       event.preventDefault();
@@ -226,7 +232,11 @@ function ArenaCanvas({
     renderer.domElement.addEventListener("webglcontextlost", kontextVerloren);
 
     const oben = nacht ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
-    scene.add(new THREE.HemisphereLight(oben, nacht ? 0x160d2e : 0x455348, nacht ? 2.15 : 2.8));
+    // Schnee wirft kaltes Licht zurück, kein olivgrünes - siehe 3D-Kapitel.
+    const unten = schneeLand3D
+      ? (nacht ? 0x24405e : 0xd3e6f4)
+      : nacht ? 0x160d2e : 0x455348;
+    scene.add(new THREE.HemisphereLight(oben, unten, nacht ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
       wetter === "sonne"
         ? 0xfff1b8
@@ -240,6 +250,22 @@ function ArenaCanvas({
     licht.position.set(-8, 14, 9);
     licht.castShadow = profil.schatten;
     licht.shadow.mapSize.set(1024, 1024);
+    /*
+     * Wohin der Schatten überhaupt fällt.
+     *
+     * Ohne diese Zeilen steht die Schattenkamera auf ihrem Standardmaß: ein
+     * Kasten von zehn Metern Kantenlänge um den Nullpunkt. Alles, was weiter
+     * weg steht, warf keinen Schatten - und was genau an der Grenze stand,
+     * einen abgeschnittenen. Im Schnee fällt das am meisten auf: Weiß auf
+     * Weiß ist nur dort zu erkennen, wo etwas einen Schatten wirft.
+     */
+    licht.shadow.camera.left = -26;
+    licht.shadow.camera.right = 26;
+    licht.shadow.camera.top = 26;
+    licht.shadow.camera.bottom = -26;
+    licht.shadow.camera.far = 70;
+    licht.shadow.bias = -0.0015;
+    licht.shadow.camera.updateProjectionMatrix();
     scene.add(licht);
 
     const ausmass = planAusmass(plan);
@@ -248,7 +274,8 @@ function ArenaCanvas({
       new THREE.MeshToonMaterial({
         color: sandSturm
           ? nacht ? 0x3b2f1f : 0xa98a5c
-          : strassentyp === "schnee" ? 0xe4eef5 : strassentyp === "sand" ? 0xb59468 : nacht ? 0x1d2732 : 0x6b7166,
+          // Unberührter Schnee ist heller als die Fahrbahn - siehe 3D-Kapitel.
+          : strassentyp === "schnee" ? (nacht ? 0x8fa9c4 : 0xf1f8ff) : strassentyp === "sand" ? 0xb59468 : nacht ? 0x1d2732 : 0x6b7166,
         gradientMap: gradient,
       }),
     );
@@ -256,6 +283,18 @@ function ArenaCanvas({
     boden.receiveShadow = true;
     scene.add(boden);
     registrieren(boden);
+    // Auch die Arena steht im Schneeland, wenn ihre Straßen aus Schnee sind.
+    if (schneeLand3D) {
+      schneeLand({
+        scene,
+        gradient,
+        merken,
+        ausmass: { breite: ausmass.breite + 24, tiefe: ausmass.tiefe + 24 },
+        plan,
+        menge: profil.schatten ? 26 : 14,
+        tageszeit,
+      });
+    }
 
     const stadtBloecke: StadtBlock[] = [];
     stadtBloecke.push(...strassenBauen({

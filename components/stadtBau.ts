@@ -3,9 +3,12 @@ import {
   FELD_GROESSE,
   STADT_HOEHE,
 
+  feldAn,
+  feldBei,
   feldMitte,
   gebaeudeFelder,
   hoeheFuer,
+  imPlan,
   istStrasse,
   strassenFelder,
   vorDerTuer,
@@ -64,20 +67,42 @@ export function gradientTextur() {
   return textur;
 }
 
+/**
+ * Der Belag einer Naturstraße - Sandpiste oder Schneefahrbahn.
+ *
+ * Bei Schnee ist die Farbe die halbe Miete: Schnee ist nicht weiß, sondern
+ * bläulich, und was in ihn hineingedrückt wird, wird nicht grau, sondern
+ * kälter. Solange die Spuren einfach nur dunkler waren, sah die Fahrbahn aus
+ * wie festgetretener Sand - und mit einem warmen Licht darüber wurde daraus
+ * ein gelblicher Streifen, der mit Schnee nichts zu tun hatte.
+ *
+ * Deshalb drückt die Spur hier je Kanal verschieden tief: Rot verliert am
+ * meisten, Blau am wenigsten. Dazu kommt ein feines Glitzern, das man kaum
+ * einzeln sieht, das der Fläche aber die Tiefe gibt, die weiße Farbe allein
+ * nie hat.
+ */
 export function naturStrassenTextur(schnee: boolean) {
   const breite = 128, laenge = 512;
   const pixel = new Uint8Array(breite * laenge * 4);
+  /** Wie tief die Reifenspur je Kanal eindrückt - bei Schnee kalt, sonst grau. */
+  const spurTiefe = schnee ? [52, 42, 26] : [29, 29, 29];
   for (let y = 0; y < laenge; y++) {
     for (let x = 0; x < breite; x++) {
       const u = x / (breite - 1);
       const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-      const korn = (rauschen - Math.floor(rauschen) - 0.5) * 14;
+      const korn = (rauschen - Math.floor(rauschen) - 0.5) * (schnee ? 9 : 14);
       const spur = [0.22, 0.38, 0.62, 0.78].reduce((summe, mitte) =>
         summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / 0.027) ** 2)), 0);
       const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
-      const riffeln = Math.sin(y * 0.7 + u * 22) * 3;
-      const basis = schnee ? [222, 236, 244] : [199, 160, 105];
-      const farbe = basis.map((v) => THREE.MathUtils.clamp(v + korn + riffeln - spur * (schnee ? 44 : 29) + rand * (schnee ? 10 : -22), 0, 255));
+      const riffeln = Math.sin(y * 0.7 + u * 22) * (schnee ? 2 : 3);
+      // Einzelne Kristalle blitzen auf - selten, klein, hell.
+      const funkeln = schnee && (rauschen - Math.floor(rauschen)) > 0.985 ? 22 : 0;
+      const basis = schnee ? [228, 240, 251] : [199, 160, 105];
+      const farbe = basis.map((v, kanal) => THREE.MathUtils.clamp(
+        v + korn + riffeln + funkeln - spur * spurTiefe[kanal] + rand * (schnee ? 8 : -22),
+        0,
+        255,
+      ));
       pixel.set([...farbe, 255], (y * breite + x) * 4);
     }
   }
@@ -141,6 +166,161 @@ export function schneeflockenTextur() {
   textur.magFilter = THREE.LinearFilter;
   textur.needsUpdate = true;
   return textur;
+}
+
+/* --- Das Schneeland -------------------------------------------------- */
+
+/**
+ * Was aus einer weißen Fläche eine Schneelandschaft macht.
+ *
+ * Die Schneestraße war lange nur eine helle Fahrbahn auf einem hellen Boden:
+ * zwei Farbflächen, in denen das Auge nichts findet. Erst was darauf steht,
+ * macht daraus ein Land - Wehen, in denen sich das Licht bricht, und
+ * verschneite Tannen, an denen man sieht, wie weit es noch ist.
+ *
+ * Gebaut wird mit drei Geometrien und drei Materialien für alles zusammen:
+ * Jede Wehe und jede Tanne ist nur ein weiteres Objekt auf denselben Daten,
+ * und davon verträgt auch ein Handy einige Dutzend.
+ */
+const halbeTiefeVon = (ausmass: { tiefe: number }) => ausmass.tiefe / 2;
+
+export function schneeLand(args: {
+  scene: THREE.Scene;
+  gradient: THREE.Texture;
+  merken: Merken;
+  /** Die Fläche, auf der etwas stehen darf - Kantenlängen in Metern. */
+  ausmass: { breite: number; tiefe: number };
+  /** Wo die Fläche liegt; der alte Straßenzug ist nach hinten versetzt. */
+  mitteZ?: number;
+  /** Der gelegte Stadtplan - dort bleiben Straßen und Häuser frei. */
+  plan?: Stadtplan | null;
+  /** Ohne Plan: Wie weit von der Straßenmitte nichts stehen darf. */
+  freieBreite?: number;
+  /** Ein Punkt, um den herum nichts steht - dort fängt man an zu laufen. */
+  startPunkt?: { x: number; z: number } | null;
+  /** Wie viele Stücke höchstens - das Gerät zählt mit. */
+  menge?: number;
+  /** Nachts ist der Schnee blau, tagsüber fast weiß. */
+  tageszeit?: DreiDTageszeit;
+}): void {
+  const {
+    scene, gradient, merken, ausmass, mitteZ = 0, plan = null,
+    freieBreite = 5.4, startPunkt = null, menge = 26, tageszeit = "tag",
+  } = args;
+
+  const nacht = tageszeit === "nacht";
+  const weheGeometrie = new THREE.IcosahedronGeometry(1, 0);
+  const tanneGeometrie = new THREE.ConeGeometry(1, 3.4, 7);
+  const hutGeometrie = new THREE.ConeGeometry(0.62, 1.5, 7);
+  const schneeMaterial = new THREE.MeshToonMaterial({
+    color: nacht ? 0xb9cfe4 : 0xf4fbff,
+    gradientMap: gradient,
+  });
+  const tanneMaterial = new THREE.MeshToonMaterial({
+    color: nacht ? 0x1d3b42 : 0x2f6a63,
+    gradientMap: gradient,
+  });
+  for (const stueck of [weheGeometrie, tanneGeometrie, hutGeometrie, schneeMaterial, tanneMaterial]) {
+    merken(stueck);
+  }
+
+  /*
+   * Immer dieselbe Landschaft.
+   *
+   * Ein Zufall, der bei jedem Betreten neu würfelt, lässt die Wehen von
+   * Besuch zu Besuch springen - und wer eine Stadt im Editor einrichtet,
+   * sieht beim Spielen etwas anderes. Deshalb ein eigener, kleiner Würfel
+   * mit festem Anfang.
+   */
+  let saat = 20260916;
+  const zufall = () => {
+    saat = (saat * 1664525 + 1013904223) % 4294967296;
+    return saat / 4294967296;
+  };
+
+  /** Ist hier Platz? Auf Straßen, Häusern und vor den Füßen steht nichts. */
+  const frei = (x: number, z: number): boolean => {
+    if (startPunkt && Math.hypot(x - startPunkt.x, z - startPunkt.z) < 11) return false;
+    if (!plan) return Math.abs(x) > freieBreite;
+    const feld = feldBei(plan, x, z);
+    return !imPlan(plan, feld.x, feld.z) || feldAn(plan, feld.x, feld.z) === "";
+  };
+
+  /*
+   * Wie groß etwas sein darf, hängt davon ab, wie nah es an der Straße steht.
+   *
+   * Direkt am Rand liegt der Schnee, den der Pflug zur Seite geschoben hat:
+   * flach und niedrig. Eine Tanne gehört dorthin nicht - sie stünde im Bild
+   * und nähme die Sicht auf die Straße, für die die ganze Szene gebaut ist.
+   */
+  const amRand = (x: number) => !plan && Math.abs(x) < 14;
+
+  /*
+   * Der Wall, den der Pflug zur Seite geschoben hat.
+   *
+   * Es ist das Stück, an dem man eine Schneestraße erkennt: zwei lange,
+   * niedrige Wälle rechts und links, in denen die Schneestangen stecken. Im
+   * gelegten Stadtraster gibt es ihn nicht - dort liegt die Straße feldweise,
+   * und ein durchgehender Wall stünde quer über Kreuzungen.
+   */
+  if (!plan) {
+    /*
+     * Nicht als langer Kasten: Eine Kante quer durchs Bild bekommt von der
+     * Zeichenschattierung einen harten dunklen Streifen, und der sieht aus
+     * wie eine Mauer. Aneinandergereihte Buckel dagegen sind das, was ein
+     * Pflug hinterlässt.
+     */
+    for (const seite of [-1, 1]) {
+      for (let z = -halbeTiefeVon(ausmass); z < halbeTiefeVon(ausmass); z += 3.1) {
+        const buckel = new THREE.Mesh(weheGeometrie, schneeMaterial);
+        const laenge = 1.9 + zufall() * 1.1;
+        buckel.scale.set(1.15 + zufall() * 0.5, 0.42 + zufall() * 0.22, laenge);
+        buckel.rotation.set(0, zufall() * 0.4, seite * 0.12);
+        buckel.position.set(seite * (freieBreite + 0.5 + zufall() * 0.3), 0.02, mitteZ + z + zufall());
+        buckel.castShadow = true;
+        buckel.receiveShadow = true;
+        scene.add(buckel);
+      }
+    }
+  }
+
+  const halbeBreite = ausmass.breite / 2;
+  const halbeTiefe = halbeTiefeVon(ausmass);
+  let gesetzt = 0;
+  // Mehr Versuche als Stücke: Wer auf einer Straße landet, tritt zurück.
+  for (let versuch = 0; versuch < menge * 4 && gesetzt < menge; versuch++) {
+    const x = (zufall() - 0.5) * 2 * halbeBreite;
+    const z = mitteZ + (zufall() - 0.5) * 2 * halbeTiefe;
+    if (!frei(x, z)) continue;
+    gesetzt++;
+
+    if (amRand(x) || zufall() < 0.62) {
+      // Eine Wehe: flach, breit, unregelmäßig gedreht.
+      const wehe = new THREE.Mesh(weheGeometrie, schneeMaterial);
+      const groesse = (amRand(x) ? 0.8 + zufall() * 0.9 : 1.1 + zufall() * 2.4);
+      wehe.scale.set(groesse, groesse * (0.28 + zufall() * 0.2), groesse * (0.8 + zufall() * 0.5));
+      wehe.rotation.set(zufall() * 0.3, zufall() * Math.PI, zufall() * 0.3);
+      // Sie liegt im Boden, nicht darauf - sonst schwebt eine Kugel im Feld.
+      wehe.position.set(x, -groesse * 0.06, z);
+      // Erst der Schatten macht aus einer weißen Beule eine Wehe: Weiß auf
+      // Weiß sieht man sonst nicht.
+      wehe.castShadow = true;
+      wehe.receiveShadow = true;
+      scene.add(wehe);
+      continue;
+    }
+
+    // Oder eine Tanne mit Schnee auf den Zweigen.
+    const hoehe = 0.6 + zufall() * 0.55;
+    const tanne = new THREE.Mesh(tanneGeometrie, tanneMaterial);
+    tanne.scale.setScalar(hoehe);
+    tanne.position.set(x, 3.4 * hoehe * 0.5, z);
+    tanne.castShadow = true;
+    const hut = new THREE.Mesh(hutGeometrie, schneeMaterial);
+    hut.scale.setScalar(hoehe);
+    hut.position.set(x, 3.4 * hoehe * 0.86, z);
+    scene.add(tanne, hut);
+  }
 }
 
 /* --- Der Sandsturm -------------------------------------------------- */
@@ -423,6 +603,16 @@ export function fahrbahnMaterial(args: {
      */
     color: wetter === "sandsturm"
       ? strassentyp === "asphalt" && !imRaster ? 0x6f6047 : 0xc2a878
+      /*
+       * Regen auf Schnee ist Schneematsch - aber immer noch Schnee. Der
+       * erdige Ton, den die Sandpiste im Regen bekommt, machte aus der
+       * Schneefahrbahn einen gelblichen Streifen; sie wird jetzt nur kühler
+       * und ein wenig dunkler.
+       */
+      : strassentyp === "schnee"
+      // Die geräumte Fahrbahn ist festgefahren und damit eine Spur dunkler
+      // und kälter als der Schnee daneben; im Regen wird sie zu Matsch.
+      ? wetter === "regen" ? 0xc8d9e8 : 0xe8f1fa
       : strassentyp !== "asphalt"
       ? wetter === "regen" ? 0xb1a18a : 0xffffff
       : wetter === "regen" ? 0x263a4a : imRaster ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
