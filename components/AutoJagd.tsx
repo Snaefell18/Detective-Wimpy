@@ -31,8 +31,12 @@ const STANDPLATZ = { x: -10, z: 3 };
  * Erst sieht man Wimpy und seinen Wagen am Straßenrand, dann rast der andere
  * Wagen vorbei, dann steigt Wimpy ein und zieht los - ohne Schnitt, die
  * Kamera gleitet dabei in die Verfolgungsansicht.
+ *
+ * Die zwei Sekunden für den Weg zum Wagen sind Absicht: Darunter sieht man
+ * die Gehanimation nicht, man sieht nur, dass jemand über den Gehweg
+ * rutscht. Wem das zu lang ist, der tippt ins Bild und ist sofort drin.
  */
-const ANFAHRT = { vorbei: 2.9, einsteigen: 4.3, losfahren: 5.9 };
+const ANFAHRT = { vorbei: 2.9, einsteigen: 4.9, losfahren: 6.6 };
 
 /** Nur so weit vor Wimpy, dass der Fluchtwagen im Bild bleibt. */
 const FLUCHT_NAH = 3.8;
@@ -62,9 +66,15 @@ function weicherPunkt(): THREE.CanvasTexture {
   leinwand.width = leinwand.height = 64;
   const stift = leinwand.getContext("2d");
   if (stift) {
+    /*
+     * Ein fester Kern, der erst außen weich ausläuft. Ein durchgehend
+     * weicher Verlauf ergibt aus vielen Wolken einen gleichmäßigen Schleier;
+     * erst der Kern macht daraus einzelne Ballen, die man als Qualm sieht.
+     */
     const verlauf = stift.createRadialGradient(32, 32, 0, 32, 32, 32);
-    verlauf.addColorStop(0, "rgba(255,255,255,0.95)");
-    verlauf.addColorStop(0.45, "rgba(255,255,255,0.45)");
+    verlauf.addColorStop(0, "rgba(255,255,255,1)");
+    verlauf.addColorStop(0.38, "rgba(255,255,255,0.88)");
+    verlauf.addColorStop(0.72, "rgba(255,255,255,0.3)");
     verlauf.addColorStop(1, "rgba(255,255,255,0)");
     stift.fillStyle = verlauf;
     stift.fillRect(0, 0, 64, 64);
@@ -85,8 +95,13 @@ type Wolke = {
   leben: number;
   dauer: number;
   tempo: THREE.Vector3;
+  /** Die Größe, mit der dieser Vorrat normalerweise anfängt. */
   start: number;
+  /** Womit diese eine Wolke angefangen hat - der Kavalierstart bläst größer. */
+  groesse: number;
   deckkraft: number;
+  /** Wie kräftig diese eine Wolke ist; sonst gilt der Wert des Vorrats. */
+  staerke: number;
 };
 
 /** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
@@ -191,6 +206,15 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
     let mixer: THREE.AnimationMixer | null = null;
     let stehen: THREE.AnimationAction | null = null;
     let gehen: THREE.AnimationAction | null = null;
+    /**
+     * Ob schon auf Gehen umgeschaltet wurde.
+     *
+     * Ein Schalter, kein Zustandstest: fadeOut hält eine Aktion nicht an,
+     * isRunning blieb also für immer wahr - und damit lief jedes Bild ein
+     * reset() auf die Gehanimation. Die stand dadurch bei Bild eins still,
+     * und Wimpy rutschte in Ruhepose zu seinem Wagen.
+     */
+    let geht = false;
     async function figurLaden() {
       if (!figurModell) return;
       const gltf = await loader.loadAsync(figurModell.datei);
@@ -229,11 +253,27 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
         sprite.scale.setScalar(groesse);
         sprite.visible = false;
         scene.add(sprite);
-        return { sprite, material, leben: 0, dauer: 1, tempo: new THREE.Vector3(), start: groesse, deckkraft };
+        return {
+          sprite, material, leben: 0, dauer: 1, tempo: new THREE.Vector3(),
+          start: groesse, groesse, deckkraft, staerke: deckkraft,
+        };
       });
-    // Auspuff: gräulich und träge. Schneefahne: weiß, kurz, dicht über dem Boden.
-    const rauch = vorrat(20, 0xa8bccd, 1, 0.58);
-    const fahne = vorrat(16, 0xffffff, 0.7, 0.34);
+    /*
+     * Auspuff: gräulich und träge. Reifenrauch: weiß, kurz, dicht über dem
+     * Boden. Beide Vorräte sind deutlich größer, als die Jagd selbst
+     * braucht - der Kavalierstart leert sie in anderthalb Sekunden fast
+     * ganz, und danach liegen sie wieder still da.
+     */
+    const rauch = vorrat(78, 0xa8bccd, 1, 0.58);
+    /*
+     * Der Reifenrauch ist nicht weiß, sondern ein kräftiges Grau.
+     *
+     * Weißer Qualm ist zwar das, was man vom Kavalierstart kennt - hier fährt
+     * er aber über Schnee los, und auf hellem Grund sieht man weiß auf weiß
+     * gar nichts. Das Grau liegt zwischen Schnee und Asphalt und ist deshalb
+     * auf beidem zu sehen.
+     */
+    const fahne = vorrat(54, 0xa4b3bf, 0.7, 0.34);
     let rauchUhr = 0, fahneUhr = 0;
     /**
      * Eine freie Wolke ans Heck setzen.
@@ -245,18 +285,28 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
     const qualmen = (
       vorratListe: Wolke[], gruppe: THREE.Group, seite: number,
       tempoZ: number, dauer: number, hoehe: number,
+      /** Für den Kavalierstart: breiter, größer, dichter, dunkler. */
+      wucht: { streuung?: number; wuchs?: number; steigen?: number; farbe?: number; dichte?: number } = {},
     ) => {
       const frei = vorratListe.find((w) => w.leben <= 0);
       if (!frei) return;
+      const streuung = wucht.streuung ?? 0.3;
       frei.leben = dauer;
       frei.dauer = dauer;
       frei.sprite.position.set(
-        gruppe.position.x + seite + (Math.random() - 0.5) * 0.3,
+        gruppe.position.x + seite + (Math.random() - 0.5) * streuung,
         hoehe,
-        gruppe.position.z - 1.35 + (Math.random() - 0.5) * 0.25,
+        gruppe.position.z - 1.35 + (Math.random() - 0.5) * streuung * 0.8,
       );
-      frei.tempo.set((Math.random() - 0.5) * 0.5, 0.35 + Math.random() * 0.4, tempoZ);
-      frei.sprite.scale.setScalar(frei.start);
+      frei.tempo.set(
+        (Math.random() - 0.5) * streuung * 1.6,
+        (wucht.steigen ?? 0.35) + Math.random() * 0.4,
+        tempoZ,
+      );
+      frei.groesse = frei.start * (wucht.wuchs ?? 1);
+      frei.staerke = frei.deckkraft * (wucht.dichte ?? 1);
+      frei.material.color.setHex(wucht.farbe ?? (vorratListe === rauch ? 0xa8bccd : 0xffffff));
+      frei.sprite.scale.setScalar(frei.groesse);
       frei.sprite.visible = true;
     };
     /** Wolken altern lassen: aufsteigen, größer werden, ruhig verschwinden. */
@@ -268,8 +318,8 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
         w.sprite.position.addScaledVector(w.tempo, dt);
         const anteil = w.leben / w.dauer;
         // Sanft ein- und ausblenden - nichts blitzt, nichts springt.
-        w.material.opacity = w.deckkraft * Math.min(1, anteil * 2.2) * anteil;
-        w.sprite.scale.setScalar(w.start * (1 + (1 - anteil) * 1.6));
+        w.material.opacity = w.staerke * Math.min(1, anteil * 2.2) * anteil;
+        w.sprite.scale.setScalar(w.groesse * (1 + (1 - anteil) * 1.6));
       }
     };
     /**
@@ -306,6 +356,16 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       if (phase !== 'anfahrt') return;
       phase = 'jagd';
       wimpy.visible = false;
+      /*
+       * Der Wagen springt vom Parkplatz auf seine Spur - und die Wolken
+       * springen mit. Sonst bliebe die ganze Qualmwand dort liegen, wo er
+       * eben noch stand, und die Jagd begänne mit einem sauberen Schnitt
+       * mitten in den Effekt hinein.
+       */
+      const versatz = new THREE.Vector3(
+        spur.current * 3.4 - spieler.position.x, 0, -spieler.position.z,
+      );
+      for (const w of [...rauch, ...fahne]) if (w.leben > 0) w.sprite.position.add(versatz);
       spieler.position.set(spur.current * 3.4, 0, 0);
       spieler.rotation.set(0, 0, 0);
       gegner.position.set(0, 0, FLUCHT_FERN);
@@ -347,7 +407,11 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       // Dann geht Wimpy die zwei Schritte zu seinem Wagen und steigt ein.
       if (t > ANFAHRT.vorbei) {
         const schritt = THREE.MathUtils.clamp((t - ANFAHRT.vorbei) / (ANFAHRT.einsteigen - ANFAHRT.vorbei), 0, 1);
-        if (gehen && stehen?.isRunning()) { stehen.fadeOut(0.25); gehen.reset().fadeIn(0.25).play(); }
+        if (!geht) {
+          geht = true;
+          stehen?.fadeOut(0.25);
+          gehen?.reset().fadeIn(0.25).play();
+        }
         const ziel = { x: PARKPLATZ.x - 0.9, z: PARKPLATZ.z + 0.5 };
         wimpy.position.x = THREE.MathUtils.lerp(STANDPLATZ.x, ziel.x, weich(schritt));
         wimpy.position.z = THREE.MathUtils.lerp(STANDPLATZ.z, ziel.z, weich(schritt));
@@ -379,12 +443,55 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
       // Der Wagen ist schon in Fahrt, wenn die Jagd übernimmt: kein Ruck.
       speed = auto.speed * 0.4 * anfahren;
       weltBewegen(speed / 3.6 * dt);
-      // Der Motor läuft schon, während Wimpy noch zusieht: ein ruhiger
-      // Standgasqualm, der beim Anfahren kräftiger wird.
+
+      /*
+       * Der Kavalierstart.
+       *
+       * Sobald Wimpy im Wagen sitzt, geht die Kupplung kommen und der Wagen
+       * steht einen Moment qualmend auf der Stelle: schwarzer Auspuff aus dem
+       * Heck, weißer Reifenrauch von beiden Hinterrädern, beides breit und
+       * dicht. Das ist nicht nur Krawall - es deckt zu, dass die Räder sich
+       * nicht drehen: Die beiden mitgelieferten Wagen sind je ein einziges
+       * Mesh ohne eigene Felgen.
+       *
+       * Am Anfang qualmt es am stärksten und lässt nach, wie es sich gehört -
+       * aber gleichmäßig, nichts blitzt und nichts springt.
+       */
+      const roh = THREE.MathUtils.clamp(
+        (t - ANFAHRT.einsteigen) / (ANFAHRT.losfahren - ANFAHRT.einsteigen), 0, 1,
+      );
+      const kavalier = t >= ANFAHRT.einsteigen ? 1 - roh * 0.45 : 0;
       rauchUhr -= dt;
       if (rauchUhr <= 0) {
-        rauchUhr = anfahren > 0 ? 0.1 : 0.5;
-        qualmen(rauch, spieler, 0.5, -1 - anfahren * 4, anfahren > 0 ? 1 : 1.6, 0.42);
+        if (kavalier > 0) {
+          /*
+           * Viele kleine dichte Ballen statt weniger großer Schleier: Erst
+           * dadurch sieht es nach Qualm aus und nicht nach Nebel. Die Wolken
+           * wachsen über ihr Leben auf das Zweieinhalbfache - aus den Ballen
+           * wird von selbst eine Wand.
+           */
+          rauchUhr = 0.04;
+          for (const seite of [0.42, 0.06, -0.3]) {
+            qualmen(rauch, spieler, seite, -1.2 - anfahren * 5, 1, 0.45 + Math.random() * 0.4, {
+              streuung: 0.55, wuchs: 1.3 + kavalier * 0.7, steigen: 0.8, dichte: 1.45, farbe: 0x47535f,
+            });
+          }
+        } else {
+          // Vorher läuft nur der Motor: ein ruhiger Standgasqualm.
+          rauchUhr = 0.5;
+          qualmen(rauch, spieler, 0.5, -1, 1.6, 0.42);
+        }
+      }
+      fahneUhr -= dt;
+      if (fahneUhr <= 0 && kavalier > 0) {
+        fahneUhr = 0.035;
+        // Von beiden Hinterrädern, flach über dem Asphalt - und sie bleibt
+        // etwas länger liegen als der Auspuff, so wie verbrannter Gummi es tut.
+        for (const seite of [0.82, -0.82]) {
+          qualmen(fahne, spieler, seite, -1.4 - anfahren * 5.5, 1.05, 0.14 + Math.random() * 0.22, {
+            streuung: 0.65, wuchs: 2.2 + kavalier * 1.2, steigen: 0.45, dichte: 2.4, farbe: 0x8d9daa,
+          });
+        }
       }
       wolkenBewegen(rauch, dt);
       wolkenBewegen(fahne, dt);
@@ -435,19 +542,31 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, onStand, 
 
       /* --- Was das Tempo sichtbar macht ------------------------------ */
       const tempoAnteil = THREE.MathUtils.clamp(speed / Math.max(1, auto.speed), 0, 1);
+      /*
+       * Der Kavalierstart klingt in die Jagd hinein aus, statt mit dem
+       * Phasenwechsel abzureißen - die erste Sekunde qualmt noch nach.
+       */
+      const nachstart = Math.max(0, 1 - zeit / 1.1);
       // Auspuff: je schneller, desto dichter die Fahne hinter dem Wagen.
       rauchUhr -= dt;
       if (rauchUhr <= 0) {
-        rauchUhr = 0.14 - tempoAnteil * 0.08;
+        rauchUhr = (0.14 - tempoAnteil * 0.08) * (1 - nachstart * 0.6);
         const abzug = -(2.5 + tempoAnteil * 5.5);
-        qualmen(rauch, spieler, 0.5, abzug, 0.9 + tempoAnteil * 0.5, 0.42);
+        qualmen(rauch, spieler, 0.5, abzug, 0.9 + tempoAnteil * 0.5, 0.42, {
+          wuchs: 1 + nachstart * 1.8, streuung: 0.3 + nachstart * 0.6, dichte: 1 + nachstart * 0.3,
+        });
         qualmen(rauch, gegner, 0.5, abzug, 0.9, 0.5);
       }
-      // Schneefahne von den Hinterrädern - erst ab ordentlichem Tempo.
+      // Reifenrauch von den Hinterrädern - beim Start dicht, danach nur noch
+      // ab ordentlichem Tempo eine Fahne.
       fahneUhr -= dt;
-      if (fahneUhr <= 0 && tempoAnteil > 0.25) {
-        fahneUhr = 0.06;
-        qualmen(fahne, spieler, (Math.random() < 0.5 ? -1 : 1) * 0.75, -(3 + tempoAnteil * 7), 0.45 + tempoAnteil * 0.3, 0.18);
+      if (fahneUhr <= 0 && (tempoAnteil > 0.25 || nachstart > 0)) {
+        fahneUhr = 0.06 - nachstart * 0.025;
+        for (const seite of nachstart > 0 ? [0.78, -0.78] : [(Math.random() < 0.5 ? -1 : 1) * 0.75]) {
+          qualmen(fahne, spieler, seite, -(3 + tempoAnteil * 7), 0.45 + tempoAnteil * 0.3 + nachstart * 0.6, 0.18, {
+            wuchs: 1 + nachstart * 2.2, streuung: 0.3 + nachstart * 0.8, dichte: 1 + nachstart * 0.9,
+          });
+        }
       }
       wolkenBewegen(rauch, dt);
       wolkenBewegen(fahne, dt);
