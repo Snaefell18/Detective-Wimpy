@@ -210,6 +210,20 @@ danach noch einmal, diesmal in der Arena. Erst dann kommt der Epilog. Wer den
 Finalfall nicht löst, sieht keinen Kampf; und brach im Täter eine Gestalt
 hervor, steht sie in der Arena, nicht ihr Wirt.
 
+#### Verloren vor Gericht: noch einmal verhandeln
+
+Ein geplatztes Verfahren ist nicht das Ende der Saga. Unter dem Urteil steht
+**„Noch einmal verhandeln ›"**: Die Anklage steht wieder offen, die Versuche
+sind wieder voll, niemand gilt mehr als abgewiesen, und die Anhörung beginnt
+als neues Gespräch - mit allem, was in der Beweismitteltasche liegt. Das gilt
+für jede Verhandlung, ob man selbst anklagt oder verteidigt.
+
+Zwei Dinge bleiben dabei stehen: Öhö zieht nicht noch einmal ein (er ist ja
+schon da - die Zeremonie ein zweites Mal wäre Wartezeit), und wer schuldig ist,
+ändert sich nicht; das steht seit der Erzeugung im versiegelten Bogen. Wer
+lieber weitergeht, nimmt den zweiten Knopf: „Genug für heute - zum Epilog ›".
+Erst der führt wie früher in den Epilog und danach in den Abspann.
+
 #### Gericht & Flucht: Urteil, Jagd, Kampf
 
 Die Finale-Art **„Gericht & Flucht“** ist beides zusammen. Sie beginnt wie

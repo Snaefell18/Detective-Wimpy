@@ -7249,6 +7249,21 @@ a.zurueck {
   color: var(--text);
 }
 
+/*
+ * Der Satz vor dem „Noch einmal“.
+ *
+ * Er steht unter einem verlorenen Urteil und soll wie eine offene Tür
+ * klingen, nicht wie eine Fehlermeldung: dieselbe Breite wie der Spruch
+ * darüber, nur leiser.
+ */
+.saal-noch-einmal {
+  margin: 0;
+  max-width: 34ch;
+  line-height: 1.55;
+  font-size: 15px;
+  color: var(--text-leise);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .saal-licht,
   .saal-flimmern,
