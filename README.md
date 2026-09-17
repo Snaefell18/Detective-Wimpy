@@ -158,8 +158,8 @@ mit dem Daumen gesteuert:
   Häusern ringsum an; eine im Reiter **Städte** geplante Stadt lässt sich
   ebenso übernehmen. Häuser sind Deckung: Zauberkugeln zerplatzen an ihnen,
   und wer um die Ecke geht, ist erst einmal weg. Unter neun Straßenfeldern
-  findet kein Kampf statt - dann geht alles weiter, als hätte man keinen
-  Showdown gewählt, und der Editor sagt das auch.
+  taugt ein Plan nicht als Arena - dann wird auf dem Standardkampfplatz
+  gekämpft, und der Editor sagt das auch.
 - **Gesteuert** wird wie im 3D-Kapitel: Daumenstick zum Laufen, ein Knopf für
   den Zauberwurf (er wird von selbst zum Nahkampf, sobald man nah genug
   steht), einer für die Ausweichrolle. Am Schreibtisch: WASD oder Pfeiltasten,
@@ -173,6 +173,9 @@ mit dem Daumen gesteuert:
 - **Davor** kann die bekannte Verfolgungsjagd laufen, diesmal mit dem Gegner
   im Fluchtwagen. Sie ist abwählbar: Wer sie im Editor nicht einrichtet, fängt
   direkt in der Arena an, und im Spiel lässt sie sich überspringen.
+- **Ohne gebaute Arena** wird trotzdem gekämpft: Dann steht der
+  Standardkampfplatz da (siehe unten bei „Gericht & Flucht"). Früher fiel der
+  Showdown dann still aus - und mit ihm ein ganzes Finale.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
   „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
   Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
@@ -207,9 +210,20 @@ Zeit **nach** Jagd und Kampf geschrieben: Er erzählt, wie es ausging, und
 nennt weder Sieger noch Verlierer - beides ist möglich.
 
 Platzt das Verfahren, wird nicht gekämpft: Dann geht der Angeklagte ganz ruhig
-durch die Vordertür, und es kommt der Epilog. Dasselbe gilt, wenn keine
-brauchbare Arena eingerichtet ist - dann endet die Saga nach dem Urteil, so wie
-ein gewöhnliches Gerichtsfinale. Der Twist verträgt sich damit so wenig wie mit
+durch die Vordertür, und es kommt der Epilog.
+
+**Ohne eingerichtete Arena fällt das Ende nicht aus.** Wer diese Finale-Art
+wählt, hat sich für Urteil, Jagd und Kampf entschieden - und bekommt sie. Steht
+im Editor keine Arena (oder eine mit weniger als neun Straßenfeldern), springt
+der Standardkampfplatz ein: freie Mitte, Häuser ringsum, genau der, den der
+Knopf „Kampfplatz anlegen" legt. War überhaupt nichts eingerichtet, gehört bei
+dieser Art auch die Jagd dazu. Alles andere - Stufe, Musik, Gegnermodell,
+Licht - bleibt, wie es eingestellt ist, und wer die Jagd bewusst abgewählt hat,
+behält sie abgewählt. Dasselbe gilt für den Showdown einer Saga und den eines
+Arcs.
+
+Und der Knopf unter dem Urteil sagt die Wahrheit: „Ihm nach ›" steht dort nur,
+wenn danach wirklich eine Verfolgung kommt. Der Twist verträgt sich damit so wenig wie mit
 jedem anderen Gerichtsfinale: Wer vor Gericht mit Wimpy spielt, kann nicht
 zugleich unsichtbar bleiben.
 

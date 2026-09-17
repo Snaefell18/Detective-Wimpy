@@ -139,7 +139,7 @@ export const kampfSpielbar = (vorgabe: KampfVorgabe | undefined | null): vorgabe
 
 /** Was im Editor unter der Arena steht. */
 export function kampfZeile(vorgabe: KampfVorgabe): string {
-  if (!vorgabe.plan) return "Noch keine Arena gebaut.";
+  if (!vorgabe.plan) return "Noch keine Arena gebaut - gekämpft wird auf dem Standardplatz.";
   const felder = strassenFelder(vorgabe.plan).length;
   const arten = gebaeudeArten(vorgabe.plan).length;
   const stufe = KAMPF_STUFEN.find((s) => s.id === vorgabe.stufe)?.label ?? vorgabe.stufe;
@@ -243,18 +243,92 @@ export const kampfSpruch = (vorgabe: KampfVorgabe, name: string): string =>
   `Du hast gewonnen, kleiner Detektiv. Aber vergiss nicht: Jahrelang hat niemand ${name} gesehen - auch du nicht.`;
 
 /**
+ * Eine Arena, wenn keine gebaut wurde.
+ *
+ * Wer als Finale den Showdown oder „Gericht & Flucht“ wählt, hat sich für ein
+ * Ende mit Kampf entschieden - und genau das muss er bekommen. Früher fiel
+ * ohne gebaute Arena das ganze Ende still aus: Im Saal stand „Ihm nach“, und
+ * danach kam sofort der Epilog. Das ist kein Zurückfallen auf ein einfacheres
+ * Ende, das ist ein verlorenes Finale.
+ *
+ * Deshalb springt hier der Kampfplatz ein, den auch der Knopf „Kampfplatz
+ * anlegen“ im Editor legt: freie Mitte, Häuser ringsum. Alles andere - Stufe,
+ * Musik, Gegnermodell, Licht - bleibt, wie es eingestellt war.
+ *
+ * Und war überhaupt nichts eingerichtet, gehört zu „Gericht & Flucht“ auch
+ * die Jagd: Das Ende heißt Urteil, Jagd, Kampf. Wer dagegen eine Arena gebaut
+ * und die Jagd bewusst abgewählt hat, behält sie abgewählt.
+ */
+function ersatzArena(
+  art: FinaleArt | undefined,
+  vorhanden: KampfVorgabe | undefined,
+  gegnerId: string,
+  name: string,
+): KampfVorgabe {
+  const plan = arenaPlan(9, 9);
+  const grund = vorhanden ?? STANDARD_KAMPF;
+  return {
+    ...grund,
+    plan,
+    locations: gebaeudeArten(plan),
+    jagd:
+      vorhanden?.jagd ??
+      (!vorhanden && art === "gericht-kampf" ? neueKampfJagd(gegnerId, name) : null),
+  };
+}
+
+/**
  * Die Arena einer Saga - oder nichts.
  *
  * Dasselbe wie arcKampf() für den Arc, nur eine Ebene tiefer: Steht die
- * Finale-Art auf „Showdown“ oder „Gericht & Flucht“ und ist die Arena
- * spielbar, wird gekämpft. Sonst endet die Saga genau wie eine klassische
- * (oder nach dem Urteil), und niemand merkt etwas davon.
+ * Finale-Art auf „Showdown“ oder „Gericht & Flucht“, wird gekämpft. Ist keine
+ * brauchbare Arena gebaut, springt die Standardarena ein (siehe
+ * ersatzArena) - das Ende fällt nicht mehr aus, nur weil im Editor ein Knopf
+ * ungedrückt geblieben ist. Bei jeder anderen Finale-Art kommt nichts.
  */
 export const sagaKampf = (
-  vorgaben: { finaleArt?: string; kampf?: KampfVorgabe } | undefined,
+  vorgaben:
+    | { finaleArt?: string; kampf?: KampfVorgabe; drahtzieherId?: string; name?: string }
+    | undefined,
 ): KampfVorgabe | null => {
   // Zwei Arten enden im Kampf: der Showdown nach dem Finalfall und das
   // Gerichtsfinale, aus dem der Verurteilte davonläuft.
-  if (!mitKampf(vorgaben?.finaleArt as FinaleArt | undefined)) return null;
-  return kampfSpielbar(vorgaben?.kampf) ? vorgaben.kampf : null;
+  const art = vorgaben?.finaleArt as FinaleArt | undefined;
+  if (!mitKampf(art)) return null;
+  if (kampfSpielbar(vorgaben?.kampf)) return vorgaben.kampf;
+  return ersatzArena(art, vorgaben?.kampf, vorgaben?.drahtzieherId ?? "", vorgaben?.name ?? "");
 };
+
+/**
+ * Die Arena einer ganzen Saga - sie fragt auch den Gerichtssaal.
+ *
+ * Normalerweise entscheiden die Vorgaben, was am Ende passiert. Eine schon
+ * erzeugte Saga trägt die Art aber ein zweites Mal bei sich: im Saal, für den
+ * ihre Texte geschrieben wurden („er hat vorgesorgt - ein Wagen, der immer
+ * fahrbereit dasteht"). Gehen die beiden auseinander - weil im Editor später
+ * eine andere Art angetippt wurde -, zählt der Saal: Der Spieler sitzt gerade
+ * darin, und ihm wurde eine Flucht versprochen.
+ */
+export const sagaKampfFuer = (
+  saga:
+    | {
+        vorgaben?: { finaleArt?: string; kampf?: KampfVorgabe; drahtzieherId?: string; name?: string };
+        finale?: { verhandlung?: { art?: string } | null } | null;
+      }
+    | undefined,
+): KampfVorgabe | null => {
+  const ausVorgaben = sagaKampf(saga?.vorgaben);
+  if (ausVorgaben) return ausVorgaben;
+  if (saga?.finale?.verhandlung?.art !== "gericht-kampf") return null;
+  return sagaKampf({ ...saga?.vorgaben, finaleArt: "gericht-kampf" });
+};
+
+/**
+ * Und dasselbe für einen Arc: Steht sein Finale auf „Showdown“, wird
+ * gekämpft - notfalls auf der Standardarena.
+ */
+export const arcErsatzArena = (
+  vorhanden: KampfVorgabe | undefined,
+  culpritId: string,
+  wort: string,
+): KampfVorgabe => ersatzArena("kampf", vorhanden, culpritId, wort);

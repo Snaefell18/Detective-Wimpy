@@ -99,9 +99,10 @@ export function KampfFeld({
       <p className="leise klein">{kampfZeile(kampf)}</p>
       {!kampfSpielbar(kampf) && (
         <p className="hinweis warnung klein">
-          Ohne Arena mit mindestens {MINDEST_FELDER} Straßenfeldern findet kein Kampf
-          statt - dann geht alles weiter, als hätte man keinen Showdown gewählt.
+          Hier steht noch keine Arena mit mindestens {MINDEST_FELDER} Straßenfeldern.
           {felder > 0 && felder < MINDEST_FELDER ? ` Gerade sind es ${felder}.` : ""}
+          {" "}Gekämpft wird trotzdem - dann auf dem Standardkampfplatz: freie
+          Mitte, Häuser ringsum. Wer etwas anderes will, legt ihn hier an.
         </p>
       )}
       <div className="knopf-reihe">

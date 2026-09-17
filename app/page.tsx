@@ -41,7 +41,7 @@ import { useAdmin } from "@/lib/adminStore";
 import { postJson } from "@/lib/api";
 import { arcAbspann, arcCredits, arcKampf, type Arc } from "@/lib/arcTypen";
 import { abspannVon } from "@/lib/abspann";
-import { sagaKampf } from "@/lib/endkampf";
+import { sagaKampfFuer } from "@/lib/endkampf";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
 import { dreiDFuerSagaFall } from "@/lib/saga3dSync";
@@ -1215,6 +1215,11 @@ export default function Home() {
               frage={sagaDaten.finale.frage}
               einzugTon={sagaDaten.vorgaben.gerichtTon}
               tasche={tasche.inhalt}
+              /*
+               * Was der Knopf unter dem Urteil verspricht, muss auch kommen:
+               * „Ihm nach“ nur dann, wenn hier wirklich eine Arena wartet.
+               */
+              nachjagd={Boolean(sagaKampfFuer(sagaDaten))}
               onFertig={(geschafft, verurteilterId) => {
                 /*
                  * „Gericht & Flucht“: Das Urteil ist nicht das Ende.
@@ -1227,7 +1232,7 @@ export default function Home() {
                  * Platzt das Verfahren oder taugt die Arena nichts, bleibt
                  * alles wie bisher: Es geht in den Epilog.
                  */
-                const arena = sagaKampf(sagaDaten.vorgaben);
+                const arena = sagaKampfFuer(sagaDaten);
                 if (geschafft && arena) {
                   setShowdownGegner(verurteilterId ?? "");
                   saga.setzePhase("showdown", null, true);
@@ -1253,7 +1258,7 @@ export default function Home() {
       return (
         <main className="app">
           <Showdown
-            kampf={sagaKampf(sagaDaten.vorgaben)}
+            kampf={sagaKampfFuer(sagaDaten)}
             gegnerId={showdownGegner}
             // Wer neu lädt, während der Kampf läuft, hat die Id verloren -
             // dann steht dort wenigstens, gegen wen es geht.
@@ -1479,7 +1484,7 @@ export default function Home() {
                      * und wenn eine Gestalt aus ihm herausgebrochen ist,
                      * gegen sie.
                      */
-                    const arena = sagaKampf(saga.stand.saga.vorgaben);
+                    const arena = sagaKampfFuer(saga.stand.saga);
                     if (arena && geschafft) {
                       setShowdownGegner(
                         stand.ergebnis?.verwandlung?.daemon?.id ||
@@ -1499,7 +1504,7 @@ export default function Home() {
           }
           weiterText={
             saga.stand?.lauf.phase === "finale"
-              ? sagaKampf(saga.stand.saga.vorgaben) && stand.ergebnis?.richtig
+              ? sagaKampfFuer(saga.stand.saga) && stand.ergebnis?.richtig
                 ? "Er wehrt sich ›"
                 : "Epilog ›"
               : saga.stand &&

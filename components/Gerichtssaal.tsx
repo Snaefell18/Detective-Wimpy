@@ -52,6 +52,7 @@ export function Gerichtssaal({
   frage,
   einzugTon = "",
   tasche,
+  nachjagd: nachjagdAussen,
   onFertig,
 }: {
   verhandlung: Verhandlung;
@@ -68,6 +69,16 @@ export function Gerichtssaal({
    * bleibt beim Fragen.
    */
   tasche: Beweismittel[];
+  /**
+   * Geht es nach dem Urteil wirklich weiter - Jagd und Arena?
+   *
+   * Die Art allein reicht dafür nicht: Ob danach etwas kommt, entscheidet der
+   * Aufrufer, der die Arena kennt (siehe sagaKampf in lib/endkampf.ts).
+   * Stünde hier nur die Art, verspräche der Knopf „Ihm nach“ eine Verfolgung,
+   * die es nicht gibt - und der Spieler landet mit einem Klick im Epilog.
+   * Ohne Angabe gilt, was die Art sagt.
+   */
+  nachjagd?: boolean;
   /**
    * Die Verhandlung ist durch - mit oder ohne Schuldspruch.
    *
@@ -88,7 +99,7 @@ export function Gerichtssaal({
    * sondern der Startschuss: Der Verurteilte wartet ihn nicht ab. Platzt das
    * Verfahren, geht er ohnehin - dann bleibt es beim Urteil.
    */
-  const nachjagd = verhandlung.art === "gericht-kampf";
+  const nachjagd = nachjagdAussen ?? verhandlung.art === "gericht-kampf";
 
   /* --- Zustand -------------------------------------------------------- */
 

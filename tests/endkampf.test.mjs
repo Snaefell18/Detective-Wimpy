@@ -304,8 +304,13 @@ console.log("\n12. Der Arc fällt nie in ein leeres Finale");
 {
   const arc = leererArc();
   pruefe("ohne Kampf-Art kein Kampf", arcKampf({ ...arc, finale: { ...arc.finale, art: "text" } }) === null);
-  pruefe("mit Art, aber ohne Arena auch nicht",
-    arcKampf({ ...arc, finale: { ...arc.finale, art: "kampf" } }) === null);
+  /*
+   * Aber mit Kampf-Art und ohne gebaute Arena fällt das Finale nicht aus:
+   * Dann steht der Standardkampfplatz da. Ein Arc, der auf den Showdown
+   * zuläuft, soll nicht still in seinen Abschlusstext springen.
+   */
+  pruefe("mit Art, aber ohne Arena springt der Standardplatz ein",
+    kampfSpielbar(arcKampf({ ...arc, finale: { ...arc.finale, art: "kampf" } })));
   const fertig = {
     ...arc,
     finale: { ...arc.finale, art: "kampf", kampf: { ...STANDARD_KAMPF, plan: arenaPlan(9, 9) } },
@@ -323,8 +328,21 @@ console.log("\n13. Auch eine Saga darf im Kampf enden");
   pruefe("die Art steht zur Wahl", FINALE_ARTEN.some((a) => a.id === "kampf"));
   pruefe("sie führt nicht in den Saal", !mitVerhandlung("kampf") && !mitAnklage("kampf"));
   pruefe("ohne die Art kein Kampf", sagaKampf({ finaleArt: "klassisch", kampf: arena }) === null);
-  pruefe("mit Art, aber ohne Arena auch nicht", sagaKampf({ finaleArt: "kampf" }) === null);
   pruefe("mit beidem schon", sagaKampf({ finaleArt: "kampf", kampf: arena }) === arena);
+  /*
+   * Und ohne gebaute Arena fällt das Finale nicht aus, sondern bekommt den
+   * Standardkampfplatz: Wer "Showdown" wählt, hat sich für ein Ende mit
+   * Kampf entschieden - ein ungedrückter Knopf im Editor darf es ihm nicht
+   * nehmen.
+   */
+  pruefe("mit Art, aber ohne Arena springt der Standardplatz ein",
+    kampfSpielbar(sagaKampf({ finaleArt: "kampf" })));
+  pruefe("und behält, was sonst eingestellt war", (() => {
+    const ersatz = sagaKampf({ finaleArt: "kampf", kampf: { ...STANDARD_KAMPF, plan: null, stufe: "hart", musik: "/audio/x.mp3" } });
+    return ersatz?.stufe === "hart" && ersatz?.musik === "/audio/x.mp3";
+  })());
+  pruefe("eine abgewählte Jagd bleibt abgewählt",
+    sagaKampf({ finaleArt: "kampf", kampf: { ...STANDARD_KAMPF, plan: null, jagd: null } })?.jagd === null);
   pruefe("und alte Sagas ohne alles stören nicht", sagaKampf(undefined) === null);
 
   // Die Vorgaben gehen als Ganzes durchs Schema, bevor sie gespeichert werden.
@@ -338,19 +356,18 @@ console.log("\n13. Auch eine Saga darf im Kampf enden");
   pruefe("und gibt sie unverändert zurück",
     sagaKampf(geprueft.data)?.plan?.breite === 9 && geprueft.data?.kampf?.stufe === "mittel");
   pruefe("samt der Jagd davor", geprueft.data?.kampf?.jagd?.fliehenderId === "hut");
-  pruefe("eine kaputte Arena nimmt es auch, macht sie aber unspielbar",
-    SagaVorgabenSchema.safeParse({
+  // Eine kaputte Arena nimmt niemandem das Finale: Das Schema wirft den Plan
+  // weg, und an seine Stelle tritt der Standardkampfplatz.
+  pruefe("eine kaputte Arena nimmt es an und ersetzt den Plan", (() => {
+    const kaputt = {
       ...STANDARD_SAGA_VORGABEN,
       finaleArt: "kampf",
       kampf: { ...arena, plan: { breite: 99, tiefe: 2, felder: [] } },
-    }).success &&
-      sagaKampf(
-        SagaVorgabenSchema.parse({
-          ...STANDARD_SAGA_VORGABEN,
-          finaleArt: "kampf",
-          kampf: { ...arena, plan: { breite: 99, tiefe: 2, felder: [] } },
-        }),
-      ) === null);
+    };
+    if (!SagaVorgabenSchema.safeParse(kaputt).success) return false;
+    const gelesen = sagaKampf(SagaVorgabenSchema.parse(kaputt));
+    return kampfSpielbar(gelesen) && gelesen.plan?.breite === 9;
+  })());
   pruefe("eine Saga ohne Kampf bleibt, wie sie war",
     SagaVorgabenSchema.parse(STANDARD_SAGA_VORGABEN).kampf === undefined);
 }
@@ -362,10 +379,19 @@ console.log("\n14. Gericht & Flucht: erst der Saal, dann die Arena");
   pruefe("sie führt in den Saal", mitVerhandlung("gericht-kampf") && mitAnklage("gericht-kampf"));
   pruefe("und danach in die Arena",
     sagaKampf({ finaleArt: "gericht-kampf", kampf: arena }) === arena);
-  pruefe("ohne Arena bleibt es beim Urteil",
-    sagaKampf({ finaleArt: "gericht-kampf" }) === null);
   pruefe("das Gerichtsfinale allein kämpft nicht",
     sagaKampf({ finaleArt: "gericht", kampf: arena }) === null);
+  /*
+   * Der Fehler, der ein ganzes Ende gekostet hat: Im Saal stand "Ihm nach",
+   * und danach kam sofort der Epilog - weil keine Arena gebaut war. Jetzt
+   * kommt das Ende, das die Art verspricht: Urteil, Jagd, Kampf.
+   */
+  {
+    const ersatz = sagaKampf({ finaleArt: "gericht-kampf", drahtzieherId: "hut", name: "Die Glocken" });
+    pruefe("ohne eingerichtete Arena springt der Standardplatz ein", kampfSpielbar(ersatz));
+    pruefe("und die Jagd gehört bei dieser Art dazu", Boolean(ersatz?.jagd));
+    pruefe("im Fluchtwagen sitzt der Drahtzieher", ersatz?.jagd?.fliehenderId === "hut");
+  }
 
   const geprueft = SagaVorgabenSchema.safeParse({
     ...STANDARD_SAGA_VORGABEN,
