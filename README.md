@@ -731,7 +731,14 @@ Dahinter:
   direkt in der Datenbank.
 - **Kampagnen** - Fälle vorbereiten und verwalten (siehe oben).
 - **Sagas / Arcs** - lange Reihen anlegen, Erzählertexte und Tondateien
-  pflegen (siehe oben).
+  pflegen (siehe oben). Das Formular dafür ist lang - es entscheidet über
+  eine ganze Reihe von Fällen -, steht aber in **einklappbaren Abschnitten**:
+  Die Saga, Kapitel (darin jedes Kapitel noch einmal für sich), Besetzung,
+  Ton und Publikum, Finale, Abspann. Zu ist der Regelfall; in der Kopfzeile
+  steht, was drinsteckt („3 Kapitel + Finale", „Gericht & Flucht · Noch keine
+  Arena gebaut"), sodass man den Stand sieht, ohne aufzuklappen. Ein
+  zugeklappter Abschnitt vergisst nichts: Die Felder bleiben stehen, wo sie
+  waren.
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
   inklusive Titelbild des Startbildschirms.
 - **Spiel** - Stadt (oder Zufall), Schauplätze pro Fall, Intro an/aus,

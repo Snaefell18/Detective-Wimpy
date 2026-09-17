@@ -1793,6 +1793,14 @@ a.zurueck {
   margin-top: 0;
 }
 
+/* Steht das Kapitel in einem eigenen Faltabschnitt, trägt der schon Rahmen
+   und Fläche - der Block darin braucht beides nicht doppelt. */
+.falt-inhalt > .kapitel-block {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+
 .erzaehler-feld {
   padding-top: 6px;
 }
@@ -2807,6 +2815,77 @@ a.zurueck {
   font-size: 14px;
   font-weight: 700;
 }
+
+/* ------------------------------------------------------------------ */
+/* Einklappbare Abschnitte im Admin-Menü                               */
+/* ------------------------------------------------------------------ */
+
+.falt-abschnitt {
+  margin: 14px 0;
+  border: 1px solid var(--rand);
+  border-radius: 12px;
+  background: rgba(16, 42, 78, 0.45);
+  overflow: hidden;
+}
+.falt-abschnitt + .falt-abschnitt { margin-top: 10px; }
+
+.falt-abschnitt > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 13px 15px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+/* Das eigene Dreieck: Safari zeigt sonst seins, und zwar an der falschen
+   Stelle und in der falschen Farbe. */
+.falt-abschnitt > summary::-webkit-details-marker { display: none; }
+.falt-abschnitt > summary::before {
+  content: "›";
+  flex: none;
+  width: 14px;
+  color: var(--eis);
+  font-size: 17px;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+.falt-abschnitt[open] > summary::before { transform: rotate(90deg); }
+.falt-abschnitt > summary:hover { background: rgba(124, 196, 255, 0.07); }
+.falt-abschnitt[open] > summary {
+  border-bottom: 1px solid rgba(45, 90, 136, 0.55);
+}
+
+.falt-titel {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* Was im Abschnitt eingestellt ist - damit man den Stand sieht, ohne ihn
+   aufzuklappen. */
+.falt-stand {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-leise);
+  font-size: 12px;
+}
+.falt-hinweis {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(228, 50, 43, 0.18);
+  color: #ffc9c4;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.falt-inhalt {
+  padding: 2px 15px 16px;
+}
+/* Die erste Überschrift im Abschnitt braucht keinen Abstand nach oben mehr -
+   der Rahmen ist schon eine Trennung. */
+.falt-inhalt > .unter-abschnitt:first-child { margin-top: 10px; }
 
 .knopf-reihe {
   display: flex;
