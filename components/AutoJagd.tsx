@@ -81,14 +81,29 @@ const HALTEPLATZ = {
 const AUSSTIEG = { x: -3.9, z: 4.5 };
 
 /**
- * Wie weit die Häuserzeilen von der Straßenmitte weg stehen.
+ * Die Häuserzeilen neben der Piste.
  *
- * Nicht auf beiden Seiten gleich: Die Kamera schwebt zwölfeinhalb Meter links
- * der Fahrbahn, und was ihr zu nah steht, fährt durch sie hindurch. Rechts
- * darf die Zeile deshalb dicht an die Straße - dort sieht man sie ohnehin am
- * besten -, links steht sie weit genug hinter der Kamera.
+ * Gemessen wird ab der Fahrbahnkante und an der *Hausfront*, nicht an der
+ * Hausmitte: Ein Baustein ist mal zwölf und mal dreißig Meter tief, und wer
+ * ihre Mittelpunkte auf eine Linie stellt, bekommt eine ausgefranste Zeile
+ * mit einer breiten Lücke davor. Vorn an der Straße steht deshalb die Front,
+ * und wie tief das Haus dahinter ist, darf es selbst wissen.
+ *
+ * Drei Zeilen, und sie stehen nicht symmetrisch:
+ *
+ * - **vorn rechts** - direkt am Gehweg. Das Spiel läuft in einer hochkanten
+ *   Spalte, und die Kamera schaut von links vorn auf die Straße: Alles, was
+ *   man sieht, steht rechts. Dort gehört die Stadt hin.
+ * - **hinten rechts** - höher und ein Stück versetzt. Sie füllt, was vorn
+ *   zwischen zwei Häusern durchblitzt, und gibt dem Horizont eine Skyline
+ *   statt einer Kante.
+ * - **links** - knapp hinter der Kamera. Im Hochformat sieht man sie nicht,
+ *   im Breitbild steht dort eine Wand. Näher darf sie nicht: Was der Kamera
+ *   zu nah kommt, fährt durch sie hindurch.
  */
-const BAUSTEIN_ABSTAND = { rechts: 16, links: 26 };
+const FAHRBAHN_RAND = 5.1;
+/** Wie weit die Front vom Fahrbahnrand wegbleibt - ein Gehweg, mehr nicht. */
+const GEHWEG = 1.5;
 
 /** Die Kamera der Verhaftung: tiefer, näher, auf die Fahrertür. */
 const KAMERA_VERHAFTUNG = { pos: [-9.4, 2.1, 11.2], ziel: [-2.6, 1.05, 5.0], fov: 40 } as const;
@@ -328,7 +343,16 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
           // Asphalt liegt in derselben Umgebung wie in der Stadt: kein Grün,
           // sondern der blaugraue Grund, den auch das 3D-Kapitel zeigt.
           : nacht ? 0x293448 : 0x4b5868;
-    mesh(new THREE.BoxGeometry(locations.length ? 66 : 34, 0.2, 130), landFarbe, 0, -0.22, 24);
+    /*
+     * Der Grund reicht so weit, wie Häuser stehen können.
+     *
+     * Mit Bausteinen stehen jetzt zwei Zeilen rechts und eine links, und die
+     * hintere darf tief hinausragen - ein schmaler Streifen darunter hörte
+     * mitten in der Stadt auf, und dahinter klaffte der Himmel bis zum Boden.
+     * Der Nebel nimmt einem den Rand lange vorher ab; die paar Dreiecke mehr
+     * kosten nichts.
+     */
+    mesh(new THREE.BoxGeometry(locations.length ? 200 : 34, 0.2, 130), landFarbe, 0, -0.22, 24);
     /*
      * Die Fahrbahn ist dieselbe wie in der Stadt: derselbe Belag, dieselben
      * Spuren, dieselbe Rechnung (components/stadtBau.ts). So fährt man über
@@ -591,11 +615,15 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
      * Die Häuser am Straßenrand.
      *
      * Dieselben Bausteine wie in den 3D-Kapiteln, nur stehen sie hier nicht
-     * auf einem Raster, sondern in zwei Reihen neben der Piste - und weil
-     * die Strecke kein Ende hat, wiederholen sie sich: Wer hinten
-     * hinausfällt, kommt vorn wieder herein. Ein einziges geladenes Modell
-     * reicht dafür für beliebig viele Kopien; geteilt werden Geometrie und
-     * Texturen.
+     * auf einem Raster, sondern in Zeilen neben der Piste - und weil die
+     * Strecke kein Ende hat, wiederholen sie sich: Wer hinten hinausfällt,
+     * kommt vorn wieder herein. Ein einziges geladenes Modell reicht dafür
+     * für beliebig viele Kopien; geteilt werden Geometrie und Texturen.
+     *
+     * Sie stehen dicht: die Front einen Gehweg von der Fahrbahn entfernt,
+     * die Häuser so hoch, dass sie oben aus dem Bild laufen, und Schulter an
+     * Schulter statt in Abständen. Man fährt nicht mehr an einer Stadt
+     * vorbei, man fährt durch sie hindurch.
      *
      * Sie kommen nebenher, nicht vorweg: Ein Baustein ist ein paar Megabyte
      * groß, und die Jagd soll losgehen können, bevor Tokio steht.
@@ -622,31 +650,84 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       if (beendet) { ressourcen.forEach((r) => r.dispose()); return; }
 
       /*
-       * Jeder Baustein wird auf dieselbe Höhe gebracht und an den Rand
-       * gestellt, die Front zur Piste - wie ein Haus an einer Straße steht.
+       * Wie groß ein Baustein bei einer bestimmten Höhe wird.
        *
-       * Weit genug draußen: Die Kamera schwebt links neben der Fahrbahn,
-       * und ein Haus, das ihr zu nah kommt, nimmt nicht nur die Sicht - man
-       * fährt durch seine Wand hindurch.
+       * Jedes Modell hat andere Maße; gebraucht werden sie schon vor dem
+       * Aufstellen, um die Front an die Straße und die Nachbarn nebeneinander
+       * zu bekommen. Deshalb einmal je Vorlage das Verhältnis messen - Tiefe
+       * und Breite je Meter Höhe - und danach nur noch multiplizieren.
+       *
+       * Achtung bei den Achsen: Die Häuser stehen quer zur Fahrbahn gedreht,
+       * ihre eigene z-Achse zeigt danach nach x. Was im Modell die Tiefe ist,
+       * steht in der Welt also neben der Straße, und die Breite liegt an ihr
+       * entlang.
        */
-      const ABSTAND = 22;
-      // Auf dem Handy steht die Zeile lockerer: weniger Häuser gleichzeitig.
-      const reihen = Math.ceil((handy ? 110 : 154) / ABSTAND);
-      for (let i = 0; i < reihen * 2; i++) {
-        const seite = i % 2 ? -1 : 1;
-        const vorlage = vorlagen[Math.floor(i / 2) % vorlagen.length];
-        const haus = vorlage.clone(true);
-        einpassen(haus, 9 + (i % 3) * 2.5);
-        const platz = new THREE.Group();
-        platz.add(haus);
-        platz.position.set(
-          seite > 0 ? BAUSTEIN_ABSTAND.rechts : -BAUSTEIN_ABSTAND.links,
-          0,
-          Math.floor(i / 2) * ABSTAND - 40 + (seite > 0 ? 0 : ABSTAND / 2),
+      const masse = vorlagen.map((vorlage) => {
+        const groesse = new THREE.Box3().setFromObject(vorlage).getSize(new THREE.Vector3());
+        const hoch = Math.max(0.001, groesse.y);
+        return { tiefe: groesse.z / hoch, breite: groesse.x / hoch };
+      });
+
+      /*
+       * Die Zeilen. Rechts steht die Stadt, weil man nur dorthin schaut.
+       *
+       * `front` ist der Abstand der Hauswand von der Fahrbahnkante. Die
+       * hintere Zeile beginnt hinter der tiefsten Vorlage der vorderen -
+       * sonst stünden zwei Häuser ineinander.
+       */
+      const tiefste = (hoehen: number[]) =>
+        Math.max(...masse.map((mass) => mass.tiefe * Math.max(...hoehen)));
+      const vorneHoehen = handy ? [13, 16] : [13, 17, 15];
+      const zeilen: { seite: 1 | -1; front: number; hoehen: number[]; luecke: number }[] = [
+        { seite: 1, front: GEHWEG, hoehen: vorneHoehen, luecke: 0 },
+        {
+          seite: 1,
+          front: GEHWEG + tiefste(vorneHoehen) + 4,
+          hoehen: handy ? [20] : [22, 26, 19],
+          luecke: 0.5,
+        },
+      ];
+      /*
+       * Links steht nur etwas, wenn Speicher dafür da ist: Im Hochformat -
+       * also auf dem Handy - sieht man diese Zeile ohnehin nie.
+       *
+       * Und sie muss hinter der Kamera bleiben. Die Anfahrt schaut aus 17,5
+       * Metern links der Fahrbahn zu; eine Front, die näher steht, hat die
+       * Kamera im Haus - dann sieht man zu Beginn der Jagd eine Wand von
+       * innen statt Wimpy an seinem Wagen.
+       */
+      if (!handy) zeilen.push({ seite: -1, front: 15, hoehen: [14, 18, 16], luecke: 0.33 });
+
+      const strecke = handy ? 120 : 170;
+      for (const zeile of zeilen) {
+        /*
+         * Wie weit zwei Nachbarn auseinanderstehen: so breit wie das breiteste
+         * Haus dieser Zeile, plus eine Handbreit. Dadurch stehen sie
+         * nebeneinander statt in Lücken - eine geschlossene Häuserzeile.
+         */
+        const abstand = Math.max(
+          14,
+          Math.max(...masse.map((mass) => mass.breite * Math.max(...zeile.hoehen))) + 1.5,
         );
-        platz.rotation.y = seite > 0 ? -Math.PI / 2 : Math.PI / 2;
-        scene.add(platz);
-        zieht(platz, -40, reihen * ABSTAND);
+        const anzahl = Math.ceil(strecke / abstand);
+        for (let i = 0; i < anzahl; i++) {
+          const vorlage = vorlagen[i % vorlagen.length];
+          const hoehe = zeile.hoehen[i % zeile.hoehen.length];
+          const haus = vorlage.clone(true);
+          einpassen(haus, hoehe);
+          const platz = new THREE.Group();
+          platz.add(haus);
+          // Die Front an die Straße: Die halbe Tiefe steht hinter ihr.
+          const tiefe = masse[i % vorlagen.length].tiefe * hoehe;
+          platz.position.set(
+            zeile.seite * (FAHRBAHN_RAND + zeile.front + tiefe / 2),
+            0,
+            (i + zeile.luecke) * abstand - 40,
+          );
+          platz.rotation.y = zeile.seite > 0 ? -Math.PI / 2 : Math.PI / 2;
+          scene.add(platz);
+          zieht(platz, -40, anzahl * abstand);
+        }
       }
     }
 

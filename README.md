@@ -253,8 +253,14 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
     Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
     daran vorbeifährt.
   - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
-    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen in zwei Zeilen
-    neben der Piste und wiederholen sich, solange die Jagd dauert: Wer durch
+    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen **direkt an
+    der Fahrbahn**: gemessen wird an der Hausfront, nicht an der Hausmitte,
+    und die steht anderthalb Meter hinter dem Fahrbahnrand - ein Gehweg, mehr
+    nicht. Dazu sind sie hoch (dreizehn bis siebzehn Meter) und rücken so eng
+    zusammen, wie sie breit sind: eine geschlossene Häuserzeile statt einzelner
+    Klötze in der Landschaft. Hinter ihr steht eine zweite, noch höhere Zeile
+    und füllt den Horizont, und links - hinter der Kamera - eine dritte fürs
+    Breitbild. Sie wiederholen sich, solange die Jagd dauert: Wer durch
     Akihabara fährt, fährt an denselben Häusern mehrmals vorbei. Auf dem Handy
     stehen weniger und kleiner aufgelöste - das Speicherproblem ist dasselbe
     wie in der Stadt. Ohne Auswahl bleibt es bei der gerechneten Landschaft.
