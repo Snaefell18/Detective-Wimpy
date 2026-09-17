@@ -421,22 +421,43 @@ export function StrassenCredits({
   /** Ohne Song (oder ohne Ton) fährt der Abspann diese Zeit lang. */
   const STUMME_DAUER = 50;
 
+  /*
+   * Die Uhr des Abspanns ist der Song.
+   *
+   * Sie beginnt, wenn er wirklich spielt - bis dahin stehen die beiden noch
+   * am Straßenrand, und Musik und Bild fangen gemeinsam an. Kann der Browser
+   * ihn nicht abspielen (blockierter Ton, fehlende Datei, eine Aufnahme aus
+   * der Datenbank, die nicht kommt), läuft der Abspann trotzdem: dann eben
+   * nach der Wanduhr. Hängenbleiben darf er nie.
+   */
   useEffect(() => {
     let aktiv = true;
     let bild = 0;
-    let start = performance.now();
-    let audio: HTMLAudioElement | null = null;
+    let start = 0;
+    laeuft.current = false;
+
+    const losgehen = () => {
+      if (!aktiv || start) return;
+      start = performance.now();
+      laeuft.current = true;
+    };
+    // Die Notbremse: Bleibt das Abspielversprechen liegen (das kommt auf iOS
+    // vor, wenn die App dabei in den Hintergrund geht), fährt der Wagen
+    // trotzdem los.
+    const notbremse = window.setTimeout(losgehen, 3000);
 
     const tick = () => {
       if (!aktiv) return;
+      const audio = audioRef.current;
       const dauer =
         audio && Number.isFinite(audio.duration) && audio.duration > 1
           ? audio.duration
           : STUMME_DAUER;
-      const zeit = audio && audio.currentTime > 0
-        ? audio.currentTime
-        : (performance.now() - start) / 1000;
-      setFortschritt(Math.min(1, zeit / dauer));
+      if (start) {
+        // Nur vorwärts: Die Wanduhr führt, die Aufnahme darf nachhelfen.
+        const vergangen = Math.max((performance.now() - start) / 1000, audio?.currentTime ?? 0);
+        setFortschritt(Math.min(1, vergangen / dauer));
+      }
       bild = requestAnimationFrame(tick);
     };
 
@@ -444,42 +465,35 @@ export function StrassenCredits({
       .then((quelle) => {
         if (!aktiv) return;
         if (!quelle) {
-          // Kein Song: Die Fahrt läuft trotzdem, nur eben auf der Wanduhr.
-          start = performance.now();
+          losgehen();
           return;
         }
-        audio = new Audio(quelle);
+        const audio = new Audio(quelle);
         audioRef.current = audio;
         audio.preload = "auto";
         audio.addEventListener("ended", () => {
           if (aktiv) setFortschritt(1);
         });
-        void audio
-          .play()
-          .then(() => {
-            start = performance.now();
-          })
-          .catch(() => {
-            // Blockierter Ton: Die Fahrt beginnt trotzdem, und ein Knopf holt
-            // die Musik nach.
-            if (!aktiv) return;
-            setStartNoetig(true);
-            audio = null;
-            audioRef.current?.pause();
-            start = performance.now();
-          });
+        void audio.play().then(losgehen, () => {
+          // Blockierter Ton: Die Fahrt beginnt trotzdem, und ein Knopf holt
+          // die Musik nach.
+          if (!aktiv) return;
+          setStartNoetig(true);
+          losgehen();
+        });
       })
-      .catch(() => {
-        if (aktiv) start = performance.now();
-      });
+      .catch(() => losgehen());
 
     bild = requestAnimationFrame(tick);
     return () => {
       aktiv = false;
       cancelAnimationFrame(bild);
+      window.clearTimeout(notbremse);
       audioRef.current?.pause();
       audioRef.current = null;
     };
+    // Der Song ist die Uhr - wechselt er, beginnt alles von vorn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vorgabe.song]);
 
   // Die letzten Sekunden gehen auf Schwarz, danach steht nur noch der Knopf.
@@ -489,9 +503,11 @@ export function StrassenCredits({
   const vorbei = fortschritt >= 1;
 
   const nachholen = () => {
-    const quelle = audioRef.current;
+    const audio = audioRef.current;
     setStartNoetig(false);
-    void quelle?.play().catch(() => setStartNoetig(true));
+    // Von vorn: Ein Abspann, der in der Mitte einsetzt, ist keiner.
+    if (audio) audio.currentTime = 0;
+    void audio?.play().catch(() => setStartNoetig(true));
   };
 
   return (
