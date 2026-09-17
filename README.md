@@ -174,7 +174,12 @@ mit dem Daumen gesteuert:
   im Fluchtwagen. Sie ist abwählbar: Wer sie im Editor nicht einrichtet, fängt
   direkt in der Arena an, und im Spiel lässt sie sich überspringen.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
-  Ein Kind soll seine Geschichte nicht an einem Kampf verlieren.
+  „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
+  Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
+  bekommt dazu den Knopf „Noch einmal, aber sanfter": Der Kampf läuft dann eine
+  Stufe milder weiter (hart → mittel → sanft), ohne dass im Editor etwas
+  umgestellt wird. Ein Kind soll seine Geschichte nicht an einem Kampf
+  verlieren.
 - Nach dem Kampf sagt der Gegner sein letztes Wort, und danach läuft das Ende
   wie gewohnt weiter. Der Kampf ersetzt es nicht, er geht ihm voraus.
 
