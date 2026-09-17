@@ -13,6 +13,8 @@ import {
   yen,
 } from "../lib/zubehoer.ts";
 import { abdrueckeAmTatort } from "../lib/abdruecke.ts";
+import { LEERER_BEUTEL, mitGeschenk } from "../lib/beutel.ts";
+import { STANDARD_AUTOS, START_AUTO_ID } from "../lib/autos.ts";
 import {
   STANDARD_SAGA_VORGABEN,
   geschenkFuerKapitel,
@@ -151,6 +153,28 @@ console.log("\n6. Das Geschenk nach einem Kapitel");
     geschenkFuerKapitel(mitLoch, 2) === "fingerabdruckset");
   pruefe("Leerzeichen zählen nicht als Eintrag",
     geschenkFuerKapitel({ kapitelGeschenke: ["   "] }, 0) === "");
+}
+
+console.log("\n6b. Verschenkt wird Zubehör - und neuerdings auch ein Auto");
+{
+  const beutel = { ...LEERER_BEUTEL, autoId: START_AUTO_ID };
+  const mitSerum = mitGeschenk(beutel, "geschenk:saga:1", VERITASERUM);
+  pruefe("das Serum landet in der Tasche", mitSerum?.vorrat[VERITASERUM.id] === 1);
+  pruefe("und der Wagen bleibt, wie er war", mitSerum?.autoId === START_AUTO_ID);
+  pruefe("dasselbe Geschenk gibt es nicht zweimal",
+    mitGeschenk(mitSerum, "geschenk:saga:1", VERITASERUM) === null);
+  pruefe("ohne Stück passiert nichts", mitGeschenk(beutel, "geschenk:saga:2", null) === null);
+  pruefe("ohne Buchungs-Id auch nicht", mitGeschenk(beutel, "", VERITASERUM) === null);
+
+  // Und das Auto: einmal, in der Garage, und sofort gefahren.
+  const wagen = STANDARD_AUTOS.find((a) => a.id !== START_AUTO_ID) ?? STANDARD_AUTOS[0];
+  const mitWagen = mitGeschenk(beutel, "geschenk:saga:3", wagen);
+  pruefe("das Auto steht in der Garage", mitWagen?.vorrat[wagen.id] === 1, wagen.id);
+  pruefe("und wird sofort gefahren", mitWagen?.autoId === wagen.id);
+  pruefe("ein zweites Mal macht daraus keine zwei Autos",
+    mitGeschenk({ ...mitWagen, bezahlt: [] }, "geschenk:saga:4", wagen)?.vorrat[wagen.id] === 1);
+  pruefe("es kostet nichts", mitWagen?.yen === 0);
+  pruefe("und der Beutel davor bleibt unberührt", beutel.vorrat[wagen.id] === undefined);
 }
 
 console.log("\n7. Hintergrundmusik je Kapitel");

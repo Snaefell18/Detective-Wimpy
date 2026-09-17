@@ -1,8 +1,18 @@
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { pruefeVorgaben } from "../lib/sagaPruefung.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
-import { fluchtStatement, verfolgungNach } from "../lib/verfolgung.ts";
-import { FLUCHT_RUECKSTAND, REMPLER, STANDARD_AUTOS, autoGueltig, fluchtTempo } from '../lib/autos.ts';
+import { JAGD_WELT, fluchtStatement, jagdWelt, verfolgungNach } from "../lib/verfolgung.ts";
+import { DREI_D_LOCATIONS } from "../lib/pursuit3d.ts";
+import {
+  AUTO_GROESSE,
+  FLUCHT_RUECKSTAND,
+  REMPLER,
+  STANDARD_AUTOS,
+  autoGroesse,
+  autoGueltig,
+  autoLaenge,
+  fluchtTempo,
+} from '../lib/autos.ts';
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -140,6 +150,80 @@ console.log("\n2b. Der Fluchtwagen lässt sich drehen");
   pruefe("der Ferrari bleibt ungedreht", nach(/ferrari/i) === 0);
   pruefe("und ein vorhandener RAV4 fährt vorwärts", nach(/rav/i) === undefined || nach(/rav/i) === 90);
   pruefe("alle Standardwagen bleiben gültig", STANDARD_AUTOS.every(autoGueltig));
+}
+
+console.log("\n2c. Die Strecke: Belag, Licht, Wetter, Häuser");
+{
+  // Eine Jagd von früher kennt nichts davon - und muss aussehen wie immer.
+  const alt = jagdWelt(jagd);
+  pruefe("ohne Angabe bleibt es die Schneepiste", alt.strassentyp === "schnee");
+  pruefe("in der Nacht", alt.tageszeit === "nacht");
+  pruefe("bei klarer Sicht", alt.wetter === "klar");
+  pruefe("und ohne Häuser am Rand", alt.locations.length === 0);
+  pruefe("das ist genau die Vorgabe", alt.strassentyp === JAGD_WELT.strassentyp);
+  pruefe("auch ganz ohne Jagd kommt eine Welt zurück", jagdWelt(null).tageszeit === "nacht");
+
+  const ort = DREI_D_LOCATIONS[0]?.id ?? "";
+  const gewaehlt = jagdWelt({
+    ...jagd,
+    strassentyp: "asphalt",
+    tageszeit: "tag",
+    wetter: "sandsturm",
+    locations: [ort, "gibtsnicht"],
+  });
+  pruefe("gewählter Belag gilt", gewaehlt.strassentyp === "asphalt");
+  pruefe("gewähltes Licht auch", gewaehlt.tageszeit === "tag");
+  pruefe("und der Sandsturm steht zur Wahl", gewaehlt.wetter === "sandsturm");
+  pruefe("ein Baustein, den es nicht gibt, fliegt raus",
+    gewaehlt.locations.length === 1 && gewaehlt.locations[0] === ort);
+
+  const unsinn = jagdWelt({ ...jagd, strassentyp: "lava", tageszeit: "mittag", wetter: "hagel" });
+  pruefe("Erfundenes fällt auf die Vorgabe zurück",
+    unsinn.strassentyp === "schnee" && unsinn.tageszeit === "nacht" && unsinn.wetter === "klar");
+
+  // Und alles davon muss den Weg durch die Datenbank überstehen.
+  const gespeichert = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    verfolgungsjagden: [{
+      ...jagd,
+      strassentyp: "sand",
+      tageszeit: "abend",
+      wetter: "schneesturm",
+      locations: [ort],
+    }],
+  });
+  pruefe("das Schema nimmt die Strecke an", gespeichert.success,
+    gespeichert.error?.issues?.[0]?.message);
+  const zurueck = jagdWelt(gespeichert.data?.verfolgungsjagden[0]);
+  pruefe("und gibt sie unverändert zurück",
+    zurueck.strassentyp === "sand" && zurueck.tageszeit === "abend" && zurueck.wetter === "schneesturm");
+  pruefe("samt Bausteinen", zurueck.locations[0] === ort);
+}
+
+console.log("\n2d. Wie groß ein Wagen im Spiel ist");
+{
+  /*
+   * Jedes Modell wird auf dieselbe Länge gebracht - und genau das machte aus
+   * einer Limousine ein Spielzeugauto. Die Größe im Katalog rückt das
+   * gerade; was fehlt oder unsinnig ist, wird stillschweigend zu 1.
+   */
+  pruefe("ohne Angabe ist ein Wagen normal groß", autoGroesse({}) === 1);
+  pruefe("und ohne Wagen erst recht", autoGroesse(undefined) === 1);
+  pruefe("eine Limousine darf länger sein", autoGroesse({ groesse: 1.5 }) === 1.5);
+  pruefe("zu klein wird auf das Mindestmaß gehoben",
+    autoGroesse({ groesse: 0.01 }) === AUTO_GROESSE.min);
+  pruefe("zu groß auf das Höchstmaß gestutzt",
+    autoGroesse({ groesse: 99 }) === AUTO_GROESSE.max);
+  pruefe("Unsinn wird zu 1", autoGroesse({ groesse: Number.NaN }) === 1 && autoGroesse({ groesse: -3 }) === 1);
+
+  pruefe("die Länge folgt der Größe",
+    Math.abs(autoLaenge({ groesse: 1.4 }, 3.5) - 4.9) < 0.001);
+  pruefe("ein gewöhnlicher Wagen bleibt bei der Grundlänge", autoLaenge({}, 3.5) === 3.5);
+
+  const wagen = { ...STANDARD_AUTOS[0] };
+  pruefe("ein Standardwagen ohne Größe bleibt gültig", autoGueltig(wagen));
+  pruefe("mit erlaubter Größe auch", autoGueltig({ ...wagen, groesse: 1.6 }));
+  pruefe("mit unmöglicher Größe nicht", !autoGueltig({ ...wagen, groesse: 9 }));
 }
 
 console.log("\n3. Nach dem Fang gibt es immer ein Statement");

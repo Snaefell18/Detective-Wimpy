@@ -53,6 +53,7 @@ export type DreiDWetter =
   | "regen"
   | "schnee"
   | "schneesturm"
+  | "blizzard"
   | "sandsturm"
   | "nebel";
 export type DreiDStrassentyp = "asphalt" | "sand" | "schnee";
@@ -70,6 +71,7 @@ export const DREI_D_WETTER: { id: DreiDWetter; name: string }[] = [
   { id: "regen", name: "Regen" },
   { id: "schnee", name: "Schneefall" },
   { id: "schneesturm", name: "Schneechaos / Schneesturm" },
+  { id: "blizzard", name: "Blizzard · extremster Schneesturm" },
   { id: "sandsturm", name: "Sandsturm" },
   { id: "nebel", name: "Nebel" },
 ];
@@ -79,6 +81,32 @@ export const DREI_D_STRASSENTYPEN: { id: DreiDStrassentyp; name: string }[] = [
   { id: "sand", name: "Sand" },
   { id: "schnee", name: "Schneestraße · Arktis" },
 ];
+
+/**
+ * Liegt bei dieser Lage Schnee in der Luft?
+ *
+ * Drei Lagen tun das: der leise Schneefall, der Sturm und der Blizzard. Sie
+ * färben Himmel, Nebel und Licht gleich - nur eben verschieden heftig -, und
+ * diese Frage wird an genug Stellen gestellt, dass sie einmal hier steht.
+ */
+export const istSchneeWetter = (wetter: DreiDWetter): boolean =>
+  wetter === "schnee" || wetter === "schneesturm" || wetter === "blizzard";
+
+/** Und nimmt sie die Sicht? Nebel, Sturm, Blizzard und Sandsturm tun das. */
+export const istDunst = (wetter: DreiDWetter): boolean =>
+  wetter === "nebel" ||
+  wetter === "schneesturm" ||
+  wetter === "blizzard" ||
+  wetter === "sandsturm";
+
+/**
+ * Der Blizzard: die eine Lage, in der man die Hand vor Augen nicht sieht.
+ *
+ * Er ist kein stärkerer Schneesturm, sondern ein eigener Zustand - Sicht auf
+ * wenige Meter, waagerechter Schnee, Böen, die für Augenblicke alles
+ * schlucken. Wo im Code etwas nur für ihn gilt, steht diese Frage.
+ */
+export const istBlizzard = (wetter: DreiDWetter): boolean => wetter === "blizzard";
 
 export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   aktiv: false,

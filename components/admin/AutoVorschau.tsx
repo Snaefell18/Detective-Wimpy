@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import { AUTO_MODELLE } from "@/lib/autos";
+import { AUTO_MODELLE, autoLaenge } from "@/lib/autos";
 
 /**
  * Wie herum steht der Wagen in seiner Datei?
@@ -22,12 +22,19 @@ import { AUTO_MODELLE } from "@/lib/autos";
 export function AutoVorschau({
   modell,
   drehung,
+  groesse = 1,
   onDrehen,
 }: {
   /** Id aus AUTO_MODELLE - die Datei, die gezeigt wird. */
   modell: string;
   /** Die eingestellte Drehung in Grad. */
   drehung: number;
+  /**
+   * Die eingestellte Größe. Die Straße bleibt, wie sie ist - so sieht man
+   * sofort, ob der Wagen zur Fahrbahn passt oder daneben aussieht wie ein
+   * Spielzeug.
+   */
+  groesse?: number;
   /** Ein Tipp auf einen der Knöpfe setzt sie neu. */
   onDrehen: (grad: number) => void;
 }) {
@@ -130,15 +137,17 @@ export function AutoVorschau({
       gruppe.clear();
       const koerper = vorlage.clone(true);
       /*
-       * Dasselbe Einpassen wie im Spiel: erst drehen, dann auf drei Meter
-       * bringen, dann mittig auf die Straße stellen. Was hier steht, steht
-       * dort genauso.
+       * Dasselbe Einpassen wie im Spiel: erst drehen, dann auf die Länge
+       * bringen, die zu seiner Größe gehört, dann mittig auf die Straße
+       * stellen. Was hier steht, steht dort genauso - und weil die Fahrbahn
+       * dabei gleich breit bleibt, sieht man sofort, ob der Wagen zu klein
+       * geraten ist.
        */
       koerper.rotation.y = THREE.MathUtils.degToRad(drehung);
       koerper.updateMatrixWorld(true);
       let box = new THREE.Box3().setFromObject(koerper);
-      const groesse = box.getSize(new THREE.Vector3());
-      koerper.scale.multiplyScalar(3 / Math.max(groesse.x, groesse.z, 0.001));
+      const masse = box.getSize(new THREE.Vector3());
+      koerper.scale.multiplyScalar(autoLaenge({ groesse }, 3) / Math.max(masse.x, masse.z, 0.001));
       koerper.updateMatrixWorld(true);
       box = new THREE.Box3().setFromObject(koerper);
       const mitte = box.getCenter(new THREE.Vector3());
@@ -181,14 +190,15 @@ export function AutoVorschau({
         });
     }
 
-    const groesse = () => {
+    // Heißt bewusst nicht "groesse": So heißt die Größe des Wagens.
+    const anpassen = () => {
       if (!element.clientWidth || !element.clientHeight) return;
       camera.aspect = element.clientWidth / element.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(element.clientWidth, element.clientHeight);
     };
-    groesse();
-    const beobachter = new ResizeObserver(groesse);
+    anpassen();
+    const beobachter = new ResizeObserver(anpassen);
     beobachter.observe(element);
 
     return () => {
@@ -199,7 +209,7 @@ export function AutoVorschau({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [eintrag, drehung]);
+  }, [eintrag, drehung, groesse]);
 
   // Das geladene Modell gehört zur Datei; wechselt die, muss es neu geholt werden.
   useEffect(() => {

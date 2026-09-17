@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useAutos } from '@/lib/useAutos';
 import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
-import { useLaden } from "@/lib/useLaden";
+import { useGeschenke } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
+import { JagdWeltFeld } from "./JagdWeltFeld";
 import { KampfFeld } from "./KampfFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
 import { StadtWahl } from "./StadtWahl";
@@ -192,10 +193,11 @@ export function SagaVorgabenFelder({
         : [...vorgaben[feld], id],
     });
 
-  // Der Laden - für die Geschenke nach einem Kapitel. Ohne Verbindung bleibt
-  // es beim Grundregal: Die Auswahl ist dann kürzer, aber nie leer, und
+  // Der Laden - für die Geschenke nach einem Kapitel. Verschenken lässt sich
+  // beides, Zubehör und Autos. Ohne Verbindung bleibt es beim Grundregal und
+  // den Standardwagen: Die Auswahl ist dann kürzer, aber nie leer, und
   // "kein Geschenk" steht ohnehin immer zur Wahl.
-  const laden = useLaden();
+  const laden = useGeschenke();
 
   /**
    * Ein Eintrag in einer Liste je Kapitel - ohne Löcher davor.
@@ -587,11 +589,26 @@ export function SagaVorgabenFelder({
                 onChange={(e) => geschenkSetzen(i, e.target.value)}
               >
                 <option value="">Kein Geschenk</option>
-                {laden.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.name} · sonst {yen(z.preis)}
-                  </option>
-                ))}
+                {/* Zwei Gruppen, weil es zwei Arten Geschenk sind: Was in die
+                    Tasche wandert, und was in der Garage steht. */}
+                <optgroup label="Zubehör">
+                  {laden
+                    .filter((z) => z.wirkung !== "auto")
+                    .map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name} · sonst {yen(z.preis)}
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="Autos · fährt er ab sofort">
+                  {laden
+                    .filter((z) => z.wirkung === "auto")
+                    .map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name} · sonst {yen(z.preis)}
+                      </option>
+                    ))}
+                </optgroup>
                 {/* Ein Gegenstand, den es nicht mehr gibt, würde die Auswahl
                     sonst still auf "Kein Geschenk" stellen. */}
                 {(vorgaben.kapitelGeschenke?.[i] ?? "") !== "" &&
@@ -1125,6 +1142,11 @@ export function SagaVorgabenFelder({
                           ))}
                         </select>
                       </label>
+                      <JagdWeltFeld
+                        jagd={jagd}
+                        onAendern={(teil) => jagdAendern(nachKapitel, teil)}
+                      />
+
                       <SongWahl
                         wert={jagd.musik ?? ""}
                         onAendern={(musik) => jagdAendern(nachKapitel, { musik })}

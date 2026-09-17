@@ -230,10 +230,35 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
 - **Versammlung:** freies Gruppengespräch mit Vorsitz, Gästen am Rand,
   verborgener Resonanz und einem möglichen zusätzlichen Beweisstück.
 - **Verfolgungsjagd:** zwei wählbare Tiere verfolgen einen unkenntlichen Fahrer
-  im weißen Sportwagen durch eine interaktive 3D-Schneelandschaft. Für beide
+  im weißen Sportwagen durch eine interaktive 3D-Landschaft. Für beide
   Verfolger werden das Schaf-mit-Schal- und das Zottel-Yeti-Modell zugeordnet.
   Nach dem Fang spricht das fliehende Tier das im Editor hinterlegte Statement;
   anschließend läuft die Saga mit dem nächsten Kapitel weiter.
+
+  **Die Strecke** stellt man ein wie jede andere 3D-Welt des Spiels - im
+  Editor der Jagd und ebenso in der Jagd vor dem Showdown:
+
+  - **Straßenbelag:** Asphalt, Sand oder Schneestraße. Er bestimmt auch das
+    Land ringsum: Tannen im Schnee, Dünen im Sand, Blöcke am Asphalt - und die
+    Markierung auf der Fahrbahn: leuchtende Striche auf Asphalt, rote
+    Schneestangen in der Arktis, helle Pfosten in der Wüste.
+  - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
+    3D-Kapitel.
+  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
+    Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
+    daran vorbeifährt.
+  - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
+    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen in zwei Zeilen
+    neben der Piste und wiederholen sich, solange die Jagd dauert: Wer durch
+    Akihabara fährt, fährt an denselben Häusern mehrmals vorbei. Auf dem Handy
+    stehen weniger und kleiner aufgelöste - das Speicherproblem ist dasselbe
+    wie in der Stadt. Ohne Auswahl bleibt es bei der gerechneten Landschaft.
+
+  Alte Jagden kennen nichts davon und fahren unverändert weiter: Ohne
+  Einstellung gilt die Schneepiste in der Nacht, durch die sie immer führten.
+  Ausprobieren lässt sich alles ohne Speichern - in der 3D-Vorschau des
+  Editors und im Admin-Menü unter **Pursuit · Verfolgungsjagd**, wo Belag,
+  Licht, Wetter und Häuser direkt auf der Startkarte stehen.
 
   **Die Verhaftung** steht dazwischen: Ist der Wagen eingeholt, gehen beide mit
   quietschenden Reifen in die Eisen, der Fluchtwagen stellt sich quer, alle vier
@@ -249,6 +274,41 @@ belegen. Die Jagd besitzt dort außerdem eine spielbare **3D-Vorschau**, einen
 frei wählbaren Song und eine kurze Comic-Mutprobe mit zwei langen
 Cognacflaschen, ohne
 dass die Saga dafür gespeichert oder erzeugt werden muss.
+
+### Geschenke nach einem Kapitel
+
+Zu jedem Kapitel einer Saga (und zum Finale) lässt sich eintragen, was Wimpy
+bekommt, wenn er es löst - freiwillig, und jede Lücke ist erlaubt. Zur Wahl
+steht alles aus dem Laden, in zwei Gruppen:
+
+- **Zubehör** landet in der Tasche und wirkt wie gekauft: Veritaserum,
+  Fingerabdruckset, was immer im Admin-Menü angelegt wurde.
+- **Autos** landen in der Garage. Ein geschenkter Wagen gehört Wimpy genau
+  einmal, kostet nichts - und wird sofort gefahren, so wie ein gekaufter auch.
+  Wer lieber beim alten bleibt, stellt das im Laden mit zwei Tippern um.
+
+Verbucht wird über Saga und Kapitelnummer: Dasselbe Kapitel noch einmal zu
+spielen bringt kein zweites Exemplar. Steht das Stück später nicht mehr im
+Laden, bleibt die Übergabe still aus - der Editor sagt das aber schon beim
+Erzeugen.
+
+### Autos: Größe und Ausrichtung
+
+Jedes Automodell wird im Spiel auf dieselbe Länge gebracht - sonst stünde ein
+Spielzeugauto neben einem Lastwagen. Genau das macht aber aus einer Limousine
+ein Spielzeug: Sie ist länger als ein Sportwagen und sieht erst richtig aus,
+wenn sie es auch im Spiel sein darf.
+
+Deshalb hat jeder Wagen im Admin-Menü unter **Autos** eine **Größe**: 1,0× ist
+ein gewöhnlicher Wagen (3,5 m in der Verfolgungsjagd), eine Limousine steht bei
+1,4× bis 1,6×, ein Kleinwagen bei 0,8×. Die Vorschau zeigt es sofort - die
+Fahrbahn bleibt gleich breit, der Wagen nicht -, und daneben steht, wie lang er
+damit wird. Erlaubt ist 0,6× bis 2,2×; Wagen ohne Angabe (alle von früher)
+bleiben bei 1,0×. Dieselbe Größe gilt überall: in der Jagd, in der 3D-Stadt und
+in der Vorschau.
+
+Daneben steht dort die **Ausrichtung**: Jedes Modell liegt anders in seiner
+Datei, und die Drehung rückt es so, dass die Schnauze in Fahrtrichtung zeigt.
 
 ## Bilder erzeugen lassen
 
@@ -408,12 +468,20 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
 - **Wetter am Schauplatz** (Admin → Spiel): Regen, Nebel, Schnee, Nacht oder
   „Zufall“ - eine Lage je Fall, damit sie nicht mitten im Herumlaufen
   umschlägt. Alles reines CSS, keine zusätzlichen Dateien.
-- **Wetter in der 3D-Welt** (Städte, 3D-Kapitel, Arena, Probewelt): klar,
-  Sonne, Regen, Schneefall, Schneesturm, **Sandsturm** oder Nebel. Der
-  Sandsturm färbt Dunst, Licht und Boden ocker, legt Sand auf die Fahrbahn und
-  treibt die Körner waagerecht und böig durchs Bild - Stadt und Kampfarena
-  rechnen dafür mit denselben Zahlen (`components/stadtBau.ts`), damit man in
-  beiden im selben Sturm steht.
+- **Wetter in der 3D-Welt** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd,
+  Probewelt): klar, Sonne, Regen, Schneefall, Schneesturm, **Blizzard**,
+  **Sandsturm** oder Nebel. Der Sandsturm färbt Dunst, Licht und Boden ocker,
+  legt Sand auf die Fahrbahn und treibt die Körner waagerecht und böig durchs
+  Bild. Alle Szenen rechnen dafür mit denselben Zahlen
+  (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
+- **Der Blizzard** ist kein stärkerer Schneesturm, sondern ein eigener
+  Zustand: Die Welt endet nach wenigen Metern, der Schnee fliegt in zwei
+  Schichten fast waagerecht vorbei, und Böen ziehen die Sicht immer wieder
+  ganz zu - zwischen ihnen sieht man gerade weit genug, um zu ahnen, wohin man
+  läuft. In der Verfolgungsjagd nehmen die Böen etwas weniger, damit der Wagen
+  vor einem ein Schemen bleibt und man nicht einer Zahl im HUD hinterherfährt.
+  Es gibt ihn auch als Wetter über dem Ortsbild (Admin → Spiel) - dort ganz
+  ohne 3D, als CSS.
 - **Verdacht in Bewegung.** Ändert sich ein Verdacht, fährt rechts kurz eine
   Meldung herein - ohne Knopf und ohne Berührungen zu schlucken.
 - **Titelkarten.** Vor jedem Kapitel steht zwei Sekunden „Kapitel II“ und der

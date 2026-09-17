@@ -63,7 +63,7 @@ import {
   type Saga,
 } from "@/lib/sagaTypen";
 import type { Character } from "@/lib/types";
-import { useLaden } from "@/lib/useLaden";
+import { useGeschenke } from "@/lib/useLaden";
 import { TASCHE_MAX, herkunftsZeile } from "@/lib/beweismittel";
 import { useTasche } from "@/lib/useTasche";
 import { wirkungVon, type Zubehoer } from "@/lib/zubehoer";
@@ -98,7 +98,14 @@ export default function Home() {
   const [arcsOffen, setArcsOffen] = useState(false);
   const [ladenOffen, setLadenOffen] = useState(false);
   /** Der Inhalt des Ladens - die Beschreibungen kommen aus der Datenbank. */
-  const zubehoer = useLaden();
+  /*
+   * Zubehör und Autos zusammen.
+   *
+   * Beides kann verschenkt werden, und beides wird hier nachgeschlagen: das
+   * Zubehör für die Tasche, das Auto für die Garage - und sein Modell, damit
+   * der Wagen vor einer Verfolgungsjagd schon geladen ist.
+   */
+  const zubehoer = useGeschenke();
   /**
    * Eingesetztes Zubehör, das auf die nächste Antwort wartet.
    * Charakter-Id -> Wirkung; verbraucht wird beim Absenden der Frage.

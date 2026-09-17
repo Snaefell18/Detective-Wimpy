@@ -9,7 +9,6 @@ import { kapitelPosition } from "@/lib/saga3dLayout";
 import { TouchJoystick } from "./TouchJoystick";
 import {
   LEUCHTEN,
-  SAND_KORN,
   SAND_LICHT,
   cellShading,
   einpassen,
@@ -17,11 +16,10 @@ import {
   gradientTextur,
   haeuserBauen,
   sandDunst,
-  sandKoerner,
-  sandTreiben,
-  schneeflockenTextur,
+  schneeLand,
   strassenBauen,
   texturenVerkleinern,
+  wetterFeld,
   type StadtBlock,
 } from "./stadtBau";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
@@ -36,12 +34,20 @@ import {
   type FahrWerte,
   type Fahrzustand,
 } from "@/lib/autofahrt";
-import { AUTO_MODELLE, START_AUTO_ID, type Auto } from "@/lib/autos";
+import { AUTO_MODELLE, START_AUTO_ID, autoLaenge, type Auto } from "@/lib/autos";
 import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { DREI_D_LOCATIONS, locationsFuer3D, polizeiAus, tankstelleAus } from "@/lib/pursuit3d";
+import {
+  DREI_D_LOCATIONS,
+  istBlizzard,
+  istDunst,
+  istSchneeWetter,
+  locationsFuer3D,
+  polizeiAus,
+  tankstelleAus,
+} from "@/lib/pursuit3d";
 import {
   begehbar,
   feldMitte,
@@ -243,17 +249,30 @@ function KapitelCanvas({
       abend: 0xa84567,
       nacht: 0x070a16,
     }[tageszeit];
-    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const schneeWetter = istSchneeWetter(wetter);
+    /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
+    const schneeLand3D = strassentyp === "schnee";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
-    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    /** Der Blizzard: Sicht auf wenige Meter, und die Böen nehmen auch die. */
+    const blizzard = istBlizzard(wetter);
+    const dunst = istDunst(wetter);
     const nebel = sandSturm
       ? sandDunst(tageszeit)
-      : dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
+      // Der Blizzard ist heller als jeder Schneesturm: ein Weiß, in dem
+      // Himmel und Boden nicht mehr zu unterscheiden sind.
+      : blizzard
+        ? (tageszeit === "nacht" ? 0x36485f : 0xe6eef6)
+        : dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
-    // Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m entfernt).
-    const nebelNah = dunst ? 17 : wetter === "regen" ? 13 : 20;
-    const nebelFern = dunst ? 36 : wetter === "regen" ? 48 : 68;
+    /*
+     * Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m
+     * entfernt). Im Blizzard gilt das nicht mehr: Dort ist die Welt hinter
+     * der nächsten Kreuzung weg, und genau das ist der Sinn der Sache. Weil
+     * die Kamera hinter Wimpy steht, bleibt er selbst sichtbar.
+     */
+    const nebelNah = blizzard ? 12 : dunst ? 17 : wetter === "regen" ? 13 : 20;
+    const nebelFern = blizzard ? 38 : dunst ? 36 : wetter === "regen" ? 48 : 68;
     /*
      * Auf dem Stadtplan endet der Nebel spätestens dort, wo das Gerät
      * aufhört zu zeichnen. Dann verschwindet ein Haus im Dunst, statt vor
@@ -278,7 +297,14 @@ function KapitelCanvas({
     renderer.shadowMap.enabled = profil.schatten;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = tageszeit === "nacht" ? 0.82 : wetter === "sonne" ? 1.18 : 0.98;
+    /*
+     * Schnee ist die hellste Fläche, die es hier gibt. Wird sie auch noch
+     * überbelichtet, kippt sie im Filmlook ins Cremefarbene - dann sieht die
+     * Piste aus wie Sand. Deshalb steht die Blende im Schneeland enger.
+     */
+    renderer.toneMappingExposure = tageszeit === "nacht"
+      ? 0.82
+      : wetter === "sonne" ? (schneeLand3D ? 0.94 : 1.18) : schneeLand3D ? 0.9 : 0.98;
     element.appendChild(renderer.domElement);
     const kontextVerloren = (event: Event) => {
       event.preventDefault();
@@ -288,7 +314,15 @@ function KapitelCanvas({
     renderer.domElement.addEventListener("webglcontextlost", kontextVerloren);
 
     const oben = tageszeit === "nacht" ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xe8f8ff;
-    scene.add(new THREE.HemisphereLight(oben, tageszeit === "nacht" ? 0x160d2e : 0x455348, tageszeit === "nacht" ? 2.15 : 2.8));
+    /*
+     * Was von unten zurückkommt, ist der Boden - und Schnee wirft kaltes
+     * Licht zurück, kein olivgrünes. Ohne diesen Unterschied bekam die
+     * Schneestraße von unten einen erdigen Schimmer.
+     */
+    const unten = schneeLand3D
+      ? (tageszeit === "nacht" ? 0x24405e : 0xd3e6f4)
+      : tageszeit === "nacht" ? 0x160d2e : 0x455348;
+    scene.add(new THREE.HemisphereLight(oben, unten, tageszeit === "nacht" ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
       wetter === "sonne"
         ? 0xfff1b8
@@ -302,6 +336,22 @@ function KapitelCanvas({
     licht.position.set(-8, 14, 9);
     licht.castShadow = profil.schatten;
     licht.shadow.mapSize.set(1024, 1024);
+    /*
+     * Wohin der Schatten überhaupt fällt.
+     *
+     * Ohne diese Zeilen steht die Schattenkamera auf ihrem Standardmaß: ein
+     * Kasten von zehn Metern Kantenlänge um den Nullpunkt. Alles, was weiter
+     * weg steht, warf keinen Schatten - und was genau an der Grenze stand,
+     * einen abgeschnittenen. Im Schnee fällt das am meisten auf: Weiß auf
+     * Weiß ist nur dort zu erkennen, wo etwas einen Schatten wirft.
+     */
+    licht.shadow.camera.left = -26;
+    licht.shadow.camera.right = 26;
+    licht.shadow.camera.top = 26;
+    licht.shadow.camera.bottom = -26;
+    licht.shadow.camera.far = 70;
+    licht.shadow.bias = -0.0015;
+    licht.shadow.camera.updateProjectionMatrix();
     scene.add(licht);
     // Der Straßenzug behält seinen gewohnten Boden; der Stadtplan bekommt
     // genau seine Rasterfläche plus einen Rand, damit nichts abbricht.
@@ -318,7 +368,7 @@ function KapitelCanvas({
       ? tageszeit === "nacht" ? 0x3b2f1f : 0xa98a5c
       : stadtplan
       ? strassentyp === "schnee"
-        ? 0xe4eef5
+        ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff)
         : strassentyp === "sand"
           ? 0xb59468
           : tageszeit === "nacht"
@@ -328,7 +378,12 @@ function KapitelCanvas({
               : wetter === "regen"
                 ? 0x3f4c52
                 : 0x6b7166
-      : strassentyp === "schnee" ? 0xc9dce8 : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
+      /*
+       * Der unberührte Schnee neben der Straße ist heller als die Fahrbahn,
+       * nicht dunkler. Andersherum - und genau so war es - sieht die Straße
+       * aus wie eine helle Rampe, die durch graues Land führt.
+       */
+      : strassentyp === "schnee" ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff) : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
       new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
@@ -337,6 +392,27 @@ function KapitelCanvas({
     boden.position.z = stadtplan ? 0 : -8;
     boden.receiveShadow = true;
     scene.add(boden);
+    /*
+     * Und wo Schnee liegt, liegt er auch neben der Straße: Wehen und
+     * verschneite Tannen, damit aus der weißen Fläche eine Landschaft wird.
+     * Auf dem Handy stehen weniger davon - jede ist ein eigenes Objekt.
+     */
+    if (schneeLand3D) {
+      schneeLand({
+        scene,
+        gradient,
+        merken: (wert) => ressourcen.add(wert),
+        ausmass,
+        mitteZ: stadtplan ? 0 : -8,
+        plan: stadtplan,
+        // Im Straßenzug steht der Schnee neben der Fahrbahn, auf dem
+        // Stadtplan auf den freien Feldern - beides ohne die Stelle, an der
+        // man selbst losläuft.
+        startPunkt: { x: 0, z: 0 },
+        menge: profil.schatten ? 30 : 16,
+        tageszeit,
+      });
+    }
     const belag = fahrbahnMaterial({
       gradient,
       strassentyp,
@@ -365,40 +441,19 @@ function KapitelCanvas({
       fahrbahn.receiveShadow = true;
       scene.add(fahrbahn);
     }
-    let regen: THREE.Points | null = null;
-    if (wetter === "regen" || schneeWetter || sandSturm) {
-      const anzahl = sandSturm ? 2000 : wetter === "schneesturm" ? 1800 : 900;
-      const positionen = sandSturm
-        ? sandKoerner(anzahl, 28, 70, -13)
-        : new Float32Array(anzahl * 3);
-      if (!sandSturm) {
-        for (let i = 0; i < anzahl; i++) {
-          positionen[i * 3] = Math.random() * 28 - 14;
-          positionen[i * 3 + 1] = Math.random() * 15;
-          positionen[i * 3 + 2] = Math.random() * 70 - 48;
-        }
-      }
-      const geometrie = new THREE.BufferGeometry();
-      geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
-      // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und
-      // in einem anderen Ton.
-      const flocken = schneeWetter || sandSturm ? schneeflockenTextur() : null;
-      if (flocken) ressourcen.add(flocken);
-      regen = new THREE.Points(
-        geometrie,
-        new THREE.PointsMaterial({
-          map: flocken,
-          color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
-          size: sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
-          transparent: true,
-          opacity: sandSturm ? SAND_KORN.deckkraft : 0.85,
-          depthWrite: false,
-        }),
-      );
-      scene.add(regen);
-      ressourcen.add(geometrie);
-      ressourcen.add(regen.material as THREE.Material);
-    }
+    /*
+     * Was vom Himmel kommt, rechnet components/stadtBau.ts - dieselbe
+     * Rechnung wie in der Arena und in der Verfolgungsjagd.
+     */
+    const wetterfall = wetterFeld({
+      wetter,
+      scene,
+      merken: (wert) => ressourcen.add(wert),
+      weite: 28,
+      tiefe: 70,
+      versatzZ: -13,
+      anzahl: blizzard ? 3200 : wetter === "schneesturm" ? 1800 : sandSturm ? 2000 : 900,
+    });
     if (wetter === "sonne") {
       const sonne = new THREE.Mesh(
         new THREE.SphereGeometry(2.2, 18, 12),
@@ -746,7 +801,7 @@ function KapitelCanvas({
 
     /* --- Ein- und Aussteigen ------------------------------------------ */
     /** Ein Auto aus dem Katalog als fahrbereite Gruppe. */
-    const wagenBauen = async (wunsch: { modell: string; drehung: number }) => {
+    const wagenBauen = async (wunsch: { modell: string; drehung: number; groesse?: number }) => {
       const modell = AUTO_MODELLE.find((m) => m.id === wunsch.modell);
       if (!modell) return null;
       const gltf = await laden(modell.datei);
@@ -759,7 +814,9 @@ function KapitelCanvas({
       körper.updateMatrixWorld(true);
       let box = new THREE.Box3().setFromObject(körper);
       const groesse = box.getSize(new THREE.Vector3());
-      körper.scale.multiplyScalar(3 / Math.max(groesse.x, groesse.z, 0.001));
+      // Dieselbe Rechnung wie in der Verfolgungsjagd: gleiche Länge für alle,
+      // mal der Größe aus dem Katalog.
+      körper.scale.multiplyScalar(autoLaenge(wunsch, 3) / Math.max(groesse.x, groesse.z, 0.001));
       körper.updateMatrixWorld(true);
       box = new THREE.Box3().setFromObject(körper);
       const mitte = box.getCenter(new THREE.Vector3());
@@ -953,28 +1010,7 @@ function KapitelCanvas({
       if (laufAktion) laufAktion.setEffectiveTimeScale(Math.max(0.25, staerke));
       spielerMixer?.update(dt);
       position.current.copy(spieler.position);
-      if (regen && sandSturm) {
-        sandTreiben(
-          regen.geometry.getAttribute("position") as THREE.BufferAttribute,
-          dt,
-          jetzt,
-          28,
-        );
-      } else if (regen) {
-        const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
-        for (let i = 0; i < positionen.count; i++) {
-          const y = positionen.getY(i) - dt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
-          positionen.setY(i, y < 0 ? 15 : y);
-          if (schneeWetter) {
-            const wind = wetter === "schneesturm" ? 7 + Math.sin(jetzt * 0.0014) * 3 : Math.sin(jetzt * 0.0006 + i) * 0.65;
-            const px = positionen.getX(i) + wind * dt;
-            positionen.setX(i, px > 14 ? -14 : px < -14 ? 14 : px);
-            const pz = positionen.getZ(i) + dt * (wetter === "schneesturm" ? 2.2 : 0.2);
-            positionen.setZ(i, pz > 22 ? -48 : pz);
-          }
-        }
-        positionen.needsUpdate = true;
-      }
+      wetterfall?.bewegen(dt, jetzt);
       npcGruppen.forEach((npc) => {
         let laeuft = false;
         const ansprechbar = npc.gruppe.position.distanceToSquared(spieler.position) < 2.35 ** 2;
@@ -1108,16 +1144,25 @@ function KapitelCanvas({
        * eine Fassade. Weggeblendet wird weich über eine gute Zehntelsekunde
        * - nichts springt, nichts blitzt.
        */
+      /**
+       * Wie weit man in diesem Bild sieht.
+       *
+       * Im Blizzard zieht die Böe die Sicht zusätzlich zu - und zwar auch
+       * im alten Straßenzug, in dem sonst nichts am Nebel dreht.
+       */
+      const sichtSetzen = (fern: number) => {
+        if (!(scene.fog instanceof THREE.Fog)) return;
+        const weit = fern * (wetterfall?.sicht(jetzt) ?? 1);
+        scene.fog.far = weit;
+        scene.fog.near = Math.min(nebelNah, weit * 0.45);
+      };
+      if (blizzard && !stadtBloecke.length) sichtSetzen(nebelFern);
       if (stadtBloecke.length) {
         // Nach einem Tabwechsel liegen Sekunden zwischen zwei Bildern. Das
         // ist kein Ruckeln, das ist eine Pause - die zählt nicht.
         if (rohDt < 0.5) regel = nachregeln(regel, rohDt);
         sichtweite += (profil.sichtweite * regel.faktor - sichtweite) * Math.min(1, dt * 0.7);
-        if (scene.fog instanceof THREE.Fog) {
-          const fern = Math.min(nebelFern, sichtweite);
-          scene.fog.far = fern;
-          scene.fog.near = Math.min(nebelNah, fern * 0.45);
-        }
+        sichtSetzen(Math.min(nebelFern, sichtweite));
         const imWeg = stadtplan
           ? sichtFelder(stadtplan, spieler.position.x, spieler.position.z, camera.position.x, camera.position.z)
           : [];

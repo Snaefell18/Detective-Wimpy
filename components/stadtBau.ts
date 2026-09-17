@@ -3,15 +3,24 @@ import {
   FELD_GROESSE,
   STADT_HOEHE,
 
+  feldAn,
+  feldBei,
   feldMitte,
   gebaeudeFelder,
   hoeheFuer,
+  imPlan,
   istStrasse,
   strassenFelder,
   vorDerTuer,
   type Stadtplan,
 } from "@/lib/stadtplan";
-import type { DreiDStrassentyp, DreiDTageszeit, DreiDWetter } from "@/lib/pursuit3d";
+import {
+  istBlizzard,
+  istSchneeWetter,
+  type DreiDStrassentyp,
+  type DreiDTageszeit,
+  type DreiDWetter,
+} from "@/lib/pursuit3d";
 
 /**
  * Wie aus einem Stadtplan eine Stadt wird.
@@ -64,20 +73,42 @@ export function gradientTextur() {
   return textur;
 }
 
+/**
+ * Der Belag einer Naturstraße - Sandpiste oder Schneefahrbahn.
+ *
+ * Bei Schnee ist die Farbe die halbe Miete: Schnee ist nicht weiß, sondern
+ * bläulich, und was in ihn hineingedrückt wird, wird nicht grau, sondern
+ * kälter. Solange die Spuren einfach nur dunkler waren, sah die Fahrbahn aus
+ * wie festgetretener Sand - und mit einem warmen Licht darüber wurde daraus
+ * ein gelblicher Streifen, der mit Schnee nichts zu tun hatte.
+ *
+ * Deshalb drückt die Spur hier je Kanal verschieden tief: Rot verliert am
+ * meisten, Blau am wenigsten. Dazu kommt ein feines Glitzern, das man kaum
+ * einzeln sieht, das der Fläche aber die Tiefe gibt, die weiße Farbe allein
+ * nie hat.
+ */
 export function naturStrassenTextur(schnee: boolean) {
   const breite = 128, laenge = 512;
   const pixel = new Uint8Array(breite * laenge * 4);
+  /** Wie tief die Reifenspur je Kanal eindrückt - bei Schnee kalt, sonst grau. */
+  const spurTiefe = schnee ? [52, 42, 26] : [29, 29, 29];
   for (let y = 0; y < laenge; y++) {
     for (let x = 0; x < breite; x++) {
       const u = x / (breite - 1);
       const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-      const korn = (rauschen - Math.floor(rauschen) - 0.5) * 14;
+      const korn = (rauschen - Math.floor(rauschen) - 0.5) * (schnee ? 9 : 14);
       const spur = [0.22, 0.38, 0.62, 0.78].reduce((summe, mitte) =>
         summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / 0.027) ** 2)), 0);
       const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
-      const riffeln = Math.sin(y * 0.7 + u * 22) * 3;
-      const basis = schnee ? [222, 236, 244] : [199, 160, 105];
-      const farbe = basis.map((v) => THREE.MathUtils.clamp(v + korn + riffeln - spur * (schnee ? 44 : 29) + rand * (schnee ? 10 : -22), 0, 255));
+      const riffeln = Math.sin(y * 0.7 + u * 22) * (schnee ? 2 : 3);
+      // Einzelne Kristalle blitzen auf - selten, klein, hell.
+      const funkeln = schnee && (rauschen - Math.floor(rauschen)) > 0.985 ? 22 : 0;
+      const basis = schnee ? [228, 240, 251] : [199, 160, 105];
+      const farbe = basis.map((v, kanal) => THREE.MathUtils.clamp(
+        v + korn + riffeln + funkeln - spur * spurTiefe[kanal] + rand * (schnee ? 8 : -22),
+        0,
+        255,
+      ));
       pixel.set([...farbe, 255], (y * breite + x) * 4);
     }
   }
@@ -141,6 +172,365 @@ export function schneeflockenTextur() {
   textur.magFilter = THREE.LinearFilter;
   textur.needsUpdate = true;
   return textur;
+}
+
+/* --- Wetter: Tropfen, Flocken, Sandkörner ---------------------------- */
+
+/** Ein Wetterfeld, das die Szene in jedem Bild ein Stück weiterschiebt. */
+export type WetterFeld = {
+  /** Alles, was fällt - der Blizzard bringt zwei Schichten mit. */
+  gruppe: THREE.Group;
+  /**
+   * Ein Bild weiter.
+   *
+   * `dt` sind Sekunden, `jetzt` Millisekunden (für den Wind), `zugZ` Meter,
+   * die die Welt in diesem Bild unter dem Wetter weggezogen ist - das braucht
+   * nur die Verfolgungsjagd, bei der nicht die Kamera fährt, sondern die
+   * Straße.
+   */
+  bewegen: (dt: number, jetzt: number, zugZ?: number) => void;
+  /**
+   * Wie weit man gerade sehen kann: 1 ist die eingestellte Sichtweite,
+   * weniger eine Böe, die sie zuzieht. Außerhalb des Blizzards immer 1.
+   */
+  sicht: (jetzt: number) => number;
+};
+
+/**
+ * Was vom Himmel kommt - einmal für die ganze Welt.
+ *
+ * Stadt, Arena und Verfolgungsjagd hatten davon je eine eigene Fassung; die
+ * dritte hätte niemand mehr mit den beiden anderen abgeglichen. Hier steht
+ * nun eine, die alle drei können: Regen fällt, Schnee schwebt, der
+ * Schneesturm weht ihn quer, und der Sandsturm fliegt fast waagerecht.
+ *
+ * Null kommt zurück, wenn es nichts zu zeichnen gibt (klar, Sonne, Nebel) -
+ * dann hat die Szene auch nichts zu tun.
+ */
+export function wetterFeld(args: {
+  wetter: DreiDWetter;
+  scene: THREE.Scene;
+  merken: Merken;
+  /** Der Ausschnitt, in dem es fällt - Kantenlängen in Metern. */
+  weite: number;
+  tiefe: number;
+  /** Wie hoch hinauf; darüber fängt jede Flocke wieder an. */
+  hoehe?: number;
+  /** Wo der Ausschnitt liegt. */
+  versatzZ?: number;
+  /** Wie viele Stücke - ohne Angabe je nach Lage. */
+  anzahl?: number;
+  /**
+   * Wie groß eine Flocke gezeichnet wird - 1 ist das Maß der Stadt.
+   *
+   * Es hängt daran, wie weit die Kamera weg steht: In der Stadt läuft man
+   * mitten durch den Schneefall, in der Verfolgungsjagd schaut man aus
+   * zwanzig Metern auf die Straße. Dieselbe Flockengröße ist dort ein Punkt,
+   * den niemand sieht.
+   */
+  groesse?: number;
+}): WetterFeld | null {
+  const { wetter, scene, merken, weite, tiefe, hoehe = 15, versatzZ = 0, groesse = 1 } = args;
+  const schneeWetter = istSchneeWetter(wetter);
+  const blizzard = istBlizzard(wetter);
+  const sandSturm = wetter === "sandsturm";
+  if (wetter !== "regen" && !schneeWetter && !sandSturm) return null;
+
+  const anzahl =
+    args.anzahl ??
+    (blizzard
+      ? 3200
+      : sandSturm
+        ? 1500
+        : wetter === "schneesturm" ? 1200 : wetter === "schnee" ? 800 : 700);
+
+  /** Eine Schicht Flocken - der Blizzard bekommt zwei davon. */
+  const schicht = (menge: number, punktGroesse: number, deckkraft: number) => {
+    const positionen = sandSturm
+      ? sandKoerner(menge, weite, tiefe, versatzZ)
+      : new Float32Array(menge * 3);
+    if (!sandSturm) {
+      for (let i = 0; i < menge; i++) {
+        positionen[i * 3] = Math.random() * weite - weite / 2;
+        positionen[i * 3 + 1] = Math.random() * hoehe;
+        positionen[i * 3 + 2] = Math.random() * tiefe - tiefe / 2 + versatzZ;
+      }
+    }
+    const geometrie = new THREE.BufferGeometry();
+    geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
+    merken(geometrie);
+    const material = new THREE.PointsMaterial({
+      map: bild,
+      color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
+      size: punktGroesse * groesse,
+      transparent: true,
+      opacity: deckkraft,
+      depthWrite: false,
+    });
+    merken(material);
+    const punkte = new THREE.Points(geometrie, material);
+    gruppe.add(punkte);
+    return geometrie;
+  };
+
+  const gruppe = new THREE.Group();
+  // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und in
+  // einem anderen Ton. Regen bleibt ein Strich ohne Bild.
+  const bild = schneeWetter || sandSturm ? schneeflockenTextur() : null;
+  if (bild) merken(bild);
+
+  const schichten = blizzard
+    ? [
+        // Fein und dicht - die Wand, durch die man fährt.
+        { geometrie: schicht(anzahl, 0.16, 0.95), tempo: 1 },
+        // Und grobe Brocken davor, die spürbar schneller durchs Bild gehen.
+        { geometrie: schicht(Math.round(anzahl / 3), 0.4, 0.85), tempo: 1.45 },
+      ]
+    : [
+        {
+          geometrie: schicht(
+            anzahl,
+            sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
+            sandSturm ? SAND_KORN.deckkraft : 0.85,
+          ),
+          tempo: 1,
+        },
+      ];
+  scene.add(gruppe);
+
+  const halbeWeite = weite / 2;
+  const vorne = versatzZ + tiefe / 2;
+  const hinten = versatzZ - tiefe / 2;
+
+  /**
+   * Wie heftig die Böe gerade ist: 0 ist eine Atempause, 1 der Augenblick,
+   * in dem man nichts mehr sieht. Zwei ungleich lange Wellen übereinander,
+   * damit sich nichts wiederholt.
+   */
+  const boe = (jetzt: number) =>
+    blizzard
+      ? THREE.MathUtils.clamp(
+          Math.sin(jetzt * 0.00042) * 0.6 + Math.sin(jetzt * 0.00097 + 1.3) * 0.5,
+          0,
+          1,
+        )
+      : 0;
+
+  const bewegen = (dt: number, jetzt: number, zugZ = 0) => {
+    const staerke = boe(jetzt);
+
+    for (const { geometrie, tempo } of schichten) {
+      const feld = geometrie.getAttribute("position") as THREE.BufferAttribute;
+      if (sandSturm) {
+        sandTreiben(feld, dt, jetzt, weite);
+        if (zugZ) zugAnwenden(feld, zugZ, hinten, vorne);
+        continue;
+      }
+      const fallen =
+        (blizzard ? 6.5 : wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13) * tempo;
+      for (let i = 0; i < feld.count; i++) {
+        const y = feld.getY(i) - dt * fallen;
+        feld.setY(i, y < 0 ? hoehe : y);
+        if (!schneeWetter) continue;
+        // Schnee fällt nicht senkrecht: Er wird getragen, im Sturm quer -
+        // und im Blizzard fliegt er fast waagerecht vorbei.
+        const wind =
+          (blizzard
+            ? 26 + staerke * 14 + Math.sin(jetzt * 0.0021 + i * 0.03) * 5
+            : wetter === "schneesturm"
+              ? 7 + Math.sin(jetzt * 0.0014) * 3
+              : Math.sin(jetzt * 0.0006 + i) * 0.65) * tempo;
+        const px = feld.getX(i) + wind * dt;
+        feld.setX(i, px > halbeWeite ? -halbeWeite : px < -halbeWeite ? halbeWeite : px);
+        const pz =
+          feld.getZ(i) + dt * (blizzard ? 5 : wetter === "schneesturm" ? 2.2 : 0.2) * tempo;
+        feld.setZ(i, pz > vorne ? hinten : pz);
+      }
+      if (zugZ) zugAnwenden(feld, zugZ, hinten, vorne);
+      feld.needsUpdate = true;
+    }
+  };
+
+  /*
+   * Im Blizzard zieht die Sicht mit der Böe zu.
+   *
+   * Das ist der Unterschied zum Schneesturm: Dort schneit es quer, hier
+   * verschwindet die Welt für Augenblicke ganz. Gerechnet wird hier nur der
+   * Faktor - den Nebel setzt jede Szene selbst, denn sie regelt ihn ohnehin
+   * schon nach dem, was das Gerät hergibt.
+   */
+  const sicht = (jetzt: number) => 1 - boe(jetzt) * 0.42;
+
+  return { gruppe, bewegen, sicht };
+}
+
+/** Die Welt zieht unter dem Wetter weg - nur in der Verfolgungsjagd. */
+function zugAnwenden(
+  feld: THREE.BufferAttribute,
+  zugZ: number,
+  hinten: number,
+  vorne: number,
+): void {
+  for (let i = 0; i < feld.count; i++) {
+    const z = feld.getZ(i) - zugZ;
+    feld.setZ(i, z < hinten ? vorne : z > vorne ? hinten : z);
+  }
+  feld.needsUpdate = true;
+}
+
+/* --- Das Schneeland -------------------------------------------------- */
+
+/**
+ * Was aus einer weißen Fläche eine Schneelandschaft macht.
+ *
+ * Die Schneestraße war lange nur eine helle Fahrbahn auf einem hellen Boden:
+ * zwei Farbflächen, in denen das Auge nichts findet. Erst was darauf steht,
+ * macht daraus ein Land - Wehen, in denen sich das Licht bricht, und
+ * verschneite Tannen, an denen man sieht, wie weit es noch ist.
+ *
+ * Gebaut wird mit drei Geometrien und drei Materialien für alles zusammen:
+ * Jede Wehe und jede Tanne ist nur ein weiteres Objekt auf denselben Daten,
+ * und davon verträgt auch ein Handy einige Dutzend.
+ */
+const halbeTiefeVon = (ausmass: { tiefe: number }) => ausmass.tiefe / 2;
+
+export function schneeLand(args: {
+  scene: THREE.Scene;
+  gradient: THREE.Texture;
+  merken: Merken;
+  /** Die Fläche, auf der etwas stehen darf - Kantenlängen in Metern. */
+  ausmass: { breite: number; tiefe: number };
+  /** Wo die Fläche liegt; der alte Straßenzug ist nach hinten versetzt. */
+  mitteZ?: number;
+  /** Der gelegte Stadtplan - dort bleiben Straßen und Häuser frei. */
+  plan?: Stadtplan | null;
+  /** Ohne Plan: Wie weit von der Straßenmitte nichts stehen darf. */
+  freieBreite?: number;
+  /** Ein Punkt, um den herum nichts steht - dort fängt man an zu laufen. */
+  startPunkt?: { x: number; z: number } | null;
+  /** Wie viele Stücke höchstens - das Gerät zählt mit. */
+  menge?: number;
+  /** Nachts ist der Schnee blau, tagsüber fast weiß. */
+  tageszeit?: DreiDTageszeit;
+}): void {
+  const {
+    scene, gradient, merken, ausmass, mitteZ = 0, plan = null,
+    freieBreite = 5.4, startPunkt = null, menge = 26, tageszeit = "tag",
+  } = args;
+
+  const nacht = tageszeit === "nacht";
+  const weheGeometrie = new THREE.IcosahedronGeometry(1, 0);
+  const tanneGeometrie = new THREE.ConeGeometry(1, 3.4, 7);
+  const hutGeometrie = new THREE.ConeGeometry(0.62, 1.5, 7);
+  const schneeMaterial = new THREE.MeshToonMaterial({
+    color: nacht ? 0xb9cfe4 : 0xf4fbff,
+    gradientMap: gradient,
+  });
+  const tanneMaterial = new THREE.MeshToonMaterial({
+    color: nacht ? 0x1d3b42 : 0x2f6a63,
+    gradientMap: gradient,
+  });
+  for (const stueck of [weheGeometrie, tanneGeometrie, hutGeometrie, schneeMaterial, tanneMaterial]) {
+    merken(stueck);
+  }
+
+  /*
+   * Immer dieselbe Landschaft.
+   *
+   * Ein Zufall, der bei jedem Betreten neu würfelt, lässt die Wehen von
+   * Besuch zu Besuch springen - und wer eine Stadt im Editor einrichtet,
+   * sieht beim Spielen etwas anderes. Deshalb ein eigener, kleiner Würfel
+   * mit festem Anfang.
+   */
+  let saat = 20260916;
+  const zufall = () => {
+    saat = (saat * 1664525 + 1013904223) % 4294967296;
+    return saat / 4294967296;
+  };
+
+  /** Ist hier Platz? Auf Straßen, Häusern und vor den Füßen steht nichts. */
+  const frei = (x: number, z: number): boolean => {
+    if (startPunkt && Math.hypot(x - startPunkt.x, z - startPunkt.z) < 11) return false;
+    if (!plan) return Math.abs(x) > freieBreite;
+    const feld = feldBei(plan, x, z);
+    return !imPlan(plan, feld.x, feld.z) || feldAn(plan, feld.x, feld.z) === "";
+  };
+
+  /*
+   * Wie groß etwas sein darf, hängt davon ab, wie nah es an der Straße steht.
+   *
+   * Direkt am Rand liegt der Schnee, den der Pflug zur Seite geschoben hat:
+   * flach und niedrig. Eine Tanne gehört dorthin nicht - sie stünde im Bild
+   * und nähme die Sicht auf die Straße, für die die ganze Szene gebaut ist.
+   */
+  const amRand = (x: number) => !plan && Math.abs(x) < 14;
+
+  /*
+   * Der Wall, den der Pflug zur Seite geschoben hat.
+   *
+   * Es ist das Stück, an dem man eine Schneestraße erkennt: zwei lange,
+   * niedrige Wälle rechts und links, in denen die Schneestangen stecken. Im
+   * gelegten Stadtraster gibt es ihn nicht - dort liegt die Straße feldweise,
+   * und ein durchgehender Wall stünde quer über Kreuzungen.
+   */
+  if (!plan) {
+    /*
+     * Nicht als langer Kasten: Eine Kante quer durchs Bild bekommt von der
+     * Zeichenschattierung einen harten dunklen Streifen, und der sieht aus
+     * wie eine Mauer. Aneinandergereihte Buckel dagegen sind das, was ein
+     * Pflug hinterlässt.
+     */
+    for (const seite of [-1, 1]) {
+      for (let z = -halbeTiefeVon(ausmass); z < halbeTiefeVon(ausmass); z += 3.1) {
+        const buckel = new THREE.Mesh(weheGeometrie, schneeMaterial);
+        const laenge = 1.9 + zufall() * 1.1;
+        buckel.scale.set(1.15 + zufall() * 0.5, 0.42 + zufall() * 0.22, laenge);
+        buckel.rotation.set(0, zufall() * 0.4, seite * 0.12);
+        buckel.position.set(seite * (freieBreite + 0.5 + zufall() * 0.3), 0.02, mitteZ + z + zufall());
+        buckel.castShadow = true;
+        buckel.receiveShadow = true;
+        scene.add(buckel);
+      }
+    }
+  }
+
+  const halbeBreite = ausmass.breite / 2;
+  const halbeTiefe = halbeTiefeVon(ausmass);
+  let gesetzt = 0;
+  // Mehr Versuche als Stücke: Wer auf einer Straße landet, tritt zurück.
+  for (let versuch = 0; versuch < menge * 4 && gesetzt < menge; versuch++) {
+    const x = (zufall() - 0.5) * 2 * halbeBreite;
+    const z = mitteZ + (zufall() - 0.5) * 2 * halbeTiefe;
+    if (!frei(x, z)) continue;
+    gesetzt++;
+
+    if (amRand(x) || zufall() < 0.62) {
+      // Eine Wehe: flach, breit, unregelmäßig gedreht.
+      const wehe = new THREE.Mesh(weheGeometrie, schneeMaterial);
+      const groesse = (amRand(x) ? 0.8 + zufall() * 0.9 : 1.1 + zufall() * 2.4);
+      wehe.scale.set(groesse, groesse * (0.28 + zufall() * 0.2), groesse * (0.8 + zufall() * 0.5));
+      wehe.rotation.set(zufall() * 0.3, zufall() * Math.PI, zufall() * 0.3);
+      // Sie liegt im Boden, nicht darauf - sonst schwebt eine Kugel im Feld.
+      wehe.position.set(x, -groesse * 0.06, z);
+      // Erst der Schatten macht aus einer weißen Beule eine Wehe: Weiß auf
+      // Weiß sieht man sonst nicht.
+      wehe.castShadow = true;
+      wehe.receiveShadow = true;
+      scene.add(wehe);
+      continue;
+    }
+
+    // Oder eine Tanne mit Schnee auf den Zweigen.
+    const hoehe = 0.6 + zufall() * 0.55;
+    const tanne = new THREE.Mesh(tanneGeometrie, tanneMaterial);
+    tanne.scale.setScalar(hoehe);
+    tanne.position.set(x, 3.4 * hoehe * 0.5, z);
+    tanne.castShadow = true;
+    const hut = new THREE.Mesh(hutGeometrie, schneeMaterial);
+    hut.scale.setScalar(hoehe);
+    hut.position.set(x, 3.4 * hoehe * 0.86, z);
+    scene.add(tanne, hut);
+  }
 }
 
 /* --- Der Sandsturm -------------------------------------------------- */
@@ -423,6 +813,16 @@ export function fahrbahnMaterial(args: {
      */
     color: wetter === "sandsturm"
       ? strassentyp === "asphalt" && !imRaster ? 0x6f6047 : 0xc2a878
+      /*
+       * Regen auf Schnee ist Schneematsch - aber immer noch Schnee. Der
+       * erdige Ton, den die Sandpiste im Regen bekommt, machte aus der
+       * Schneefahrbahn einen gelblichen Streifen; sie wird jetzt nur kühler
+       * und ein wenig dunkler.
+       */
+      : strassentyp === "schnee"
+      // Die geräumte Fahrbahn ist festgefahren und damit eine Spur dunkler
+      // und kälter als der Schnee daneben; im Regen wird sie zu Matsch.
+      ? wetter === "regen" ? 0xc8d9e8 : 0xe8f1fa
       : strassentyp !== "asphalt"
       ? wetter === "regen" ? 0xb1a18a : 0xffffff
       : wetter === "regen" ? 0x263a4a : imRaster ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,

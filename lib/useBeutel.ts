@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LEERER_BEUTEL, mitGeschenk, type Beutel } from "./beutel";
 import { LOHN_FALL, LOHN_SAGA, type Zubehoer } from "./zubehoer";
 import { START_AUTO_ID, autoGueltig, type Auto } from "./autos";
 
@@ -18,16 +19,11 @@ import { START_AUTO_ID, autoGueltig, type Auto } from "./autos";
  */
 const KEY = "detective-wimpy:beutel:v1";
 
-export type Beutel = {
-  autoId?: string;
-  yen: number;
-  /** Gekaufte Gegenstände: Zubehör-Id -> Anzahl. */
-  vorrat: Record<string, number>;
-  /** Wofür schon gezahlt wurde: Fall-Ids und Saga-Ids. */
-  bezahlt: string[];
-};
+// Der Beutel selbst und die Rechnung mit den Geschenken stehen in
+// lib/beutel.ts - dort sind sie ohne Browser zu prüfen.
+export type { Beutel };
 
-const LEER: Beutel = { yen: 0, vorrat: {}, bezahlt: [] };
+const LEER = LEERER_BEUTEL;
 
 /** Wie viel eine gerade eingelöste Belohnung wert war - für die Anzeige. */
 export type Lohn = { betrag: number; grund: string };
@@ -116,14 +112,9 @@ export function useBeutel() {
    */
   const geschenkErhalten = useCallback(
     (was: string, stueck: Zubehoer | null | undefined, grund: string) => {
-      if (!was || !stueck?.id) return;
-      const alt = jetzt.current;
-      if (alt.bezahlt.includes(was)) return;
-      const neu = {
-        ...alt,
-        bezahlt: [...alt.bezahlt, was],
-        vorrat: { ...alt.vorrat, [stueck.id]: (alt.vorrat[stueck.id] ?? 0) + 1 },
-      };
+      const neu = mitGeschenk(jetzt.current, was, stueck);
+      // Nichts dabei, oder längst übergeben - dann auch keine Übergabe.
+      if (!neu || !stueck) return;
       jetzt.current = neu;
       setBeutel(neu);
       setGeschenk({ stueck, grund });

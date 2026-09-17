@@ -24,7 +24,7 @@ import {
   type Saga,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
-import { useLaden } from "@/lib/useLaden";
+import { useGeschenke } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { CaseFile, PublicCase } from "@/lib/types";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
@@ -56,7 +56,8 @@ import type { BereichProps } from "./typen";
 export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
   const stammdaten = useStammdaten();
   /** Der Ladeninhalt - für die Prüfung der Kapitelgeschenke. */
-  const regal = useLaden();
+  // Geschenke dürfen Zubehör oder Autos sein - beides steht hier drin.
+  const regal = useGeschenke();
   const { daten: admin } = useAdmin();
   const [sagas, setSagas] = useState<Saga[] | null>(null);
   const [vorgaben, setVorgaben] = useState<SagaVorgaben>(STANDARD_SAGA_VORGABEN);

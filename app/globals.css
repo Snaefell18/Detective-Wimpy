@@ -6230,6 +6230,92 @@ a.zurueck {
   }
 }
 
+/* Der Blizzard: derselbe Sturm, aber in jeder Hinsicht zu viel. Die Streifen
+   stehen dichter, fliegen schneller und sind heller, der Grund ist fast weiß -
+   und in den Böen sieht man für einen Augenblick gar nichts mehr. */
+.wetter[data-lage="blizzard"] {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(233, 243, 255, 0.4) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(190, 209, 232, 0.55) 0%, rgba(150, 174, 204, 0.62) 100%);
+}
+
+.wetter[data-lage="blizzard"] .wetter-schicht {
+  background-image:
+    repeating-linear-gradient(
+      336deg,
+      transparent 0 11px,
+      rgba(255, 255, 255, 0.72) 11px 13px,
+      transparent 13px 30px
+    ),
+    radial-gradient(3.4px 3.4px at 30px 40px, rgba(255, 255, 255, 1), transparent),
+    radial-gradient(3px 3px at 120px 90px, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(4.6px 4.6px at 200px 30px, rgba(255, 255, 255, 1), transparent),
+    radial-gradient(3px 3px at 260px 140px, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(3.6px 3.6px at 80px 200px, rgba(255, 255, 255, 0.9), transparent);
+  background-size: 300px 300px;
+  animation: blizzard-fegen 0.85s linear infinite;
+}
+
+.wetter[data-lage="blizzard"] .wetter-schicht[data-tiefe="2"] {
+  opacity: 0.85;
+  transform: scale(1.8);
+  animation-duration: 1.4s;
+}
+
+.wetter[data-lage="blizzard"] .wetter-schicht[data-tiefe="3"] {
+  opacity: 0.7;
+  transform: scale(2.8);
+  animation-duration: 2.3s;
+}
+
+/* Noch flacher und noch weiter als im Sturm: Der Schnee fliegt fast waagerecht. */
+@keyframes blizzard-fegen {
+  to {
+    background-position: -620px 150px;
+  }
+}
+
+/* Die Wand: Weiß, das anschwillt und wieder abfällt - der Augenblick, in dem
+   die Böe alles schluckt. Kein Blitzen, sondern ein Zuziehen. */
+.wetter-weiss {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(255, 255, 255, 0.92) 0%, rgba(226, 238, 250, 0.75) 60%, rgba(205, 222, 242, 0.5) 100%);
+  opacity: 0;
+  animation: blizzard-weiss 11s ease-in-out infinite;
+}
+
+@keyframes blizzard-weiss {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  38% {
+    opacity: 0.06;
+  }
+  52% {
+    opacity: 0.72;
+  }
+  66% {
+    opacity: 0.12;
+  }
+}
+
+.wetter[data-lage="blizzard"] .wetter-boe {
+  animation-duration: 3.8s;
+  filter: blur(11px);
+}
+
+.wetter[data-lage="blizzard"] .wetter-boe[data-tiefe="2"] {
+  animation-duration: 5.6s;
+  animation-delay: 1.4s;
+}
+
+.wetter[data-lage="blizzard"] .wetter-boe[data-tiefe="3"] {
+  animation-duration: 8.2s;
+  animation-delay: 2.9s;
+}
+
 .wetter-boe {
   position: absolute;
   inset: -20%;

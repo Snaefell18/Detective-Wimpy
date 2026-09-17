@@ -1,7 +1,49 @@
 import { AUTO_MODELLE } from './autos.generated';
 import type { Zubehoer } from './zubehoer';
 export { AUTO_MODELLE };
-export type Auto = Zubehoer & { modell: string; speed: number; beschleunigung: number; drehung: number };
+export type Auto = Zubehoer & {
+  modell: string;
+  speed: number;
+  beschleunigung: number;
+  drehung: number;
+  /**
+   * Wie groß der Wagen im Spiel ist - 1 ist die übliche Größe.
+   *
+   * Jedes Modell wird beim Aufstellen auf dieselbe Länge gebracht, sonst
+   * stünde ein Spielzeugauto neben einem Lastwagen. Genau das macht aber aus
+   * einer Limousine ein Spielzeug: Sie ist länger als ein Sportwagen und
+   * sieht erst richtig aus, wenn sie es auch im Spiel sein darf. Fehlt der
+   * Wert (alle Wagen von früher), gilt 1.
+   */
+  groesse?: number;
+};
+
+/** Zwischen Bobbycar und Bus - weiter geht die Größe nicht. */
+export const AUTO_GROESSE = { min: 0.6, max: 2.2, schritt: 0.05 };
+
+/**
+ * Die Größe eines Wagens, wie die Szene sie wirklich verwendet.
+ *
+ * Alles, was fehlt, unsinnig ist oder aus dem Rahmen fällt, wird hier
+ * geradegerückt - eine Zahl aus der Datenbank darf kein Auto unsichtbar
+ * machen.
+ */
+export const autoGroesse = (auto: { groesse?: number } | null | undefined): number => {
+  const wert = Number(auto?.groesse);
+  if (!Number.isFinite(wert) || wert <= 0) return 1;
+  return Math.min(AUTO_GROESSE.max, Math.max(AUTO_GROESSE.min, Math.round(wert * 100) / 100));
+};
+
+/**
+ * Wie lang ein Wagen im Spiel wirklich ist.
+ *
+ * `basis` ist die Länge, auf die eine Szene ihre Wagen bringt (die Jagd nimmt
+ * 3,5 Meter, die Stadt 3). Daraus und aus der eingestellten Größe ergibt sich,
+ * was dasteht - und genau diese Zahl zeigt der Editor an, damit niemand raten
+ * muss, was "1,4" bedeutet.
+ */
+export const autoLaenge = (auto: { groesse?: number } | null | undefined, basis: number): number =>
+  basis * autoGroesse(auto);
 export const START_AUTO_ID = 'auto-start';
 
 /**
@@ -103,7 +145,13 @@ export function autoGueltig(auto: Auto) {
   return Boolean(auto.name.trim()) && AUTO_MODELLE.some(m => m.id === auto.modell)
     && Number.isFinite(auto.speed) && auto.speed >= 60 && auto.speed <= 320
     && Number.isFinite(auto.beschleunigung) && auto.beschleunigung >= 5 && auto.beschleunigung <= 100
-    && Number.isFinite(auto.preis) && auto.preis >= 0 && Number.isFinite(auto.drehung);
+    && Number.isFinite(auto.preis) && auto.preis >= 0 && Number.isFinite(auto.drehung)
+    // Die Größe darf fehlen (alle Wagen von früher); steht sie da, muss sie im
+    // Rahmen liegen - sonst stünde ein Punkt oder ein Hochhaus auf der Straße.
+    && (auto.groesse === undefined
+      || (Number.isFinite(auto.groesse)
+        && auto.groesse >= AUTO_GROESSE.min
+        && auto.groesse <= AUTO_GROESSE.max));
 }
 export function autoRegal(daten: Auto[]) {
   const eigene = daten.filter(autoGueltig);
