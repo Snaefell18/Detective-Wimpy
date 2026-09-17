@@ -63,6 +63,7 @@ export const WETTERLAGEN: DreiDWetter[] = [
   "blizzard",
   "sandsturm",
   "nebel",
+  "feuerwerk",
 ];
 
 /** Eine neue, noch leere Stadt - mit einer Kreuzung zum Anfangen. */

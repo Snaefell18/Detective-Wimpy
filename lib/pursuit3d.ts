@@ -55,7 +55,8 @@ export type DreiDWetter =
   | "schneesturm"
   | "blizzard"
   | "sandsturm"
-  | "nebel";
+  | "nebel"
+  | "feuerwerk";
 export type DreiDStrassentyp = "asphalt" | "sand" | "schnee" | "gras";
 
 export const DREI_D_TAGESZEITEN: { id: DreiDTageszeit; name: string }[] = [
@@ -74,6 +75,7 @@ export const DREI_D_WETTER: { id: DreiDWetter; name: string }[] = [
   { id: "blizzard", name: "Blizzard · extremster Schneesturm" },
   { id: "sandsturm", name: "Sandsturm" },
   { id: "nebel", name: "Nebel" },
+  { id: "feuerwerk", name: "Feuerwerk · Raketen über der Stadt" },
 ];
 
 export const DREI_D_STRASSENTYPEN: { id: DreiDStrassentyp; name: string }[] = [
@@ -108,6 +110,17 @@ export const istDunst = (wetter: DreiDWetter): boolean =>
  * schlucken. Wo im Code etwas nur für ihn gilt, steht diese Frage.
  */
 export const istBlizzard = (wetter: DreiDWetter): boolean => wetter === "blizzard";
+
+/**
+ * Feuerwerk: die eine Lage, bei der nichts vom Himmel fällt, sondern etwas
+ * hinauffliegt.
+ *
+ * Es ändert weder Sicht noch Licht - der Himmel bleibt, wie die Tageszeit ihn
+ * malt, am schönsten ist es nachts. Und es blitzt nicht: Die Funken gehen
+ * weich aus, es gibt kein Aufleuchten der ganzen Szene. Grelles Flackern kann
+ * Migräne auslösen und hat hier so wenig zu suchen wie auf den Auftrittsbühnen.
+ */
+export const istFeuerwerk = (wetter: DreiDWetter): boolean => wetter === "feuerwerk";
 
 export const STANDARD_KAPITEL_3D: Kapitel3DVorgabe = {
   aktiv: false,

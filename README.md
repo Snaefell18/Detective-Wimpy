@@ -273,9 +273,9 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
     Pfosten in der Wüste, hölzerne Zaunpfähle am Feldweg.
   - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
     3D-Kapitel.
-  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
-    Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
-    daran vorbeifährt.
+  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm, Nebel
+    oder Feuerwerk. Was fällt, fällt nicht nur: Es bleibt auch zurück, während
+    man daran vorbeifährt.
   - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
     - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen **direkt an
     der Fahrbahn**: gemessen wird an der Hausfront, nicht an der Hausmitte,
@@ -544,10 +544,21 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   umschlägt. Alles reines CSS, keine zusätzlichen Dateien.
 - **Wetter in der 3D-Welt** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd,
   Probewelt): klar, Sonne, Regen, Schneefall, Schneesturm, **Blizzard**,
-  **Sandsturm** oder Nebel. Der Sandsturm färbt Dunst, Licht und Boden ocker,
-  legt Sand auf die Fahrbahn und treibt die Körner waagerecht und böig durchs
-  Bild. Alle Szenen rechnen dafür mit denselben Zahlen
+  **Sandsturm**, Nebel oder **Feuerwerk**. Der Sandsturm färbt Dunst, Licht
+  und Boden ocker, legt Sand auf die Fahrbahn und treibt die Körner waagerecht
+  und böig durchs Bild. Alle Szenen rechnen dafür mit denselben Zahlen
   (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
+- **Feuerwerk** ist die eine Lage, bei der nichts fällt, sondern etwas
+  aufsteigt: Eine Rakete zieht mit Funkenschweif nach oben, wird langsamer und
+  blüht knapp über den Dächern zu einer Kugel auf, die auseinandertreibt,
+  sinkt und weich ausgeht - dann die nächste, an anderer Stelle, in anderer
+  Farbe. Am schönsten nachts, aber zu jeder Tageszeit erlaubt; die Sicht ändert
+  es nicht. Bewusst **ohne Blitzen**: Die Szene wird nirgends kurz hell, kein
+  Licht zuckt, nichts pulst schnell - der hellste Augenblick eines Funkens ist
+  sein erster, danach geht er über anderthalb Sekunden aus. Gerechnet wird
+  alles in einem einzigen Punktefeld mit festem Vorrat, das auch auf einem
+  Telefon ruhig durchläuft. Und es steigt ein gutes Stück entfernt auf: Die
+  Kameras schauen fast waagerecht, was näher aufblüht, läge über dem Bildrand.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
   Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
   durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
