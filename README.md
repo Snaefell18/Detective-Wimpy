@@ -158,8 +158,8 @@ mit dem Daumen gesteuert:
   Häusern ringsum an; eine im Reiter **Städte** geplante Stadt lässt sich
   ebenso übernehmen. Häuser sind Deckung: Zauberkugeln zerplatzen an ihnen,
   und wer um die Ecke geht, ist erst einmal weg. Unter neun Straßenfeldern
-  findet kein Kampf statt - dann geht alles weiter, als hätte man keinen
-  Showdown gewählt, und der Editor sagt das auch.
+  taugt ein Plan nicht als Arena - dann wird auf dem Standardkampfplatz
+  gekämpft, und der Editor sagt das auch.
 - **Gesteuert** wird wie im 3D-Kapitel: Daumenstick zum Laufen, ein Knopf für
   den Zauberwurf (er wird von selbst zum Nahkampf, sobald man nah genug
   steht), einer für die Ausweichrolle. Am Schreibtisch: WASD oder Pfeiltasten,
@@ -173,6 +173,9 @@ mit dem Daumen gesteuert:
 - **Davor** kann die bekannte Verfolgungsjagd laufen, diesmal mit dem Gegner
   im Fluchtwagen. Sie ist abwählbar: Wer sie im Editor nicht einrichtet, fängt
   direkt in der Arena an, und im Spiel lässt sie sich überspringen.
+- **Ohne gebaute Arena** wird trotzdem gekämpft: Dann steht der
+  Standardkampfplatz da (siehe unten bei „Gericht & Flucht"). Früher fiel der
+  Showdown dann still aus - und mit ihm ein ganzes Finale.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
   „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
   Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
@@ -207,9 +210,20 @@ Zeit **nach** Jagd und Kampf geschrieben: Er erzählt, wie es ausging, und
 nennt weder Sieger noch Verlierer - beides ist möglich.
 
 Platzt das Verfahren, wird nicht gekämpft: Dann geht der Angeklagte ganz ruhig
-durch die Vordertür, und es kommt der Epilog. Dasselbe gilt, wenn keine
-brauchbare Arena eingerichtet ist - dann endet die Saga nach dem Urteil, so wie
-ein gewöhnliches Gerichtsfinale. Der Twist verträgt sich damit so wenig wie mit
+durch die Vordertür, und es kommt der Epilog.
+
+**Ohne eingerichtete Arena fällt das Ende nicht aus.** Wer diese Finale-Art
+wählt, hat sich für Urteil, Jagd und Kampf entschieden - und bekommt sie. Steht
+im Editor keine Arena (oder eine mit weniger als neun Straßenfeldern), springt
+der Standardkampfplatz ein: freie Mitte, Häuser ringsum, genau der, den der
+Knopf „Kampfplatz anlegen" legt. War überhaupt nichts eingerichtet, gehört bei
+dieser Art auch die Jagd dazu. Alles andere - Stufe, Musik, Gegnermodell,
+Licht - bleibt, wie es eingestellt ist, und wer die Jagd bewusst abgewählt hat,
+behält sie abgewählt. Dasselbe gilt für den Showdown einer Saga und den eines
+Arcs.
+
+Und der Knopf unter dem Urteil sagt die Wahrheit: „Ihm nach ›" steht dort nur,
+wenn danach wirklich eine Verfolgung kommt. Der Twist verträgt sich damit so wenig wie mit
 jedem anderen Gerichtsfinale: Wer vor Gericht mit Wimpy spielt, kann nicht
 zugleich unsichtbar bleiben.
 
@@ -243,10 +257,11 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
   **Die Strecke** stellt man ein wie jede andere 3D-Welt des Spiels - im
   Editor der Jagd und ebenso in der Jagd vor dem Showdown:
 
-  - **Straßenbelag:** Asphalt, Sand oder Schneestraße. Er bestimmt auch das
-    Land ringsum: Tannen im Schnee, Dünen im Sand, Blöcke am Asphalt - und die
-    Markierung auf der Fahrbahn: leuchtende Striche auf Asphalt, rote
-    Schneestangen in der Arktis, helle Pfosten in der Wüste.
+  - **Straßenbelag:** Asphalt, Sand, Schneestraße oder Graspiste. Er bestimmt
+    auch das Land ringsum: Tannen im Schnee, Dünen im Sand, Bäume und Büsche
+    an der Graspiste, Blöcke am Asphalt - und die Markierung auf der Fahrbahn:
+    leuchtende Striche auf Asphalt, rote Schneestangen in der Arktis, helle
+    Pfosten in der Wüste, hölzerne Zaunpfähle am Feldweg.
   - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
     3D-Kapitel.
   - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
@@ -519,6 +534,21 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   legt Sand auf die Fahrbahn und treibt die Körner waagerecht und böig durchs
   Bild. Alle Szenen rechnen dafür mit denselben Zahlen
   (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
+- **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
+  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
+  durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
+  nur andersherum: Wo Räder fahren, ist das Gras weg und die Erde kommt durch,
+  also sind die beiden Spurrillen *heller* als der Belag, mit einem grünen
+  Streifen dazwischen, auf dem nie ein Rad läuft. Eine Mittellinie wird dort
+  nicht gemalt.
+
+  Ringsum steht, was aus einer grünen Fläche eine Wiese macht: Büsche in zwei
+  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand und ein paar Blumen
+  dazwischen (`grasLand` in `components/stadtBau.ts` - dieselbe Rechnung wie
+  das Schneeland, nur in Grün, und mit derselben festen Saat, damit die Wiese
+  im Editor so aussieht wie später im Spiel). Der Boden, das zurückgeworfene
+  Licht und die Staubfahne hinter den Reifen färben sich mit; nachts liegt die
+  Piste im Mondlicht statt im Mittagsgrün.
 - **Der Blizzard** ist kein stärkerer Schneesturm, sondern ein eigener
   Zustand: Die Welt endet nach wenigen Metern, der Schnee fliegt in zwei
   Schichten fast waagerecht vorbei, und Böen ziehen die Sicht immer wieder
@@ -701,7 +731,14 @@ Dahinter:
   direkt in der Datenbank.
 - **Kampagnen** - Fälle vorbereiten und verwalten (siehe oben).
 - **Sagas / Arcs** - lange Reihen anlegen, Erzählertexte und Tondateien
-  pflegen (siehe oben).
+  pflegen (siehe oben). Das Formular dafür ist lang - es entscheidet über
+  eine ganze Reihe von Fällen -, steht aber in **einklappbaren Abschnitten**:
+  Die Saga, Kapitel (darin jedes Kapitel noch einmal für sich), Besetzung,
+  Ton und Publikum, Finale, Abspann. Zu ist der Regelfall; in der Kopfzeile
+  steht, was drinsteckt („3 Kapitel + Finale", „Gericht & Flucht · Noch keine
+  Arena gebaut"), sodass man den Stand sieht, ohne aufzuklappen. Ein
+  zugeklappter Abschnitt vergisst nichts: Die Felder bleiben stehen, wo sie
+  waren.
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
   inklusive Titelbild des Startbildschirms.
 - **Spiel** - Stadt (oder Zufall), Schauplätze pro Fall, Intro an/aus,

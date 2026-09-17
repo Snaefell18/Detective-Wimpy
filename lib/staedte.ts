@@ -52,7 +52,7 @@ export type StadtVorgabe = {
   wetter: DreiDWetter;
 };
 
-export const STRASSENTYPEN: DreiDStrassentyp[] = ["asphalt", "sand", "schnee"];
+export const STRASSENTYPEN: DreiDStrassentyp[] = ["asphalt", "sand", "schnee", "gras"];
 export const TAGESZEITEN: DreiDTageszeit[] = ["morgen", "tag", "abend", "nacht"];
 export const WETTERLAGEN: DreiDWetter[] = [
   "klar",

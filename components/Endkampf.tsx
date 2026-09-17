@@ -62,6 +62,7 @@ import {
   gradientTextur,
   haeuserBauen,
   sandDunst,
+  grasLand,
   schneeLand,
   strassenBauen,
   texturenVerkleinern,
@@ -194,6 +195,8 @@ function ArenaCanvas({
     const schneeWetter = istSchneeWetter(wetter);
     /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
     const schneeLand3D = strassentyp === "schnee";
+    /** Oder Wiese? Dann steht statt der Wehen Grün auf dem Platz. */
+    const grasLand3D = strassentyp === "gras";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
     /** Der Blizzard: Sicht auf wenige Meter, und die Böen nehmen auch die. */
@@ -282,7 +285,14 @@ function ArenaCanvas({
         color: sandSturm
           ? nacht ? 0x3b2f1f : 0xa98a5c
           // Unberührter Schnee ist heller als die Fahrbahn - siehe 3D-Kapitel.
-          : strassentyp === "schnee" ? (nacht ? 0x8fa9c4 : 0xf1f8ff) : strassentyp === "sand" ? 0xb59468 : nacht ? 0x1d2732 : 0x6b7166,
+          : strassentyp === "schnee"
+            ? (nacht ? 0x8fa9c4 : 0xf1f8ff)
+            : strassentyp === "sand"
+              ? 0xb59468
+              // Die Wiese: dieselben Grüntöne wie im 3D-Kapitel.
+              : strassentyp === "gras"
+                ? (nacht ? 0x24382a : 0x63914a)
+                : nacht ? 0x1d2732 : 0x6b7166,
         gradientMap: gradient,
       }),
     );
@@ -290,9 +300,13 @@ function ArenaCanvas({
     boden.receiveShadow = true;
     scene.add(boden);
     registrieren(boden);
-    // Auch die Arena steht im Schneeland, wenn ihre Straßen aus Schnee sind.
-    if (schneeLand3D) {
-      schneeLand({
+    /*
+     * Die Arena steht im selben Land wie ihre Straßen: im Schnee zwischen
+     * Wehen und Tannen, auf der Graspiste zwischen Büschen und Bäumen.
+     */
+    const landschaft = schneeLand3D ? schneeLand : grasLand3D ? grasLand : null;
+    if (landschaft) {
+      landschaft({
         scene,
         gradient,
         merken,

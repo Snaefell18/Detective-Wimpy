@@ -469,7 +469,16 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
      * gar nichts. Das Grau liegt zwischen Schnee und Asphalt und ist deshalb
      * auf beidem zu sehen.
      */
-    const fahne = vorrat(54, 0xa4b3bf, 0.7, 0.34);
+    /*
+     * Was hinter den Rädern aufstiebt, hat die Farbe des Belags: Schnee
+     * blaugrau, Sand ocker, die Wiese staubig grün.
+     */
+    const fahne = vorrat(
+      54,
+      strassentyp === "sand" ? 0xd9c39b : strassentyp === "gras" ? 0x9aa87a : 0xa4b3bf,
+      0.7,
+      0.34,
+    );
     let rauchUhr = 0, fahneUhr = 0;
     /**
      * Eine freie Wolke ans Heck setzen.

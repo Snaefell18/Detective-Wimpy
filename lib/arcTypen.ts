@@ -1,5 +1,5 @@
 import { STANDARD_ABSPANN, abspannVon, type AbspannVorgabe } from "./abspann";
-import { STANDARD_KAMPF, kampfSpielbar, type KampfVorgabe } from "./endkampf";
+import { arcErsatzArena, kampfSpielbar, type KampfVorgabe } from "./endkampf";
 import { LEERER_ERZAEHLER, type Erzaehlerteil, type Saga } from "./sagaTypen";
 
 /**
@@ -66,8 +66,17 @@ export const arcAbspann = (arc: Arc | undefined): string =>
  */
 export const arcKampf = (arc: Arc | undefined): KampfVorgabe | null => {
   if (arc?.finale.art !== "kampf") return null;
-  const kampf = arc.finale.kampf ?? STANDARD_KAMPF;
-  return kampfSpielbar(kampf) ? kampf : null;
+  const kampf = arc.finale.kampf;
+  if (kampfSpielbar(kampf)) return kampf;
+  /*
+   * Ohne gebaute Arena fällt das Finale nicht aus.
+   *
+   * Wer „Showdown“ wählt, will einen Kampf - und bekam früher nichts,
+   * sobald im Editor der Knopf „Kampfplatz anlegen“ ungedrückt blieb: Der
+   * Arc sprang stumm in seinen Abschlusstext. Jetzt springt der
+   * Standardkampfplatz ein, und alles andere bleibt, wie es eingestellt war.
+   */
+  return arcErsatzArena(kampf, arc.culprit.charakterId, arc.culprit.wort);
 };
 
 /**

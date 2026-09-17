@@ -13,6 +13,7 @@ import {
   cellShading,
   einpassen,
   fahrbahnMaterial,
+  grasLand,
   gradientTextur,
   haeuserBauen,
   sandDunst,
@@ -252,6 +253,8 @@ function KapitelCanvas({
     const schneeWetter = istSchneeWetter(wetter);
     /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
     const schneeLand3D = strassentyp === "schnee";
+    /** Oder Wiese? Dann steht statt der Wehen Grün auf der Fläche. */
+    const grasLand3D = strassentyp === "gras";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
     /** Der Blizzard: Sicht auf wenige Meter, und die Böen nehmen auch die. */
@@ -321,7 +324,10 @@ function KapitelCanvas({
      */
     const unten = schneeLand3D
       ? (tageszeit === "nacht" ? 0x24405e : 0xd3e6f4)
-      : tageszeit === "nacht" ? 0x160d2e : 0x455348;
+      // Und eine Wiese wirft Grün zurück - das ist der halbe Sommer.
+      : grasLand3D
+        ? (tageszeit === "nacht" ? 0x1d3326 : 0x5c8a4a)
+        : tageszeit === "nacht" ? 0x160d2e : 0x455348;
     scene.add(new THREE.HemisphereLight(oben, unten, tageszeit === "nacht" ? 2.15 : 2.8));
     const licht = new THREE.DirectionalLight(
       wetter === "sonne"
@@ -371,6 +377,19 @@ function KapitelCanvas({
         ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff)
         : strassentyp === "sand"
           ? 0xb59468
+          /*
+           * Die Wiese zwischen den Häusern: satt genug, dass sie sich vom
+           * Weg absetzt, und dunkel genug, dass die Büsche darauf noch zu
+           * sehen sind. Im Regen wird sie tiefer, abends wärmer.
+           */
+          : strassentyp === "gras"
+            ? tageszeit === "nacht"
+              ? 0x24382a
+              : tageszeit === "abend"
+                ? 0x5a6b3e
+                : wetter === "regen"
+                  ? 0x455c3c
+                  : 0x63914a
           : tageszeit === "nacht"
             ? 0x1d2732
             : tageszeit === "abend"
@@ -383,7 +402,13 @@ function KapitelCanvas({
        * nicht dunkler. Andersherum - und genau so war es - sieht die Straße
        * aus wie eine helle Rampe, die durch graues Land führt.
        */
-      : strassentyp === "schnee" ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff) : strassentyp === "sand" ? 0x897052 : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
+      : strassentyp === "schnee"
+        ? (tageszeit === "nacht" ? 0x8fa9c4 : 0xf1f8ff)
+        : strassentyp === "sand"
+          ? 0x897052
+          : strassentyp === "gras"
+            ? (tageszeit === "nacht" ? 0x223425 : tageszeit === "tag" ? 0x5b8a45 : 0x4a6438)
+            : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
       new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
@@ -408,6 +433,24 @@ function KapitelCanvas({
         // Im Straßenzug steht der Schnee neben der Fahrbahn, auf dem
         // Stadtplan auf den freien Feldern - beides ohne die Stelle, an der
         // man selbst losläuft.
+        startPunkt: { x: 0, z: 0 },
+        menge: profil.schatten ? 30 : 16,
+        tageszeit,
+      });
+    }
+    /*
+     * Und wo Wiese ist, steht auch etwas darauf: Büsche, Bäume, Grasbüschel
+     * und ein paar Blumen - dieselbe Rechnung wie beim Schneeland, nur in
+     * Grün (components/stadtBau.ts).
+     */
+    if (grasLand3D) {
+      grasLand({
+        scene,
+        gradient,
+        merken: (wert) => ressourcen.add(wert),
+        ausmass,
+        mitteZ: stadtplan ? 0 : -8,
+        plan: stadtplan,
         startPunkt: { x: 0, z: 0 },
         menge: profil.schatten ? 30 : 16,
         tageszeit,
@@ -471,14 +514,21 @@ function KapitelCanvas({
       scene.add(strich);
     }
     if (!stadtplan && strassentyp !== "asphalt") {
-      // Flache Schultern statt Bordstein; schmale rote Schneestangen wie in der Arktis.
+      /*
+       * Flache Schultern statt Bordstein: rote Schneestangen in der Arktis,
+       * helle Pfosten in der Wüste - und am Feldweg hölzerne Zaunpfähle, die
+       * etwas höher stehen und warm gefärbt sind.
+       */
+      const hoehe = strassentyp === "schnee" ? 1.25 : strassentyp === "gras" ? 1 : 0.5;
+      const farbe =
+        strassentyp === "schnee" ? 0xd65a47 : strassentyp === "gras" ? 0x8a6a45 : 0xd2bb8b;
       for (const seite of [-1, 1]) {
         for (let i = 0; i < 15; i++) {
           const pfosten = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.035, 0.045, strassentyp === "schnee" ? 1.25 : 0.5, 5),
-            new THREE.MeshToonMaterial({ color: strassentyp === "schnee" ? 0xd65a47 : 0xd2bb8b, gradientMap: gradient }),
+            new THREE.CylinderGeometry(0.035, 0.045, hoehe, 5),
+            new THREE.MeshToonMaterial({ color: farbe, gradientMap: gradient }),
           );
-          pfosten.position.set(seite * 4.48, strassentyp === "schnee" ? 0.625 : 0.25, 18 - i * 4.8);
+          pfosten.position.set(seite * 4.48, hoehe / 2, 18 - i * 4.8);
           scene.add(pfosten);
         }
       }
