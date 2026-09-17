@@ -197,6 +197,40 @@ ZWEI TÄTER - SIE HABEN ES ZUSAMMEN GETAN
 - Aufgelöst wird die Sache, sobald einer von beiden benannt ist - dann kommt der andere mit heraus.`;
 }
 
+/**
+ * Ein von Hand gesetztes Motiv - fertig formuliert fürs Modell.
+ *
+ * Es ist die einzige Vorgabe, die der Fall am Ende wörtlich übernimmt: Wer
+ * sich die Mühe macht, den Grund selbst zu schreiben, will ihn nachher
+ * wiederfinden und nicht eine höflichere Fassung davon. Das Modell baut
+ * deshalb nur alles andere darum herum - Tathergang, Alibis, Spuren.
+ */
+export function motivRegeln(args: {
+  /** Wer es getan hat - für die Anrede im Prompt. */
+  taeterName: string;
+  motiv: string;
+  /** Im Kern und im Kapitel steht die Ansage etwas anders. */
+  was?: "fall" | "kern" | "kapitel";
+}): string {
+  const { taeterName, motiv, was = "fall" } = args;
+  if (!motiv.trim()) return "";
+
+  const kopf = `\nDAS MOTIV STEHT FEST${taeterName ? ` - warum ${taeterName} es getan hat` : ""}: ${motiv.trim()}`;
+  if (was === "kern") {
+    return `${kopf}
+- Die Wahrheit hinter der ganzen Saga muss genau daraus folgen: Alles, was in den Kapiteln geschieht, dient diesem Grund.
+- Im Feld drahtzieherMotiv steht dieser Satz wörtlich, nicht umformuliert.`;
+  }
+  if (was === "kapitel") {
+    return `${kopf}
+- Auftrag und Enthüllung dieses Kapitels müssen dazu passen: Die Tat geschieht aus diesem Grund und aus keinem anderen.
+- Das Motiv selbst bleibt geheim - es steht in keinem Text, den der Spieler zu Beginn liest.`;
+  }
+  return `${kopf}
+- Übernimm diesen Satz wörtlich ins Feld motiv - nicht umformulieren, nicht ausschmücken, nicht ersetzen.
+- Tathergang, Alibis und Spuren müssen genau dazu passen: Die Tat geschieht aus diesem Grund und aus keinem anderen.`;
+}
+
 export function buildGeruestPrompt(
   besetzung: Character[],
   stadt: string,
@@ -204,17 +238,25 @@ export function buildGeruestPrompt(
   vorgaben?: Vorgaben | null,
   /** Ein zweiter Täter derselben Tat - leer heißt: einer allein. */
   mittaeterId = "",
+  /**
+   * Ein im Editor gesetztes Motiv - leer heißt: das Modell denkt sich eins
+   * aus, wie bisher. Steht eines da, ist es keine Anregung: Der Fall bekommt
+   * genau diesen Satz.
+   */
+  motiv = "",
 ): string {
   const taeter = besetzung.find((c) => c.id === taeterId);
   if (!taeter) throw new Error(`Unbekannter Charakter: ${taeterId}`);
   const zweiter = besetzung.find((c) => c.id === mittaeterId && c.id !== taeterId);
+
+  const motivAnsage = motivRegeln({ taeterName: taeter.name, motiv });
 
   return `Erfinde das Gerüst eines neuen Falls für Detective Wimpy - er spielt in ${stadt}.
 
 DER TÄTER STEHT BEREITS FEST: ${taeter.name} [${taeter.id}].
 Baue den Fall so, dass er zu diesem Charakter und seinen Werten passt - Motiv und Vorgehen.${
     zweiter ? `\n${mittaeterRegeln(taeter.name, zweiter.name)}` : ""
-  }
+  }${motivAnsage}
 
 Anforderungen:
 - Ein Tatort aus der Schauplatzliste.
@@ -222,9 +264,15 @@ Anforderungen:
 - titel: kurz und knackig (höchstens 6 Wörter) - er wird im Intro groß eingeblendet.
 - tatbeschreibung: zwei bis vier Sätze, die der Spieler zu Beginn liest. Sie verraten den Täter nicht.
 - tathergang: was wirklich geschah, Schritt für Schritt. Das sieht nur der Server.
-- motiv: warum ${
-    zweiter ? `${taeter.name} und ${zweiter.name} es getan haben` : `${taeter.name} es getan hat`
-  } - nachvollziehbar, nicht "böse".
+- motiv: ${
+    motivAnsage
+      ? "der Satz von oben, Wort für Wort"
+      : `warum ${
+          zweiter
+            ? `${taeter.name} und ${zweiter.name} es getan haben`
+            : `${taeter.name} es getan hat`
+        } - nachvollziehbar, nicht "böse"`
+  }.
 - schlagworte: vier bis sechs Schlagworte aus dem Fall, je ein bis zwei Wörter (z.B. "Goldene Ruderstange", "Nebel um vier", "Ein falscher Knoten"). Sie blitzen im Intro einzeln auf - also griffig, geheimnisvoll und ohne den Täter zu verraten.
 - introText: drei bis vier kurze Zeilen im Stil einer Krimi-Ansage, die den Fall anteasern, ohne den Täter zu verraten. Kein "Kapitel", keine Anrede, nur Atmosphäre.
 ${regeln(vorgaben)}

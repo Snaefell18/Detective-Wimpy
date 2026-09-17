@@ -1,9 +1,15 @@
 import { besessenheitsRegeln } from "./gestaltStimme";
 import { characterBrief } from "./characters";
+import { motivRegeln } from "./prompts";
 import { mitAnklage, type FinaleArt } from "./sagaFinale";
 import { nochNichtDa } from "./namenSchutz";
 import { URTEILS_REGEL } from "./urteil";
-import { besessen, falscheFaehrteVon, type SagaVorgaben } from "./sagaTypen";
+import {
+  besessen,
+  falscheFaehrteVon,
+  motivFuerKapitel,
+  type SagaVorgaben,
+} from "./sagaTypen";
 import type { Character, City } from "./types";
 
 /**
@@ -224,6 +230,14 @@ export function buildKernPrompt(
     ausfuehrlich: true,
   });
 
+  // Warum der Drahtzieher es tut. Steht es im Editor, wird die Wahrheit
+  // darum herum erfunden - sonst denkt sich das Modell einen Grund aus.
+  const motivAnsage = motivRegeln({
+    taeterName: drahtzieher.name,
+    motiv: motivFuerKapitel(vorgaben, vorgaben.kapitelAnzahl),
+    was: "kern",
+  });
+
   // Ein Verdacht, der die ganze Saga über mitwächst und nirgendwohin führt.
   const faehrte = falscheFaehrteVon(vorgaben, besetzung);
   const faehrtenRegeln = faehrte
@@ -240,7 +254,7 @@ DER DRAHTZIEHER STEHT BEREITS FEST: ${drahtzieher.name} [${drahtzieher.id}].
 ${characterBrief(drahtzieher)}
 Er oder sie steckt hinter allem, taucht aber erst im Finale als Schuldiger auf.
 NIRGENDS VOR DEM FINALE BENENNEN: In Titel, Überthema, Klappentext und Auftakt darf ${drahtzieher.name} nicht als der Verantwortliche dastehen - kein "dahinter steckt", kein "zieht die Fäden", kein "hinter allem". Andeuten ist ausdrücklich erwünscht: eine Handschrift, ein Geruch, ein Satz, der zweimal fällt. Nur der Schluss gehört dem Spieler.
-${artRegeln ? `${artRegeln}\n` : ""}${faehrtenRegeln ? `${faehrtenRegeln}\n` : ""}${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
+${artRegeln ? `${artRegeln}\n` : ""}${motivAnsage ? `${motivAnsage}\n` : ""}${faehrtenRegeln ? `${faehrtenRegeln}\n` : ""}${vorgaben.twist ? `${TWIST_REGELN}\n` : ""}${
     wirt
       ? `
 BESESSENHEIT - DAS GEHEIMNIS DIESER SAGA
@@ -295,6 +309,8 @@ export function buildKapitelPrompt(args: {
   neueTiere: string[];
   /** Von Hand gesetzter Täter dieses Kapitels - leer heißt: freie Wahl. */
   wunschTaeter: string;
+  /** Von Hand gesetztes Motiv - leer heißt: das Modell denkt sich eins aus. */
+  wunschMotiv?: string;
   /** Tiere, die erst nach diesem Kapitel dazustoßen. */
   nochNichtDaTiere?: string[];
   /** Wirt und Dämonengestalt, wenn die Saga eine Besessenheit hat. */
@@ -318,6 +334,7 @@ export function buildKapitelPrompt(args: {
     twist,
     neueTiere,
     wunschTaeter,
+    wunschMotiv = "",
     nochNichtDaTiere = [],
     besessenheit,
     finaleRegeln = "",
@@ -349,7 +366,7 @@ ${
       ? `DER TÄTER DIESES KAPITELS STEHT FEST: ${wunschTaeter}. Bau den Fall um ihn herum - Motiv, Gelegenheit und Verbindung zum Drahtzieher müssen zu ihm passen.`
       : `MÖGLICHE TÄTER FÜR DIESES KAPITEL
 ${moeglicheTaeter.map((c) => `- ${c.name} [${c.id}]`).join("\n")}`
-  }
+  }${motivRegeln({ taeterName: wunschTaeter, motiv: wunschMotiv, was: "kapitel" })}
 
 Anforderungen:
 - Das Kapitel spielt in ${stadt}.

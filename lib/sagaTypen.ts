@@ -87,6 +87,20 @@ export type SagaVorgaben = {
    */
   kapitelTaeter: string[];
   /**
+   * Das Motiv des Täters je Kapitel - leer heißt: das Modell denkt sich eins
+   * aus, genau wie bisher.
+   *
+   * Anders als der Täter gilt es auch fürs Finale, deshalb die Zählung der
+   * Städte: Platz 0 ist Kapitel 1, Platz `kapitelAnzahl` das Finale. Dort ist
+   * der Drahtzieher der Schuldige, und was hier steht, wird sein Motiv - die
+   * Wahrheit hinter der ganzen Saga wird darum herum gebaut.
+   *
+   * Steht ein Motiv da, ist es keine Anregung, sondern die Vorgabe: Der Fall
+   * bekommt genau diesen Satz, und Tathergang, Alibis und Spuren richten sich
+   * danach.
+   */
+  kapitelMotive: string[];
+  /**
    * Stadt je Kapitel: Stadt-Id, "zufall" oder leer für die allgemeine
    * Einstellung darunter. Das Finale steht an letzter Stelle.
    */
@@ -269,6 +283,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   kapitelAnzahl: 3,
   kapitelWuensche: [],
   kapitelTaeter: [],
+  kapitelMotive: [],
   kapitelStaedte: [],
   kapitelVideos: [],
   kapitelGeschenke: [],
@@ -312,6 +327,33 @@ export const daemonFuerKapitel = (
   vorgaben: Pick<SagaVorgaben, "kapitelDaemon"> | undefined,
   nummer: number,
 ): string => (nummer >= 1 ? (vorgaben?.kapitelDaemon?.[nummer - 1] ?? "").trim() : "");
+
+/**
+ * Das vorgegebene Motiv für Kapitel `index` (0-basiert; das Finale steht an
+ * letzter Stelle, also auf Platz `kapitelAnzahl`). Leer heißt: ausgedacht.
+ */
+export const motivFuerKapitel = (
+  vorgaben: Pick<SagaVorgaben, "kapitelMotive"> | undefined,
+  index: number,
+): string => (vorgaben?.kapitelMotive?.[index] ?? "").trim();
+
+/**
+ * Dasselbe Motiv, aber in der Zählung der Fallerzeugung: Dort ist 0 das
+ * Finale und 1 das erste Kapitel.
+ *
+ * Zwei Zählungen für dieselbe Sache sind eine Zumutung, aber sie sind älter
+ * als dieses Feld: Die Kapitellisten im Editor hängen das Finale hinten an,
+ * der Fallbau nennt es 0. Diese Zeile ist die einzige Stelle, an der beide
+ * aufeinandertreffen.
+ */
+export const motivFuerFall = (
+  vorgaben: Pick<SagaVorgaben, "kapitelMotive" | "kapitelAnzahl"> | undefined,
+  kapitelNummer: number,
+): string =>
+  motivFuerKapitel(
+    vorgaben,
+    kapitelNummer === 0 ? (vorgaben?.kapitelAnzahl ?? 0) : kapitelNummer - 1,
+  );
 
 /** Der zweite Täter für Kapitel `nummer` (1-basiert) - oder leer. */
 export const mittaeterFuerKapitel = (
@@ -582,8 +624,14 @@ export function besetzungFuerSaga<
  * Keine dieser Bühnen darf stroboskopisch werden: Was pulsiert, pulsiert
  * langsam und weich. Grelles Flackern kann Migräne auslösen und hat hier
  * nichts zu suchen.
+ *
+ * "ohne" ist die Ausnahme: gar kein Auftritt. Kein Song, keine Bühne, keine
+ * Unterbrechung - das Tier steht beim nächsten Kapitel einfach da. Für alle,
+ * bei denen die große Ansage stört: den Nachbarn, der beiläufig dazukommt,
+ * oder das dritte Tier in Folge, bei dem die Vorstellung ermüdet.
  */
 export type AuftrittsArt =
+  | "ohne"
   | "klassisch"
   | "gewitter"
   | "jackpot"
@@ -600,6 +648,7 @@ export type AuftrittsArt =
   | "akte";
 
 export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
+  { id: "ohne", label: "Kein Auftritt", hinweis: "kein Song, keine Bühne" },
   { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
   { id: "gewitter", label: "Gewitter", hinweis: "Regen, Blitze, Silhouette" },
   { id: "jackpot", label: "Jackpot", hinweis: "Konfetti, Geld, alles blinkt" },
@@ -643,6 +692,20 @@ export const artFuerAuftritt = (
   alsAuftrittsArt(vorgaben?.neuzugangArten?.[charakterId]) ??
   alsAuftrittsArt(tier?.auftrittArt) ??
   "klassisch";
+
+/**
+ * Bekommt dieses Tier überhaupt einen Auftritt?
+ *
+ * Nein heißt: kein Song, keine Bühne, keine Unterbrechung - es ist beim
+ * nächsten Kapitel einfach dabei. Gefragt wird an einer einzigen Stelle,
+ * bevor die Bühne gebaut wird; wer hier draußen bleibt, taucht in der
+ * Ansage gar nicht erst auf.
+ */
+export const mitAuftritt = (
+  charakterId: string,
+  vorgaben: Pick<SagaVorgaben, "neuzugangArten"> | undefined,
+  tier?: { auftrittArt?: string },
+): boolean => artFuerAuftritt(charakterId, vorgaben, tier) !== "ohne";
 
 /**
  * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes

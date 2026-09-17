@@ -6,6 +6,7 @@ import {
   OHNE_AUFTRITT_TON,
   warFrueherDa,
   STANDARD_AUFTRITT_TON,
+  mitAuftritt,
   neueGesichter,
   tonFuerAuftritt,
   artFuerAuftritt,
@@ -161,6 +162,25 @@ console.log("\nDer eigene Auftritt eines Tiers");
   );
   pruefe("Unsinn am Tier wird ignoriert", artFuerAuftritt("hut", {}, { auftrittArt: "quatsch" }) === "klassisch");
   pruefe("gar kein Tier", artFuerAuftritt("hut", {}) === "klassisch");
+}
+
+console.log("\n5. Wer gar nicht angekündigt werden soll");
+{
+  const still = { auftrittArt: "ohne" };
+  pruefe("ohne Einstellung wird angekündigt", mitAuftritt("hut", {}, {}) === true);
+  pruefe("die Saga kann es abstellen", mitAuftritt("hut", { neuzugangArten: { hut: "ohne" } }) === false);
+  pruefe("das Tier selbst auch", mitAuftritt("hut", {}, still) === false);
+  pruefe(
+    "und die Saga holt es zurück",
+    mitAuftritt("hut", { neuzugangArten: { hut: "jackpot" } }, still) === true,
+  );
+  pruefe(
+    "es gilt nur für dieses Tier",
+    mitAuftritt("nala", { neuzugangArten: { hut: "ohne" } }) === true,
+  );
+  // Die Wahl muss auch als Art durchkommen - sonst stünde im Editor ein
+  // Knopf, den niemand gedrückt bekommt.
+  pruefe("„ohne“ ist eine gültige Art", artFuerAuftritt("hut", { neuzugangArten: { hut: "ohne" } }) === "ohne");
 }
 
 console.log(

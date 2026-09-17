@@ -1060,7 +1060,19 @@ function KapitelCanvas({
       if (laufAktion) laufAktion.setEffectiveTimeScale(Math.max(0.25, staerke));
       spielerMixer?.update(dt);
       position.current.copy(spieler.position);
-      wetterfall?.bewegen(dt, jetzt);
+      if (wetterfall) {
+        wetterfall.bewegen(dt, jetzt);
+        /*
+         * Das Wetter zieht mit - wie in der Arena.
+         *
+         * Der Ausschnitt ist knapp dreißig auf siebzig Meter; eine Stadt ist
+         * größer. Blieb er am Nullpunkt stehen, schneite es nur dort, und
+         * wer in die hintere Ecke lief, stand im Trockenen. Beim Feuerwerk
+         * fiele es sofort auf: Man ginge um die Ecke, und der Himmel wäre
+         * leer.
+         */
+        wetterfall.gruppe.position.set(spieler.position.x, 0, spieler.position.z);
+      }
       npcGruppen.forEach((npc) => {
         let laeuft = false;
         const ansprechbar = npc.gruppe.position.distanceToSquared(spieler.position) < 2.35 ** 2;

@@ -44,6 +44,7 @@ import {
   daemonFuerKapitel,
   falscheFaehrteVon,
   mittaeterFuerKapitel,
+  motivFuerFall,
 } from "@/lib/sagaTypen";
 import { waehleDaemonform, waehleMittaeter } from "@/lib/daemonEnthuellung";
 import { besessenheitsRegeln } from "@/lib/gestaltStimme";
@@ -531,6 +532,15 @@ async function geruestSchritt(body: Record<string, unknown>) {
     );
   }
 
+  /*
+   * Warum er es getan hat.
+   *
+   * In einer Saga darf das im Editor stehen - je Kapitel eines, und das
+   * Finale zählt mit. Steht dort nichts, bleibt alles wie immer: Das Modell
+   * denkt sich einen Grund aus, der zum Tier passt.
+   */
+  const wunschMotiv = saga ? motivFuerFall(saga.bogen.vorgaben, saga.kapitel) : "";
+
   const fallItems = wuerfleItems(itemsAus(body?.items), vorgaben?.items ?? []);
 
   const alleOrte = orteAus(body?.orte);
@@ -609,6 +619,7 @@ async function geruestSchritt(body: Record<string, unknown>) {
           taeter.id,
           vorgaben,
           mittaeter?.id ?? "",
+          wunschMotiv,
         ),
         roh.sagaBriefing,
       ),
@@ -634,7 +645,9 @@ async function geruestSchritt(body: Record<string, unknown>) {
     tatbeschreibung: draft.tatbeschreibung,
     introText: draft.introText,
     tatort: idOderStandard(draft.tatort, ortIds, ortIds[0]),
-    motiv: draft.motiv,
+    // Ein gesetztes Motiv bleibt, wie es getippt wurde - das Modell hat den
+    // Fall darum herum gebaut, umformulieren soll es den Satz nicht.
+    motiv: wunschMotiv || draft.motiv,
     tathergang: draft.tathergang,
     // Notfalls Schlagworte selbst bilden - das Intro braucht immer welche.
     schlagworte:

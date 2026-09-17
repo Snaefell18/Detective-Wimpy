@@ -16,6 +16,7 @@ import {
 } from "@/lib/stadtplan";
 import {
   istBlizzard,
+  istFeuerwerk,
   istSchneeWetter,
   type DreiDStrassentyp,
   type DreiDTageszeit,
@@ -285,6 +286,12 @@ export function wetterFeld(args: {
   const schneeWetter = istSchneeWetter(wetter);
   const blizzard = istBlizzard(wetter);
   const sandSturm = wetter === "sandsturm";
+  // Das Feuerwerk fällt nicht, es steigt - eine eigene Rechnung, gleich
+  // darunter. Herauskommt dasselbe Wetterfeld, und die Szenen merken keinen
+  // Unterschied.
+  if (istFeuerwerk(wetter)) {
+    return feuerwerkFeld({ scene, merken, versatzZ, groesse, anzahl: args.anzahl });
+  }
   if (wetter !== "regen" && !schneeWetter && !sandSturm) return null;
 
   const anzahl =
@@ -413,6 +420,256 @@ export function wetterFeld(args: {
   const sicht = (jetzt: number) => 1 - boe(jetzt) * 0.42;
 
   return { gruppe, bewegen, sicht };
+}
+
+/* --- Feuerwerk ------------------------------------------------------- */
+
+/**
+ * Die Farben der Kugeln. Warm und kühl gemischt, keine reinen Vollfarben -
+ * die leuchten im Additivmodus aus wie Leuchtstoffröhren.
+ */
+const FEUERWERK_FARBEN = [
+  [1.0, 0.82, 0.45], // Gold
+  [1.0, 0.45, 0.42], // Rot
+  [0.55, 1.0, 0.68], // Grün
+  [0.56, 0.78, 1.0], // Blau
+  [0.84, 0.64, 1.0], // Violett
+  [1.0, 0.95, 0.84], // Warmweiß
+];
+
+/**
+ * Feuerwerk über der Stadt.
+ *
+ * Eine Rakete steigt neben der Straße auf, wird oben langsamer und blüht zu
+ * einer Kugel auf, die auseinandertreibt, sinkt und weich ausgeht. Dann die
+ * nächste, an anderer Stelle, in anderer Farbe.
+ *
+ * Alles steckt in einem einzigen Punktefeld: Ein fester Vorrat an Funken wird
+ * vergeben und wieder eingesammelt, statt für jede Kugel Geometrie anzulegen
+ * und wegzuwerfen. Das läuft auch auf einem Telefon ruhig durch - und genau
+ * darum geht es hier, denn die Szene rechnet daneben schon eine ganze Stadt.
+ *
+ * Bewusst ohne Blitzen: Die Szene wird nirgends kurz hell, kein Licht zuckt,
+ * nichts pulst schnell. Was leuchtet, sind die Funken selbst, und die gehen
+ * über anderthalb Sekunden aus. Grelles Flackern kann Migräne auslösen.
+ */
+function feuerwerkFeld(args: {
+  scene: THREE.Scene;
+  merken: Merken;
+  versatzZ: number;
+  groesse: number;
+  anzahl?: number;
+}): WetterFeld {
+  const { scene, merken, versatzZ, groesse } = args;
+
+  /** Der Vorrat an Funken. Mehr als tausend sieht man nicht, es kostet nur. */
+  const vorrat = Math.round(Math.min(1400, Math.max(400, args.anzahl ?? 900)));
+
+  const positionen = new Float32Array(vorrat * 3);
+  const farben = new Float32Array(vorrat * 3);
+  // Geschwindigkeit, Restleben, Gesamtleben, Farbe und Art je Funke.
+  const vx = new Float32Array(vorrat);
+  const vy = new Float32Array(vorrat);
+  const vz = new Float32Array(vorrat);
+  const leben = new Float32Array(vorrat);
+  const dauer = new Float32Array(vorrat);
+  const farbe = new Uint8Array(vorrat);
+  /** 0 = frei, 1 = steigende Rakete, 2 = Funke einer Kugel, 3 = Funkenschweif. */
+  const art = new Uint8Array(vorrat);
+  /** Nur für Raketen: die Höhe, in der sie aufblüht. */
+  const ziel = new Float32Array(vorrat);
+
+  const geometrie = new THREE.BufferGeometry();
+  geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
+  geometrie.setAttribute("color", new THREE.BufferAttribute(farben, 3));
+  merken(geometrie);
+
+  const bild = schneeflockenTextur();
+  merken(bild);
+  const material = new THREE.PointsMaterial({
+    map: bild,
+    size: 1.05 * groesse,
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    // Ohne Nebel: Das Feuerwerk steht weit hinten, jenseits der Nebelgrenze -
+    // eingenebelt bliebe von den Funken die Nebelfarbe übrig, und die würde
+    // additiv den Himmel aufhellen statt zu leuchten.
+    fog: false,
+    // Additiv, damit sich Funken zu einem hellen Kern überlagern - und damit
+    // Schwarz von selbst unsichtbar ist. Ein toter Funke bekommt einfach
+    // keine Farbe mehr; er muss nicht aus der Geometrie genommen werden.
+    blending: THREE.AdditiveBlending,
+  });
+  merken(material);
+
+  const gruppe = new THREE.Group();
+  gruppe.add(new THREE.Points(geometrie, material));
+  scene.add(gruppe);
+
+  /*
+   * Der Zeiger auf den nächsten freien Platz.
+   *
+   * Gesucht wird von hier aus reihum. Ist der Vorrat wirklich einmal voll,
+   * bleibt die Kugel eben kleiner - das sieht niemand, und es ist allemal
+   * besser, als mitten im Spiel Speicher anzufordern.
+   */
+  let zeiger = 0;
+  const freierPlatz = (): number => {
+    for (let versuch = 0; versuch < vorrat; versuch++) {
+      zeiger = (zeiger + 1) % vorrat;
+      if (art[zeiger] === 0) return zeiger;
+    }
+    return -1;
+  };
+
+  const setzen = (
+    i: number,
+    x: number,
+    y: number,
+    z: number,
+    art_: number,
+    dauer_: number,
+    farbe_: number,
+  ) => {
+    positionen[i * 3] = x;
+    positionen[i * 3 + 1] = y;
+    positionen[i * 3 + 2] = z;
+    art[i] = art_;
+    leben[i] = dauer_;
+    dauer[i] = dauer_;
+    farbe[i] = farbe_;
+  };
+
+  /** Eine neue Rakete - neben der Straße, nicht mittendrin. */
+  const starten = () => {
+    const i = freierPlatz();
+    if (i < 0) return;
+    const seite = Math.random() < 0.5 ? -1 : 1;
+    const x = seite * (2 + Math.random() * 9);
+    /*
+     * Weit vorn, nicht über dem Kopf.
+     *
+     * Beide Kameras schauen fast waagerecht: Die Stadt zeigt vom Spieler aus
+     * einen Himmelstreifen von knapp zehn Grad, die Verfolgungsjagd noch
+     * weniger. Was in dreißig Metern Entfernung zwanzig Meter hoch aufblüht,
+     * liegt über dem Bildrand und ist für den Spieler schlicht nicht da.
+     * Deshalb steigen die Raketen ein gutes Stück entfernt auf und blühen
+     * knapp über den Dächern - dort, wo der Himmelstreifen ist.
+     */
+    const z = versatzZ - (40 + Math.random() * 25);
+    setzen(i, x, 0.6, z, 1, 6, Math.floor(Math.random() * FEUERWERK_FARBEN.length));
+    vx[i] = (Math.random() - 0.5) * 1.2;
+    vy[i] = 10 + Math.random() * 2.5;
+    vz[i] = (Math.random() - 0.5) * 1.2;
+    ziel[i] = 9.5 + Math.random() * 3.5;
+  };
+
+  /** Und ihr Ende: die Kugel, die auseinanderfliegt. */
+  const aufbluehen = (i: number) => {
+    const x = positionen[i * 3];
+    const y = positionen[i * 3 + 1];
+    const z = positionen[i * 3 + 2];
+    const ton = farbe[i];
+    const menge = 34 + Math.floor(Math.random() * 24);
+    const tempo = 5 + Math.random() * 3.5;
+    for (let k = 0; k < menge; k++) {
+      const j = freierPlatz();
+      if (j < 0) return;
+      // Gleichmäßig auf der Kugel verteilt - sonst sammelt sich alles an den
+      // Polen, und aus der Blüte wird ein Sanduhr.
+      const u = Math.random() * 2 - 1;
+      const phi = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(1 - u * u);
+      const schwung = tempo * (0.55 + Math.random() * 0.45);
+      setzen(j, x, y, z, 2, 1.3 + Math.random() * 1.1, ton);
+      vx[j] = Math.cos(phi) * r * schwung;
+      vy[j] = u * schwung;
+      vz[j] = Math.sin(phi) * r * schwung;
+    }
+  };
+
+  /** Bis zur nächsten Rakete. Anfangs kurz, damit es gleich losgeht. */
+  let naechste = 0.4;
+
+  const bewegen = (dt: number, _jetzt: number, zugZ = 0) => {
+    // Ein stehengebliebenes Bild (Tab im Hintergrund) darf die Rechnung nicht
+    // auf einen Schlag durchlaufen lassen - sonst sind alle Funken weg.
+    const schritt = Math.min(dt, 0.05);
+
+    naechste -= schritt;
+    if (naechste <= 0) {
+      starten();
+      // Manchmal zwei kurz hintereinander - das wirkt gefeiert statt getaktet.
+      if (Math.random() < 0.28) starten();
+      naechste = 0.55 + Math.random() * 1.1;
+    }
+
+    for (let i = 0; i < vorrat; i++) {
+      if (art[i] === 0) continue;
+
+      leben[i] -= schritt;
+      positionen[i * 3] += vx[i] * schritt;
+      positionen[i * 3 + 1] += vy[i] * schritt;
+      // Minus, nicht plus: `zugZ` sind die Meter, die die Welt in diesem Bild
+      // nach vorn gezogen ist - das Feuerwerk muss also nach hinten.
+      positionen[i * 3 + 2] += vz[i] * schritt - zugZ;
+
+      if (art[i] === 1) {
+        // Die Rakete wird langsamer, je höher sie kommt.
+        vy[i] -= 4.2 * schritt;
+        const oben = positionen[i * 3 + 1] >= ziel[i] || vy[i] <= 0.8;
+        if (oben || leben[i] <= 0) {
+          aufbluehen(i);
+          art[i] = 0;
+          farben[i * 3] = farben[i * 3 + 1] = farben[i * 3 + 2] = 0;
+          continue;
+        }
+        // Der Schweif: kleine, kurze Funken, die stehen bleiben.
+        if (Math.random() < 0.55) {
+          const j = freierPlatz();
+          if (j >= 0) {
+            setzen(j, positionen[i * 3], positionen[i * 3 + 1], positionen[i * 3 + 2], 3, 0.42, farbe[i]);
+            vx[j] = vy[j] = vz[j] = 0;
+          }
+        }
+      } else {
+        // Funken sinken und werden von der Luft gebremst.
+        vy[i] -= 2.4 * schritt;
+        const bremse = Math.max(0, 1 - 0.9 * schritt);
+        vx[i] *= bremse;
+        vy[i] *= bremse;
+        vz[i] *= bremse;
+      }
+
+      if (leben[i] <= 0 || positionen[i * 3 + 1] < 0) {
+        art[i] = 0;
+        farben[i * 3] = farben[i * 3 + 1] = farben[i * 3 + 2] = 0;
+        continue;
+      }
+
+      /*
+       * Und das Ausgehen.
+       *
+       * Hoch zwei, nicht linear: So bleibt die Kugel einen Moment hell
+       * stehen und verglüht dann weich, statt gleichmäßig wegzudimmen. Ein
+       * Aufblitzen gibt es nirgends - der hellste Wert ist der erste.
+       */
+      const anteil = leben[i] / dauer[i];
+      const helligkeit =
+        art[i] === 1 ? 1 : art[i] === 3 ? anteil * 0.5 : anteil * anteil * 1.15;
+      const ton = FEUERWERK_FARBEN[farbe[i]] ?? FEUERWERK_FARBEN[0];
+      farben[i * 3] = ton[0] * helligkeit;
+      farben[i * 3 + 1] = ton[1] * helligkeit;
+      farben[i * 3 + 2] = ton[2] * helligkeit;
+    }
+
+    (geometrie.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+    (geometrie.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
+  };
+
+  // Das Feuerwerk nimmt keine Sicht - der Himmel bleibt, wie er ist.
+  return { gruppe, bewegen, sicht: () => 1 };
 }
 
 /** Die Welt zieht unter dem Wetter weg - nur in der Verfolgungsjagd. */

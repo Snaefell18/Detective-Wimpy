@@ -105,6 +105,15 @@ Finale, in dem der Drahtzieher auffliegt. Sie entsteht im Admin-Menü unter
 **Sagas**; zwischen den Kapiteln spricht der Erzähler, wahlweise mit eigener
 Tondatei aus `public/audio`.
 
+**Das Motiv je Fall** lässt sich dabei selbst schreiben: In jedem Kapitel steht
+ein Feld „Motiv des Täters“, im Finale eines für den Drahtzieher. Was dort
+steht, wird wörtlich das Motiv des Falls - Tathergang, Alibis und Spuren werden
+darum herum gebaut, und im Finale folgt sogar die Wahrheit hinter der ganzen
+Saga daraus. Leer lassen heißt wie überall: Das Modell denkt sich einen Grund
+aus, der zum Tier passt. Gespeichert wird das Motiv nur im verschlüsselten
+Bogen - in der offen liegenden Vorgabenliste steht es nicht, sonst wäre der
+Täter mit einem Blick in die Datenbank verraten.
+
 Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
 
 1. Admin-Menü → **Arcs**. Name, Klappentext, eigener Titelsong (Pfad in
@@ -118,6 +127,14 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    Schwierigkeit. Was der Arc vorgibt (Überthema samt Culprit-Ansage, die
    Besetzung ohne den Culprit, im letzten Teil der Drahtzieher samt Twist), ist
    dort vorbelegt und markiert - ändern lässt es sich trotzdem.
+
+   **Als Entwurf speichern.** Das Formular ist lang, und es muss nicht in einem
+   Zug fertig werden: „Entwurf speichern“ legt alles Ausgefüllte an der Station
+   ab, ohne etwas zu bestellen. Danach steht dort „Am Entwurf weiterarbeiten“
+   samt Datum, und man macht dort weiter, wo man aufgehört hat - auch an einem
+   anderen Gerät, denn der Entwurf liegt am Arc und nicht im Browser. „Entwurf
+   verwerfen“ stellt das Formular zurück auf die Vorgaben des Arcs, und sobald
+   die Saga wirklich erzeugt ist, räumt sich der Entwurf von selbst weg.
 
    Eine **bereits vorhandene Saga** lässt sich ebenfalls zuordnen, wirkt dann
    aber nur als Station: Ihre Texte sind längst geschrieben und kennen weder
@@ -264,9 +281,9 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
     Pfosten in der Wüste, hölzerne Zaunpfähle am Feldweg.
   - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
     3D-Kapitel.
-  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
-    Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
-    daran vorbeifährt.
+  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm, Nebel
+    oder Feuerwerk. Was fällt, fällt nicht nur: Es bleibt auch zurück, während
+    man daran vorbeifährt.
   - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
     - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen **direkt an
     der Fahrbahn**: gemessen wird an der Hausfront, nicht an der Hausmitte,
@@ -471,6 +488,11 @@ betritt das Feld!“, darunter Bild und Name.
 
 Wie der Auftritt aussieht, wählt man im Saga-Editor **je Tier**:
 
+- **Kein Auftritt** - gar keine Ansage: kein Song, keine Bühne, keine
+  Unterbrechung. Das Tier ist im Kapitel einfach da. Für den Nachbarn, der
+  beiläufig dazukommt - oder wenn im dritten Kapitel hintereinander jemand
+  vorgestellt würde. Steht die Wahl schon unter **Tiere** am Tier selbst, gilt
+  sie überall; im Saga-Editor lässt sie sich für die eine Reihe umstellen.
 - **Enthüllung** - ruhig, aus dem Dunkel (Standard).
 - **Gewitter** - Regen, zuckende Blitze, die Figur als Silhouette davor. Für
   Tiere, bei denen einem mulmig werden soll.
@@ -525,15 +547,31 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   Beschuldigten und hört, was er dazu sagt. Erst danach fällt das Urteil - und
   mit ihm die Siegermusik, die zu einem Satz, der noch nichts entschieden hat,
   nichts verloren hat.
+- **Hintergrundmusik** (Admin → Spiel, je Saga-Kapitel überschreibbar): läuft
+  leise weiter, solange man ermittelt - am Schauplatz **und genauso in der
+  3D-Stadt**, denn die steht an derselben Stelle im selben Bildschirm. Szenen
+  mit eigener Musik (Intro, Auftritt, Gerichtseinzug, Auflösung) halten sie an
+  und geben sie danach an derselben Stelle wieder frei, nicht von vorn.
 - **Wetter am Schauplatz** (Admin → Spiel): Regen, Nebel, Schnee, Nacht oder
   „Zufall“ - eine Lage je Fall, damit sie nicht mitten im Herumlaufen
   umschlägt. Alles reines CSS, keine zusätzlichen Dateien.
 - **Wetter in der 3D-Welt** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd,
   Probewelt): klar, Sonne, Regen, Schneefall, Schneesturm, **Blizzard**,
-  **Sandsturm** oder Nebel. Der Sandsturm färbt Dunst, Licht und Boden ocker,
-  legt Sand auf die Fahrbahn und treibt die Körner waagerecht und böig durchs
-  Bild. Alle Szenen rechnen dafür mit denselben Zahlen
+  **Sandsturm**, Nebel oder **Feuerwerk**. Der Sandsturm färbt Dunst, Licht
+  und Boden ocker, legt Sand auf die Fahrbahn und treibt die Körner waagerecht
+  und böig durchs Bild. Alle Szenen rechnen dafür mit denselben Zahlen
   (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
+- **Feuerwerk** ist die eine Lage, bei der nichts fällt, sondern etwas
+  aufsteigt: Eine Rakete zieht mit Funkenschweif nach oben, wird langsamer und
+  blüht knapp über den Dächern zu einer Kugel auf, die auseinandertreibt,
+  sinkt und weich ausgeht - dann die nächste, an anderer Stelle, in anderer
+  Farbe. Am schönsten nachts, aber zu jeder Tageszeit erlaubt; die Sicht ändert
+  es nicht. Bewusst **ohne Blitzen**: Die Szene wird nirgends kurz hell, kein
+  Licht zuckt, nichts pulst schnell - der hellste Augenblick eines Funkens ist
+  sein erster, danach geht er über anderthalb Sekunden aus. Gerechnet wird
+  alles in einem einzigen Punktefeld mit festem Vorrat, das auch auf einem
+  Telefon ruhig durchläuft. Und es steigt ein gutes Stück entfernt auf: Die
+  Kameras schauen fast waagerecht, was näher aufblüht, läge über dem Bildrand.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
   Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
   durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
@@ -735,8 +773,9 @@ Dahinter:
   eine ganze Reihe von Fällen -, steht aber in **einklappbaren Abschnitten**:
   Die Saga, Kapitel (darin jedes Kapitel noch einmal für sich), Besetzung,
   Ton und Publikum, Finale, Abspann. Zu ist der Regelfall; in der Kopfzeile
-  steht, was drinsteckt („3 Kapitel + Finale", „Gericht & Flucht · Noch keine
-  Arena gebaut"), sodass man den Stand sieht, ohne aufzuklappen. Ein
+  steht, was drinsteckt („3 Kapitel + Finale", „Täter: Nala · mit Motiv",
+  „Gericht & Flucht · Noch keine Arena gebaut"), sodass man den Stand sieht,
+  ohne aufzuklappen. Ein
   zugeklappter Abschnitt vergisst nichts: Die Felder bleiben stehen, wo sie
   waren.
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAdmin } from "@/lib/adminStore";
 import {
+  arcEntwurfVon,
   besetzungFuerTeil,
   fertigeTeile,
   leererArc,
@@ -93,8 +94,35 @@ function enttarntDenCulprit(saga: Saga, name: string): boolean {
 /** Einer Station ihre Saga zuweisen - oder sie wieder freimachen. */
 const mitSaga = (arc: Arc, index: number, sagaId: string): Arc => ({
   ...arc,
-  teile: arc.teile.map((t, i) => (i === index ? { ...t, sagaId } : t)),
+  teile: arc.teile.map((t, i) =>
+    i === index
+      ? // Steht die Saga, hat das angefangene Formular seinen Zweck erfüllt:
+        // Es beschriebe eine Saga, die es nun wirklich gibt.
+        { ...t, sagaId, ...(sagaId ? { entwurf: null } : {}) }
+      : t,
+  ),
 });
+
+/** Den Stand des offenen Formulars an seiner Station ablegen - oder löschen. */
+const mitFormular = (arc: Arc, index: number, vorgaben: SagaVorgaben | null): Arc => ({
+  ...arc,
+  teile: arc.teile.map((t, i) =>
+    i === index
+      ? { ...t, entwurf: vorgaben ? { vorgaben, gespeichertAm: Date.now() } : null }
+      : t,
+  ),
+});
+
+/** „vor 3 Minuten“, „gestern“ - kurz genug für eine Zeile im Editor. */
+function seitdem(zeitpunkt: number): string {
+  const minuten = Math.round((Date.now() - zeitpunkt) / 60000);
+  if (!Number.isFinite(minuten) || minuten < 1) return "gerade eben";
+  if (minuten < 60) return `vor ${minuten} Minute${minuten === 1 ? "" : "n"}`;
+  const stunden = Math.round(minuten / 60);
+  if (stunden < 24) return `vor ${stunden} Stunde${stunden === 1 ? "" : "n"}`;
+  const tage = Math.round(stunden / 24);
+  return `vor ${tage} Tag${tage === 1 ? "" : "en"}`;
+}
 
 /**
  * Die Sammlung "arcs" ist neu. Wer seine Firestore-Regeln noch nicht neu
@@ -310,6 +338,31 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
     const teil = arc.teile[index];
     const letzte = index >= arc.teile.length - 1;
     const culprit = verdaechtige.find((c) => c.id === arc.culprit.charakterId);
+    const gespeichert = arcEntwurfVon(teil);
+
+    /*
+     * Den Stand festhalten, ohne etwas zu bestellen.
+     *
+     * Eine Saga vorzubereiten dauert; „Zurück“, ein Neuladen oder ein leerer
+     * Akku warfen bisher alles weg. Der Entwurf liegt am Arc, nicht auf dem
+     * Gerät - angefangen am Schreibtisch, weiter auf dem Tablet.
+     */
+    const entwurfSichern = async () => {
+      const neuer = mitFormular(arc, index, vorgaben);
+      setEntwurfSaga({ arc: neuer, index, vorgaben });
+      await sichern(neuer, "Entwurf gespeichert - hier geht es später weiter.");
+    };
+
+    /** Und wieder zurück auf das, was der Arc vorgibt. */
+    const entwurfVerwerfen = async () => {
+      const neuer = mitFormular(arc, index, null);
+      setEntwurfSaga({
+        arc: neuer,
+        index,
+        vorgaben: vorgabenFuerTeil(neuer, index, verdaechtige.map((c) => c.id)),
+      });
+      await sichern(neuer, "Entwurf verworfen - das Formular steht wieder auf den Vorgaben des Arcs.");
+    };
 
     return (
       <>
@@ -374,6 +427,16 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
           >
             {laeuft ? "Die Saga entsteht …" : "Saga erzeugen und speichern"}
           </button>
+          {/* Nichts wird bestellt, nichts geprüft: Ein Entwurf darf auch
+              halb fertig sein - dafür ist er da. */}
+          <button className="knopf klein" disabled={laeuft || !admin} onClick={() => void entwurfSichern()}>
+            Entwurf speichern
+          </button>
+          {gespeichert && (
+            <button className="knopf klein" disabled={laeuft || !admin} onClick={() => void entwurfVerwerfen()}>
+              Entwurf verwerfen
+            </button>
+          )}
           <button
             className="knopf klein"
             disabled={laeuft}
@@ -382,6 +445,11 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
             Zurück
           </button>
         </div>
+        <p className="leise klein">
+          {gespeichert
+            ? `Entwurf gespeichert ${seitdem(gespeichert.gespeichertAm)}. „Zurück“ lässt ihn stehen, wie er zuletzt gespeichert wurde - Änderungen danach gehen verloren.`
+            : "„Entwurf speichern“ legt alles Ausgefüllte am Arc ab: Man kann später hier weitermachen, auch an einem anderen Gerät. Ohne Entwurf ist alles weg, sobald man zurückgeht."}
+        </p>
 
         {abbruch && !laeuft && (
           <div className="abbruch">
@@ -490,6 +558,8 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
 
               {arc.teile.map((teil, i) => {
                 const saga = sagas.find((s) => s.id === teil.sagaId);
+                // Ein angefangenes Formular an dieser Station - oder nichts.
+                const angefangen = arcEntwurfVon(teil);
                 const fremd = Boolean(saga && saga.arcId !== arc.id);
                 const culpritName = verdaechtige.find(
                   (c) => c.id === arc.culprit.charakterId,
@@ -568,23 +638,40 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                     </div>
 
                     {!teil.sagaId && (
-                      <button
-                        className="knopf klein"
-                        disabled={laeuft || !admin}
-                        onClick={() =>
-                          setEntwurfSaga({
-                            arc,
-                            index: i,
-                            vorgaben: vorgabenFuerTeil(
+                      <>
+                        <button
+                          className="knopf klein"
+                          disabled={laeuft || !admin}
+                          onClick={() =>
+                            setEntwurfSaga({
                               arc,
-                              i,
-                              verdaechtige.map((c) => c.id),
-                            ),
-                          })
-                        }
-                      >
-                        Saga für diesen Teil vorbereiten
-                      </button>
+                              index: i,
+                              /*
+                               * Der gespeicherte Entwurf liegt über den
+                               * Vorgaben des Arcs, nicht neben ihnen: So
+                               * bleibt jedes Feld erhalten, das man gesetzt
+                               * hat, und Felder, die es beim Speichern noch
+                               * gar nicht gab, stehen auf ihrem Standard.
+                               */
+                              vorgaben: {
+                                ...vorgabenFuerTeil(arc, i, verdaechtige.map((c) => c.id)),
+                                ...(angefangen?.vorgaben ?? {}),
+                              },
+                            })
+                          }
+                        >
+                          {angefangen
+                            ? "Am Entwurf weiterarbeiten"
+                            : "Saga für diesen Teil vorbereiten"}
+                        </button>
+                        {angefangen && (
+                          <span className="leise klein">
+                            {" "}
+                            Entwurf gespeichert {seitdem(angefangen.gespeichertAm)} ·{" "}
+                            {(angefangen.vorgaben.name ?? "").trim() || "noch ohne Namen"}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 );

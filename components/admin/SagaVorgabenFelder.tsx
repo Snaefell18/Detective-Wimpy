@@ -248,6 +248,7 @@ export function SagaVorgabenFelder({
         : taeter
           ? `Täter: ${namenVon(taeter)}`
           : "Täter: zufällig",
+      (vorgaben.kapitelMotive?.[i] ?? "").trim() ? "mit Motiv" : null,
       (vorgaben.kapitelStaedte?.[i] ?? "").trim() || null,
       dreiD && "3D-Welt",
       (vorgaben.kapitelVideos?.[i] ?? "").trim() ? "Video" : null,
@@ -288,6 +289,10 @@ export function SagaVorgabenFelder({
 
   const wunschSetzen = (i: number, text: string) =>
     onAendern({ kapitelWuensche: anStelle(vorgaben.kapitelWuensche, i, text, "") });
+
+  /** Das Motiv des Täters; der letzte Eintrag gehört zum Finale. */
+  const motivSetzen = (i: number, text: string) =>
+    onAendern({ kapitelMotive: anStelle(vorgaben.kapitelMotive, i, text, "") });
 
   /** Stadt je Kapitel; der letzte Eintrag gehört zum Finale. */
   const stadtSetzen = (i: number, stadt: string) =>
@@ -680,6 +685,39 @@ export function SagaVorgabenFelder({
                 <p className="leise klein">
                   Im Finale ist der Drahtzieher der Täter - das steht oben. Eine
                   Verwandlung gehört dort zur Besessenheit der ganzen Saga.
+                </p>
+              )}
+
+              {/*
+                Warum er es getan hat.
+
+                Es ist die einzige Vorgabe, die wörtlich im Fall landet: Was
+                hier steht, wird das Motiv, und Tathergang, Alibis und Spuren
+                werden darum herum gebaut. Leer heißt wie überall: Das Modell
+                denkt sich etwas aus, das zum Tier passt.
+              */}
+              <label className="feld">
+                <span className="leise">
+                  {istFinale ? "Motiv des Drahtziehers" : "Motiv des Täters"} ·
+                  leer = wird ausgedacht
+                </span>
+                <textarea
+                  rows={2}
+                  value={vorgaben.kapitelMotive?.[i] ?? ""}
+                  onChange={(e) => motivSetzen(i, e.target.value)}
+                  placeholder={
+                    istFinale
+                      ? "z.B. Er will die Werft zurück, die man seiner Familie genommen hat"
+                      : "z.B. Sie braucht das Geld für die Reparatur ihres Bootes"
+                  }
+                  maxLength={600}
+                />
+              </label>
+              {istFinale && (
+                <p className="leise klein">
+                  Das Motiv des Drahtziehers trägt die ganze Saga: Die Wahrheit
+                  hinter allem wird darum herum erfunden, und vor Gericht wird
+                  damit argumentiert.
                 </p>
               )}
 
@@ -1608,7 +1646,11 @@ export function SagaVorgabenFelder({
                     <button
                       key={a.id}
                       className="wahl-chip"
-                      data-aktiv={artFuerAuftritt(c.id, vorgaben) === a.id}
+                      // Mit dem Tier gefragt, nicht ohne: Steht seine Art
+                      // schon unter „Tiere“, soll hier auch die leuchten -
+                      // sonst zeigte die Reihe eine Bühne an, die im Spiel
+                      // gar nicht kommt.
+                      data-aktiv={artFuerAuftritt(c.id, vorgaben, c) === a.id}
                       onClick={() =>
                         setzen({
                           neuzugangArten: {
@@ -1624,15 +1666,24 @@ export function SagaVorgabenFelder({
                   ))}
                 </div>
 
-                <TonFeld
-                  wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
-                  satzVorschlag={`${c.name} betritt das Feld!`}
-                  onAendern={(wert) =>
-                    setzen({
-                      neuzugangToene: { ...(vorgaben.neuzugangToene ?? {}), [c.id]: wert },
-                    })
-                  }
-                />
+                {/* Ohne Auftritt gibt es auch nichts zu hören - das Feld
+                    stünde nur da und verspräche etwas. */}
+                {artFuerAuftritt(c.id, vorgaben, c) === "ohne" ? (
+                  <p className="leise klein">
+                    {c.name} wird nicht angekündigt - kein Song, keine Bühne. Er
+                    ist im Kapitel einfach dabei.
+                  </p>
+                ) : (
+                  <TonFeld
+                    wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
+                    satzVorschlag={`${c.name} betritt das Feld!`}
+                    onAendern={(wert) =>
+                      setzen({
+                        neuzugangToene: { ...(vorgaben.neuzugangToene ?? {}), [c.id]: wert },
+                      })
+                    }
+                  />
+                )}
               </div>
             ))}
           </>

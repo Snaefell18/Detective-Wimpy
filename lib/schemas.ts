@@ -499,6 +499,8 @@ export const SagaVorgabenSchema = z.object({
   kapitelAnzahl: z.number().min(2).max(8),
   kapitelWuensche: luecken(z.string().max(400), "").max(8),
   kapitelTaeter: luecken(z.string().max(40), "").max(8).default([]),
+  // Ein Motiv je Kapitel - und eines mehr, denn das Finale hat auch eins.
+  kapitelMotive: luecken(z.string().max(600), "").max(9).default([]),
   kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
   kapitelGeschenke: luecken(z.string().max(40), "").max(9).default([]),
