@@ -547,6 +547,11 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   Beschuldigten und hört, was er dazu sagt. Erst danach fällt das Urteil - und
   mit ihm die Siegermusik, die zu einem Satz, der noch nichts entschieden hat,
   nichts verloren hat.
+- **Hintergrundmusik** (Admin → Spiel, je Saga-Kapitel überschreibbar): läuft
+  leise weiter, solange man ermittelt - am Schauplatz **und genauso in der
+  3D-Stadt**, denn die steht an derselben Stelle im selben Bildschirm. Szenen
+  mit eigener Musik (Intro, Auftritt, Gerichtseinzug, Auflösung) halten sie an
+  und geben sie danach an derselben Stelle wieder frei, nicht von vorn.
 - **Wetter am Schauplatz** (Admin → Spiel): Regen, Nebel, Schnee, Nacht oder
   „Zufall“ - eine Lage je Fall, damit sie nicht mitten im Herumlaufen
   umschlägt. Alles reines CSS, keine zusätzlichen Dateien.

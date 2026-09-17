@@ -198,12 +198,12 @@ export function SpielBereich({ onMeldung }: BereichProps) {
 
       <h2 className="abschnitt">Hintergrundmusik</h2>
       <p className="leise">
-        Läuft leise weiter, solange man ermittelt - am Schauplatz, bei den
-        Verdächtigen, im Inventar, im Notizbuch und im Gespräch. Szenen mit
-        eigener Musik (Intro, Auftritt, Gericht, Auflösung) halten sie so
-        lange an und geben sie danach an derselben Stelle wieder frei. In
-        einer Saga darf jedes Kapitel eine andere wählen; nichts gewählt
-        heißt: keine Musik.
+        Läuft leise weiter, solange man ermittelt - am Schauplatz und genauso
+        in der 3D-Stadt, bei den Verdächtigen, im Inventar, im Notizbuch und
+        im Gespräch. Szenen mit eigener Musik (Intro, Auftritt, Gericht,
+        Auflösung) halten sie so lange an und geben sie danach an derselben
+        Stelle wieder frei. In einer Saga darf jedes Kapitel eine andere
+        wählen; nichts gewählt heißt: keine Musik.
       </p>
       <SongFeld
         wert={e.musik}

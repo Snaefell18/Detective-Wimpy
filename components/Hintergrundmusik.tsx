@@ -8,10 +8,12 @@ import { musikPausieren, musikSpielen } from "@/lib/hintergrundMusik";
  * Bild ist.
  *
  * Deshalb steht es genau dort, wo ermittelt wird - am Schauplatz, bei den
- * Verdächtigen, im Inventar, im Notizbuch und im Gespräch. Jede Szene, die
- * ihre eigene Musik mitbringt (Intro, Auftritt, Gerichtseinzug, Auflösung),
- * ist ein anderer Zweig; dort verschwindet dieses Element und die Musik
- * pausiert - und danach läuft sie an derselben Stelle weiter.
+ * Verdächtigen, im Inventar, im Notizbuch und im Gespräch. Die 3D-Stadt
+ * gehört dazu: Sie steht an der Stelle des Schauplatzes im selben Bildschirm,
+ * also läuft dieselbe Musik, während man durch sie hindurchläuft. Jede Szene,
+ * die ihre eigene Musik mitbringt (Intro, Auftritt, Gerichtseinzug,
+ * Auflösung), ist ein anderer Zweig; dort verschwindet dieses Element und die
+ * Musik pausiert - und danach läuft sie an derselben Stelle weiter.
  *
  * Ohne Stück passiert nichts.
  */
