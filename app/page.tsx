@@ -53,6 +53,7 @@ import { spieleSofort, tonFreigeben } from "@/lib/introAudio";
 import {
   artFuerAuftritt,
   besessen,
+  mitAuftritt,
   geschenkFuerKapitel,
   musikFuerKapitel,
   neueGesichter,
@@ -602,6 +603,12 @@ export default function Home() {
       ).filter(
         // Die Dämonenform kündigt sich nie als "neuer Spieler" an.
         (c) => c.id !== besessenheit?.daemonId,
+      ).filter(
+        // Und wer im Editor auf "Kein Auftritt" steht, wird auch nicht
+        // angekündigt: kein Song, keine Bühne, er ist beim Kapitel einfach
+        // da. Bleibt danach niemand übrig, geht es ohne Unterbrechung
+        // weiter - die Ansage wird gar nicht erst gebaut.
+        (c) => mitAuftritt(c.id, saga.stand?.saga.vorgaben, c),
       );
       if (neue.length > 0) {
         setNeuling({ tiere: neue, finale });

@@ -1646,7 +1646,11 @@ export function SagaVorgabenFelder({
                     <button
                       key={a.id}
                       className="wahl-chip"
-                      data-aktiv={artFuerAuftritt(c.id, vorgaben) === a.id}
+                      // Mit dem Tier gefragt, nicht ohne: Steht seine Art
+                      // schon unter „Tiere“, soll hier auch die leuchten -
+                      // sonst zeigte die Reihe eine Bühne an, die im Spiel
+                      // gar nicht kommt.
+                      data-aktiv={artFuerAuftritt(c.id, vorgaben, c) === a.id}
                       onClick={() =>
                         setzen({
                           neuzugangArten: {
@@ -1662,15 +1666,24 @@ export function SagaVorgabenFelder({
                   ))}
                 </div>
 
-                <TonFeld
-                  wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
-                  satzVorschlag={`${c.name} betritt das Feld!`}
-                  onAendern={(wert) =>
-                    setzen({
-                      neuzugangToene: { ...(vorgaben.neuzugangToene ?? {}), [c.id]: wert },
-                    })
-                  }
-                />
+                {/* Ohne Auftritt gibt es auch nichts zu hören - das Feld
+                    stünde nur da und verspräche etwas. */}
+                {artFuerAuftritt(c.id, vorgaben, c) === "ohne" ? (
+                  <p className="leise klein">
+                    {c.name} wird nicht angekündigt - kein Song, keine Bühne. Er
+                    ist im Kapitel einfach dabei.
+                  </p>
+                ) : (
+                  <TonFeld
+                    wert={vorgaben.neuzugangToene?.[c.id] ?? ""}
+                    satzVorschlag={`${c.name} betritt das Feld!`}
+                    onAendern={(wert) =>
+                      setzen({
+                        neuzugangToene: { ...(vorgaben.neuzugangToene ?? {}), [c.id]: wert },
+                      })
+                    }
+                  />
+                )}
               </div>
             ))}
           </>

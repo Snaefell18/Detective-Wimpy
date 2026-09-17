@@ -480,6 +480,11 @@ betritt das Feld!“, darunter Bild und Name.
 
 Wie der Auftritt aussieht, wählt man im Saga-Editor **je Tier**:
 
+- **Kein Auftritt** - gar keine Ansage: kein Song, keine Bühne, keine
+  Unterbrechung. Das Tier ist im Kapitel einfach da. Für den Nachbarn, der
+  beiläufig dazukommt - oder wenn im dritten Kapitel hintereinander jemand
+  vorgestellt würde. Steht die Wahl schon unter **Tiere** am Tier selbst, gilt
+  sie überall; im Saga-Editor lässt sie sich für die eine Reihe umstellen.
 - **Enthüllung** - ruhig, aus dem Dunkel (Standard).
 - **Gewitter** - Regen, zuckende Blitze, die Figur als Silhouette davor. Für
   Tiere, bei denen einem mulmig werden soll.

@@ -624,8 +624,14 @@ export function besetzungFuerSaga<
  * Keine dieser Bühnen darf stroboskopisch werden: Was pulsiert, pulsiert
  * langsam und weich. Grelles Flackern kann Migräne auslösen und hat hier
  * nichts zu suchen.
+ *
+ * "ohne" ist die Ausnahme: gar kein Auftritt. Kein Song, keine Bühne, keine
+ * Unterbrechung - das Tier steht beim nächsten Kapitel einfach da. Für alle,
+ * bei denen die große Ansage stört: den Nachbarn, der beiläufig dazukommt,
+ * oder das dritte Tier in Folge, bei dem die Vorstellung ermüdet.
  */
 export type AuftrittsArt =
+  | "ohne"
   | "klassisch"
   | "gewitter"
   | "jackpot"
@@ -642,6 +648,7 @@ export type AuftrittsArt =
   | "akte";
 
 export const AUFTRITTS_ARTEN: { id: AuftrittsArt; label: string; hinweis: string }[] = [
+  { id: "ohne", label: "Kein Auftritt", hinweis: "kein Song, keine Bühne" },
   { id: "klassisch", label: "Enthüllung", hinweis: "ruhig, aus dem Dunkel" },
   { id: "gewitter", label: "Gewitter", hinweis: "Regen, Blitze, Silhouette" },
   { id: "jackpot", label: "Jackpot", hinweis: "Konfetti, Geld, alles blinkt" },
@@ -685,6 +692,20 @@ export const artFuerAuftritt = (
   alsAuftrittsArt(vorgaben?.neuzugangArten?.[charakterId]) ??
   alsAuftrittsArt(tier?.auftrittArt) ??
   "klassisch";
+
+/**
+ * Bekommt dieses Tier überhaupt einen Auftritt?
+ *
+ * Nein heißt: kein Song, keine Bühne, keine Unterbrechung - es ist beim
+ * nächsten Kapitel einfach dabei. Gefragt wird an einer einzigen Stelle,
+ * bevor die Bühne gebaut wird; wer hier draußen bleibt, taucht in der
+ * Ansage gar nicht erst auf.
+ */
+export const mitAuftritt = (
+  charakterId: string,
+  vorgaben: Pick<SagaVorgaben, "neuzugangArten"> | undefined,
+  tier?: { auftrittArt?: string },
+): boolean => artFuerAuftritt(charakterId, vorgaben, tier) !== "ohne";
 
 /**
  * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes
