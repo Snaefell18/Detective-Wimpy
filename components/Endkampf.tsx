@@ -23,6 +23,7 @@ import {
   gegnerDenken,
   gegnerTempo,
   gegnerTreffen,
+  leichtereStufe,
   neuerKampf,
   rolleGesetzt,
   salvenBreite,
@@ -1217,12 +1218,24 @@ export function Endkampf({
   const [anzeige, setAnzeige] = useState<KampfAnzeige>(LEERE_ANZEIGE);
   /** Wie oft schon gekämpft wurde - jeder Neustart baut die Arena neu auf. */
   const [runde, setRunde] = useState(0);
+  /** Wie oft Wimpy schon im Staub lag. Steht auf der Karte und macht milder. */
+  const [niederlagen, setNiederlagen] = useState(0);
+  /**
+   * Die Stufe dieses Abends.
+   *
+   * Sie beginnt bei dem, was im Editor steht, und lässt sich nach einer
+   * Niederlage eine Stufe senken. Gespeichert wird das nirgends: Beim
+   * nächsten Mal steht wieder da, was der Erwachsene eingestellt hat.
+   */
+  const [stufeJetzt, setStufeJetzt] = useState<KampfStufe>(stufe);
+  const sanfter = leichtereStufe(stufeJetzt);
 
-  const starten = () => {
+  const starten = (neueStufe?: KampfStufe) => {
     steuerung.current = { x: 0, z: 0 };
     befehle.current = { angriff: 0, ausweichen: 0 };
     setAnzeige(LEERE_ANZEIGE);
     setGeladen(false);
+    if (neueStufe) setStufeJetzt(neueStufe);
     setRunde((wert) => wert + 1);
     setPhase("kampf");
   };
@@ -1246,9 +1259,18 @@ export function Endkampf({
             {phase === "verloren" && <>
               <p>
                 Wimpy liegt im Staub - aber aufgeben gilt nicht. {gegnerName} steht
-                noch genau dort, wo er stand.
+                noch genau dort, wo er stand{niederlagen > 1 ? `, und du gehst zum ${niederlagen + 1}. Mal auf ihn los` : ""}.
               </p>
-              <button className="knopf aktion" onClick={starten}>Noch einmal ›</button>
+              {/* Die Wiederholung ist der Regelfall: derselbe Kampf, dieselbe
+                  Arena, von vorn - und der Gegner wieder mit vollem Balken. */}
+              <button className="knopf aktion" onClick={() => starten()}>Noch einmal ›</button>
+              {/* Wer zweimal verloren hat, darf es milder haben. Ein Kind soll
+                  seine Geschichte nicht an einem Kampf verlieren. */}
+              {niederlagen >= 2 && sanfter && (
+                <button className="knopf" onClick={() => starten(sanfter)}>
+                  Noch einmal, aber sanfter ›
+                </button>
+              )}
               <button className="knopf" onClick={onAufgeben}>
                 {vorschau ? "Vorschau schließen" : "Genug für heute - zum Ende ›"}
               </button>
@@ -1265,7 +1287,7 @@ export function Endkampf({
                 Am Schreibtisch: WASD oder Pfeiltasten laufen, Leertaste greift an,
                 Umschalt rollt.
               </p>
-              <button className="knopf aktion" onClick={starten}>Kampf beginnen ›</button>
+              <button className="knopf aktion" onClick={() => starten()}>Kampf beginnen ›</button>
               <button className="knopf" onClick={onAufgeben}>
                 {vorschau ? "Vorschau schließen" : "Lieber ohne Kampf zum Ende ›"}
               </button>
@@ -1285,7 +1307,7 @@ export function Endkampf({
         strassentyp={strassentyp}
         tageszeit={tageszeit}
         wetter={wetter}
-        stufe={stufe}
+        stufe={stufeJetzt}
         spielerModell={spielerModell}
         gegnerModell={gegnerModell}
         gegnerGroesse={gegnerGroesse}
@@ -1293,7 +1315,10 @@ export function Endkampf({
         befehle={befehle}
         onAnzeige={setAnzeige}
         onBereit={() => setGeladen(true)}
-        onEnde={(ergebnis) => setPhase(ergebnis)}
+        onEnde={(ergebnis) => {
+          if (ergebnis === "verloren") setNiederlagen((wert) => wert + 1);
+          setPhase(ergebnis);
+        }}
       />
       <div className="kampf-balken">
         <div className="kampf-leben kampf-leben-wimpy">

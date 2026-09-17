@@ -95,6 +95,17 @@ const WERTE: Record<KampfStufe, KampfWerte> = {
 export const werteFuer = (stufe: KampfStufe | undefined): KampfWerte =>
   WERTE[stufe ?? "mittel"] ?? WERTE.mittel;
 
+/**
+ * Eine Stufe sanfter - oder nichts, wenn es schon die sanfteste ist.
+ *
+ * Gebraucht nach einer Niederlage: Wer zum dritten Mal im Staub liegt, soll
+ * nicht ewig gegen dieselbe Wand laufen. Der Kampf wird dann eine Stufe
+ * milder, und die Geschichte geht weiter. Eingestellt bleibt im Editor
+ * trotzdem, was dort steht - das hier gilt nur für diesen einen Abend.
+ */
+export const leichtereStufe = (stufe: KampfStufe | undefined): KampfStufe | null =>
+  stufe === "hart" ? "mittel" : (stufe ?? "mittel") === "mittel" ? "sanft" : null;
+
 /* --- Feste Maße des Kampfes ---------------------------------------- */
 
 /** Wie schnell Wimpy zaubern darf. Kurz genug, dass es sich flüssig anfühlt. */

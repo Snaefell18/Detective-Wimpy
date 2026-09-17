@@ -598,7 +598,11 @@ textarea {
 .jagd-statement {
   position: relative;
   z-index: 10;
-  width: min(680px, 92vw);
+  /* Prozent vom Rahmen, nicht vom Fenster: Das Spiel läuft in einer Spalte
+     von höchstens 520 Pixeln. Mit 92vw war die Karte auf dem iPad und am
+     Schreibtisch breiter als diese Spalte - und ihr rechter Rand samt der
+     Knöpfe darauf verschwand hinter der Kante. */
+  width: min(680px, 100%);
   padding: clamp(24px, 5vw, 52px);
   border: 6px solid #172337;
   border-radius: 5px 28px 5px 28px;
@@ -636,7 +640,8 @@ textarea {
   left: 50%;
   bottom: max(42px, calc(var(--safe-bottom) + 24px));
   display: grid;
-  width: min(620px, 86vw);
+  /* Auch hier: Prozent vom Rahmen des Spiels, nicht vom Fenster. */
+  width: min(620px, 86%);
   padding: 14px 20px 16px;
   border: 5px solid #172337;
   border-radius: 4px 18px 4px 18px;

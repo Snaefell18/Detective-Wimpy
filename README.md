@@ -174,7 +174,12 @@ mit dem Daumen gesteuert:
   im Fluchtwagen. Sie ist abwählbar: Wer sie im Editor nicht einrichtet, fängt
   direkt in der Arena an, und im Spiel lässt sie sich überspringen.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
-  Ein Kind soll seine Geschichte nicht an einem Kampf verlieren.
+  „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
+  Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
+  bekommt dazu den Knopf „Noch einmal, aber sanfter": Der Kampf läuft dann eine
+  Stufe milder weiter (hart → mittel → sanft), ohne dass im Editor etwas
+  umgestellt wird. Ein Kind soll seine Geschichte nicht an einem Kampf
+  verlieren.
 - Nach dem Kampf sagt der Gegner sein letztes Wort, und danach läuft das Ende
   wie gewohnt weiter. Der Kampf ersetzt es nicht, er geht ihm voraus.
 
@@ -248,8 +253,14 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
     Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
     daran vorbeifährt.
   - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
-    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen in zwei Zeilen
-    neben der Piste und wiederholen sich, solange die Jagd dauert: Wer durch
+    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen **direkt an
+    der Fahrbahn**: gemessen wird an der Hausfront, nicht an der Hausmitte,
+    und die steht anderthalb Meter hinter dem Fahrbahnrand - ein Gehweg, mehr
+    nicht. Dazu sind sie hoch (dreizehn bis siebzehn Meter) und rücken so eng
+    zusammen, wie sie breit sind: eine geschlossene Häuserzeile statt einzelner
+    Klötze in der Landschaft. Hinter ihr steht eine zweite, noch höhere Zeile
+    und füllt den Horizont, und links - hinter der Kamera - eine dritte fürs
+    Breitbild. Sie wiederholen sich, solange die Jagd dauert: Wer durch
     Akihabara fährt, fährt an denselben Häusern mehrmals vorbei. Auf dem Handy
     stehen weniger und kleiner aufgelöste - das Speicherproblem ist dasselbe
     wie in der Stadt. Ohne Auswahl bleibt es bei der gerechneten Landschaft.
