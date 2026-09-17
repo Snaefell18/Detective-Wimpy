@@ -1,6 +1,11 @@
 import { STANDARD_ABSPANN, abspannVon, type AbspannVorgabe } from "./abspann";
 import { arcErsatzArena, kampfSpielbar, type KampfVorgabe } from "./endkampf";
-import { LEERER_ERZAEHLER, type Erzaehlerteil, type Saga } from "./sagaTypen";
+import {
+  LEERER_ERZAEHLER,
+  type Erzaehlerteil,
+  type Saga,
+  type SagaVorgaben,
+} from "./sagaTypen";
 
 /**
  * Ein Arc ist die Klammer über mehreren Sagen.
@@ -17,6 +22,26 @@ import { LEERER_ERZAEHLER, type Erzaehlerteil, type Saga } from "./sagaTypen";
  * übrigen Sagen kommen nach, während gespielt wird.
  */
 
+/**
+ * Ein angefangenes Saga-Formular für eine Station.
+ *
+ * Eine Saga vorzubereiten ist Arbeit von einer Viertelstunde: Kapitelzahl,
+ * Städte, Täter, Motive, Wetter, 3D-Welten, Abspann. Bisher lag das alles nur
+ * im Arbeitsspeicher des Browsers - „Zurück“, ein Neuladen oder ein leerer
+ * Akku, und es war weg. Der Entwurf hält es fest, bis die Saga wirklich
+ * erzeugt wird.
+ *
+ * Er liegt am Arc und nicht auf dem Gerät: So kann man am Schreibtisch
+ * anfangen und auf dem Tablet weitermachen. Verraten kann er nichts - er
+ * beschreibt eine Saga, die es noch gar nicht gibt, und sobald sie entsteht,
+ * wird er gelöscht.
+ */
+export type ArcEntwurf = {
+  vorgaben: SagaVorgaben;
+  /** Wann zuletzt gespeichert - für die Zeile in der Übersicht. */
+  gespeichertAm: number;
+};
+
 /** Eine Station im Arc: erst der Erzähler, dann die Saga. */
 export type ArcTeil = {
   /** 1-basiert, entspricht der Reihenfolge im Arc. */
@@ -27,6 +52,29 @@ export type ArcTeil = {
   erzaehler: Erzaehlerteil;
   /** Id der Saga in der Sammlung "sagen". Leer heißt: noch nicht erzeugt. */
   sagaId: string;
+  /**
+   * Das angefangene Formular für diese Station - oder nichts.
+   *
+   * Steht hier etwas, macht „Saga vorbereiten“ dort weiter, wo aufgehört
+   * wurde. Ältere Arcs kennen das Feld nicht; dann fängt man wie bisher mit
+   * den Vorgaben des Arcs an.
+   */
+  entwurf?: ArcEntwurf | null;
+};
+
+/**
+ * Der Entwurf einer Station - oder null.
+ *
+ * Geprüft wird nur das Nötigste: Was aus der Datenbank kommt, kann aus einer
+ * älteren Fassung stammen. Fehlt die Kapitelzahl, ist es kein Formular,
+ * sondern Schrott - und dann fängt man lieber neu an, als mit einem halben
+ * Entwurf loszulaufen.
+ */
+export const arcEntwurfVon = (teil: ArcTeil | undefined): ArcEntwurf | null => {
+  const entwurf = teil?.entwurf;
+  return entwurf && typeof entwurf === "object" && Number.isFinite(entwurf.vorgaben?.kapitelAnzahl)
+    ? entwurf
+    : null;
 };
 
 /**
@@ -198,6 +246,7 @@ export const LEERER_ARC_TEIL = (nummer: number): ArcTeil => ({
   name: `Teil ${nummer}`,
   erzaehler: { ...LEERER_ERZAEHLER },
   sagaId: "",
+  entwurf: null,
 });
 
 export function leererArc(): Arc {

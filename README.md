@@ -128,6 +128,14 @@ Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
    Besetzung ohne den Culprit, im letzten Teil der Drahtzieher samt Twist), ist
    dort vorbelegt und markiert - ändern lässt es sich trotzdem.
 
+   **Als Entwurf speichern.** Das Formular ist lang, und es muss nicht in einem
+   Zug fertig werden: „Entwurf speichern“ legt alles Ausgefüllte an der Station
+   ab, ohne etwas zu bestellen. Danach steht dort „Am Entwurf weiterarbeiten“
+   samt Datum, und man macht dort weiter, wo man aufgehört hat - auch an einem
+   anderen Gerät, denn der Entwurf liegt am Arc und nicht im Browser. „Entwurf
+   verwerfen“ stellt das Formular zurück auf die Vorgaben des Arcs, und sobald
+   die Saga wirklich erzeugt ist, räumt sich der Entwurf von selbst weg.
+
    Eine **bereits vorhandene Saga** lässt sich ebenfalls zuordnen, wirkt dann
    aber nur als Station: Ihre Texte sind längst geschrieben und kennen weder
    das Ziel des Arcs noch seinen Culprit. Der Admin sagt das an der Station

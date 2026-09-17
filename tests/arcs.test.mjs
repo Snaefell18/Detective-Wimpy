@@ -5,6 +5,7 @@
 import {
   LEERER_ARC_TEIL,
   arcAbspann,
+  arcEntwurfVon,
   besetzungFuerTeil,
   sagaAuftrag,
   fertigeTeile,
@@ -15,6 +16,7 @@ import {
   sagaVon,
   spielbar,
 } from "../lib/arcTypen.ts";
+import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -156,6 +158,33 @@ console.log("\nCredits nach der letzten Saga");
     "andere Finale-Arten warten weiterhin in der Übersicht",
     phaseNachSaga({ ...arc, finale: { ...arc.finale, art: "text" } }, [1, 2, 3]) === "uebersicht",
   );
+}
+
+console.log("\n8. Der Entwurf einer Station");
+{
+  const teil = LEERER_ARC_TEIL(1);
+  pruefe("eine frische Station hat keinen", arcEntwurfVon(teil) === null);
+  pruefe("und eine aus einer älteren Fassung auch nicht", arcEntwurfVon({ nummer: 1 }) === null);
+  pruefe("gar keine Station auch nicht", arcEntwurfVon(undefined) === null);
+
+  const entwurf = { vorgaben: { ...STANDARD_SAGA_VORGABEN, name: "Der Hafen" }, gespeichertAm: 1 };
+  pruefe("ein gespeicherter kommt zurück", arcEntwurfVon({ ...teil, entwurf })?.vorgaben.name === "Der Hafen");
+
+  // Was aus der Datenbank kommt, kann alles Mögliche sein.
+  pruefe("Schrott zählt nicht", arcEntwurfVon({ ...teil, entwurf: { vorgaben: {} } }) === null);
+  pruefe("und ein leeres Feld auch nicht", arcEntwurfVon({ ...teil, entwurf: null }) === null);
+
+  /*
+   * Der Entwurf liegt über den Vorgaben des Arcs - so wie der Editor ihn
+   * öffnet. Felder, die es beim Speichern noch nicht gab, stehen danach auf
+   * ihrem Standard statt auf undefined.
+   */
+  const alt = { ...STANDARD_SAGA_VORGABEN, name: "Der Hafen", kapitelAnzahl: 5 };
+  delete alt.kapitelMotive;
+  const geoeffnet = { ...STANDARD_SAGA_VORGABEN, thema: "aus dem Arc", ...alt };
+  pruefe("der eigene Name bleibt", geoeffnet.name === "Der Hafen");
+  pruefe("die eigene Kapitelzahl bleibt", geoeffnet.kapitelAnzahl === 5);
+  pruefe("das neue Feld ist da", Array.isArray(geoeffnet.kapitelMotive));
 }
 
 console.log(
