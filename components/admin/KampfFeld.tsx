@@ -22,6 +22,7 @@ import {
 import { gebaeudeArten, strassenFelder } from "@/lib/stadtplan";
 import { useStammdaten } from "@/lib/stammdaten";
 import { useAutos } from "@/lib/useAutos";
+import { JagdWeltFeld } from "./JagdWeltFeld";
 import { SongWahl } from "./SongFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
 import { StadtWahl } from "./StadtWahl";
@@ -341,6 +342,8 @@ export function KampfFeld({
               ))}
             </select>
           </label>
+          <JagdWeltFeld jagd={kampf.jagd} onAendern={jagdAendern} />
+
           <SongWahl
             wert={kampf.jagd.musik}
             onAendern={(musik) => jagdAendern({ musik })}

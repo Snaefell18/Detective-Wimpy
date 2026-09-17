@@ -168,6 +168,130 @@ export function schneeflockenTextur() {
   return textur;
 }
 
+/* --- Wetter: Tropfen, Flocken, Sandkörner ---------------------------- */
+
+/** Ein Wetterfeld, das die Szene in jedem Bild ein Stück weiterschiebt. */
+export type WetterFeld = {
+  punkte: THREE.Points;
+  /**
+   * Ein Bild weiter.
+   *
+   * `dt` sind Sekunden, `jetzt` Millisekunden (für den Wind), `zugZ` Meter,
+   * die die Welt in diesem Bild unter dem Wetter weggezogen ist - das braucht
+   * nur die Verfolgungsjagd, bei der nicht die Kamera fährt, sondern die
+   * Straße.
+   */
+  bewegen: (dt: number, jetzt: number, zugZ?: number) => void;
+};
+
+/**
+ * Was vom Himmel kommt - einmal für die ganze Welt.
+ *
+ * Stadt, Arena und Verfolgungsjagd hatten davon je eine eigene Fassung; die
+ * dritte hätte niemand mehr mit den beiden anderen abgeglichen. Hier steht
+ * nun eine, die alle drei können: Regen fällt, Schnee schwebt, der
+ * Schneesturm weht ihn quer, und der Sandsturm fliegt fast waagerecht.
+ *
+ * Null kommt zurück, wenn es nichts zu zeichnen gibt (klar, Sonne, Nebel) -
+ * dann hat die Szene auch nichts zu tun.
+ */
+export function wetterFeld(args: {
+  wetter: DreiDWetter;
+  scene: THREE.Scene;
+  merken: Merken;
+  /** Der Ausschnitt, in dem es fällt - Kantenlängen in Metern. */
+  weite: number;
+  tiefe: number;
+  /** Wie hoch hinauf; darüber fängt jede Flocke wieder an. */
+  hoehe?: number;
+  /** Wo der Ausschnitt liegt. */
+  versatzZ?: number;
+  /** Wie viele Stücke - ohne Angabe je nach Lage. */
+  anzahl?: number;
+}): WetterFeld | null {
+  const { wetter, scene, merken, weite, tiefe, hoehe = 15, versatzZ = 0 } = args;
+  const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+  const sandSturm = wetter === "sandsturm";
+  if (wetter !== "regen" && !schneeWetter && !sandSturm) return null;
+
+  const anzahl =
+    args.anzahl ??
+    (sandSturm ? 1500 : wetter === "schneesturm" ? 1200 : wetter === "schnee" ? 800 : 700);
+  const positionen = sandSturm
+    ? sandKoerner(anzahl, weite, tiefe, versatzZ)
+    : new Float32Array(anzahl * 3);
+  if (!sandSturm) {
+    for (let i = 0; i < anzahl; i++) {
+      positionen[i * 3] = Math.random() * weite - weite / 2;
+      positionen[i * 3 + 1] = Math.random() * hoehe;
+      positionen[i * 3 + 2] = Math.random() * tiefe - tiefe / 2 + versatzZ;
+    }
+  }
+  const geometrie = new THREE.BufferGeometry();
+  geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
+  merken(geometrie);
+  // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und in
+  // einem anderen Ton. Regen bleibt ein Strich ohne Bild.
+  const flocken = schneeWetter || sandSturm ? schneeflockenTextur() : null;
+  if (flocken) merken(flocken);
+  const material = new THREE.PointsMaterial({
+    map: flocken,
+    color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
+    size: sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
+    transparent: true,
+    opacity: sandSturm ? SAND_KORN.deckkraft : 0.85,
+    depthWrite: false,
+  });
+  merken(material);
+  const punkte = new THREE.Points(geometrie, material);
+  scene.add(punkte);
+
+  const halbeWeite = weite / 2;
+  const vorne = versatzZ + tiefe / 2;
+  const hinten = versatzZ - tiefe / 2;
+
+  const bewegen = (dt: number, jetzt: number, zugZ = 0) => {
+    const feld = geometrie.getAttribute("position") as THREE.BufferAttribute;
+    if (sandSturm) {
+      sandTreiben(feld, dt, jetzt, weite);
+      if (zugZ) zugAnwenden(feld, zugZ, hinten, vorne);
+      return;
+    }
+    for (let i = 0; i < feld.count; i++) {
+      const y = feld.getY(i) - dt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
+      feld.setY(i, y < 0 ? hoehe : y);
+      if (!schneeWetter) continue;
+      // Schnee fällt nicht senkrecht: Er wird getragen, im Sturm quer.
+      const wind =
+        wetter === "schneesturm"
+          ? 7 + Math.sin(jetzt * 0.0014) * 3
+          : Math.sin(jetzt * 0.0006 + i) * 0.65;
+      const px = feld.getX(i) + wind * dt;
+      feld.setX(i, px > halbeWeite ? -halbeWeite : px < -halbeWeite ? halbeWeite : px);
+      const pz = feld.getZ(i) + dt * (wetter === "schneesturm" ? 2.2 : 0.2);
+      feld.setZ(i, pz > vorne ? hinten : pz);
+    }
+    if (zugZ) zugAnwenden(feld, zugZ, hinten, vorne);
+    feld.needsUpdate = true;
+  };
+
+  return { punkte, bewegen };
+}
+
+/** Die Welt zieht unter dem Wetter weg - nur in der Verfolgungsjagd. */
+function zugAnwenden(
+  feld: THREE.BufferAttribute,
+  zugZ: number,
+  hinten: number,
+  vorne: number,
+): void {
+  for (let i = 0; i < feld.count; i++) {
+    const z = feld.getZ(i) - zugZ;
+    feld.setZ(i, z < hinten ? vorne : z > vorne ? hinten : z);
+  }
+  feld.needsUpdate = true;
+}
+
 /* --- Das Schneeland -------------------------------------------------- */
 
 /**

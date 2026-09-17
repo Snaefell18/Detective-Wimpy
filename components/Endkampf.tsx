@@ -52,7 +52,6 @@ import { Hintergrundmusik } from "./Hintergrundmusik";
 import { TouchJoystick } from "./TouchJoystick";
 import {
   LEUCHTEN,
-  SAND_KORN,
   SAND_LICHT,
   cellShading,
   einpassen,
@@ -60,12 +59,10 @@ import {
   gradientTextur,
   haeuserBauen,
   sandDunst,
-  sandKoerner,
-  sandTreiben,
   schneeLand,
-  schneeflockenTextur,
   strassenBauen,
   texturenVerkleinern,
+  wetterFeld,
   type StadtBlock,
 } from "./stadtBau";
 
@@ -309,41 +306,15 @@ function ArenaCanvas({
     /** Auf welchen Feldern ein Haus steht - dafür weicht die Kamera aus. */
     const hausFelder = new Set<string>();
 
-    /* --- Wetter: dieselben Flocken wie in der Stadt ------------------- */
-    let regen: THREE.Points | null = null;
-    if (wetter === "regen" || schneeWetter || sandSturm) {
-      const anzahl = sandSturm ? 1500 : wetter === "schneesturm" ? 1200 : 700;
-      const positionen = sandSturm
-        ? sandKoerner(anzahl, 40, 40)
-        : new Float32Array(anzahl * 3);
-      if (!sandSturm) {
-        for (let i = 0; i < anzahl; i++) {
-          positionen[i * 3] = Math.random() * 40 - 20;
-          positionen[i * 3 + 1] = Math.random() * 15;
-          positionen[i * 3 + 2] = Math.random() * 40 - 20;
-        }
-      }
-      const geometrie = new THREE.BufferGeometry();
-      geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
-      // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und
-      // in einem anderen Ton.
-      const flocken = schneeWetter || sandSturm ? schneeflockenTextur() : null;
-      if (flocken) merken(flocken);
-      regen = new THREE.Points(
-        geometrie,
-        new THREE.PointsMaterial({
-          map: flocken,
-          color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
-          size: sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
-          transparent: true,
-          opacity: sandSturm ? SAND_KORN.deckkraft : 0.85,
-          depthWrite: false,
-        }),
-      );
-      scene.add(regen);
-      merken(geometrie);
-      merken(regen.material as THREE.Material);
-    }
+    /* --- Wetter: dieselbe Rechnung wie in der Stadt ------------------- */
+    const wetterfall = wetterFeld({
+      wetter,
+      scene,
+      merken,
+      weite: 40,
+      tiefe: 40,
+      anzahl: wetter === "schneesturm" ? 1200 : sandSturm ? 1500 : 700,
+    });
 
     /* --- Die beiden Kämpfer ------------------------------------------ */
     const spieler = new THREE.Group();
@@ -1035,18 +1006,10 @@ function ArenaCanvas({
           material.emissiveIntensity = 0.32 + Math.sin(jetzt * 0.006) * 0.1;
         }
       }
-      if (regen) {
-        const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
-        if (sandSturm) {
-          sandTreiben(positionen, echt, jetzt, 40);
-        } else {
-          for (let i = 0; i < positionen.count; i++) {
-            const y = positionen.getY(i) - echt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
-            positionen.setY(i, y < 0 ? 15 : y);
-          }
-          positionen.needsUpdate = true;
-        }
-        regen.position.set(spieler.position.x, 0, spieler.position.z);
+      if (wetterfall) {
+        wetterfall.bewegen(echt, jetzt);
+        // Das Wetter zieht mit: Es fällt dort, wo gerade gekämpft wird.
+        wetterfall.punkte.position.set(spieler.position.x, 0, spieler.position.z);
       }
       for (const werkzeug of mixer) werkzeug.update(dt);
 

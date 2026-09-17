@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -8,7 +8,25 @@ import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
 import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
-import { fluchtStatement, type VerfolgungVorgabe } from '@/lib/verfolgung';
+import { fluchtStatement, jagdWelt, type JagdWelt, type VerfolgungVorgabe } from '@/lib/verfolgung';
+import {
+  DREI_D_LOCATIONS,
+  DREI_D_STRASSENTYPEN,
+  DREI_D_TAGESZEITEN,
+  DREI_D_WETTER,
+} from '@/lib/pursuit3d';
+import { istHandy } from '@/lib/dreiDLeistung';
+import {
+  LEUCHTEN as LEUCHT_STAERKE,
+  SAND_LICHT,
+  cellShading,
+  einpassen,
+  fahrbahnMaterial,
+  gradientTextur,
+  sandDunst,
+  texturenVerkleinern,
+  wetterFeld,
+} from './stadtBau';
 import { Hintergrundmusik } from './Hintergrundmusik';
 
 /**
@@ -60,6 +78,16 @@ const HALTEPLATZ = {
 };
 /** Und wo der Flüchtige aussteigt: auf der Seite, auf die die Kamera sieht. */
 const AUSSTIEG = { x: -3.9, z: 4.5 };
+
+/**
+ * Wie weit die Häuserzeilen von der Straßenmitte weg stehen.
+ *
+ * Nicht auf beiden Seiten gleich: Die Kamera schwebt zwölfeinhalb Meter links
+ * der Fahrbahn, und was ihr zu nah steht, fährt durch sie hindurch. Rechts
+ * darf die Zeile deshalb dicht an die Straße - dort sieht man sie ohnehin am
+ * besten -, links steht sie weit genug hinter der Kamera.
+ */
+const BAUSTEIN_ABSTAND = { rechts: 16, links: 26 };
 
 /** Die Kamera der Verhaftung: tiefer, näher, auf die Fahrertür. */
 const KAMERA_VERHAFTUNG = { pos: [-9.4, 2.1, 11.2], ziel: [-2.6, 1.05, 5.0], fov: 40 } as const;
@@ -181,7 +209,7 @@ function reifenQuietschen(): void {
 /** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
 const RAD_NAME = /wheel|rad\b|reifen|tyre|tire|felge/i;
 
-function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig: fluechtigModell, onStand, onEnde, onFehler, onBereit, onPhase }: {
+function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, fluechtig: fluechtigModell, onStand, onEnde, onFehler, onBereit, onPhase }: {
   auto: Auto; flucht: Auto; spur: React.MutableRefObject<number>;
   /** Wimpys 3D-Modell aus den Stammdaten - fehlt es, steht niemand am Rand. */
   figur?: { datei: string };
@@ -194,6 +222,8 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
    * niemand.
    */
   fluechtig?: { datei: string };
+  /** Belag, Licht, Wetter und Bausteine der Strecke. */
+  welt: JagdWelt;
   /** Zusätzliche Drehung des Fluchtwagens in Grad - live veränderbar. */
   drehung: React.MutableRefObject<number>;
   onStand: (speed: number, abstand: number, treffer: boolean) => void;
@@ -208,8 +238,34 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
     if (!element) return;
     let beendet = false, bereit = false, frame = 0;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x091426);
-    scene.fog = new THREE.Fog(0x15283e, 28, 95);
+    const { strassentyp, tageszeit, wetter, locations } = welt;
+    const nacht = tageszeit === "nacht";
+    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const sandSturm = wetter === "sandsturm";
+    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    /*
+     * Himmel, Dunst und Licht kommen aus derselben Palette wie die 3D-Stadt.
+     *
+     * Die Jagd war lange eine einzige Landschaft - dunkelblauer Himmel,
+     * blaugraue Piste, immer dieselbe Dämmerung. Jetzt ist sie eine Strecke
+     * wie jede andere Welt des Spiels: Wer eine Nacht im Regen einstellt,
+     * bekommt dieselbe Nacht und denselben Regen wie im Kapitel davor.
+     */
+    const himmel = {
+      morgen: 0xf3a979,
+      tag: wetter === "sonne" ? 0x62c8ff : 0x91b8d2,
+      abend: 0xa84567,
+      nacht: 0x070a16,
+    }[tageszeit];
+    const dunstFarbe = sandSturm
+      ? sandDunst(tageszeit)
+      : dunst || schneeWetter
+        ? (nacht ? 0x253749 : 0xb7cbd6)
+        : wetter === "regen" ? 0x536777 : himmel;
+    scene.background = new THREE.Color(dunst || schneeWetter ? dunstFarbe : himmel);
+    // Weiter als in der Stadt: Hier fährt man auf das hin, was am Horizont
+    // steht, statt zwischen Häusern zu laufen.
+    scene.fog = new THREE.Fog(dunstFarbe, dunst ? 16 : 28, dunst ? 62 : 95);
     // Gleiche Achsen und Blickrichtung wie Jump-and-Run; etwas weiter für zwei Autos.
     const camera = new THREE.PerspectiveCamera(KAMERA_ANFAHRT.fov, 1, 0.1, 130);
     camera.position.set(...KAMERA_ANFAHRT.pos);
@@ -219,9 +275,21 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
     catch { callbacks.current.onFehler('3D konnte nicht gestartet werden.'); return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // Im Schneeland steht die Blende enger - sonst wird aus Weiß Creme.
+    renderer.toneMappingExposure = nacht
+      ? 0.9
+      : wetter === "sonne" ? (strassentyp === "schnee" ? 0.96 : 1.16) : strassentyp === "schnee" ? 0.92 : 1;
     element.appendChild(renderer.domElement);
-    scene.add(new THREE.HemisphereLight(0xc2e9ff, 0x253042, 3));
-    const licht = new THREE.DirectionalLight(0xffe2b6, 3);
+    scene.add(new THREE.HemisphereLight(
+      nacht ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xc2e9ff,
+      // Schnee wirft kaltes Licht zurück, Asphalt fast keines.
+      strassentyp === "schnee" ? (nacht ? 0x24405e : 0xd3e6f4) : nacht ? 0x161d2e : 0x3c4a44,
+      nacht ? 2.4 : 3,
+    ));
+    const licht = new THREE.DirectionalLight(
+      wetter === "sonne" ? 0xfff1b8 : sandSturm ? SAND_LICHT : nacht ? 0x9fc4ff : 0xffe2b6,
+      wetter === "sonne" ? 4.4 : sandSturm ? 1.6 : dunst ? 1.1 : wetter === "regen" || schneeWetter ? 1.8 : 3,
+    );
     licht.position.set(-8, 14, 10); scene.add(licht);
     const ressourcen = new Set<{ dispose: () => void }>();
     const sammeln = (root: THREE.Object3D) => root.traverse(obj => {
@@ -236,19 +304,152 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       const obj = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ color: farbe }));
       obj.position.set(x, y, z); scene.add(obj); return obj;
     };
-    mesh(new THREE.BoxGeometry(34, 0.2, 130), 0xb8d6e2, 0, -0.22, 24);
-    mesh(new THREE.BoxGeometry(10.2, 0.1, 130), 0x25384c, 0, -0.05, 24);
-    const markierungen: THREE.Mesh[] = [];
-    for (const x of [-1.7, 1.7]) for (let i = 0; i < 25; i++) markierungen.push(mesh(new THREE.BoxGeometry(0.08, 0.02, 2), 0x7cdaee, x, 0.02, i * 4 - 20));
-    const kulisse: THREE.Mesh[] = [];
-    for (let i = 0; i < 28; i++) {
-      const x = (i % 2 ? -1 : 1) * (7 + i % 3);
-      // Wo Wimpy und sein Wagen auf die Jagd warten, steht kein Baum im Bild.
+    /* --- Der Untergrund ---------------------------------------------- */
+    const gradient = gradientTextur();
+    ressourcen.add(gradient);
+    /** Das Land neben der Piste: Schnee, Sand oder Grün. */
+    const landFarbe = sandSturm
+      ? (nacht ? 0x3b2f1f : 0xa98a5c)
+      : strassentyp === "schnee"
+        ? (nacht ? 0x8fa9c4 : 0xf1f8ff)
+        : strassentyp === "sand"
+          ? (nacht ? 0x5a4a33 : 0xc6a678)
+          // Asphalt liegt in derselben Umgebung wie in der Stadt: kein Grün,
+          // sondern der blaugraue Grund, den auch das 3D-Kapitel zeigt.
+          : nacht ? 0x293448 : 0x4b5868;
+    mesh(new THREE.BoxGeometry(locations.length ? 66 : 34, 0.2, 130), landFarbe, 0, -0.22, 24);
+    /*
+     * Die Fahrbahn ist dieselbe wie in der Stadt: derselbe Belag, dieselben
+     * Spuren, dieselbe Rechnung (components/stadtBau.ts). So fährt man über
+     * die Straße, durch die man vorher gelaufen ist.
+     */
+    const belag = fahrbahnMaterial({
+      gradient,
+      strassentyp,
+      tageszeit,
+      wetter,
+      imRaster: false,
+      merken: (wert) => ressourcen.add(wert),
+    });
+    // Die Naturtextur ist für ein kurzes Stück gedacht; über 130 Meter muss
+    // sie sich öfter wiederholen, sonst zieht sie sich zu langen Schlieren.
+    belag.map?.repeat.set(1, 26);
+    const fahrbahn = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.1, 130), belag);
+    fahrbahn.position.set(0, -0.05, 24);
+    scene.add(fahrbahn);
+    ressourcen.add(fahrbahn.geometry);
+
+    /* --- Was am Rand vorbeizieht -------------------------------------- */
+    /**
+     * Alles, was mit der Straße nach hinten wandert.
+     *
+     * Jeder Eintrag bringt mit, wie weit er zurückfallen darf und wie weit
+     * er dann wieder nach vorn springt - so ziehen Fahrbahnmarkierungen,
+     * Schneestangen und ganze Häuserzeilen in einer einzigen Schleife
+     * vorbei, obwohl sie unterschiedlich weit auseinanderstehen.
+     */
+    const ziehendes: { obj: THREE.Object3D; ende: number; sprung: number }[] = [];
+    const zieht = (obj: THREE.Object3D, ende: number, sprung: number) => {
+      ziehendes.push({ obj, ende, sprung });
+      return obj;
+    };
+
+    if (strassentyp === "asphalt") {
+      // Mittelstreifen wie bisher: zwei Reihen leuchtender Striche.
+      const strichGeometrie = new THREE.BoxGeometry(0.08, 0.02, 2);
+      ressourcen.add(strichGeometrie);
+      const strichMaterial = new THREE.MeshToonMaterial({ color: nacht ? 0x7cdaee : 0xe8e2b8 });
+      ressourcen.add(strichMaterial);
+      for (const x of [-1.7, 1.7]) {
+        for (let i = 0; i < 25; i++) {
+          const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
+          strich.position.set(x, 0.02, i * 4 - 20);
+          scene.add(strich);
+          zieht(strich, -22, 100);
+        }
+      }
+    } else {
+      /*
+       * Wo kein Asphalt ist, steht am Rand, was den Weg zeigt: rote
+       * Schneestangen in der Arktis, helle Pfosten in der Wüste - dieselben
+       * wie im 3D-Kapitel.
+       */
+      const pfostenGeometrie = new THREE.CylinderGeometry(
+        0.05, 0.06, strassentyp === "schnee" ? 1.6 : 0.7, 5,
+      );
+      ressourcen.add(pfostenGeometrie);
+      const pfostenMaterial = new THREE.MeshToonMaterial({
+        color: strassentyp === "schnee" ? 0xd65a47 : 0xd2bb8b,
+        gradientMap: gradient,
+      });
+      ressourcen.add(pfostenMaterial);
+      for (const seite of [-1, 1]) {
+        for (let i = 0; i < 14; i++) {
+          const pfosten = new THREE.Mesh(pfostenGeometrie, pfostenMaterial);
+          pfosten.position.set(seite * 5.4, strassentyp === "schnee" ? 0.8 : 0.35, i * 8 - 20);
+          scene.add(pfosten);
+          zieht(pfosten, -24, 112);
+        }
+      }
+    }
+
+    /**
+     * Die Landschaft dahinter.
+     *
+     * Ohne gewählte Bausteine ist sie gerechnet: Tannen im Schnee, Dünen im
+     * Sand, Häuserblöcke am Asphalt. Sind Bausteine gewählt, kommen sie
+     * zusätzlich dazu - siehe bausteineLaden().
+     */
+    const landGeometrie = strassentyp === "sand"
+      ? new THREE.IcosahedronGeometry(2.4, 0)
+      : strassentyp === "schnee"
+        ? new THREE.ConeGeometry(1.4, 4, 5)
+        : new THREE.BoxGeometry(4.5, 9, 4.5);
+    ressourcen.add(landGeometrie);
+    const landMaterialien = (strassentyp === "schnee"
+      ? [0x3f7f78, 0xe8f4fb]
+      : strassentyp === "sand"
+        ? [0xd9b782, 0xc09a63]
+        : nacht ? [0x2b3a4d, 0x1d2836] : [0x6d7b8c, 0x55637a]
+    ).map((farbe) => {
+      const material = new THREE.MeshToonMaterial({ color: farbe, gradientMap: gradient });
+      ressourcen.add(material);
+      return material;
+    });
+    // Nur wo keine Bausteine gewählt sind: Sonst stünde die gerechnete
+    // Landschaft vor den Häusern und verdeckte genau das, was man sehen will.
+    for (let i = 0; !locations.length && i < 28; i++) {
+      const x = (i % 2 ? -1 : 1) * (strassentyp === "asphalt" ? 10 + (i % 3) * 1.5 : 7 + (i % 3));
+      // Wo Wimpy und sein Wagen auf die Jagd warten, steht nichts im Bild.
       const z = i * 4 - 25;
       const imWeg = x < -5 && z > -6 && z < 10;
-      const baum = mesh(new THREE.ConeGeometry(1.4, 4, 5), i % 3 ? 0x4b8496 : 0xc8e6ed, x, 2, imWeg ? z + 56 : z);
-      kulisse.push(baum);
+      const stueck = new THREE.Mesh(landGeometrie, landMaterialien[i % landMaterialien.length]);
+      stueck.position.set(
+        x,
+        strassentyp === "sand" ? -0.9 : strassentyp === "schnee" ? 2 : 4.4,
+        imWeg ? z + 56 : z,
+      );
+      if (strassentyp === "sand") stueck.scale.set(1 + (i % 3) * 0.3, 0.32, 1.4);
+      scene.add(stueck);
+      zieht(stueck, -30, 112);
     }
+    /*
+     * Und das Wetter darüber - dieselbe Rechnung wie in Stadt und Arena.
+     *
+     * Der Ausschnitt ist so lang wie die sichtbare Strecke: Was vorn in der
+     * Luft steht, zieht während der Fahrt nach hinten durch und kommt vorn
+     * wieder herein.
+     */
+    const wetterfall = wetterFeld({
+      wetter,
+      scene,
+      merken: (wert) => ressourcen.add(wert),
+      weite: 34,
+      tiefe: 110,
+      versatzZ: 16,
+      hoehe: 16,
+    });
+
     const spieler = new THREE.Group(), gegner = new THREE.Group(), wimpy = new THREE.Group();
     /** Der Flüchtige selbst - unsichtbar, bis er aussteigt. */
     const fluechtiger = new THREE.Group();
@@ -364,10 +565,74 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       taeterGehen = gehClip ? taeterMixer.clipAction(gehClip) : null;
       taeterDa = true;
     }
+    /**
+     * Die Häuser am Straßenrand.
+     *
+     * Dieselben Bausteine wie in den 3D-Kapiteln, nur stehen sie hier nicht
+     * auf einem Raster, sondern in zwei Reihen neben der Piste - und weil
+     * die Strecke kein Ende hat, wiederholen sie sich: Wer hinten
+     * hinausfällt, kommt vorn wieder herein. Ein einziges geladenes Modell
+     * reicht dafür für beliebig viele Kopien; geteilt werden Geometrie und
+     * Texturen.
+     *
+     * Sie kommen nebenher, nicht vorweg: Ein Baustein ist ein paar Megabyte
+     * groß, und die Jagd soll losgehen können, bevor Tokio steht.
+     */
+    async function bausteineLaden() {
+      const handy = istHandy();
+      const gewaehlt = locations
+        .map((id) => DREI_D_LOCATIONS.find((ort) => ort.id === id))
+        .filter((ort): ort is (typeof DREI_D_LOCATIONS)[number] => Boolean(ort))
+        // Mehr als drei Bauarten hält kein Handy aus - jede bringt ihre
+        // eigenen Texturen mit; auf dem Handy sind es zwei.
+        .slice(0, handy ? 2 : 3);
+      if (!gewaehlt.length) return;
+
+      const vorlagen = await Promise.all(
+        gewaehlt.map(async (ort) => {
+          const gltf = await loader.loadAsync(ort.datei);
+          texturenVerkleinern(gltf.scene, handy ? 512 : 768);
+          cellShading(gltf.scene, gradient, [], LEUCHT_STAERKE[tageszeit]);
+          sammeln(gltf.scene);
+          return gltf.scene;
+        }),
+      );
+      if (beendet) { ressourcen.forEach((r) => r.dispose()); return; }
+
+      /*
+       * Jeder Baustein wird auf dieselbe Höhe gebracht und an den Rand
+       * gestellt, die Front zur Piste - wie ein Haus an einer Straße steht.
+       *
+       * Weit genug draußen: Die Kamera schwebt links neben der Fahrbahn,
+       * und ein Haus, das ihr zu nah kommt, nimmt nicht nur die Sicht - man
+       * fährt durch seine Wand hindurch.
+       */
+      const ABSTAND = 22;
+      // Auf dem Handy steht die Zeile lockerer: weniger Häuser gleichzeitig.
+      const reihen = Math.ceil((handy ? 110 : 154) / ABSTAND);
+      for (let i = 0; i < reihen * 2; i++) {
+        const seite = i % 2 ? -1 : 1;
+        const vorlage = vorlagen[Math.floor(i / 2) % vorlagen.length];
+        const haus = vorlage.clone(true);
+        einpassen(haus, 9 + (i % 3) * 2.5);
+        const platz = new THREE.Group();
+        platz.add(haus);
+        platz.position.set(
+          seite > 0 ? BAUSTEIN_ABSTAND.rechts : -BAUSTEIN_ABSTAND.links,
+          0,
+          Math.floor(i / 2) * ABSTAND - 40 + (seite > 0 ? 0 : ABSTAND / 2),
+        );
+        platz.rotation.y = seite > 0 ? -Math.PI / 2 : Math.PI / 2;
+        scene.add(platz);
+        zieht(platz, -40, reihen * ABSTAND);
+      }
+    }
+
     void Promise.all([laden(auto, spieler), laden(flucht, gegner)]).then(async () => {
       await figurLaden().catch(() => undefined);
       if (!beendet) { bereit = true; callbacks.current.onBereit(); }
       await fluechtigenLaden().catch(() => undefined);
+      await bausteineLaden().catch(() => undefined);
     }).catch(() => { if (!beendet) callbacks.current.onFehler('Ein Automodell konnte nicht geladen werden. Bitte erneut starten.'); });
     /* --- Was Tempo sichtbar macht ------------------------------------ */
     const raeder: THREE.Object3D[] = [];
@@ -476,10 +741,15 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
     /** Wie die beiden standen und wie schnell sie waren, als die Jagd endete. */
     const halt = { tempo: 0, spielerX: 0, spielerZ: 0, gegnerX: 0, gegnerZ: 0 };
     let speed = 0, fluchtSpeed = 0, abstand = ABSTAND_START, zeit = 0, ausgabe = 0, unverwundbar = 0, letzter = performance.now();
-    /** Straße und Kulisse ziehen vorbei - in der Anfahrt wie in der Jagd. */
-    const weltBewegen = (weg: number) => {
-      for (const m of markierungen) { m.position.z -= weg; if (m.position.z < -22) m.position.z += 100; }
-      for (const b of kulisse) { b.position.z -= weg; if (b.position.z < -30) b.position.z += 112; }
+    /** Straße, Kulisse und Wetter ziehen vorbei - in der Anfahrt wie in der Jagd. */
+    const weltBewegen = (weg: number, dt: number) => {
+      for (const teil of ziehendes) {
+        teil.obj.position.z -= weg;
+        if (teil.obj.position.z < teil.ende) teil.obj.position.z += teil.sprung;
+      }
+      // Der Schnee fällt nicht nur, er bleibt auch zurück: Was vor dem Wagen
+      // in der Luft steht, ist einen Augenblick später hinter ihm.
+      wetterfall?.bewegen(dt, performance.now(), weg);
     };
     /** Aus der Anfahrt in die Jagd - ohne Schnitt, nur ohne Wimpy am Rand. */
     const losfahren = () => {
@@ -576,7 +846,7 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       camera.updateProjectionMatrix();
       // Der Wagen ist schon in Fahrt, wenn die Jagd übernimmt: kein Ruck.
       speed = auto.speed * 0.4 * anfahren;
-      weltBewegen(speed / 3.6 * dt);
+      weltBewegen(speed / 3.6 * dt, dt);
 
       /*
        * Der Kavalierstart.
@@ -670,7 +940,7 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       //    steht am Ende quer über der Fahrbahn.
       const bremsen = weich(THREE.MathUtils.clamp(t / VERHAFTUNG.bremsen, 0, 1));
       speed = halt.tempo * (1 - bremsen);
-      weltBewegen(speed / 3.6 * dt);
+      weltBewegen(speed / 3.6 * dt, dt);
       gegner.position.x = THREE.MathUtils.lerp(halt.gegnerX, HALTEPLATZ.flucht.x, bremsen);
       gegner.position.z = THREE.MathUtils.lerp(halt.gegnerZ, HALTEPLATZ.flucht.z, bremsen);
       gegner.rotation.y = THREE.MathUtils.degToRad(drehung.current) + HALTEPLATZ.flucht.winkel * bremsen;
@@ -814,7 +1084,7 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
         }
         if (h.obj.position.z < -15) { h.obj.position.z += HINDERNIS_ABSTAND * 5; h.obj.position.x = (Math.floor(Math.random() * 3) - 1) * 3.4; h.getroffen = false; }
       }
-      weltBewegen(weg);
+      weltBewegen(weg, dt);
 
       /* --- Was das Tempo sichtbar macht ------------------------------ */
       const tempoAnteil = THREE.MathUtils.clamp(speed / Math.max(1, auto.speed), 0, 1);
@@ -887,7 +1157,7 @@ function RennCanvas({ auto, flucht, spur, drehung, figur: figurModell, fluechtig
       taeterMixer?.stopAllAction();
       sammeln(scene); ressourcen.forEach(r => r.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [auto, flucht, spur, drehung, figurModell]);
+  }, [auto, flucht, spur, drehung, welt, figurModell, fluechtigModell]);
   return <div className="jagd-canvas" ref={host} aria-label="Wimpy verfolgt den Fluchtwagen auf drei Spuren" />;
 }
 
@@ -937,6 +1207,17 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
       ?? ANIMATIONS_MODELLE.find(m => m.id !== figur?.id)
       ?? ANIMATIONS_MODELLE[0];
   const verfuegbar = autos.filter(a => vorschau || a.id === START_AUTO_ID || besitz[a.id]);
+  /*
+   * Die Strecke: Belag, Licht, Wetter, Bausteine.
+   *
+   * Im Spiel gilt, was in der Jagd steht. In der Vorschau darf man daran
+   * drehen, ohne etwas zu speichern - deshalb liegt die Wahl daneben und
+   * wird darübergelegt. Der Umweg über den Text hält die Szene ruhig: Ein
+   * gleich aussehendes Objekt baut sonst bei jedem Bild die Welt neu auf.
+   */
+  const [weltWahl, setWeltWahl] = useState<Partial<JagdWelt>>({});
+  const weltText = JSON.stringify(jagdWelt({ ...vorgabe, ...weltWahl }));
+  const welt = useMemo(() => JSON.parse(weltText) as JagdWelt, [weltText]);
   const drehen = (schritt: number) => {
     const grad = (((fluchtDrehung + schritt) % 360) + 360) % 360;
     setFluchtDrehung(grad); drehung.current = grad; onDrehung?.(grad);
@@ -951,7 +1232,7 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
   return <div className="jagd" data-treffer={stand.treffer}>
     {faehrt && rennen && !fehler ? <>
       {vorgabe.musik && (phase === 'jagd' || phase === 'verhaftung') && <Hintergrundmusik stueck={vorgabe.musik} />}
-      <RennCanvas {...rennen} spur={spur} drehung={drehung} figur={figur} fluechtig={fluechtig} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
+      <RennCanvas {...rennen} spur={spur} drehung={drehung} welt={welt} figur={figur} fluechtig={fluechtig} onBereit={() => setBereit(true)} onPhase={setPhase} onStand={(speed, abstand, treffer) => setStand({ speed, abstand, treffer })} onEnde={fang => setPhase(fang ? 'gefangen' : 'entkommen')} onFehler={setFehler} />
       {!bereit && <div className="auto-jagd-laden" role="status">Die Wagen werden bereitgestellt …</div>}
       {bereit && phase === 'anfahrt' && <div className="auto-jagd-anfahrt" role="status"><strong>{vorgabe.name}</strong><span>Tippen überspringt</span></div>}
       {phase === 'jagd' && <>
@@ -970,6 +1251,35 @@ export function AutoJagd({ vorgabe, onFertig, autoId, besitz = {}, vorschau = fa
         <label className="feld">Wimpys Wagen<select value={verfuegbar.some(a => a.id === wahl) ? wahl : verfuegbar[0]?.id ?? ''} onChange={e => setWahl(e.target.value)}>{verfuegbar.map(a => <option key={a.id} value={a.id}>{a.name} · {a.speed} km/h · +{a.beschleunigung} km/h/s</option>)}</select></label>
         {vorschau && <label className="feld">Fluchtwagen<select value={fluchtId} onChange={e => setFluchtId(e.target.value)}>{autos.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>}
         {vorschau && <label className="feld">Fluchtwagen drehen<select value={fluchtDrehung} onChange={e => { const grad = Number(e.target.value); setFluchtDrehung(grad); drehung.current = grad; onDrehung?.(grad); }}>{[0, 90, 180, 270].map(grad => <option key={grad} value={grad}>{grad}°</option>)}</select></label>}
+        {/* In der Probe lässt sich die ganze Strecke umbauen, ohne dass dafür
+            etwas gespeichert werden muss: Belag, Licht, Wetter - und die
+            Häuser, an denen man vorbeifährt. */}
+        {vorschau && <>
+          <label className="feld">Straße<select value={welt.strassentyp} onChange={e => setWeltWahl(alt => ({ ...alt, strassentyp: e.target.value as JagdWelt['strassentyp'] }))}>{DREI_D_STRASSENTYPEN.map(typ => <option key={typ.id} value={typ.id}>{typ.name}</option>)}</select></label>
+          <label className="feld">Tageszeit<select value={welt.tageszeit} onChange={e => setWeltWahl(alt => ({ ...alt, tageszeit: e.target.value as JagdWelt['tageszeit'] }))}>{DREI_D_TAGESZEITEN.map(zeit => <option key={zeit.id} value={zeit.id}>{zeit.name}</option>)}</select></label>
+          <label className="feld">Wetter<select value={welt.wetter} onChange={e => setWeltWahl(alt => ({ ...alt, wetter: e.target.value as JagdWelt['wetter'] }))}>{DREI_D_WETTER.map(lage => <option key={lage.id} value={lage.id}>{lage.name}</option>)}</select></label>
+          <span className="leise klein">Bausteine am Straßenrand · höchstens drei</span>
+          <div className="marken-reihe">
+            {DREI_D_LOCATIONS.map(ort => {
+              const aktiv = welt.locations.includes(ort.id);
+              return <button
+                key={ort.id}
+                type="button"
+                className="marke-knopf"
+                data-aktiv={aktiv}
+                onClick={() => setWeltWahl(alt => {
+                  const bisher = alt.locations ?? welt.locations;
+                  return {
+                    ...alt,
+                    locations: aktiv
+                      ? bisher.filter(id => id !== ort.id)
+                      : [...bisher, ort.id].slice(-3),
+                  };
+                })}
+              >{ort.name}</button>;
+            })}
+          </div>
+        </>}
         {(fehler || katalogFehler) && <p role="alert">{fehler || katalogFehler}</p>}
         <button className="knopf aktion" onClick={starten}>Verfolgung starten ›</button>
       </>}

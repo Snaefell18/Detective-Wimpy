@@ -441,6 +441,12 @@ const JagdSchema = z.object({
       { charakterId: "wimpy", modell: "schaf" },
       { charakterId: "wimpy", modell: "yeti" },
     ]),
+  // Die Welt, durch die gefahren wird. Alles davon darf fehlen: Ältere
+  // Jagden kennen es nicht und fahren weiter durch ihre Schneelandschaft.
+  strassentyp: DreiDStrassentypSchema().optional(),
+  tageszeit: DreiDTageszeitSchema().optional(),
+  wetter: DreiDWetterSchema().optional(),
+  locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(8).optional(),
   musik: z.string().max(200).default(""),
   fluchtgrund: z.string().max(800).default(""),
   statement: z.string().max(1200).default(""),

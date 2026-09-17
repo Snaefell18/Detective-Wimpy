@@ -282,6 +282,13 @@ console.log("\n11. Der Weg durch die Datenbank");
   pruefe("die Arena auch", kampfSpielbar(gelesen));
   pruefe("die Bausteinliste kommt aus dem Plan", (gelesen?.locations.length ?? 0) > 0);
   pruefe("die Jagd bleibt am Finale hängen", gelesen?.jagd?.nachKapitel === 0 && gelesen.jagd.fliehenderId === "hut");
+  pruefe("die Strecke der Jagd kommt mit",
+    kampfLesen({
+      ...gespeichert,
+      jagd: { ...gespeichert.jagd, strassentyp: "asphalt", tageszeit: "tag", wetter: "regen" },
+    })?.jagd?.wetter === "regen");
+  pruefe("und eine alte Jagd fährt weiter durch den Schnee",
+    gelesen?.jagd?.strassentyp === "schnee" && gelesen.jagd.tageszeit === "nacht");
   pruefe("auch im Sandsturm wird gekämpft",
     kampfLesen({ ...gespeichert, wetter: "sandsturm", strassentyp: "sand" })?.wetter === "sandsturm");
 

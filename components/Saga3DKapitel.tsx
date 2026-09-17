@@ -9,7 +9,6 @@ import { kapitelPosition } from "@/lib/saga3dLayout";
 import { TouchJoystick } from "./TouchJoystick";
 import {
   LEUCHTEN,
-  SAND_KORN,
   SAND_LICHT,
   cellShading,
   einpassen,
@@ -17,12 +16,10 @@ import {
   gradientTextur,
   haeuserBauen,
   sandDunst,
-  sandKoerner,
-  sandTreiben,
   schneeLand,
-  schneeflockenTextur,
   strassenBauen,
   texturenVerkleinern,
+  wetterFeld,
   type StadtBlock,
 } from "./stadtBau";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
@@ -425,40 +422,19 @@ function KapitelCanvas({
       fahrbahn.receiveShadow = true;
       scene.add(fahrbahn);
     }
-    let regen: THREE.Points | null = null;
-    if (wetter === "regen" || schneeWetter || sandSturm) {
-      const anzahl = sandSturm ? 2000 : wetter === "schneesturm" ? 1800 : 900;
-      const positionen = sandSturm
-        ? sandKoerner(anzahl, 28, 70, -13)
-        : new Float32Array(anzahl * 3);
-      if (!sandSturm) {
-        for (let i = 0; i < anzahl; i++) {
-          positionen[i * 3] = Math.random() * 28 - 14;
-          positionen[i * 3 + 1] = Math.random() * 15;
-          positionen[i * 3 + 2] = Math.random() * 70 - 48;
-        }
-      }
-      const geometrie = new THREE.BufferGeometry();
-      geometrie.setAttribute("position", new THREE.BufferAttribute(positionen, 3));
-      // Das runde Korn der Flocke taugt auch als Sandkorn - nur kleiner und
-      // in einem anderen Ton.
-      const flocken = schneeWetter || sandSturm ? schneeflockenTextur() : null;
-      if (flocken) ressourcen.add(flocken);
-      regen = new THREE.Points(
-        geometrie,
-        new THREE.PointsMaterial({
-          map: flocken,
-          color: sandSturm ? SAND_KORN.farbe : schneeWetter ? 0xf3faff : 0xc6edff,
-          size: sandSturm ? SAND_KORN.groesse : schneeWetter ? 0.18 : 0.075,
-          transparent: true,
-          opacity: sandSturm ? SAND_KORN.deckkraft : 0.85,
-          depthWrite: false,
-        }),
-      );
-      scene.add(regen);
-      ressourcen.add(geometrie);
-      ressourcen.add(regen.material as THREE.Material);
-    }
+    /*
+     * Was vom Himmel kommt, rechnet components/stadtBau.ts - dieselbe
+     * Rechnung wie in der Arena und in der Verfolgungsjagd.
+     */
+    const wetterfall = wetterFeld({
+      wetter,
+      scene,
+      merken: (wert) => ressourcen.add(wert),
+      weite: 28,
+      tiefe: 70,
+      versatzZ: -13,
+      anzahl: wetter === "schneesturm" ? 1800 : sandSturm ? 2000 : 900,
+    });
     if (wetter === "sonne") {
       const sonne = new THREE.Mesh(
         new THREE.SphereGeometry(2.2, 18, 12),
@@ -1013,28 +989,7 @@ function KapitelCanvas({
       if (laufAktion) laufAktion.setEffectiveTimeScale(Math.max(0.25, staerke));
       spielerMixer?.update(dt);
       position.current.copy(spieler.position);
-      if (regen && sandSturm) {
-        sandTreiben(
-          regen.geometry.getAttribute("position") as THREE.BufferAttribute,
-          dt,
-          jetzt,
-          28,
-        );
-      } else if (regen) {
-        const positionen = regen.geometry.getAttribute("position") as THREE.BufferAttribute;
-        for (let i = 0; i < positionen.count; i++) {
-          const y = positionen.getY(i) - dt * (wetter === "schneesturm" ? 4.5 : schneeWetter ? 1.5 : 13);
-          positionen.setY(i, y < 0 ? 15 : y);
-          if (schneeWetter) {
-            const wind = wetter === "schneesturm" ? 7 + Math.sin(jetzt * 0.0014) * 3 : Math.sin(jetzt * 0.0006 + i) * 0.65;
-            const px = positionen.getX(i) + wind * dt;
-            positionen.setX(i, px > 14 ? -14 : px < -14 ? 14 : px);
-            const pz = positionen.getZ(i) + dt * (wetter === "schneesturm" ? 2.2 : 0.2);
-            positionen.setZ(i, pz > 22 ? -48 : pz);
-          }
-        }
-        positionen.needsUpdate = true;
-      }
+      wetterfall?.bewegen(dt, jetzt);
       npcGruppen.forEach((npc) => {
         let laeuft = false;
         const ansprechbar = npc.gruppe.position.distanceToSquared(spieler.position) < 2.35 ** 2;

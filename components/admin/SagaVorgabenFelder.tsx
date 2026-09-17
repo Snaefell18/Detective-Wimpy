@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useGeschenke } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
+import { JagdWeltFeld } from "./JagdWeltFeld";
 import { KampfFeld } from "./KampfFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
 import { StadtWahl } from "./StadtWahl";
@@ -1141,6 +1142,11 @@ export function SagaVorgabenFelder({
                           ))}
                         </select>
                       </label>
+                      <JagdWeltFeld
+                        jagd={jagd}
+                        onAendern={(teil) => jagdAendern(nachKapitel, teil)}
+                      />
+
                       <SongWahl
                         wert={jagd.musik ?? ""}
                         onAendern={(musik) => jagdAendern(nachKapitel, { musik })}

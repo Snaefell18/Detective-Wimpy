@@ -230,10 +230,35 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
 - **Versammlung:** freies Gruppengespräch mit Vorsitz, Gästen am Rand,
   verborgener Resonanz und einem möglichen zusätzlichen Beweisstück.
 - **Verfolgungsjagd:** zwei wählbare Tiere verfolgen einen unkenntlichen Fahrer
-  im weißen Sportwagen durch eine interaktive 3D-Schneelandschaft. Für beide
+  im weißen Sportwagen durch eine interaktive 3D-Landschaft. Für beide
   Verfolger werden das Schaf-mit-Schal- und das Zottel-Yeti-Modell zugeordnet.
   Nach dem Fang spricht das fliehende Tier das im Editor hinterlegte Statement;
   anschließend läuft die Saga mit dem nächsten Kapitel weiter.
+
+  **Die Strecke** stellt man ein wie jede andere 3D-Welt des Spiels - im
+  Editor der Jagd und ebenso in der Jagd vor dem Showdown:
+
+  - **Straßenbelag:** Asphalt, Sand oder Schneestraße. Er bestimmt auch das
+    Land ringsum: Tannen im Schnee, Dünen im Sand, Blöcke am Asphalt - und die
+    Markierung auf der Fahrbahn: leuchtende Striche auf Asphalt, rote
+    Schneestangen in der Arktis, helle Pfosten in der Wüste.
+  - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
+    3D-Kapitel.
+  - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
+    Nebel. Was fällt, fällt nicht nur: Es bleibt auch zurück, während man
+    daran vorbeifährt.
+  - **Häuser am Straßenrand:** bis zu drei Bausteine aus `/public/3d_locations`
+    - dieselben, aus denen die 3D-Städte gebaut sind. Sie stehen in zwei Zeilen
+    neben der Piste und wiederholen sich, solange die Jagd dauert: Wer durch
+    Akihabara fährt, fährt an denselben Häusern mehrmals vorbei. Auf dem Handy
+    stehen weniger und kleiner aufgelöste - das Speicherproblem ist dasselbe
+    wie in der Stadt. Ohne Auswahl bleibt es bei der gerechneten Landschaft.
+
+  Alte Jagden kennen nichts davon und fahren unverändert weiter: Ohne
+  Einstellung gilt die Schneepiste in der Nacht, durch die sie immer führten.
+  Ausprobieren lässt sich alles ohne Speichern - in der 3D-Vorschau des
+  Editors und im Admin-Menü unter **Pursuit · Verfolgungsjagd**, wo Belag,
+  Licht, Wetter und Häuser direkt auf der Startkarte stehen.
 
   **Die Verhaftung** steht dazwischen: Ist der Wagen eingeholt, gehen beide mit
   quietschenden Reifen in die Eisen, der Fluchtwagen stellt sich quer, alle vier

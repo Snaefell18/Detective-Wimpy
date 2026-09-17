@@ -36,7 +36,7 @@ import {
 } from "./stadtplan";
 import { mitKampf, type FinaleArt } from "./sagaFinale";
 import { STRASSENTYPEN, TAGESZEITEN, WETTERLAGEN } from "./staedte";
-import type { VerfolgungVorgabe } from "./verfolgung";
+import { jagdWelt, type VerfolgungVorgabe } from "./verfolgung";
 
 export type KampfVorgabe = {
   /** Die Arena. Ohne gültigen Plan wird nicht gekämpft - siehe kampfSpielbar. */
@@ -223,6 +223,9 @@ function jagdLesen(roh: unknown): VerfolgungVorgabe | null {
       { charakterId: "wimpy", modell: "schaf" },
       { charakterId: "wimpy", modell: "yeti" },
     ],
+    // Belag, Licht, Wetter und Bausteine der Strecke - fehlt etwas, gilt die
+    // alte Schneelandschaft (siehe lib/verfolgung.ts).
+    ...jagdWelt(wert as Partial<VerfolgungVorgabe>),
     musik: text(wert.musik, 200),
     fluchtgrund: text(wert.fluchtgrund, 800),
     statement: text(wert.statement, 1200),
