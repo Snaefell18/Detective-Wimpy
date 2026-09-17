@@ -722,9 +722,37 @@ Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder Verdächtige einzeln
 mit seinen Werten, die fünf Schauplätze, „Wer war es?“ - und zum Schluss der
 Startschuss. So steht im Intro von der ersten Sekunde an alles fest.
 
-Das Intro ist an den Song gekoppelt (`audio.currentTime`), nicht an feste
-Sekunden: Es endet **genau** mit dem letzten Ton. Tauschst du die MP3 gegen eine
-längere oder kürzere aus, passt sich der Ablauf von selbst an.
+**Jede Tafel bleibt so lange stehen, wie ihr Text zum Vorlesen braucht.**
+Früher hatte jeder Abschnitt einen festen Anteil des Songs - die Verdächtigen
+zusammen ein Viertel, die Schauplätze ein Sechstel. Bei fünf Verdächtigen und
+fünf Schauplätzen sind das anderthalb Sekunden pro Tafel: Der Text blitzte auf,
+brach mitten in der Einblendung ab, und vorlesen ließ sich davon nichts.
+
+Jetzt sagt jede Tafel selbst, wie lange sie braucht (`lib/introTiming.ts`):
+gut elf Zeichen je Sekunde, mindestens zwei Sekunden, und ein Steckbrief mit
+drei wachsenden Balken bekommt mehr als ein einzelnes Wort. Verteilt wird erst
+danach:
+
+- Ist der Song **länger** als nötig, bekommen alle Tafeln gleichmäßig mehr Zeit
+  - das Intro endet weiterhin genau mit dem letzten Ton.
+- Ist er **kürzer**, läuft das Intro länger als der Song, und der Song
+  wiederholt sich so lange, bis die letzte Tafel steht. Lieber Musik doppelt
+  als ein Text, den niemand lesen kann.
+- Schlagworte sind Schmuck: Passen sie nicht mehr in ihr Drittel des Songs,
+  kommen eben weniger vor. Verdächtige und Schauplätze bleiben immer alle da.
+
+Dieselbe Rechnung gilt für den Vorspann einer Saga und den eines Arcs - dort
+vor allem für Überthema und Klappentext, die ganze Absätze sein können.
+
+Auch die Uhr dahinter läuft anders (`lib/introUhr.ts`): Sie beginnt erst, wenn
+die Musik wirklich spielt (oder feststeht, dass der Browser sie blockiert), und
+zählt danach nur noch vorwärts. Vorher wurde zwischen Aufnahme- und Wanduhr
+umgeschaltet - begann die Musik einen Moment später, sprang der Vorspann
+zurück, und man sah dieselbe Tafel zweimal.
+
+Erzählertexte ohne Tondatei folgen derselben Regel: Sie liefen immer in
+sechzehn Sekunden durch, egal ob zwei Zeilen oder ein Absatz dastand. Jetzt
+bekommt jeder Text die Zeit, die er zum Vorlesen braucht.
 
 Damit der Ton trotz der Wartezeit erlaubt bleibt, wird das Audio-Element schon
 im Klick selbst kurz angetippt - Browser lassen Abspielen nur als Folge einer

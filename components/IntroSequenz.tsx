@@ -1,33 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Bild } from "./Bild";
-import { spiele, stand, stoppe } from "@/lib/introAudio";
+import { leseDauer, passendeAnzahl, tafelnVerteilen } from "@/lib/introTiming";
+import { useIntroUhr } from "@/lib/introUhr";
 import type { Character, Location, PublicCase } from "@/lib/types";
 
-/** Ohne Musik (blockierter Ton) läuft das Intro deutlich kürzer. */
+/** Ohne Musik (blockierter Ton) wird mit dieser Songlänge gerechnet. */
 const STUMME_DAUER = 34;
 
-type Szene =
-  | { art: "titel"; von: number; bis: number }
-  | { art: "stadt"; von: number; bis: number }
-  | { art: "wort"; von: number; bis: number; wort: string; nr: number }
-  | { art: "verdaechtig"; von: number; bis: number; charakter: Character; nr: number }
-  | { art: "ort"; von: number; bis: number; ort: Location; nr: number }
-  | { art: "frage"; von: number; bis: number }
-  | { art: "akte"; von: number; bis: number };
+type Tafel =
+  | { art: "titel"; dauer: number }
+  | { art: "stadt"; dauer: number }
+  | { art: "wort"; dauer: number; wort: string; nr: number }
+  | { art: "verdaechtig"; dauer: number; charakter: Character; nr: number }
+  | { art: "ort"; dauer: number; ort: Location; nr: number }
+  | { art: "frage"; dauer: number }
+  | { art: "akte"; dauer: number };
+
+type Szene = Tafel & { von: number; bis: number };
 
 /**
- * Der Ablauf in Anteilen der Songlänge (0..1) - so passt das Intro auf jede
- * Aufnahme. Am Ende steht die Fallakte; sie wartet auf einen Fingertipp.
+ * Was das Intro zeigt - und wie lange jede Tafel dafür braucht.
+ *
+ * Die Zeiten stehen nicht mehr in Anteilen der Aufnahme, sondern in Sekunden:
+ * Ein Steckbrief mit Namen, Tierart und drei Balken braucht länger als ein
+ * einzelnes Schlagwort, und der Schauplatz mit seiner Atmosphäre noch länger.
+ * Verteilt wird erst danach (lib/introTiming.ts) - dauert das Intro damit
+ * länger als sein Song, läuft der Song eben zweimal.
  */
-function szenenPlan(fall: PublicCase): Szene[] {
+function tafelnFuer(fall: PublicCase, songDauer: number): Tafel[] {
   const verdaechtige = fall.besetzung.filter((c) => !c.istDetektiv);
 
   // Ältere Fälle (und Kampagnen von vorher) haben noch keine Schlagworte -
   // dann werden welche aus dem Fall selbst gebildet.
   const worte = (fall.schlagworte ?? []).filter(Boolean).slice(0, 6);
-  const schlagworte = worte.length
+  const alle = worte.length
     ? worte
     : [
         fall.stadt,
@@ -35,58 +43,37 @@ function szenenPlan(fall: PublicCase): Szene[] {
         `${verdaechtige.length} Verdächtige`,
         "Eine Spur zu viel",
       ].filter(Boolean);
+  /*
+   * Die Schlagworte sind Schmuck, die Verdächtigen und Schauplätze sind der
+   * Fall. Deshalb dürfen die Worte weichen, wenn der Song knapp ist: Sie
+   * bekommen ein Drittel davon und nicht mehr.
+   */
+  const schlagworte = alle.slice(0, passendeAnzahl(alle, songDauer * 0.34));
 
-  const plan: Szene[] = [
-    { art: "titel", von: 0, bis: 0.09 },
-    { art: "stadt", von: 0.09, bis: 0.2 },
+  return [
+    { art: "titel", dauer: leseDauer("Ein neuer Fall für Detektiv Wimpy") },
+    { art: "stadt", dauer: leseDauer(`Tatort ${fall.stadt}`) },
+    ...schlagworte.map((wort, i) => ({ art: "wort" as const, wort, nr: i, dauer: leseDauer(wort) })),
+    ...verdaechtige.map((charakter, i) => ({
+      art: "verdaechtig" as const,
+      charakter,
+      nr: i + 1,
+      // Zum Lesen kommt, was sich bewegt: Die drei Wertebalken wachsen erst.
+      dauer: leseDauer(
+        `Verdächtige ${charakter.name} ${charakter.tierart} ${charakter.alter} Jahre`,
+        3.2,
+      ),
+    })),
+    ...fall.orte.map((ort, i) => ({
+      art: "ort" as const,
+      ort,
+      nr: i + 1,
+      dauer: leseDauer(`${ort.name} ${ort.atmosphaere ?? ""}`, 2.8),
+    })),
+    { art: "frage", dauer: leseDauer("Wer war es?", 2.6) },
+    // Die Fallakte wartet ohnehin auf einen Fingertipp.
+    { art: "akte", dauer: leseDauer(fall.titel, 3) },
   ];
-
-  const verteile = <T,>(liste: T[], von: number, bis: number, bauen: (
-    posten: T,
-    i: number,
-    von: number,
-    bis: number,
-  ) => Szene) => {
-    if (liste.length === 0) return;
-    const schritt = (bis - von) / liste.length;
-    liste.forEach((posten, i) =>
-      plan.push(bauen(posten, i, von + i * schritt, von + (i + 1) * schritt)),
-    );
-  };
-
-  // Schlagworte blitzen einzeln auf.
-  verteile(schlagworte, 0.2, 0.42, (wort, i, von, bis) => ({
-    art: "wort",
-    von,
-    bis,
-    wort,
-    nr: i,
-  }));
-
-  verteile(verdaechtige, 0.42, 0.68, (charakter, i, von, bis) => ({
-    art: "verdaechtig",
-    von,
-    bis,
-    charakter,
-    nr: i + 1,
-  }));
-
-  // Jeder Schauplatz bekommt den ganzen Bildschirm - in einen Rahmen gequetscht
-  // sahen die hochkanten Bilder immer angeschnitten aus.
-  verteile(fall.orte, 0.68, 0.86, (ort, i, von, bis) => ({
-    art: "ort",
-    von,
-    bis,
-    ort,
-    nr: i + 1,
-  }));
-
-  plan.push(
-    { art: "frage", von: 0.86, bis: 0.94 },
-    { art: "akte", von: 0.94, bis: 1.01 },
-  );
-
-  return plan;
 }
 
 export function IntroSequenz({
@@ -97,38 +84,18 @@ export function IntroSequenz({
   /** Wird erst aufgerufen, wenn der Spieler die Fallakte antippt. */
   onFertig: () => void;
 }) {
-  const startRef = useRef(performance.now());
-  const [fortschritt, setFortschritt] = useState(0);
-  const [tonAn, setTonAn] = useState(true);
-
-  const plan = useMemo(() => szenenPlan(fall), [fall]);
-
-  useEffect(() => {
-    let laeuftNoch = true;
-
-    void spiele("intro").then((geklappt) => {
-      if (laeuftNoch) setTonAn(geklappt);
-    });
-
-    const tick = () => {
-      if (!laeuftNoch) return;
-
-      const { zeit, dauer } = stand("intro");
-      const gesamt = dauer ?? STUMME_DAUER;
-      const vergangen = zeit > 0 ? zeit : (performance.now() - startRef.current) / 1000;
-
-      // Bei 1 bleibt es stehen: Die Fallakte wartet auf den Fingertipp.
-      setFortschritt(Math.min(1, vergangen / gesamt));
-      requestAnimationFrame(tick);
-    };
-
-    const id = requestAnimationFrame(tick);
-    return () => {
-      laeuftNoch = false;
-      cancelAnimationFrame(id);
-      stoppe("intro");
-    };
-  }, []);
+  /*
+   * Wie lang der Titelsong ist, weiß erst der Browser - und davon hängt ab,
+   * wie viel Luft die Tafeln bekommen. Bis dahin wird mit STUMME_DAUER
+   * gerechnet; sobald die Länge da ist, rückt sich der Plan von selbst
+   * zurecht.
+   */
+  const [songDauer, setSongDauer] = useState<number | null>(null);
+  const { plan, dauer } = useMemo(() => {
+    const song = songDauer ?? STUMME_DAUER;
+    return tafelnVerteilen(tafelnFuer(fall, song), song);
+  }, [fall, songDauer]);
+  const { fortschritt, tonAn, anschalten } = useIntroUhr("intro", dauer, setSongDauer);
 
   const szene =
     plan.find((s) => fortschritt >= s.von && fortschritt < s.bis) ?? plan[plan.length - 1];
@@ -141,7 +108,7 @@ export function IntroSequenz({
     <div
       className="intro"
       onPointerDown={() => {
-        if (!tonAn) void spiele("intro").then(setTonAn);
+        if (!tonAn) anschalten();
       }}
     >
       <IntroHintergrund fall={fall} aktiv={aktiverOrt(szene, fall)} />
@@ -166,7 +133,7 @@ export function IntroSequenz({
         </div>
         <div className="intro-knoepfe">
           {!tonAn && (
-            <button className="intro-ton" onClick={() => void spiele("intro").then(setTonAn)}>
+            <button className="intro-ton" onClick={anschalten}>
               🔈 Ton an
             </button>
           )}

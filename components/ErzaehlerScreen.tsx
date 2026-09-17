@@ -6,19 +6,26 @@ import { VideoSzene } from "./VideoSzene";
 import { spiele, stoppe, type Stueck } from "@/lib/introAudio";
 import { tonQuelle } from "@/lib/stimme";
 import { sichtbareErzaehlerZeilen } from "@/lib/erzaehlerTiming";
+import { leseDauer } from "@/lib/introTiming";
 import { videoVon, type Erzaehlerteil } from "@/lib/sagaTypen";
 
 /**
  * Ein Erzählerteil zwischen zwei Kapiteln: Text, der zeilenweise erscheint,
  * dazu - sobald eine Datei hinterlegt ist - die gesprochene Fassung.
  *
- * Ohne Tondatei läuft der Text nach einer festen Zeit durch. Weiter geht es
- * immer erst auf Fingertipp, damit niemand etwas verpasst.
+ * Ohne Tondatei läuft der Text in der Zeit durch, die er zum Vorlesen braucht.
+ * Weiter geht es immer erst auf Fingertipp, damit niemand etwas verpasst.
  *
  * Ist ein Video hinterlegt, läuft es davor - bildschirmfüllend, danach erst
  * Titelkarte und Text. Ohne Eintrag bleibt alles wie bisher.
+ *
+ * Die Zeit ohne Tondatei richtet sich nach dem Text. Sechzehn Sekunden für
+ * alles waren für einen Zweizeiler zu viel und für einen Absatz viel zu wenig:
+ * Die Zeilen erschienen schneller, als man sie vorlesen konnte, und wer mitlas,
+ * war nach dem dritten Satz raus. Jetzt bekommt jeder Text die Zeit, die er
+ * zum Vorlesen braucht - Weiter geht es ohnehin erst auf Fingertipp.
  */
-const STUMME_DAUER = 16;
+const stummeDauer = (text: string) => leseDauer(text, 9, 400);
 
 /** Die Titelkarte vor einem Kapitel - wie in einer Serie. */
 export type Kapitelkarte = { marke: string; name: string; bild?: string | null };
@@ -174,7 +181,7 @@ export function ErzaehlerScreen({
         return;
       }
       const hatAudio = Boolean(audio && Number.isFinite(audio.duration) && audio.duration > 1);
-      const dauer = hatAudio && audio ? audio.duration : STUMME_DAUER;
+      const dauer = hatAudio && audio ? audio.duration : stummeDauer(teil.text);
       const zeit = hatAudio && audio
         ? audio.currentTime
         : (performance.now() - startRef.current) / 1000;
