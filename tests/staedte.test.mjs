@@ -78,6 +78,9 @@ console.log("\n2. Aus der Datenbank kommt nur Brauchbares zurück");
   pruefe("und die erlaubten Werte sind es, die im Editor stehen",
     STRASSENTYPEN.includes("asphalt") && TAGESZEITEN.includes("nacht") && WETTERLAGEN.includes("schneesturm"));
   pruefe("und der Sandsturm steht ebenfalls zur Wahl", WETTERLAGEN.includes("sandsturm"));
+  pruefe("der Blizzard auch", WETTERLAGEN.includes("blizzard"));
+  pruefe("eine Stadt im Blizzard kommt heil zurück",
+    stadtLesen({ ...stadt, wetter: "blizzard" })?.wetter === "blizzard");
   pruefe("eine Stadt im Sandsturm kommt heil zurück",
     stadtLesen({ ...stadt, wetter: "sandsturm", strassentyp: "sand" })?.wetter === "sandsturm");
 

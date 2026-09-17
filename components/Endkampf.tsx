@@ -48,6 +48,7 @@ import {
   type Stadtplan,
 } from "@/lib/stadtplan";
 import { vergessen } from "@/lib/vorladen";
+import { istBlizzard, istDunst, istSchneeWetter } from "@/lib/pursuit3d";
 import { Hintergrundmusik } from "./Hintergrundmusik";
 import { TouchJoystick } from "./TouchJoystick";
 import {
@@ -188,18 +189,25 @@ function ArenaCanvas({
       abend: 0xa84567,
       nacht: 0x070a16,
     }[tageszeit];
-    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const schneeWetter = istSchneeWetter(wetter);
     /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
     const schneeLand3D = strassentyp === "schnee";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
-    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    /** Der Blizzard: Sicht auf wenige Meter, und die Böen nehmen auch die. */
+    const blizzard = istBlizzard(wetter);
+    const dunst = istDunst(wetter);
     const nebel = sandSturm
       ? sandDunst(tageszeit)
-      : dunst || schneeWetter ? (nacht ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
+      // Der Blizzard ist heller als jeder Schneesturm: ein Weiß, in dem
+      // Himmel und Boden nicht mehr zu unterscheiden sind.
+      : blizzard
+        ? (nacht ? 0x36485f : 0xe6eef6)
+        : dunst || schneeWetter ? (nacht ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
-    const nebelNah = dunst ? 17 : wetter === "regen" ? 13 : 20;
-    const nebelFern = Math.min(dunst ? 36 : 68, profil.sichtweite);
+    const nebelNah = blizzard ? 7 : dunst ? 17 : wetter === "regen" ? 13 : 20;
+    // Im Blizzard sieht man den Gegner - und sonst so gut wie nichts.
+    const nebelFern = Math.min(blizzard ? 30 : dunst ? 36 : 68, profil.sichtweite);
     scene.fog = new THREE.Fog(nebel, Math.min(nebelNah, nebelFern * 0.45), nebelFern);
     const gradient = gradientTextur();
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, Math.min(140, nebelFern + 40));
@@ -313,7 +321,7 @@ function ArenaCanvas({
       merken,
       weite: 40,
       tiefe: 40,
-      anzahl: wetter === "schneesturm" ? 1200 : sandSturm ? 1500 : 700,
+      anzahl: blizzard ? 2600 : wetter === "schneesturm" ? 1200 : sandSturm ? 1500 : 700,
     });
 
     /* --- Die beiden Kämpfer ------------------------------------------ */
@@ -1009,7 +1017,7 @@ function ArenaCanvas({
       if (wetterfall) {
         wetterfall.bewegen(echt, jetzt);
         // Das Wetter zieht mit: Es fällt dort, wo gerade gekämpft wird.
-        wetterfall.punkte.position.set(spieler.position.x, 0, spieler.position.z);
+        wetterfall.gruppe.position.set(spieler.position.x, 0, spieler.position.z);
       }
       for (const werkzeug of mixer) werkzeug.update(dt);
 
@@ -1061,7 +1069,8 @@ function ArenaCanvas({
       if (rohDt < 0.5) regel = nachregeln(regel, rohDt);
       sichtweite += (profil.sichtweite * regel.faktor - sichtweite) * Math.min(1, echt * 0.7);
       if (scene.fog instanceof THREE.Fog) {
-        const fern = Math.min(nebelFern, sichtweite);
+        // Die Böe des Blizzards zieht die Sicht zusätzlich zu.
+        const fern = Math.min(nebelFern, sichtweite) * (wetterfall?.sicht(jetzt) ?? 1);
         scene.fog.far = fern;
         scene.fog.near = Math.min(nebelNah, fern * 0.45);
       }

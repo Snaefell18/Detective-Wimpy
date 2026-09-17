@@ -17,6 +17,7 @@ import type { Saga } from "./sagaTypen";
 import { bereinigteSaga3D } from "./saga3dSync";
 import type { Arc } from "./arcTypen";
 import { kampfLesen } from "./endkampf";
+import type { Auto } from "./autos";
 import type { Zubehoer } from "./zubehoer";
 import type { Character, Item, Kampagne, Location } from "./types";
 import { stadtLesen, type Stadt } from "./staedte";
@@ -262,7 +263,15 @@ export const ladeZubehoer = async () => {
   return { ...ergebnis, daten: ergebnis.daten.filter(s => s.wirkung !== "auto") };
 };
 
-export async function speichereZubehoer(stueck: Zubehoer): Promise<void> {
+/**
+ * Ein Stück Zubehör speichern - oder ein Auto.
+ *
+ * Beides liegt in derselben Sammlung; ein Auto ist ein Zubehör mit der Wirkung
+ * "auto" und ein paar Feldern mehr (Modell, Tempo, Größe). Deshalb nimmt diese
+ * Stelle auch mehr an, als ein Zubehör hat - abgeschnitten wird nur, was zu
+ * lang ist.
+ */
+export async function speichereZubehoer(stueck: Zubehoer | Auto): Promise<void> {
   await anmelden();
   await setDoc(
     doc(getDb(), "zubehoer", stueck.id),

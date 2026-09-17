@@ -3,7 +3,16 @@ import { pruefeVorgaben } from "../lib/sagaPruefung.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 import { JAGD_WELT, fluchtStatement, jagdWelt, verfolgungNach } from "../lib/verfolgung.ts";
 import { DREI_D_LOCATIONS } from "../lib/pursuit3d.ts";
-import { FLUCHT_RUECKSTAND, REMPLER, STANDARD_AUTOS, autoGueltig, fluchtTempo } from '../lib/autos.ts';
+import {
+  AUTO_GROESSE,
+  FLUCHT_RUECKSTAND,
+  REMPLER,
+  STANDARD_AUTOS,
+  autoGroesse,
+  autoGueltig,
+  autoLaenge,
+  fluchtTempo,
+} from '../lib/autos.ts';
 
 let fehlgeschlagen = 0;
 const pruefe = (name, ok, zusatz = "") => {
@@ -189,6 +198,32 @@ console.log("\n2c. Die Strecke: Belag, Licht, Wetter, Häuser");
   pruefe("und gibt sie unverändert zurück",
     zurueck.strassentyp === "sand" && zurueck.tageszeit === "abend" && zurueck.wetter === "schneesturm");
   pruefe("samt Bausteinen", zurueck.locations[0] === ort);
+}
+
+console.log("\n2d. Wie groß ein Wagen im Spiel ist");
+{
+  /*
+   * Jedes Modell wird auf dieselbe Länge gebracht - und genau das machte aus
+   * einer Limousine ein Spielzeugauto. Die Größe im Katalog rückt das
+   * gerade; was fehlt oder unsinnig ist, wird stillschweigend zu 1.
+   */
+  pruefe("ohne Angabe ist ein Wagen normal groß", autoGroesse({}) === 1);
+  pruefe("und ohne Wagen erst recht", autoGroesse(undefined) === 1);
+  pruefe("eine Limousine darf länger sein", autoGroesse({ groesse: 1.5 }) === 1.5);
+  pruefe("zu klein wird auf das Mindestmaß gehoben",
+    autoGroesse({ groesse: 0.01 }) === AUTO_GROESSE.min);
+  pruefe("zu groß auf das Höchstmaß gestutzt",
+    autoGroesse({ groesse: 99 }) === AUTO_GROESSE.max);
+  pruefe("Unsinn wird zu 1", autoGroesse({ groesse: Number.NaN }) === 1 && autoGroesse({ groesse: -3 }) === 1);
+
+  pruefe("die Länge folgt der Größe",
+    Math.abs(autoLaenge({ groesse: 1.4 }, 3.5) - 4.9) < 0.001);
+  pruefe("ein gewöhnlicher Wagen bleibt bei der Grundlänge", autoLaenge({}, 3.5) === 3.5);
+
+  const wagen = { ...STANDARD_AUTOS[0] };
+  pruefe("ein Standardwagen ohne Größe bleibt gültig", autoGueltig(wagen));
+  pruefe("mit erlaubter Größe auch", autoGueltig({ ...wagen, groesse: 1.6 }));
+  pruefe("mit unmöglicher Größe nicht", !autoGueltig({ ...wagen, groesse: 9 }));
 }
 
 console.log("\n3. Nach dem Fang gibt es immer ein Statement");

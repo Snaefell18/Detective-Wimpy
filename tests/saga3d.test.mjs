@@ -26,7 +26,7 @@ for (const anzahl of [1, 7, 12, 24, 40]) {
   }
 }
 const konfiguration = { ...STANDARD_KAPITEL_3D, aktiv: true, locations: ["tokyo1", "stellenbosch"], strassentyp: "sand", wetter: "regen", locationDrehungen: { tokyo1: 180 } };
-for (const wetter of ["schnee", "schneesturm", "sandsturm", "nebel"]) {
+for (const wetter of ["schnee", "schneesturm", "blizzard", "sandsturm", "nebel"]) {
   const winter = { ...konfiguration, wetter, strassentyp: wetter === "sandsturm" ? "sand" : "schnee" };
   const gespeichert = SagaVorgabenSchema.parse(JSON.parse(JSON.stringify({ ...STANDARD_SAGA_VORGABEN, kapitel3d: [winter] })));
   assert.deepEqual(dreiDFuerKapitel(gespeichert, 0), winter, "Neue Straßen/Wetter überstehen Saga-Generierung und Speicherung");

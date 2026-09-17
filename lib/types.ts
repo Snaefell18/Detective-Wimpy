@@ -236,6 +236,7 @@ export type Wetterlage =
   | "gewitter"
   | "schnee"
   | "schneesturm"
+  | "blizzard"
   | "nebel"
   | "nacht";
 
@@ -247,6 +248,7 @@ export const WETTERLAGEN: { id: Wetterlage; label: string; hinweis: string }[] =
   { id: "gewitter", label: "Gewitter", hinweis: "Guss, Blitz, Donnerlicht" },
   { id: "schnee", label: "Schnee", hinweis: "leise Flocken" },
   { id: "schneesturm", label: "Schneesturm", hinweis: "quer, weiß, böig" },
+  { id: "blizzard", label: "Blizzard", hinweis: "extremster Sturm, Sicht bei null" },
   { id: "nebel", label: "Nebel", hinweis: "Schwaden über allem" },
   { id: "nacht", label: "Nacht", hinweis: "spät und blau" },
 ];

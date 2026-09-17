@@ -60,6 +60,7 @@ export const WETTERLAGEN: DreiDWetter[] = [
   "regen",
   "schnee",
   "schneesturm",
+  "blizzard",
   "sandsturm",
   "nebel",
 ];

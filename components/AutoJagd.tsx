@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { modellFuerTier, spielerModell } from '@/lib/tiermodelle';
 import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
-import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, fluchtTempo, type Auto } from '@/lib/autos';
+import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, autoLaenge, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
 import { useStammdaten } from '@/lib/stammdaten';
 import { fluchtStatement, jagdWelt, type JagdWelt, type VerfolgungVorgabe } from '@/lib/verfolgung';
@@ -16,6 +16,7 @@ import {
   DREI_D_WETTER,
 } from '@/lib/pursuit3d';
 import { istHandy } from '@/lib/dreiDLeistung';
+import { istBlizzard, istDunst, istSchneeWetter } from '@/lib/pursuit3d';
 import {
   LEUCHTEN as LEUCHT_STAERKE,
   SAND_LICHT,
@@ -240,9 +241,11 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
     const scene = new THREE.Scene();
     const { strassentyp, tageszeit, wetter, locations } = welt;
     const nacht = tageszeit === "nacht";
-    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const schneeWetter = istSchneeWetter(wetter);
     const sandSturm = wetter === "sandsturm";
-    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    /** Der Blizzard: Man sieht den Fluchtwagen - und sonst fast nichts. */
+    const blizzard = istBlizzard(wetter);
+    const dunst = istDunst(wetter);
     /*
      * Himmel, Dunst und Licht kommen aus derselben Palette wie die 3D-Stadt.
      *
@@ -259,13 +262,21 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
     }[tageszeit];
     const dunstFarbe = sandSturm
       ? sandDunst(tageszeit)
-      : dunst || schneeWetter
-        ? (nacht ? 0x253749 : 0xb7cbd6)
-        : wetter === "regen" ? 0x536777 : himmel;
+      : blizzard
+        ? (nacht ? 0x36485f : 0xe6eef6)
+        : dunst || schneeWetter
+          ? (nacht ? 0x253749 : 0xb7cbd6)
+          : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? dunstFarbe : himmel);
-    // Weiter als in der Stadt: Hier fährt man auf das hin, was am Horizont
-    // steht, statt zwischen Häusern zu laufen.
-    scene.fog = new THREE.Fog(dunstFarbe, dunst ? 16 : 28, dunst ? 62 : 95);
+    /*
+     * Weiter als in der Stadt: Hier fährt man auf das hin, was am Horizont
+     * steht, statt zwischen Häusern zu laufen. Im Blizzard dagegen endet die
+     * Welt kurz hinter dem Fluchtwagen - er bleibt gerade noch zu sehen, und
+     * die Böen nehmen einem auch den für Augenblicke.
+     */
+    const sichtNah = blizzard ? 9 : dunst ? 16 : 28;
+    const sichtFern = blizzard ? 34 : dunst ? 62 : 95;
+    scene.fog = new THREE.Fog(dunstFarbe, sichtNah, sichtFern);
     // Gleiche Achsen und Blickrichtung wie Jump-and-Run; etwas weiter für zwei Autos.
     const camera = new THREE.PerspectiveCamera(KAMERA_ANFAHRT.fov, 1, 0.1, 130);
     camera.position.set(...KAMERA_ANFAHRT.pos);
@@ -448,6 +459,15 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       tiefe: 110,
       versatzZ: 16,
       hoehe: 16,
+      anzahl: blizzard ? 3000 : undefined,
+      /*
+       * Größere Flocken als in der Stadt.
+       *
+       * Dort läuft man mitten durch den Schneefall, hier schaut man aus
+       * zwanzig Metern auf die Straße - in derselben Größe wäre jede Flocke
+       * ein Punkt, den man nicht sieht.
+       */
+      groesse: 2,
     });
 
     const spieler = new THREE.Group(), gegner = new THREE.Group(), wimpy = new THREE.Group();
@@ -473,7 +493,9 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       obj.updateMatrixWorld(true);
       let box = new THREE.Box3().setFromObject(obj);
       const size = box.getSize(new THREE.Vector3());
-      obj.scale.multiplyScalar(3.5 / Math.max(size.x, size.z, 0.001));
+      // Jeder Wagen wird auf dieselbe Länge gebracht - mal die Größe, die
+      // im Katalog steht. Eine Limousine darf länger sein als ein Flitzer.
+      obj.scale.multiplyScalar(autoLaenge(wagen, 3.5) / Math.max(size.x, size.z, 0.001));
       obj.updateMatrixWorld(true); box = new THREE.Box3().setFromObject(obj);
       const mitte = box.getCenter(new THREE.Vector3());
       obj.position.set(-mitte.x, -box.min.y, -mitte.z);
@@ -749,7 +771,19 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       }
       // Der Schnee fällt nicht nur, er bleibt auch zurück: Was vor dem Wagen
       // in der Luft steht, ist einen Augenblick später hinter ihm.
-      wetterfall?.bewegen(dt, performance.now(), weg);
+      const jetzt = performance.now();
+      wetterfall?.bewegen(dt, jetzt, weg);
+      // Und im Blizzard zieht jede Böe die Sicht weiter zu.
+      if (blizzard && scene.fog instanceof THREE.Fog) {
+        /*
+         * Die Böe nimmt hier weniger Sicht als anderswo: Wer fährt, muss den
+         * Wagen vor sich noch als Schemen erkennen können - sonst jagt man
+         * einer Zahl im HUD hinterher.
+         */
+        const faktor = 1 - (1 - (wetterfall?.sicht(jetzt) ?? 1)) * 0.6;
+        scene.fog.near = sichtNah * faktor;
+        scene.fog.far = sichtFern * faktor;
+      }
     };
     /** Aus der Anfahrt in die Jagd - ohne Schnitt, nur ohne Wimpy am Rand. */
     const losfahren = () => {

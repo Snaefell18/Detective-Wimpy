@@ -34,12 +34,20 @@ import {
   type FahrWerte,
   type Fahrzustand,
 } from "@/lib/autofahrt";
-import { AUTO_MODELLE, START_AUTO_ID, type Auto } from "@/lib/autos";
+import { AUTO_MODELLE, START_AUTO_ID, autoLaenge, type Auto } from "@/lib/autos";
 import { useAutos } from "@/lib/useAutos";
 import { postJson } from "@/lib/api";
 import { herkunftsZeile, type Beweismittel } from "@/lib/beweismittel";
 import { laufAnimation } from "@/lib/pursuit";
-import { DREI_D_LOCATIONS, locationsFuer3D, polizeiAus, tankstelleAus } from "@/lib/pursuit3d";
+import {
+  DREI_D_LOCATIONS,
+  istBlizzard,
+  istDunst,
+  istSchneeWetter,
+  locationsFuer3D,
+  polizeiAus,
+  tankstelleAus,
+} from "@/lib/pursuit3d";
 import {
   begehbar,
   feldMitte,
@@ -241,19 +249,30 @@ function KapitelCanvas({
       abend: 0xa84567,
       nacht: 0x070a16,
     }[tageszeit];
-    const schneeWetter = wetter === "schnee" || wetter === "schneesturm";
+    const schneeWetter = istSchneeWetter(wetter);
     /** Liegt hier Schnee? Dann gelten andere Farben, anderes Licht - und Wehen. */
     const schneeLand3D = strassentyp === "schnee";
     // Der Sandsturm nimmt die Sicht wie ein Schneesturm - nur in Ocker.
     const sandSturm = wetter === "sandsturm";
-    const dunst = wetter === "nebel" || wetter === "schneesturm" || sandSturm;
+    /** Der Blizzard: Sicht auf wenige Meter, und die Böen nehmen auch die. */
+    const blizzard = istBlizzard(wetter);
+    const dunst = istDunst(wetter);
     const nebel = sandSturm
       ? sandDunst(tageszeit)
-      : dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
+      // Der Blizzard ist heller als jeder Schneesturm: ein Weiß, in dem
+      // Himmel und Boden nicht mehr zu unterscheiden sind.
+      : blizzard
+        ? (tageszeit === "nacht" ? 0x36485f : 0xe6eef6)
+        : dunst || schneeWetter ? (tageszeit === "nacht" ? 0x253749 : 0xb7cbd6) : wetter === "regen" ? 0x536777 : himmel;
     scene.background = new THREE.Color(dunst || schneeWetter ? nebel : himmel);
-    // Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m entfernt).
-    const nebelNah = dunst ? 17 : wetter === "regen" ? 13 : 20;
-    const nebelFern = dunst ? 36 : wetter === "regen" ? 48 : 68;
+    /*
+     * Nahbereich bleibt selbst im Whiteout lesbar (Kamera sitzt ~17 m
+     * entfernt). Im Blizzard gilt das nicht mehr: Dort ist die Welt hinter
+     * der nächsten Kreuzung weg, und genau das ist der Sinn der Sache. Weil
+     * die Kamera hinter Wimpy steht, bleibt er selbst sichtbar.
+     */
+    const nebelNah = blizzard ? 12 : dunst ? 17 : wetter === "regen" ? 13 : 20;
+    const nebelFern = blizzard ? 38 : dunst ? 36 : wetter === "regen" ? 48 : 68;
     /*
      * Auf dem Stadtplan endet der Nebel spätestens dort, wo das Gerät
      * aufhört zu zeichnen. Dann verschwindet ein Haus im Dunst, statt vor
@@ -433,7 +452,7 @@ function KapitelCanvas({
       weite: 28,
       tiefe: 70,
       versatzZ: -13,
-      anzahl: wetter === "schneesturm" ? 1800 : sandSturm ? 2000 : 900,
+      anzahl: blizzard ? 3200 : wetter === "schneesturm" ? 1800 : sandSturm ? 2000 : 900,
     });
     if (wetter === "sonne") {
       const sonne = new THREE.Mesh(
@@ -782,7 +801,7 @@ function KapitelCanvas({
 
     /* --- Ein- und Aussteigen ------------------------------------------ */
     /** Ein Auto aus dem Katalog als fahrbereite Gruppe. */
-    const wagenBauen = async (wunsch: { modell: string; drehung: number }) => {
+    const wagenBauen = async (wunsch: { modell: string; drehung: number; groesse?: number }) => {
       const modell = AUTO_MODELLE.find((m) => m.id === wunsch.modell);
       if (!modell) return null;
       const gltf = await laden(modell.datei);
@@ -795,7 +814,9 @@ function KapitelCanvas({
       körper.updateMatrixWorld(true);
       let box = new THREE.Box3().setFromObject(körper);
       const groesse = box.getSize(new THREE.Vector3());
-      körper.scale.multiplyScalar(3 / Math.max(groesse.x, groesse.z, 0.001));
+      // Dieselbe Rechnung wie in der Verfolgungsjagd: gleiche Länge für alle,
+      // mal der Größe aus dem Katalog.
+      körper.scale.multiplyScalar(autoLaenge(wunsch, 3) / Math.max(groesse.x, groesse.z, 0.001));
       körper.updateMatrixWorld(true);
       box = new THREE.Box3().setFromObject(körper);
       const mitte = box.getCenter(new THREE.Vector3());
@@ -1123,16 +1144,25 @@ function KapitelCanvas({
        * eine Fassade. Weggeblendet wird weich über eine gute Zehntelsekunde
        * - nichts springt, nichts blitzt.
        */
+      /**
+       * Wie weit man in diesem Bild sieht.
+       *
+       * Im Blizzard zieht die Böe die Sicht zusätzlich zu - und zwar auch
+       * im alten Straßenzug, in dem sonst nichts am Nebel dreht.
+       */
+      const sichtSetzen = (fern: number) => {
+        if (!(scene.fog instanceof THREE.Fog)) return;
+        const weit = fern * (wetterfall?.sicht(jetzt) ?? 1);
+        scene.fog.far = weit;
+        scene.fog.near = Math.min(nebelNah, weit * 0.45);
+      };
+      if (blizzard && !stadtBloecke.length) sichtSetzen(nebelFern);
       if (stadtBloecke.length) {
         // Nach einem Tabwechsel liegen Sekunden zwischen zwei Bildern. Das
         // ist kein Ruckeln, das ist eine Pause - die zählt nicht.
         if (rohDt < 0.5) regel = nachregeln(regel, rohDt);
         sichtweite += (profil.sichtweite * regel.faktor - sichtweite) * Math.min(1, dt * 0.7);
-        if (scene.fog instanceof THREE.Fog) {
-          const fern = Math.min(nebelFern, sichtweite);
-          scene.fog.far = fern;
-          scene.fog.near = Math.min(nebelNah, fern * 0.45);
-        }
+        sichtSetzen(Math.min(nebelFern, sichtweite));
         const imWeg = stadtplan
           ? sichtFelder(stadtplan, spieler.position.x, spieler.position.z, camera.position.x, camera.position.z)
           : [];

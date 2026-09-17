@@ -35,7 +35,10 @@ export function lageFuer(wunsch: Wetterlage, fallId: string): Wetterlage {
 }
 
 /** Lagen, die aus fallenden oder fliegenden Schichten bestehen. */
-const MIT_SCHICHTEN: Wetterlage[] = ["regen", "gewitter", "schnee", "schneesturm"];
+const MIT_SCHICHTEN: Wetterlage[] = ["regen", "gewitter", "schnee", "schneesturm", "blizzard"];
+
+/** Lagen mit Böen, die quer durchs Bild fegen. */
+const MIT_BOEEN: Wetterlage[] = ["schneesturm", "blizzard"];
 
 export function Wetter({ lage }: { lage: Wetterlage }) {
   if (lage === "aus" || lage === "zufall") return null;
@@ -81,11 +84,18 @@ export function Wetter({ lage }: { lage: Wetterlage }) {
       )}
 
       {/* Der Sturm bekommt Böen: weiße Schleier, die quer durchs Bild
-          fegen und kurz alles schlucken. */}
-      {lage === "schneesturm" && (
+          fegen und kurz alles schlucken. Der Blizzard bekommt eine dritte -
+          und eine Wand aus Weiß, die zwischendurch alles nimmt. */}
+      {MIT_BOEEN.includes(lage) && (
         <>
           <div className="wetter-boe" data-tiefe="1" />
           <div className="wetter-boe" data-tiefe="2" />
+          {lage === "blizzard" && (
+            <>
+              <div className="wetter-boe" data-tiefe="3" />
+              <div className="wetter-weiss" />
+            </>
+          )}
         </>
       )}
     </div>
