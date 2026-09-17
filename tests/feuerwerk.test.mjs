@@ -72,7 +72,16 @@ console.log("\n2. Es steigt auf und leuchtet");
   laufen(feld, 4);
   const nach4 = zaehlen(feld);
   pruefe("nach vier Sekunden leuchtet etwas", nach4.leuchtend > 0, `${nach4.leuchtend} Funken`);
-  pruefe("und es ist über den Häusern", nach4.hoechster > 11, `${nach4.hoechster.toFixed(1)} m`);
+  /*
+   * Und es bleibt im Bild.
+   *
+   * Beide Kameras stehen fünf bis sieben Meter hoch und schauen fast
+   * waagerecht; was höher als ein gutes Stück über Straßenhöhe aufblüht,
+   * liegt über dem Bildrand und ist für den Spieler nicht da. Deshalb ist
+   * die Höhe hier eine Ober- und keine Untergrenze.
+   */
+  pruefe("es steigt über die Straße", nach4.hoechster > 5, `${nach4.hoechster.toFixed(1)} m`);
+  pruefe("bleibt aber im Bild", nach4.hoechster < 18, `${nach4.hoechster.toFixed(1)} m`);
   pruefe("nichts ist kaputtgerechnet", nach4.kaputt === 0);
 
   // Der lange Lauf: Wird der Vorrat wieder frei, brennt es auch nach einer
