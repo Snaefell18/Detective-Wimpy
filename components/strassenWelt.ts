@@ -125,8 +125,12 @@ export function strasseBauen({
 
   scene.add(new THREE.HemisphereLight(
     nacht ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xc2e9ff,
-    // Schnee wirft kaltes Licht zurück, Asphalt fast keines.
-    strassentyp === "schnee" ? (nacht ? 0x24405e : 0xd3e6f4) : nacht ? 0x161d2e : 0x3c4a44,
+    // Schnee wirft kaltes Licht zurück, Wiese ein warmes Grün, Asphalt fast keines.
+    strassentyp === "schnee"
+      ? (nacht ? 0x24405e : 0xd3e6f4)
+      : strassentyp === "gras"
+        ? (nacht ? 0x1d3326 : 0x5c8a4a)
+        : nacht ? 0x161d2e : 0x3c4a44,
     nacht ? 2.4 : 3,
   ));
   const licht = new THREE.DirectionalLight(
@@ -154,9 +158,12 @@ export function strasseBauen({
       ? (nacht ? 0x8fa9c4 : 0xf1f8ff)
       : strassentyp === "sand"
         ? (nacht ? 0x5a4a33 : 0xc6a678)
-        // Asphalt liegt in derselben Umgebung wie in der Stadt: kein Grün,
-        // sondern der blaugraue Grund, den auch das 3D-Kapitel zeigt.
-        : nacht ? 0x293448 : 0x4b5868;
+        // Die Wiese neben dem Feldweg - dieselben Töne wie im 3D-Kapitel.
+        : strassentyp === "gras"
+          ? (nacht ? 0x24382a : 0x63914a)
+          // Asphalt liegt in derselben Umgebung wie in der Stadt: kein Grün,
+          // sondern der blaugraue Grund, den auch das 3D-Kapitel zeigt.
+          : nacht ? 0x293448 : 0x4b5868;
   /*
    * Der Grund reicht so weit, wie Häuser stehen können.
    *
@@ -205,22 +212,23 @@ export function strasseBauen({
   } else {
     /*
      * Wo kein Asphalt ist, steht am Rand, was den Weg zeigt: rote
-     * Schneestangen in der Arktis, helle Pfosten in der Wüste - dieselben wie
-     * im 3D-Kapitel.
+     * Schneestangen in der Arktis, helle Pfosten in der Wüste, hölzerne
+     * Zaunpfähle am Feldweg - dieselben wie im 3D-Kapitel.
      */
-    const pfostenGeometrie = new THREE.CylinderGeometry(
-      0.05, 0.06, strassentyp === "schnee" ? 1.6 : 0.7, 5,
-    );
+    const pfostenHoehe =
+      strassentyp === "schnee" ? 1.6 : strassentyp === "gras" ? 1.2 : 0.7;
+    const pfostenGeometrie = new THREE.CylinderGeometry(0.05, 0.06, pfostenHoehe, 5);
     merken(pfostenGeometrie);
     const pfostenMaterial = new THREE.MeshToonMaterial({
-      color: strassentyp === "schnee" ? 0xd65a47 : 0xd2bb8b,
+      color:
+        strassentyp === "schnee" ? 0xd65a47 : strassentyp === "gras" ? 0x8a6a45 : 0xd2bb8b,
       gradientMap: gradient,
     });
     merken(pfostenMaterial);
     for (const seite of [-1, 1]) {
       for (let i = 0; i < 14; i++) {
         const pfosten = new THREE.Mesh(pfostenGeometrie, pfostenMaterial);
-        pfosten.position.set(seite * 5.4, strassentyp === "schnee" ? 0.8 : 0.35, i * 8 - 20);
+        pfosten.position.set(seite * 5.4, pfostenHoehe / 2, i * 8 - 20);
         scene.add(pfosten);
         zieht(pfosten, -24, 112);
       }
@@ -231,31 +239,83 @@ export function strasseBauen({
    * Die Landschaft dahinter.
    *
    * Ohne gewählte Bausteine ist sie gerechnet: Tannen im Schnee, Dünen im
-   * Sand, Häuserblöcke am Asphalt. Sind Bausteine gewählt, kommen stattdessen
-   * die Häuserzeilen - sonst stünde die gerechnete Landschaft vor ihnen und
-   * verdeckte genau das, was man sehen will.
+   * Sand, Bäume und Büsche an der Graspiste, Häuserblöcke am Asphalt. Sind
+   * Bausteine gewählt, kommen stattdessen die Häuserzeilen - sonst stünde die
+   * gerechnete Landschaft vor ihnen und verdeckte genau das, was man sehen
+   * will.
    */
+  const gras = strassentyp === "gras";
   const landGeometrie = strassentyp === "sand"
     ? new THREE.IcosahedronGeometry(2.4, 0)
     : strassentyp === "schnee"
       ? new THREE.ConeGeometry(1.4, 4, 5)
-      : new THREE.BoxGeometry(4.5, 9, 4.5);
+      : gras
+        // Die Krone eines Laubbaums - und mit flacher Skalierung ein Busch.
+        ? new THREE.IcosahedronGeometry(1.7, 0)
+        : new THREE.BoxGeometry(4.5, 9, 4.5);
   merken(landGeometrie);
   const landMaterialien = (strassentyp === "schnee"
     ? [0x3f7f78, 0xe8f4fb]
     : strassentyp === "sand"
       ? [0xd9b782, 0xc09a63]
-      : nacht ? [0x2b3a4d, 0x1d2836] : [0x6d7b8c, 0x55637a]
+      : gras
+        ? (nacht ? [0x1f3a2a, 0x27452f] : [0x3f7a44, 0x58913f])
+        : nacht ? [0x2b3a4d, 0x1d2836] : [0x6d7b8c, 0x55637a]
   ).map((farbe) => {
     const material = new THREE.MeshToonMaterial({ color: farbe, gradientMap: gradient });
     merken(material);
     return material;
   });
+  /** Nur für die Wiese: der Stamm, auf dem die Krone sitzt. */
+  const stammGeometrie = gras ? new THREE.CylinderGeometry(0.18, 0.26, 2.6, 6) : null;
+  const stammMaterial = gras
+    ? new THREE.MeshToonMaterial({ color: nacht ? 0x2a2119 : 0x6b4f33, gradientMap: gradient })
+    : null;
+  if (stammGeometrie) merken(stammGeometrie);
+  if (stammMaterial) merken(stammMaterial);
+
   for (let i = 0; !locations.length && i < 28; i++) {
-    const x = (i % 2 ? -1 : 1) * (strassentyp === "asphalt" ? 10 + (i % 3) * 1.5 : 7 + (i % 3));
+    const seite = i % 2 ? -1 : 1;
+    /*
+     * Wie weit weg von der Fahrbahnmitte.
+     *
+     * Bäume sind hoch und breit, und die Kamera schwebt zwölfeinhalb Meter
+     * links der Piste: Ein Baum, der dort im Bild steht, verdeckt die ganze
+     * Jagd. Rechts bleibt er hinter dem Straßenrand, links geht er hinter die
+     * Kamera. Tannen und Dünen sind klein genug, dass sie dort stehen
+     * bleiben dürfen, wo sie immer standen.
+     */
+    const abstand = strassentyp === "asphalt"
+      ? 10 + (i % 3) * 1.5
+      : gras
+        ? (seite < 0 ? 17 + (i % 3) * 2 : 11 + (i % 3) * 2)
+        : 7 + (i % 3);
+    const x = seite * abstand;
     const z = i * 4 - 25;
     const imWeg = freiHalten?.(x, z) ?? false;
     const stueck = new THREE.Mesh(landGeometrie, landMaterialien[i % landMaterialien.length]);
+    if (gras && stammGeometrie && stammMaterial) {
+      /*
+       * An der Graspiste steht ein Baum auf einem Stamm - und jeder dritte
+       * ist ein Busch, damit die Zeile nicht wie eine Allee aussieht.
+       */
+      const busch = i % 3 === 2;
+      const gruppe = new THREE.Group();
+      const hoehe = busch ? 0.55 : 0.75 + (i % 3) * 0.2;
+      stueck.scale.set(hoehe, hoehe * (busch ? 0.5 : 0.9), hoehe);
+      stueck.position.y = busch ? hoehe * 0.8 : 2.6 * hoehe + hoehe * 0.6;
+      gruppe.add(stueck);
+      if (!busch) {
+        const stamm = new THREE.Mesh(stammGeometrie, stammMaterial);
+        stamm.scale.set(hoehe, hoehe, hoehe);
+        stamm.position.y = 1.3 * hoehe;
+        gruppe.add(stamm);
+      }
+      gruppe.position.set(x, 0, imWeg ? z + 56 : z);
+      scene.add(gruppe);
+      zieht(gruppe, -30, 112);
+      continue;
+    }
     stueck.position.set(
       x,
       strassentyp === "sand" ? -0.9 : strassentyp === "schnee" ? 2 : 4.4,

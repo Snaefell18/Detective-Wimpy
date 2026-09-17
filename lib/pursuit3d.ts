@@ -56,7 +56,7 @@ export type DreiDWetter =
   | "blizzard"
   | "sandsturm"
   | "nebel";
-export type DreiDStrassentyp = "asphalt" | "sand" | "schnee";
+export type DreiDStrassentyp = "asphalt" | "sand" | "schnee" | "gras";
 
 export const DREI_D_TAGESZEITEN: { id: DreiDTageszeit; name: string }[] = [
   { id: "morgen", name: "Morgen" },
@@ -80,6 +80,7 @@ export const DREI_D_STRASSENTYPEN: { id: DreiDStrassentyp; name: string }[] = [
   { id: "asphalt", name: "Asphalt" },
   { id: "sand", name: "Sand" },
   { id: "schnee", name: "Schneestraße · Arktis" },
+  { id: "gras", name: "Graspiste · Wiese und Wald" },
 ];
 
 /**

@@ -243,10 +243,11 @@ Kapitellücke optional genau ein großes Ereignis einrichten:
   **Die Strecke** stellt man ein wie jede andere 3D-Welt des Spiels - im
   Editor der Jagd und ebenso in der Jagd vor dem Showdown:
 
-  - **Straßenbelag:** Asphalt, Sand oder Schneestraße. Er bestimmt auch das
-    Land ringsum: Tannen im Schnee, Dünen im Sand, Blöcke am Asphalt - und die
-    Markierung auf der Fahrbahn: leuchtende Striche auf Asphalt, rote
-    Schneestangen in der Arktis, helle Pfosten in der Wüste.
+  - **Straßenbelag:** Asphalt, Sand, Schneestraße oder Graspiste. Er bestimmt
+    auch das Land ringsum: Tannen im Schnee, Dünen im Sand, Bäume und Büsche
+    an der Graspiste, Blöcke am Asphalt - und die Markierung auf der Fahrbahn:
+    leuchtende Striche auf Asphalt, rote Schneestangen in der Arktis, helle
+    Pfosten in der Wüste, hölzerne Zaunpfähle am Feldweg.
   - **Tageszeit:** Morgen, Tag, Abend, Nacht - derselbe Himmel wie im
     3D-Kapitel.
   - **Wetter:** klar, Sonne, Regen, Schneefall, Schneesturm, Sandsturm oder
@@ -519,6 +520,21 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   legt Sand auf die Fahrbahn und treibt die Körner waagerecht und böig durchs
   Bild. Alle Szenen rechnen dafür mit denselben Zahlen
   (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
+- **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
+  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
+  durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
+  nur andersherum: Wo Räder fahren, ist das Gras weg und die Erde kommt durch,
+  also sind die beiden Spurrillen *heller* als der Belag, mit einem grünen
+  Streifen dazwischen, auf dem nie ein Rad läuft. Eine Mittellinie wird dort
+  nicht gemalt.
+
+  Ringsum steht, was aus einer grünen Fläche eine Wiese macht: Büsche in zwei
+  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand und ein paar Blumen
+  dazwischen (`grasLand` in `components/stadtBau.ts` - dieselbe Rechnung wie
+  das Schneeland, nur in Grün, und mit derselben festen Saat, damit die Wiese
+  im Editor so aussieht wie später im Spiel). Der Boden, das zurückgeworfene
+  Licht und die Staubfahne hinter den Reifen färben sich mit; nachts liegt die
+  Piste im Mondlicht statt im Mittagsgrün.
 - **Der Blizzard** ist kein stärkerer Schneesturm, sondern ein eigener
   Zustand: Die Welt endet nach wenigen Metern, der Schnee fliegt in zwei
   Schichten fast waagerecht vorbei, und Böen ziehen die Sicht immer wieder

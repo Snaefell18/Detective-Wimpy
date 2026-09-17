@@ -19,7 +19,7 @@ import {
   stadtZeile,
 } from "../lib/staedte.ts";
 import { STRASSE, beispielPlan, feldSetzen, leererPlan } from "../lib/stadtplan.ts";
-import { DREI_D_LOCATIONS } from "../lib/pursuit3d.ts";
+import { DREI_D_LOCATIONS, DREI_D_STRASSENTYPEN } from "../lib/pursuit3d.ts";
 import { SagaVorgabenSchema } from "../lib/schemas.ts";
 import { STANDARD_SAGA_VORGABEN } from "../lib/sagaTypen.ts";
 import { STANDARD_KAPITEL_3D } from "../lib/pursuit3d.ts";
@@ -83,6 +83,11 @@ console.log("\n2. Aus der Datenbank kommt nur Brauchbares zurück");
     stadtLesen({ ...stadt, wetter: "blizzard" })?.wetter === "blizzard");
   pruefe("eine Stadt im Sandsturm kommt heil zurück",
     stadtLesen({ ...stadt, wetter: "sandsturm", strassentyp: "sand" })?.wetter === "sandsturm");
+  pruefe("die Graspiste steht zur Wahl", STRASSENTYPEN.includes("gras"));
+  pruefe("sie hat auch einen Namen im Editor",
+    Boolean(DREI_D_STRASSENTYPEN.find((typ) => typ.id === "gras")?.name));
+  pruefe("und eine Stadt auf der Wiese kommt heil zurück",
+    stadtLesen({ ...stadt, strassentyp: "gras" })?.strassentyp === "gras");
 
   const kaputteDrehung = stadtLesen({ ...stadt, plan: { ...stadt.plan, drehungen: { "0,0": 999, "1,1": 90 } } });
   pruefe("unmögliche Drehungen fallen weg, brauchbare bleiben",
@@ -122,6 +127,14 @@ console.log("\n3. Auswählen heißt abschreiben");
   pruefe("mit ihrer Tankstelle", gespeichert.data?.kapitel3d[0].tankstelleId === zweitesHaus);
   pruefe("und ihrer Wache", gespeichert.data?.kapitel3d[0].polizeiId === haus);
   pruefe("und ihrem Licht", gespeichert.data?.kapitel3d[0].tageszeit === "nacht");
+
+  // Der vierte Belag kam später dazu - auch er muss durch die Prüfung passen.
+  const wiese = SagaVorgabenSchema.safeParse({
+    ...STANDARD_SAGA_VORGABEN,
+    kapitel3d: [{ ...STANDARD_KAPITEL_3D, aktiv: true, strassentyp: "gras" }],
+  });
+  pruefe("ein Kapitel auf der Graspiste kommt durch", wiese.success, wiese.error?.issues[0]?.message);
+  pruefe("und behält seinen Belag", wiese.data?.kapitel3d[0].strassentyp === "gras");
 }
 
 console.log("\n4. Die Zeile im Menü");

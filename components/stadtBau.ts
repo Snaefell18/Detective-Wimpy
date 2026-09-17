@@ -74,7 +74,7 @@ export function gradientTextur() {
 }
 
 /**
- * Der Belag einer Naturstraße - Sandpiste oder Schneefahrbahn.
+ * Der Belag einer Naturstraße - Sandpiste, Schneefahrbahn oder Graspiste.
  *
  * Bei Schnee ist die Farbe die halbe Miete: Schnee ist nicht weiß, sondern
  * bläulich, und was in ihn hineingedrückt wird, wird nicht grau, sondern
@@ -86,26 +86,77 @@ export function gradientTextur() {
  * meisten, Blau am wenigsten. Dazu kommt ein feines Glitzern, das man kaum
  * einzeln sieht, das der Fläche aber die Tiefe gibt, die weiße Farbe allein
  * nie hat.
+ *
+ * Die Graspiste dreht das um: Dort ist die Spur *heller* als der Belag, denn
+ * wo die Räder fahren, ist das Gras weg und die blanke Erde kommt durch.
+ * Genau daran erkennt man einen Feldweg - zwei erdige Bänder mit einem
+ * grünen Streifen dazwischen, auf dem nie ein Rad läuft.
  */
-export function naturStrassenTextur(schnee: boolean) {
+
+/** Wie eine Naturstraße aussieht - Grundfarbe, Spur und Korn. */
+const NATUR_BELAG: Record<
+  "sand" | "schnee" | "gras",
+  {
+    /** Die Grundfarbe der Fläche. */
+    basis: [number, number, number];
+    /**
+     * Was die Radspur je Kanal abzieht. Negative Werte heißen: Dort wird es
+     * heller - beim Gras kommt in der Spur die Erde durch.
+     */
+    spur: [number, number, number];
+    /** Wie stark das Korn rauscht. */
+    korn: number;
+    /** Und was der Rand tut: Schnee wird heller, Sand und Gras dunkler. */
+    rand: number;
+  }
+> = {
+  schnee: { basis: [228, 240, 251], spur: [52, 42, 26], korn: 9, rand: 8 },
+  sand: { basis: [199, 160, 105], spur: [29, 29, 29], korn: 14, rand: -22 },
+  /*
+   * Gras: sattes Wiesengrün, in der Spur die trockene Erde darunter
+   * (138/116/84). Ein kräftigeres Braun wurde unter der Sonne orange - ein
+   * Feldweg ist staubig, kein Backstein.
+   */
+  gras: { basis: [104, 140, 66], spur: [-34, 24, -18], korn: 13, rand: -16 },
+};
+
+export function naturStrassenTextur(art: "sand" | "schnee" | "gras") {
   const breite = 128, laenge = 512;
   const pixel = new Uint8Array(breite * laenge * 4);
-  /** Wie tief die Reifenspur je Kanal eindrückt - bei Schnee kalt, sonst grau. */
-  const spurTiefe = schnee ? [52, 42, 26] : [29, 29, 29];
+  const schnee = art === "schnee";
+  const gras = art === "gras";
+  const belag = NATUR_BELAG[art] ?? NATUR_BELAG.sand;
   for (let y = 0; y < laenge; y++) {
     for (let x = 0; x < breite; x++) {
       const u = x / (breite - 1);
       const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-      const korn = (rauschen - Math.floor(rauschen) - 0.5) * (schnee ? 9 : 14);
-      const spur = [0.22, 0.38, 0.62, 0.78].reduce((summe, mitte) =>
-        summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / 0.027) ** 2)), 0);
+      const korn = (rauschen - Math.floor(rauschen) - 0.5) * belag.korn;
+      /*
+       * Die Radspuren: weiche Bänder, die leicht schlängeln.
+       *
+       * Auf der Graspiste sind es nur zwei davon, dafür breitere - ein
+       * Feldweg hat zwei ausgefahrene Spuren und dazwischen Gras, keinen
+       * vierspurigen Acker.
+       */
+      const mitten = gras ? [0.28, 0.72] : [0.22, 0.38, 0.62, 0.78];
+      const breiteSpur = gras ? 0.075 : 0.027;
+      const spur = mitten.reduce((summe, mitte) =>
+        summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / breiteSpur) ** 2)), 0);
       const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
       const riffeln = Math.sin(y * 0.7 + u * 22) * (schnee ? 2 : 3);
       // Einzelne Kristalle blitzen auf - selten, klein, hell.
       const funkeln = schnee && (rauschen - Math.floor(rauschen)) > 0.985 ? 22 : 0;
-      const basis = schnee ? [228, 240, 251] : [199, 160, 105];
-      const farbe = basis.map((v, kanal) => THREE.MathUtils.clamp(
-        v + korn + riffeln + funkeln - spur * spurTiefe[kanal] + rand * (schnee ? 8 : -22),
+      /*
+       * Grashalme: ein kurzwelliges Muster quer und längs, damit die Wiese
+       * nicht wie ein grüner Teppich aussieht. Nur dort, wo Gras steht - in
+       * der ausgefahrenen Spur wächst nichts mehr.
+       */
+      const halme = gras
+        ? Math.sin(x * 1.9) * Math.sin(y * 0.8 + x * 0.3) * 13 * Math.max(0, 1 - spur)
+        : 0;
+      const farbe = belag.basis.map((v, kanal) => THREE.MathUtils.clamp(
+        v + korn + riffeln + funkeln + (kanal === 1 ? halme : halme * 0.35)
+          - spur * belag.spur[kanal] + rand * belag.rand,
         0,
         255,
       ));
@@ -533,6 +584,188 @@ export function schneeLand(args: {
   }
 }
 
+/* --- Das Grasland ---------------------------------------------------- */
+
+/**
+ * Was aus einer grünen Fläche eine Wiese macht.
+ *
+ * Dasselbe Problem wie beim Schnee, nur in Grün: Eine Farbfläche ist keine
+ * Landschaft. Erst was darauf steht, macht sie zu einer - Büsche, Bäume mit
+ * einem Stamm, an dem man die Entfernung ablesen kann, Grasbüschel am
+ * Wegrand und ein paar Blumen dazwischen, die man einzeln kaum sieht und
+ * ohne die es doch nach Rasen aussieht.
+ *
+ * Gebaut wird wie das Schneeland: wenige Geometrien und Materialien für
+ * alles zusammen, jedes Stück nur ein weiteres Objekt auf denselben Daten.
+ * Davon verträgt auch ein Handy einige Dutzend.
+ */
+export function grasLand(args: {
+  scene: THREE.Scene;
+  gradient: THREE.Texture;
+  merken: Merken;
+  /** Die Fläche, auf der etwas stehen darf - Kantenlängen in Metern. */
+  ausmass: { breite: number; tiefe: number };
+  /** Wo die Fläche liegt; der alte Straßenzug ist nach hinten versetzt. */
+  mitteZ?: number;
+  /** Der gelegte Stadtplan - dort bleiben Straßen und Häuser frei. */
+  plan?: Stadtplan | null;
+  /** Ohne Plan: Wie weit von der Straßenmitte nichts stehen darf. */
+  freieBreite?: number;
+  /** Ein Punkt, um den herum nichts steht - dort fängt man an zu laufen. */
+  startPunkt?: { x: number; z: number } | null;
+  /** Wie viele Stücke höchstens - das Gerät zählt mit. */
+  menge?: number;
+  /** Abends und nachts steht die Wiese in einem anderen Grün. */
+  tageszeit?: DreiDTageszeit;
+}): void {
+  const {
+    scene, gradient, merken, ausmass, mitteZ = 0, plan = null,
+    freieBreite = 5.4, startPunkt = null, menge = 26, tageszeit = "tag",
+  } = args;
+
+  const nacht = tageszeit === "nacht";
+  const abend = tageszeit === "abend";
+  /*
+   * Drei Geometrien für alles: eine Kugel (Busch und Baumkrone), ein Kegel
+   * (Grasbüschel) und ein Zylinder (Stamm). Die Blumen sind dieselbe Kugel,
+   * nur klein und bunt.
+   */
+  const kugelGeometrie = new THREE.IcosahedronGeometry(1, 0);
+  const buschelGeometrie = new THREE.ConeGeometry(0.34, 0.9, 5);
+  const stammGeometrie = new THREE.CylinderGeometry(0.12, 0.17, 1.6, 6);
+  const gruen = (farbe: number) =>
+    new THREE.MeshToonMaterial({ color: farbe, gradientMap: gradient });
+  /** Zwei Grüntöne, damit nicht jeder Busch derselbe ist. */
+  const laub = [
+    gruen(nacht ? 0x1f3a2a : abend ? 0x4a6b3c : 0x3f7a44),
+    gruen(nacht ? 0x27452f : abend ? 0x5d7a44 : 0x58913f),
+  ];
+  const halmMaterial = gruen(nacht ? 0x2c4a33 : abend ? 0x6c8348 : 0x7aa64c);
+  const stammMaterial = gruen(nacht ? 0x2a2119 : 0x6b4f33);
+  /** Die Blumen: Weiß, Gelb und Rot - nachts bleiben sie aus. */
+  const blumen = [0xf6f2e2, 0xffd75e, 0xe8615c].map(
+    (farbe) => new THREE.MeshBasicMaterial({ color: farbe }),
+  );
+  for (const stueck of [
+    kugelGeometrie, buschelGeometrie, stammGeometrie,
+    ...laub, halmMaterial, stammMaterial, ...blumen,
+  ]) {
+    merken(stueck);
+  }
+
+  /*
+   * Immer dieselbe Wiese - derselbe Grund wie beim Schneeland: Wer eine
+   * Stadt im Editor einrichtet, soll sie beim Spielen wiedererkennen.
+   */
+  let saat = 20260917;
+  const zufall = () => {
+    saat = (saat * 1664525 + 1013904223) % 4294967296;
+    return saat / 4294967296;
+  };
+
+  /** Ist hier Platz? Auf Straßen, Häusern und vor den Füßen steht nichts. */
+  const frei = (x: number, z: number): boolean => {
+    if (startPunkt && Math.hypot(x - startPunkt.x, z - startPunkt.z) < 11) return false;
+    if (!plan) return Math.abs(x) > freieBreite;
+    const feld = feldBei(plan, x, z);
+    return !imPlan(plan, feld.x, feld.z) || feldAn(plan, feld.x, feld.z) === "";
+  };
+
+  /** Dicht am Weg wächst nur Gras - ein Baum dort nähme die Sicht. */
+  const amRand = (x: number) => !plan && Math.abs(x) < 14;
+
+  /** Ein Grasbüschel - drei schiefe Halme aus einem Kegel. */
+  const buschel = (x: number, z: number, groesse: number) => {
+    for (let i = 0; i < 3; i++) {
+      const halm = new THREE.Mesh(buschelGeometrie, halmMaterial);
+      halm.scale.set(groesse, groesse * (0.8 + zufall() * 0.7), groesse);
+      halm.rotation.set((zufall() - 0.5) * 0.5, zufall() * Math.PI, (zufall() - 0.5) * 0.5);
+      halm.position.set(x + (zufall() - 0.5) * 0.5, 0.35 * groesse, z + (zufall() - 0.5) * 0.5);
+      halm.castShadow = true;
+      scene.add(halm);
+    }
+  };
+
+  /*
+   * Der Saum am Wegrand.
+   *
+   * Beim Schnee ist es der Wall des Pflugs, hier das hohe Gras, das
+   * stehenbleibt, wo keine Räder fahren. Im Stadtraster gibt es ihn nicht -
+   * dort liegt die Straße feldweise, und ein durchgehender Saum stünde quer
+   * über jeder Kreuzung.
+   */
+  if (!plan) {
+    for (const seite of [-1, 1]) {
+      for (let z = -ausmass.tiefe / 2; z < ausmass.tiefe / 2; z += 2.6) {
+        buschel(
+          seite * (freieBreite + 0.3 + zufall() * 0.5),
+          mitteZ + z + zufall(),
+          0.7 + zufall() * 0.5,
+        );
+      }
+    }
+  }
+
+  const halbeBreite = ausmass.breite / 2;
+  const halbeTiefe = ausmass.tiefe / 2;
+  let gesetzt = 0;
+  // Mehr Versuche als Stücke: Wer auf einer Straße landet, tritt zurück.
+  for (let versuch = 0; versuch < menge * 4 && gesetzt < menge; versuch++) {
+    const x = (zufall() - 0.5) * 2 * halbeBreite;
+    const z = mitteZ + (zufall() - 0.5) * 2 * halbeTiefe;
+    if (!frei(x, z)) continue;
+    gesetzt++;
+    const wuerfel = zufall();
+
+    // Nah am Weg: Gras und Blumen, nichts, was die Sicht nimmt.
+    if (amRand(x) || wuerfel < 0.3) {
+      buschel(x, z, 0.8 + zufall() * 0.6);
+      if (!nacht && zufall() < 0.55) {
+        const blume = new THREE.Mesh(kugelGeometrie, blumen[Math.floor(zufall() * blumen.length)]);
+        const gross = 0.07 + zufall() * 0.05;
+        blume.scale.setScalar(gross);
+        blume.position.set(x + (zufall() - 0.5) * 1.2, 0.5 + zufall() * 0.2, z + (zufall() - 0.5) * 1.2);
+        scene.add(blume);
+      }
+      continue;
+    }
+
+    // Ein Busch: flach, breit, in einem der beiden Grüntöne.
+    if (wuerfel < 0.68) {
+      const busch = new THREE.Mesh(kugelGeometrie, laub[Math.floor(zufall() * laub.length)]);
+      const groesse = 0.7 + zufall() * 1.1;
+      busch.scale.set(groesse, groesse * (0.55 + zufall() * 0.35), groesse * (0.85 + zufall() * 0.4));
+      busch.rotation.set(zufall() * 0.3, zufall() * Math.PI, zufall() * 0.3);
+      busch.position.set(x, groesse * 0.35, z);
+      busch.castShadow = true;
+      busch.receiveShadow = true;
+      scene.add(busch);
+      continue;
+    }
+
+    // Oder ein Baum: Stamm und eine Krone aus zwei versetzten Kugeln.
+    const hoehe = 0.9 + zufall() * 0.8;
+    const stamm = new THREE.Mesh(stammGeometrie, stammMaterial);
+    stamm.scale.set(hoehe, hoehe, hoehe);
+    stamm.position.set(x, 0.8 * hoehe, z);
+    stamm.castShadow = true;
+    scene.add(stamm);
+    const ton = laub[Math.floor(zufall() * laub.length)];
+    for (const versatz of [0, 1]) {
+      const krone = new THREE.Mesh(kugelGeometrie, ton);
+      const weite = (1.05 + zufall() * 0.5) * hoehe * (versatz ? 0.72 : 1);
+      krone.scale.set(weite, weite * 0.85, weite);
+      krone.position.set(
+        x + (versatz ? (zufall() - 0.5) * 0.9 * hoehe : 0),
+        (versatz ? 2.35 : 1.95) * hoehe,
+        z + (versatz ? (zufall() - 0.5) * 0.9 * hoehe : 0),
+      );
+      krone.castShadow = true;
+      scene.add(krone);
+    }
+  }
+}
+
 /* --- Der Sandsturm -------------------------------------------------- */
 
 /**
@@ -802,7 +1035,7 @@ export function fahrbahnMaterial(args: {
   const { gradient, strassentyp, tageszeit, wetter, imRaster, merken } = args;
   const asphalt = imRaster && strassentyp === "asphalt" ? asphaltTextur(tageszeit === "nacht") : null;
   if (asphalt) merken(asphalt);
-  const natur = strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp === "schnee") : null;
+  const natur = strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp) : null;
   if (natur) merken(natur);
   const material = new THREE.MeshToonMaterial({
     map: natur ?? asphalt,
@@ -823,6 +1056,14 @@ export function fahrbahnMaterial(args: {
       // Die geräumte Fahrbahn ist festgefahren und damit eine Spur dunkler
       // und kälter als der Schnee daneben; im Regen wird sie zu Matsch.
       ? wetter === "regen" ? 0xc8d9e8 : 0xe8f1fa
+      /*
+       * Die Graspiste bringt ihre Farbe in der Textur mit - hier wird sie
+       * nur noch von Wetter und Tageszeit angefasst: Regen macht aus den
+       * Spurrillen Matsch, und nachts liegt die Wiese im Mondlicht, statt
+       * so grün zu leuchten wie am Mittag.
+       */
+      : strassentyp === "gras"
+      ? wetter === "regen" ? 0xa8b596 : tageszeit === "nacht" ? 0x93a892 : 0xffffff
       : strassentyp !== "asphalt"
       ? wetter === "regen" ? 0xb1a18a : 0xffffff
       : wetter === "regen" ? 0x263a4a : imRaster ? 0xffffff : tageszeit === "nacht" ? 0x202b3c : 0x52606c,
@@ -857,6 +1098,8 @@ export function strassenBauen(args: {
   const strichMaterial = new THREE.MeshBasicMaterial({
     color: strassentyp === "asphalt" ? 0xe8e2b8 : 0xdfe7ea,
     transparent: true,
+    // Auf die Graspiste malt niemand eine Mittellinie - dort werden gar
+    // keine gesetzt (siehe unten).
     opacity: 0.65,
   });
   merken(strichGeometrie);
@@ -943,10 +1186,11 @@ export function strassenBauen(args: {
               : { x: -1, z: 0 };
       laterne(schmuck, nach.x * kante, nach.z * kante, nach);
     }
-    // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen.
+    // Mittellinie nur auf der durchgehenden Strecke, nicht auf Kreuzungen -
+    // und gar nicht auf der Graspiste (siehe strichMaterial).
     const laengs = nachbarn.nord && nachbarn.sued && !nachbarn.west && !nachbarn.ost;
     const quer = nachbarn.west && nachbarn.ost && !nachbarn.nord && !nachbarn.sued;
-    if (laengs || quer) {
+    if ((laengs || quer) && strassentyp !== "gras") {
       for (const versatz of [-2.4, 0, 2.4]) {
         const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
         strich.rotation.x = -Math.PI / 2;
