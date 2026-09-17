@@ -488,7 +488,14 @@ function feuerwerkFeld(args: {
   merken(bild);
   const material = new THREE.PointsMaterial({
     map: bild,
-    size: 1.05 * groesse,
+    /*
+     * Die Funkengröße hängt nur wenig am Maß der Szene.
+     *
+     * `groesse` ist für Flocken gedacht, die in zwanzig Metern noch zu sehen
+     * sein müssen; die Funken stehen ohnehin nah. Voll durchgereicht wurden
+     * daraus in der Verfolgungsjagd weiche Bälle statt Funken.
+     */
+    size: 0.8 + (groesse - 1) * 0.25,
     vertexColors: true,
     transparent: true,
     depthWrite: false,
@@ -541,28 +548,43 @@ function feuerwerkFeld(args: {
     farbe[i] = farbe_;
   };
 
-  /** Eine neue Rakete - neben der Straße, nicht mittendrin. */
+  /**
+   * Eine neue Rakete - über der Straße, im Bild.
+   *
+   * Der erste Anlauf schickte sie weit nach hinten und hoch über die Dächer,
+   * weil es dort hingehört. Nur sieht man sie dort nicht: Beide Kameras
+   * schauen fast waagerecht und stehen fünf bis sieben Meter hoch - der
+   * Himmelstreifen über dem Bildrand ist ein schmaler Saum, und alles, was
+   * weit weg hoch aufblüht, liegt darüber.
+   *
+   * Also andersherum: nah genug, dass die Rakete durch das ganze Bild steigt,
+   * und knapp über Straßenhöhe, wo der Blick ohnehin hinfällt. Das ist kein
+   * Feuerwerk über der Stadt mehr, sondern eines mitten darin - und genau
+   * das sieht man.
+   */
   const starten = () => {
     const i = freierPlatz();
     if (i < 0) return;
     const seite = Math.random() < 0.5 ? -1 : 1;
-    const x = seite * (2 + Math.random() * 9);
-    /*
-     * Weit vorn, nicht über dem Kopf.
-     *
-     * Beide Kameras schauen fast waagerecht: Die Stadt zeigt vom Spieler aus
-     * einen Himmelstreifen von knapp zehn Grad, die Verfolgungsjagd noch
-     * weniger. Was in dreißig Metern Entfernung zwanzig Meter hoch aufblüht,
-     * liegt über dem Bildrand und ist für den Spieler schlicht nicht da.
-     * Deshalb steigen die Raketen ein gutes Stück entfernt auf und blühen
-     * knapp über den Dächern - dort, wo der Himmelstreifen ist.
-     */
-    const z = versatzZ - (40 + Math.random() * 25);
+    // Über der Fahrbahn und dem Gehweg, nicht hinter den Häuserzeilen.
+    const x = seite * (2 + Math.random() * 10);
+    const z = versatzZ - (10 + Math.random() * 34);
     setzen(i, x, 0.6, z, 1, 6, Math.floor(Math.random() * FEUERWERK_FARBEN.length));
     vx[i] = (Math.random() - 0.5) * 1.2;
-    vy[i] = 10 + Math.random() * 2.5;
+    vy[i] = 7.5 + Math.random() * 2;
     vz[i] = (Math.random() - 0.5) * 1.2;
-    ziel[i] = 9.5 + Math.random() * 3.5;
+    /*
+     * Zwei Stockwerke über der Straße - und das ist Absicht.
+     *
+     * Ausgerechnet ist es aus den beiden Kameras: Die Stadt schaut aus fünf
+     * Metern Höhe vierzehn Grad nach unten, die Verfolgungsjagd aus sieben
+     * Metern noch steiler. In beiden Bildern liegt der Bereich, in dem eine
+     * Kugel wirklich auffällt, bei sechs bis acht Metern über dem Boden -
+     * darüber schiebt sie sich aus dem Bild, darunter zerplatzt sie zwischen
+     * den Autodächern. Die Rakete steigt also durch das ganze Bild und blüht
+     * knapp unter dem oberen Rand.
+     */
+    ziel[i] = 5.5 + Math.random() * 2.5;
   };
 
   /** Und ihr Ende: die Kugel, die auseinanderfliegt. */
@@ -602,7 +624,7 @@ function feuerwerkFeld(args: {
       starten();
       // Manchmal zwei kurz hintereinander - das wirkt gefeiert statt getaktet.
       if (Math.random() < 0.28) starten();
-      naechste = 0.55 + Math.random() * 1.1;
+      naechste = 0.4 + Math.random() * 0.85;
     }
 
     for (let i = 0; i < vorrat; i++) {

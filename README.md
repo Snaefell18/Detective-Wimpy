@@ -210,6 +210,20 @@ danach noch einmal, diesmal in der Arena. Erst dann kommt der Epilog. Wer den
 Finalfall nicht löst, sieht keinen Kampf; und brach im Täter eine Gestalt
 hervor, steht sie in der Arena, nicht ihr Wirt.
 
+#### Verloren vor Gericht: noch einmal verhandeln
+
+Ein geplatztes Verfahren ist nicht das Ende der Saga. Unter dem Urteil steht
+**„Noch einmal verhandeln ›"**: Die Anklage steht wieder offen, die Versuche
+sind wieder voll, niemand gilt mehr als abgewiesen, und die Anhörung beginnt
+als neues Gespräch - mit allem, was in der Beweismitteltasche liegt. Das gilt
+für jede Verhandlung, ob man selbst anklagt oder verteidigt.
+
+Zwei Dinge bleiben dabei stehen: Öhö zieht nicht noch einmal ein (er ist ja
+schon da - die Zeremonie ein zweites Mal wäre Wartezeit), und wer schuldig ist,
+ändert sich nicht; das steht seit der Erzeugung im versiegelten Bogen. Wer
+lieber weitergeht, nimmt den zweiten Knopf: „Genug für heute - zum Epilog ›".
+Erst der führt wie früher in den Epilog und danach in den Abspann.
+
 #### Gericht & Flucht: Urteil, Jagd, Kampf
 
 Die Finale-Art **„Gericht & Flucht“** ist beides zusammen. Sie beginnt wie
@@ -563,15 +577,20 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   (`components/stadtBau.ts`), damit man überall im selben Wetter steht.
 - **Feuerwerk** ist die eine Lage, bei der nichts fällt, sondern etwas
   aufsteigt: Eine Rakete zieht mit Funkenschweif nach oben, wird langsamer und
-  blüht knapp über den Dächern zu einer Kugel auf, die auseinandertreibt,
-  sinkt und weich ausgeht - dann die nächste, an anderer Stelle, in anderer
-  Farbe. Am schönsten nachts, aber zu jeder Tageszeit erlaubt; die Sicht ändert
-  es nicht. Bewusst **ohne Blitzen**: Die Szene wird nirgends kurz hell, kein
-  Licht zuckt, nichts pulst schnell - der hellste Augenblick eines Funkens ist
-  sein erster, danach geht er über anderthalb Sekunden aus. Gerechnet wird
-  alles in einem einzigen Punktefeld mit festem Vorrat, das auch auf einem
-  Telefon ruhig durchläuft. Und es steigt ein gutes Stück entfernt auf: Die
-  Kameras schauen fast waagerecht, was näher aufblüht, läge über dem Bildrand.
+  blüht zu einer Kugel auf, die auseinandertreibt, sinkt und weich ausgeht -
+  dann die nächste, an anderer Stelle, in anderer Farbe. Am schönsten nachts,
+  aber zu jeder Tageszeit erlaubt; die Sicht ändert es nicht. Bewusst **ohne
+  Blitzen**: Die Szene wird nirgends kurz hell, kein Licht zuckt, nichts pulst
+  schnell - der hellste Augenblick eines Funkens ist sein erster, danach geht
+  er über anderthalb Sekunden aus. Gerechnet wird alles in einem einzigen
+  Punktefeld mit festem Vorrat, das auch auf einem Telefon ruhig durchläuft.
+
+  Es steigt **über der Straße** auf, zehn bis vierzig Meter voraus, und blüht
+  sechs bis acht Meter hoch - also vor den Fassaden und knapp unter dem oberen
+  Bildrand, nicht hoch über den Dächern. Das ist ausgerechnet und nicht
+  geraten: Beide Kameras schauen fast waagerecht (die Stadt aus fünf Metern
+  vierzehn Grad nach unten, die Verfolgungsjagd aus sieben Metern noch
+  steiler), und was höher aufblüht, liegt schlicht über dem Bild.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
   Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
   durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,

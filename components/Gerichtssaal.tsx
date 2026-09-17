@@ -130,6 +130,43 @@ export function Gerichtssaal({
   >(null);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  /**
+   * Wie oft schon verhandelt wurde.
+   *
+   * Die Zahl hängt an der Anhörung: Sie führt ihr Gespräch selbst, mit
+   * Verlauf, Überzeugung, Geduld und den Stücken, die schon auf dem Tisch
+   * liegen. Eine neue Runde ist ein neues Gespräch - und das bekommt sie am
+   * ehrlichsten, indem sie noch einmal von vorn gebaut wird.
+   */
+  const [runde, setRunde] = useState(0);
+  /** Wie oft der Saal schon gegen Wimpy entschieden hat. */
+  const [niederlagen, setNiederlagen] = useState(0);
+
+  /**
+   * Noch einmal verhandeln.
+   *
+   * Eine verlorene Verhandlung war bisher das Ende der Saga: Öhö schloss die
+   * Akte, und danach kam der Epilog. Das ist hart für einen Abend, an dem man
+   * fünf Kapitel lang Beweise gesammelt hat - und anders als ein verlorener
+   * Fall lässt sich eine Verhandlung ohne Weiteres wiederholen: Wer schuldig
+   * ist, steht im Bogen und ändert sich nicht.
+   *
+   * Zurückgesetzt wird alles, was im Saal passiert ist - die Anklage samt
+   * ihrer Versuche, die Abgewiesenen, das Urteil, das Gespräch. Der Einzug
+   * des Gerichts bleibt, wo er war: Öhö ist schon da, und die Zeremonie ein
+   * zweites Mal wäre keine Zeremonie mehr, sondern Wartezeit.
+   */
+  const nochEinmal = () => {
+    setUrteil(null);
+    setSpruch(null);
+    setWandelt(null);
+    setGewaehlt(null);
+    setAbgewiesen([]);
+    setVersuche(verhandlung.anklageVersuche ?? 2);
+    setBank(klagenNoetig ? undefined : finde(verhandlung.bankId ?? ""));
+    setFehler(null);
+    setRunde((wert) => wert + 1);
+  };
 
   /* --- Die Anklage ---------------------------------------------------- */
 
@@ -175,6 +212,7 @@ export function Gerichtssaal({
         30,
       );
       setUrteil({ text, geschafft, strafe });
+      if (!geschafft) setNiederlagen((wert) => wert + 1);
     } catch {
       // Ohne Netz endet die Verhandlung trotzdem - nur eben wortkarg.
       setUrteil({
@@ -183,6 +221,7 @@ export function Gerichtssaal({
           : "Der Vorsitz schließt die Akte. Mehr war heute nicht zu holen.",
         geschafft,
       });
+      if (!geschafft) setNiederlagen((wert) => wert + 1);
     }
   };
 
@@ -255,8 +294,29 @@ export function Gerichtssaal({
             </div>
           )}
 
+          {/*
+            Verloren heißt nicht vorbei.
+
+            Wer die Verhandlung nicht gewinnt, bekommt sie noch einmal -
+            dieselbe Anklage, dieselbe Tasche, von vorn. Erst der zweite Knopf
+            führt weiter, und dann steht auch dort, wohin: in den Epilog.
+          */}
+          {!urteil.geschafft && (
+            <>
+              <p className="saal-noch-einmal">
+                Öhö hat die Akte geschlossen - aber er hat sie noch nicht
+                weggelegt.
+                {niederlagen > 1
+                  ? ` Zum ${niederlagen + 1}. Mal: Die Anklage steht dir wieder offen.`
+                  : " Die Verhandlung lässt sich noch einmal führen, mit allem, was du mitgebracht hast."}
+              </p>
+              <button className="knopf aktion" onClick={nochEinmal}>
+                Noch einmal verhandeln ›
+              </button>
+            </>
+          )}
           <button
-            className="knopf aktion"
+            className={urteil.geschafft ? "knopf aktion" : "knopf"}
             onClick={() => {
               // Wo es gleich weitergeht, gibt es noch nichts zu bejubeln:
               // Der Verurteilte ist schon durch die Tür.
@@ -266,7 +326,11 @@ export function Gerichtssaal({
           >
             {/* Nur nach einem Schuldspruch rennt jemand: Wer freikommt,
                 geht durch die Vordertür, und danach kommt der Epilog. */}
-            {nachjagd && urteil.geschafft ? "Ihm nach ›" : "Weiter ›"}
+            {urteil.geschafft
+              ? nachjagd
+                ? "Ihm nach ›"
+                : "Weiter ›"
+              : "Genug für heute - zum Epilog ›"}
           </button>
         </div>
       </div>
@@ -438,6 +502,9 @@ export function Gerichtssaal({
    */
   return (
     <Anhoerung
+      // Eine neue Runde ist ein neues Gespräch: Verlauf, Überzeugung, Geduld
+      // und die vorgelegten Stücke fangen von vorn an.
+      key={runde}
       art={verhandlung.art}
       bogenSiegel={bogenSiegel}
       frage={frage}
