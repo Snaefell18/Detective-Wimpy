@@ -56,6 +56,9 @@ const BLENDE = 3;
 /** So lange steht der Titel im Bild, danach gehört es der Straße. */
 const TITEL_ZEIT = 11;
 
+/** Ohne Song (oder ohne erlaubten Ton) fährt der Abspann diese Zeit lang. */
+const STUMME_DAUER = 50;
+
 const weich = (t: number) => t * t * (3 - 2 * t);
 
 /** Räder, die sich wirklich drehen können - falls das Modell welche mitbringt. */
@@ -408,7 +411,9 @@ export function StrassenCredits({
   const [bereit, setBereit] = useState(false);
   const [fehler, setFehler] = useState("");
   const [startNoetig, setStartNoetig] = useState(false);
-  const laeuft = useRef(true);
+  // Solange das false ist, stehen die beiden noch am Straßenrand: Die Fahrt
+  // beginnt mit der Musik, nicht vor ihr.
+  const laeuft = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const welt = abspannWelt(vorgabe);
@@ -417,9 +422,6 @@ export function StrassenCredits({
     (id) => ANIMATIONS_MODELLE.find((modell) => modell.id === id) ?? ANIMATIONS_MODELLE[0],
   );
   const auto = autos.find((a) => a.id === vorgabe.autoId) ?? autos[0];
-
-  /** Ohne Song (oder ohne Ton) fährt der Abspann diese Zeit lang. */
-  const STUMME_DAUER = 50;
 
   /*
    * Die Uhr des Abspanns ist der Song.
