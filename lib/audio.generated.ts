@@ -3,8 +3,13 @@
  * Nicht von Hand ändern: Beim nächsten Build wird die Datei überschrieben.
  */
 export const AUDIO_DATEIEN: string[] = [
+  "/audio/affentrommel.mp3",
+  "/audio/Arabischer Chinchi.mp3",
+  "/audio/bellabell.mp3",
   "/audio/bockbruder.mp3",
+  "/audio/californiadreaming.mp3",
   "/audio/evilquana.mp3",
+  "/audio/evilwimpy.mp3",
   "/audio/geckerl.mp3",
   "/audio/greenvalleyintro.mp3",
   "/audio/hutsong.mp3",
@@ -24,6 +29,8 @@ export const AUDIO_DATEIEN: string[] = [
   "/audio/kopf_3.mp3",
   "/audio/kopf_4.mp3",
   "/audio/kopf_5.mp3",
+  "/audio/Menschenbär.mp3",
+  "/audio/Menschenbär.mp3",
   "/audio/newplayer.mp3",
   "/audio/pj_1.mp3",
   "/audio/pj_2.mp3",
@@ -34,5 +41,6 @@ export const AUDIO_DATEIEN: string[] = [
   "/audio/richter.mp3",
   "/audio/teufel.mp3",
   "/audio/teufel2.mp3",
+  "/audio/trampili.mp3",
   "/audio/winner.mp3",
 ];

@@ -186,7 +186,20 @@ export async function speichereSaga(saga: Saga): Promise<void> {
     doc(getDb(), "sagen", saga.id),
     sauber({
       ...saga,
-      vorgaben: { ...saga.vorgaben, kapitel3d: bereinigteSaga3D(saga) },
+      vorgaben: {
+        ...saga.vorgaben,
+        kapitel3d: bereinigteSaga3D(saga),
+        // Auch der Abspann wird gekürzt: Song und Text sind frei eingetippt.
+        ...(saga.vorgaben.abspann
+          ? {
+              abspann: {
+                ...saga.vorgaben.abspann,
+                song: kuerze(saga.vorgaben.abspann.song, 200),
+                text: kuerze(saga.vorgaben.abspann.text, 4000),
+              },
+            }
+          : {}),
+      },
       name: kuerze(saga.name, 120),
       thema: kuerze(saga.thema, 2000),
       klappentext: kuerze(saga.klappentext, 2000),
@@ -232,6 +245,17 @@ export async function speichereArc(arc: Arc): Promise<void> {
       finale: {
         ...arc.finale,
         creditsSong: kuerze(arc.finale.creditsSong ?? "", 200),
+        // Der Abspann bringt Song und Text mit - beide werden gekürzt, bevor
+        // ein Dokument daran zu groß wird.
+        ...(arc.finale.abspann
+          ? {
+              abspann: {
+                ...arc.finale.abspann,
+                song: kuerze(arc.finale.abspann.song, 200),
+                text: kuerze(arc.finale.abspann.text, 4000),
+              },
+            }
+          : {}),
         // Der Showdown bringt eigene Texte mit - auch sie werden gekürzt,
         // bevor Firestore sie ablehnt.
         ...(arc.finale.kampf

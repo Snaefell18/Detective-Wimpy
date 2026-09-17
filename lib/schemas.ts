@@ -474,6 +474,25 @@ export const KampfVorgabeSchema = z.object({
   jagd: JagdSchema.nullable().default(null).catch(null),
 });
 
+/**
+ * Der Abspann - die Straßenfahrt oder die Textrolle nach dem Epilog.
+ *
+ * Alles daran darf fehlen oder verrutschen: Was hier nicht stimmt, bekommt
+ * seinen Standardwert, und im schlimmsten Fall endet die Saga wie früher mit
+ * dem Epilog. Ein Abspann ist Zugabe, kein Teil der Geschichte.
+ */
+export const AbspannSchema = z.object({
+  art: z.enum(["keiner", "strassenfahrt", "rolle"]).default("keiner").catch("keiner"),
+  song: z.string().max(200).default("").catch(""),
+  modelle: z.array(z.string().max(80)).max(2).default([]).catch([]),
+  autoId: z.string().max(100).default("").catch(""),
+  strassentyp: DreiDStrassentypSchema().default("asphalt").catch("asphalt"),
+  tageszeit: DreiDTageszeitSchema().default("abend").catch("abend"),
+  wetter: DreiDWetterSchema().default("klar").catch("klar"),
+  locations: z.array(ausAuswahl(GENERIERTE_3D_LOCATION_IDS)).max(3).default([]).catch([]),
+  text: z.string().max(4000).default("").catch(""),
+});
+
 export const SagaVorgabenSchema = z.object({
   name: z.string().max(120),
   thema: z.string().max(2000),
@@ -583,6 +602,8 @@ export const SagaVorgabenSchema = z.object({
   /** Die Arena, wenn die Saga im Showdown endet. Fehlt sie, endet sie klassisch. */
   kampf: KampfVorgabeSchema.optional(),
   gerichtTon: z.string().max(200).default(""),
+  /** Der Abspann nach dem Epilog. Fehlt er, endet die Saga wie bisher. */
+  abspann: AbspannSchema.optional(),
   ortsAnzahl: z.number().min(2).max(8),
   beschuldigungen: z.number().min(1).max(5),
 });

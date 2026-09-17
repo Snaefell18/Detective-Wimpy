@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Szene } from "./Bild";
-import { spiele, stand, stoppe } from "@/lib/introAudio";
+import { leseDauer, passendeAnzahl, tafelnVerteilen } from "@/lib/introTiming";
+import { useIntroUhr } from "@/lib/introUhr";
 import { ohneNamen, spaeteNamen, worteOhneNamen } from "@/lib/namenSchutz";
 import type { Saga } from "@/lib/sagaTypen";
 
@@ -20,13 +21,15 @@ import type { Saga } from "@/lib/sagaTypen";
  */
 const STUMME_DAUER = 30;
 
-type Szenenbild =
-  | { art: "praesentiert"; von: number; bis: number }
-  | { art: "titel"; von: number; bis: number }
-  | { art: "wort"; nr: number; wort: string; von: number; bis: number }
-  | { art: "thema"; von: number; bis: number }
-  | { art: "kapitel"; von: number; bis: number }
-  | { art: "einsatz"; von: number; bis: number };
+type Tafel =
+  | { art: "praesentiert"; dauer: number }
+  | { art: "titel"; dauer: number }
+  | { art: "wort"; nr: number; wort: string; dauer: number }
+  | { art: "thema"; dauer: number }
+  | { art: "kapitel"; dauer: number }
+  | { art: "einsatz"; dauer: number };
+
+type Szenenbild = Tafel & { von: number; bis: number };
 
 /**
  * Die Saga, wie der Vorspann sie zeigen darf.
@@ -68,37 +71,35 @@ function schlagworte(saga: Saga): string[] {
     .slice(0, 4);
 }
 
-/** Der Ablauf, aufgeteilt auf 0…1 der Musik. */
-function szenenPlan(worte: string[], kapitelAnzahl: number): Szenenbild[] {
-  const plan: Szenenbild[] = [
-    { art: "praesentiert", von: 0, bis: 0.1 },
-    { art: "titel", von: 0.1, bis: 0.3 },
+/**
+ * Der Ablauf - jede Tafel mit der Zeit, die ihr Text zum Vorlesen braucht.
+ *
+ * Vorher standen hier feste Anteile: das Überthema bekam sechzehn Prozent der
+ * Musik, der Klappentext am Ende acht. Bei einem Titelsong von dreiviertel
+ * Minuten sind das sieben und dreieinhalb Sekunden - für einen Absatz, den
+ * jemand vorlesen soll, ist das nichts. Jetzt sagt jede Tafel selbst, wie
+ * lange sie steht (lib/introTiming.ts).
+ */
+function tafelnFuer(saga: Saga, worte: string[], songDauer: number): Tafel[] {
+  const kapitel = saga.kapitel.map((k) => k.name).join(", ");
+  return [
+    { art: "praesentiert", dauer: leseDauer("Detective Wimpy in") },
+    { art: "titel", dauer: leseDauer(`Eine Saga in ${saga.kapitel.length} Fällen ${saga.name}`, 3) },
+    ...worte.map((wort, nr) => ({ art: "wort" as const, nr, wort, dauer: leseDauer(wort) })),
+    { art: "thema", dauer: leseDauer(saga.thema, 3) },
+    ...(saga.kapitel.length
+      ? [{ art: "kapitel" as const, dauer: leseDauer(`Die Kapitel ${kapitel} Finale`, 3) }]
+      : []),
+    { art: "einsatz", dauer: leseDauer(`${saga.name} ${saga.klappentext}`, 3.5) },
   ];
-
-  // Die Schlagworte teilen sich das Mittelstück.
-  const wortVon = 0.3;
-  const wortBis = 0.62;
-  const breite = (wortBis - wortVon) / Math.max(1, worte.length);
-  worte.forEach((wort, i) => {
-    plan.push({
-      art: "wort",
-      nr: i,
-      wort,
-      von: wortVon + i * breite,
-      bis: wortVon + (i + 1) * breite,
-    });
-  });
-
-  plan.push({ art: "thema", von: wortBis, bis: 0.78 });
-  if (kapitelAnzahl > 0) plan.push({ art: "kapitel", von: 0.78, bis: 0.93 });
-  plan.push({ art: "einsatz", von: kapitelAnzahl > 0 ? 0.93 : 0.78, bis: 1.01 });
-  return plan;
 }
 
+/** Wie viele Schlagworte in den Vorspann passen, ohne dass sie hetzen. */
+const passendeWorte = (worte: string[], songDauer: number): string[] =>
+  worte.slice(0, passendeAnzahl(worte, songDauer * 0.34));
+
 export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => void }) {
-  const startRef = useRef(performance.now());
-  const [fortschritt, setFortschritt] = useState(0);
-  const [tonAn, setTonAn] = useState(true);
+  const [songDauer, setSongDauer] = useState<number | null>(null);
 
   // Das letzte Gitter: Wer erst später dazustößt, kommt hier nicht vor. Der
   // Server hält seine Texte schon davon frei; das hier greift auch bei von
@@ -106,36 +107,13 @@ export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => v
   const gezeigt = useMemo(() => ohneSpaete(saga), [saga]);
 
   const worte = useMemo(() => schlagworte(gezeigt), [gezeigt]);
-  const plan = useMemo(
-    () => szenenPlan(worte, gezeigt.kapitel.length),
-    [worte, gezeigt.kapitel.length],
-  );
+  const { plan, dauer } = useMemo(() => {
+    const song = songDauer ?? STUMME_DAUER;
+    return tafelnVerteilen(tafelnFuer(gezeigt, passendeWorte(worte, song), song), song);
+  }, [gezeigt, worte, songDauer]);
+  const { fortschritt, tonAn, anschalten } = useIntroUhr("intro", dauer, setSongDauer);
 
-  useEffect(() => {
-    let laeuftNoch = true;
-
-    void spiele("intro").then((geklappt) => {
-      if (laeuftNoch) setTonAn(geklappt);
-    });
-
-    const tick = () => {
-      if (!laeuftNoch) return;
-      const { zeit, dauer } = stand("intro");
-      const gesamt = dauer ?? STUMME_DAUER;
-      const vergangen = zeit > 0 ? zeit : (performance.now() - startRef.current) / 1000;
-      setFortschritt(Math.min(1, vergangen / gesamt));
-      requestAnimationFrame(tick);
-    };
-
-    const id = requestAnimationFrame(tick);
-    return () => {
-      laeuftNoch = false;
-      cancelAnimationFrame(id);
-      stoppe("intro");
-    };
-  }, []);
-
-  // Ist die Musik durch, geht es von allein weiter zum Auftakt.
+  // Ist der Vorspann durch, geht es von allein weiter zum Auftakt.
   useEffect(() => {
     if (fortschritt >= 1) onFertig();
   }, [fortschritt, onFertig]);
@@ -151,7 +129,7 @@ export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => v
     <div
       className="intro vorspann"
       onPointerDown={() => {
-        if (!tonAn) void spiele("intro").then(setTonAn);
+        if (!tonAn) anschalten();
       }}
     >
       <div className="intro-hintergrund">
@@ -168,7 +146,7 @@ export function SagaVorspann({ saga, onFertig }: { saga: Saga; onFertig: () => v
         </div>
         <div className="intro-knoepfe">
           {!tonAn && (
-            <button className="intro-ton" onClick={() => void spiele("intro").then(setTonAn)}>
+            <button className="intro-ton" onClick={anschalten}>
               🔈 Ton an
             </button>
           )}

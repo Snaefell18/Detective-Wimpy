@@ -1,4 +1,5 @@
 import type { KampfVorgabe } from "./endkampf";
+import type { AbspannVorgabe } from "./abspann";
 import type { FinaleArt, Verhandlung } from "./sagaFinale";
 import type { VersammlungVorgabe } from "./versammlung";
 import type { VerfolgungVorgabe } from "./verfolgung";
@@ -247,6 +248,15 @@ export type SagaVorgaben = {
    * kurze feste Zeit.
    */
   gerichtTon: string;
+  /**
+   * Der Abspann nach dem Epilog - die Straßenfahrt oder eine Textrolle.
+   *
+   * Er steht hier und nicht im erzeugten Finale, weil er mit dem Modell
+   * nichts zu tun hat: Gebaut wird er im Admin-Menü, und er darf sich auch
+   * dann noch ändern, wenn die Saga längst erzeugt ist. Fehlt er, endet die
+   * Saga wie bisher mit dem Epilog.
+   */
+  abspann?: AbspannVorgabe;
   /** Schauplätze je Fall. */
   ortsAnzahl: number;
   /** Beschuldigungen je Fall. */
@@ -495,7 +505,9 @@ export type SagaLauf = {
     | "verhandlung"
     /** Der Showdown nach dem Finalfall: Wimpy gegen den Drahtzieher. */
     | "showdown"
-    | "epilog";
+    | "epilog"
+    /** Der Abspann ganz am Schluss - Straßenfahrt oder Textrolle. */
+    | "abspann";
   /**
    * Id des Falls, der gerade zu dieser Saga läuft. Damit lässt sich ein
    * einzelner Fall zwischendurch spielen, ohne dass sein Ende die Saga

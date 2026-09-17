@@ -17,17 +17,8 @@ import {
 } from '@/lib/pursuit3d';
 import { istHandy } from '@/lib/dreiDLeistung';
 import { istBlizzard, istDunst, istSchneeWetter } from '@/lib/pursuit3d';
-import {
-  LEUCHTEN as LEUCHT_STAERKE,
-  SAND_LICHT,
-  cellShading,
-  einpassen,
-  fahrbahnMaterial,
-  gradientTextur,
-  sandDunst,
-  texturenVerkleinern,
-  wetterFeld,
-} from './stadtBau';
+import { einpassen, gradientTextur } from './stadtBau';
+import { haeuserZeilen, strasseBauen } from './strassenWelt';
 import { Hintergrundmusik } from './Hintergrundmusik';
 
 /**
@@ -256,42 +247,50 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
     const scene = new THREE.Scene();
     const { strassentyp, tageszeit, wetter, locations } = welt;
     const nacht = tageszeit === "nacht";
-    const schneeWetter = istSchneeWetter(wetter);
-    const sandSturm = wetter === "sandsturm";
-    /** Der Blizzard: Man sieht den Fluchtwagen - und sonst fast nichts. */
-    const blizzard = istBlizzard(wetter);
-    const dunst = istDunst(wetter);
-    /*
-     * Himmel, Dunst und Licht kommen aus derselben Palette wie die 3D-Stadt.
+
+    /* --- Aufräumen: alles, was Speicher hält, kommt hier hinein ------- */
+    const ressourcen = new Set<{ dispose: () => void }>();
+    const merken = (wert: { dispose: () => void }) => ressourcen.add(wert);
+    const sammeln = (root: THREE.Object3D) => root.traverse(obj => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      ressourcen.add(obj.geometry);
+      for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) {
+        ressourcen.add(mat);
+        for (const wert of Object.values(mat)) if (wert instanceof THREE.Texture) ressourcen.add(wert);
+      }
+    });
+
+    /**
+     * Alles, was mit der Straße nach hinten wandert.
      *
-     * Die Jagd war lange eine einzige Landschaft - dunkelblauer Himmel,
-     * blaugraue Piste, immer dieselbe Dämmerung. Jetzt ist sie eine Strecke
-     * wie jede andere Welt des Spiels: Wer eine Nacht im Regen einstellt,
-     * bekommt dieselbe Nacht und denselben Regen wie im Kapitel davor.
+     * Jeder Eintrag bringt mit, wie weit er zurückfallen darf und wie weit er
+     * dann wieder nach vorn springt - so ziehen Fahrbahnmarkierungen,
+     * Schneestangen und ganze Häuserzeilen in einer einzigen Schleife vorbei,
+     * obwohl sie unterschiedlich weit auseinanderstehen.
      */
-    const himmel = {
-      morgen: 0xf3a979,
-      tag: wetter === "sonne" ? 0x62c8ff : 0x91b8d2,
-      abend: 0xa84567,
-      nacht: 0x070a16,
-    }[tageszeit];
-    const dunstFarbe = sandSturm
-      ? sandDunst(tageszeit)
-      : blizzard
-        ? (nacht ? 0x36485f : 0xe6eef6)
-        : dunst || schneeWetter
-          ? (nacht ? 0x253749 : 0xb7cbd6)
-          : wetter === "regen" ? 0x536777 : himmel;
-    scene.background = new THREE.Color(dunst || schneeWetter ? dunstFarbe : himmel);
+    const ziehendes: { obj: THREE.Object3D; ende: number; sprung: number }[] = [];
+    const zieht = (obj: THREE.Object3D, ende: number, sprung: number) => {
+      ziehendes.push({ obj, ende, sprung });
+      return obj;
+    };
+
+    const gradient = gradientTextur();
+    merken(gradient);
     /*
-     * Weiter als in der Stadt: Hier fährt man auf das hin, was am Horizont
-     * steht, statt zwischen Häusern zu laufen. Im Blizzard dagegen endet die
-     * Welt kurz hinter dem Fluchtwagen - er bleibt gerade noch zu sehen, und
-     * die Böen nehmen einem auch den für Augenblicke.
+     * Himmel, Licht, Fahrbahn, Landschaft und Wetter stehen in
+     * components/strassenWelt.ts - dieselbe Straße fährt der Abspann.
      */
-    const sichtNah = blizzard ? 9 : dunst ? 16 : 28;
-    const sichtFern = blizzard ? 34 : dunst ? 62 : 95;
-    scene.fog = new THREE.Fog(dunstFarbe, sichtNah, sichtFern);
+    const strasse = strasseBauen({
+      scene,
+      welt,
+      gradient,
+      merken,
+      zieht,
+      // Wo Wimpy und sein Wagen auf die Jagd warten, steht nichts im Bild.
+      freiHalten: (x, z) => x < -5 && z > -6 && z < 10,
+    });
+    const { sichtNah, sichtFern, blizzard, wetterfall } = strasse;
+
     // Gleiche Achsen und Blickrichtung wie Jump-and-Run; etwas weiter für zwei Autos.
     const camera = new THREE.PerspectiveCamera(KAMERA_ANFAHRT.fov, 1, 0.1, 130);
     camera.position.set(...KAMERA_ANFAHRT.pos);
@@ -302,197 +301,8 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // Im Schneeland steht die Blende enger - sonst wird aus Weiß Creme.
-    renderer.toneMappingExposure = nacht
-      ? 0.9
-      : wetter === "sonne" ? (strassentyp === "schnee" ? 0.96 : 1.16) : strassentyp === "schnee" ? 0.92 : 1;
+    renderer.toneMappingExposure = strasse.belichtung;
     element.appendChild(renderer.domElement);
-    scene.add(new THREE.HemisphereLight(
-      nacht ? 0x7aa1ff : tageszeit === "abend" ? 0xffad87 : 0xc2e9ff,
-      // Schnee wirft kaltes Licht zurück, Asphalt fast keines.
-      strassentyp === "schnee" ? (nacht ? 0x24405e : 0xd3e6f4) : nacht ? 0x161d2e : 0x3c4a44,
-      nacht ? 2.4 : 3,
-    ));
-    const licht = new THREE.DirectionalLight(
-      wetter === "sonne" ? 0xfff1b8 : sandSturm ? SAND_LICHT : nacht ? 0x9fc4ff : 0xffe2b6,
-      wetter === "sonne" ? 4.4 : sandSturm ? 1.6 : dunst ? 1.1 : wetter === "regen" || schneeWetter ? 1.8 : 3,
-    );
-    licht.position.set(-8, 14, 10); scene.add(licht);
-    const ressourcen = new Set<{ dispose: () => void }>();
-    const sammeln = (root: THREE.Object3D) => root.traverse(obj => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      ressourcen.add(obj.geometry);
-      for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) {
-        ressourcen.add(mat);
-        for (const wert of Object.values(mat)) if (wert instanceof THREE.Texture) ressourcen.add(wert);
-      }
-    });
-    const mesh = (geo: THREE.BufferGeometry, farbe: number, x: number, y: number, z: number) => {
-      const obj = new THREE.Mesh(geo, new THREE.MeshToonMaterial({ color: farbe }));
-      obj.position.set(x, y, z); scene.add(obj); return obj;
-    };
-    /* --- Der Untergrund ---------------------------------------------- */
-    const gradient = gradientTextur();
-    ressourcen.add(gradient);
-    /** Das Land neben der Piste: Schnee, Sand oder Grün. */
-    const landFarbe = sandSturm
-      ? (nacht ? 0x3b2f1f : 0xa98a5c)
-      : strassentyp === "schnee"
-        ? (nacht ? 0x8fa9c4 : 0xf1f8ff)
-        : strassentyp === "sand"
-          ? (nacht ? 0x5a4a33 : 0xc6a678)
-          // Asphalt liegt in derselben Umgebung wie in der Stadt: kein Grün,
-          // sondern der blaugraue Grund, den auch das 3D-Kapitel zeigt.
-          : nacht ? 0x293448 : 0x4b5868;
-    /*
-     * Der Grund reicht so weit, wie Häuser stehen können.
-     *
-     * Mit Bausteinen stehen jetzt zwei Zeilen rechts und eine links, und die
-     * hintere darf tief hinausragen - ein schmaler Streifen darunter hörte
-     * mitten in der Stadt auf, und dahinter klaffte der Himmel bis zum Boden.
-     * Der Nebel nimmt einem den Rand lange vorher ab; die paar Dreiecke mehr
-     * kosten nichts.
-     */
-    mesh(new THREE.BoxGeometry(locations.length ? 200 : 34, 0.2, 130), landFarbe, 0, -0.22, 24);
-    /*
-     * Die Fahrbahn ist dieselbe wie in der Stadt: derselbe Belag, dieselben
-     * Spuren, dieselbe Rechnung (components/stadtBau.ts). So fährt man über
-     * die Straße, durch die man vorher gelaufen ist.
-     */
-    const belag = fahrbahnMaterial({
-      gradient,
-      strassentyp,
-      tageszeit,
-      wetter,
-      imRaster: false,
-      merken: (wert) => ressourcen.add(wert),
-    });
-    // Die Naturtextur ist für ein kurzes Stück gedacht; über 130 Meter muss
-    // sie sich öfter wiederholen, sonst zieht sie sich zu langen Schlieren.
-    belag.map?.repeat.set(1, 26);
-    const fahrbahn = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.1, 130), belag);
-    fahrbahn.position.set(0, -0.05, 24);
-    scene.add(fahrbahn);
-    ressourcen.add(fahrbahn.geometry);
-
-    /* --- Was am Rand vorbeizieht -------------------------------------- */
-    /**
-     * Alles, was mit der Straße nach hinten wandert.
-     *
-     * Jeder Eintrag bringt mit, wie weit er zurückfallen darf und wie weit
-     * er dann wieder nach vorn springt - so ziehen Fahrbahnmarkierungen,
-     * Schneestangen und ganze Häuserzeilen in einer einzigen Schleife
-     * vorbei, obwohl sie unterschiedlich weit auseinanderstehen.
-     */
-    const ziehendes: { obj: THREE.Object3D; ende: number; sprung: number }[] = [];
-    const zieht = (obj: THREE.Object3D, ende: number, sprung: number) => {
-      ziehendes.push({ obj, ende, sprung });
-      return obj;
-    };
-
-    if (strassentyp === "asphalt") {
-      // Mittelstreifen wie bisher: zwei Reihen leuchtender Striche.
-      const strichGeometrie = new THREE.BoxGeometry(0.08, 0.02, 2);
-      ressourcen.add(strichGeometrie);
-      const strichMaterial = new THREE.MeshToonMaterial({ color: nacht ? 0x7cdaee : 0xe8e2b8 });
-      ressourcen.add(strichMaterial);
-      for (const x of [-1.7, 1.7]) {
-        for (let i = 0; i < 25; i++) {
-          const strich = new THREE.Mesh(strichGeometrie, strichMaterial);
-          strich.position.set(x, 0.02, i * 4 - 20);
-          scene.add(strich);
-          zieht(strich, -22, 100);
-        }
-      }
-    } else {
-      /*
-       * Wo kein Asphalt ist, steht am Rand, was den Weg zeigt: rote
-       * Schneestangen in der Arktis, helle Pfosten in der Wüste - dieselben
-       * wie im 3D-Kapitel.
-       */
-      const pfostenGeometrie = new THREE.CylinderGeometry(
-        0.05, 0.06, strassentyp === "schnee" ? 1.6 : 0.7, 5,
-      );
-      ressourcen.add(pfostenGeometrie);
-      const pfostenMaterial = new THREE.MeshToonMaterial({
-        color: strassentyp === "schnee" ? 0xd65a47 : 0xd2bb8b,
-        gradientMap: gradient,
-      });
-      ressourcen.add(pfostenMaterial);
-      for (const seite of [-1, 1]) {
-        for (let i = 0; i < 14; i++) {
-          const pfosten = new THREE.Mesh(pfostenGeometrie, pfostenMaterial);
-          pfosten.position.set(seite * 5.4, strassentyp === "schnee" ? 0.8 : 0.35, i * 8 - 20);
-          scene.add(pfosten);
-          zieht(pfosten, -24, 112);
-        }
-      }
-    }
-
-    /**
-     * Die Landschaft dahinter.
-     *
-     * Ohne gewählte Bausteine ist sie gerechnet: Tannen im Schnee, Dünen im
-     * Sand, Häuserblöcke am Asphalt. Sind Bausteine gewählt, kommen sie
-     * zusätzlich dazu - siehe bausteineLaden().
-     */
-    const landGeometrie = strassentyp === "sand"
-      ? new THREE.IcosahedronGeometry(2.4, 0)
-      : strassentyp === "schnee"
-        ? new THREE.ConeGeometry(1.4, 4, 5)
-        : new THREE.BoxGeometry(4.5, 9, 4.5);
-    ressourcen.add(landGeometrie);
-    const landMaterialien = (strassentyp === "schnee"
-      ? [0x3f7f78, 0xe8f4fb]
-      : strassentyp === "sand"
-        ? [0xd9b782, 0xc09a63]
-        : nacht ? [0x2b3a4d, 0x1d2836] : [0x6d7b8c, 0x55637a]
-    ).map((farbe) => {
-      const material = new THREE.MeshToonMaterial({ color: farbe, gradientMap: gradient });
-      ressourcen.add(material);
-      return material;
-    });
-    // Nur wo keine Bausteine gewählt sind: Sonst stünde die gerechnete
-    // Landschaft vor den Häusern und verdeckte genau das, was man sehen will.
-    for (let i = 0; !locations.length && i < 28; i++) {
-      const x = (i % 2 ? -1 : 1) * (strassentyp === "asphalt" ? 10 + (i % 3) * 1.5 : 7 + (i % 3));
-      // Wo Wimpy und sein Wagen auf die Jagd warten, steht nichts im Bild.
-      const z = i * 4 - 25;
-      const imWeg = x < -5 && z > -6 && z < 10;
-      const stueck = new THREE.Mesh(landGeometrie, landMaterialien[i % landMaterialien.length]);
-      stueck.position.set(
-        x,
-        strassentyp === "sand" ? -0.9 : strassentyp === "schnee" ? 2 : 4.4,
-        imWeg ? z + 56 : z,
-      );
-      if (strassentyp === "sand") stueck.scale.set(1 + (i % 3) * 0.3, 0.32, 1.4);
-      scene.add(stueck);
-      zieht(stueck, -30, 112);
-    }
-    /*
-     * Und das Wetter darüber - dieselbe Rechnung wie in Stadt und Arena.
-     *
-     * Der Ausschnitt ist so lang wie die sichtbare Strecke: Was vorn in der
-     * Luft steht, zieht während der Fahrt nach hinten durch und kommt vorn
-     * wieder herein.
-     */
-    const wetterfall = wetterFeld({
-      wetter,
-      scene,
-      merken: (wert) => ressourcen.add(wert),
-      weite: 34,
-      tiefe: 110,
-      versatzZ: 16,
-      hoehe: 16,
-      anzahl: blizzard ? 3000 : undefined,
-      /*
-       * Größere Flocken als in der Stadt.
-       *
-       * Dort läuft man mitten durch den Schneefall, hier schaut man aus
-       * zwanzig Metern auf die Straße - in derselben Größe wäre jede Flocke
-       * ein Punkt, den man nicht sieht.
-       */
-      groesse: 2,
-    });
 
     const spieler = new THREE.Group(), gegner = new THREE.Group(), wimpy = new THREE.Group();
     /** Der Flüchtige selbst - unsichtbar, bis er aussteigt. */
@@ -612,124 +422,14 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       taeterDa = true;
     }
     /**
-     * Die Häuser am Straßenrand.
-     *
-     * Dieselben Bausteine wie in den 3D-Kapiteln, nur stehen sie hier nicht
-     * auf einem Raster, sondern in Zeilen neben der Piste - und weil die
-     * Strecke kein Ende hat, wiederholen sie sich: Wer hinten hinausfällt,
-     * kommt vorn wieder herein. Ein einziges geladenes Modell reicht dafür
-     * für beliebig viele Kopien; geteilt werden Geometrie und Texturen.
-     *
-     * Sie stehen dicht: die Front einen Gehweg von der Fahrbahn entfernt,
-     * die Häuser so hoch, dass sie oben aus dem Bild laufen, und Schulter an
-     * Schulter statt in Abständen. Man fährt nicht mehr an einer Stadt
-     * vorbei, man fährt durch sie hindurch.
+     * Die Häuser am Straßenrand - dieselben Zeilen wie im Abspann.
      *
      * Sie kommen nebenher, nicht vorweg: Ein Baustein ist ein paar Megabyte
      * groß, und die Jagd soll losgehen können, bevor Tokio steht.
      */
-    async function bausteineLaden() {
-      const handy = istHandy();
-      const gewaehlt = locations
-        .map((id) => DREI_D_LOCATIONS.find((ort) => ort.id === id))
-        .filter((ort): ort is (typeof DREI_D_LOCATIONS)[number] => Boolean(ort))
-        // Mehr als drei Bauarten hält kein Handy aus - jede bringt ihre
-        // eigenen Texturen mit; auf dem Handy sind es zwei.
-        .slice(0, handy ? 2 : 3);
-      if (!gewaehlt.length) return;
-
-      const vorlagen = await Promise.all(
-        gewaehlt.map(async (ort) => {
-          const gltf = await loader.loadAsync(ort.datei);
-          texturenVerkleinern(gltf.scene, handy ? 512 : 768);
-          cellShading(gltf.scene, gradient, [], LEUCHT_STAERKE[tageszeit]);
-          sammeln(gltf.scene);
-          return gltf.scene;
-        }),
-      );
-      if (beendet) { ressourcen.forEach((r) => r.dispose()); return; }
-
-      /*
-       * Wie groß ein Baustein bei einer bestimmten Höhe wird.
-       *
-       * Jedes Modell hat andere Maße; gebraucht werden sie schon vor dem
-       * Aufstellen, um die Front an die Straße und die Nachbarn nebeneinander
-       * zu bekommen. Deshalb einmal je Vorlage das Verhältnis messen - Tiefe
-       * und Breite je Meter Höhe - und danach nur noch multiplizieren.
-       *
-       * Achtung bei den Achsen: Die Häuser stehen quer zur Fahrbahn gedreht,
-       * ihre eigene z-Achse zeigt danach nach x. Was im Modell die Tiefe ist,
-       * steht in der Welt also neben der Straße, und die Breite liegt an ihr
-       * entlang.
-       */
-      const masse = vorlagen.map((vorlage) => {
-        const groesse = new THREE.Box3().setFromObject(vorlage).getSize(new THREE.Vector3());
-        const hoch = Math.max(0.001, groesse.y);
-        return { tiefe: groesse.z / hoch, breite: groesse.x / hoch };
-      });
-
-      /*
-       * Die Zeilen. Rechts steht die Stadt, weil man nur dorthin schaut.
-       *
-       * `front` ist der Abstand der Hauswand von der Fahrbahnkante. Die
-       * hintere Zeile beginnt hinter der tiefsten Vorlage der vorderen -
-       * sonst stünden zwei Häuser ineinander.
-       */
-      const tiefste = (hoehen: number[]) =>
-        Math.max(...masse.map((mass) => mass.tiefe * Math.max(...hoehen)));
-      const vorneHoehen = handy ? [13, 16] : [13, 17, 15];
-      const zeilen: { seite: 1 | -1; front: number; hoehen: number[]; luecke: number }[] = [
-        { seite: 1, front: GEHWEG, hoehen: vorneHoehen, luecke: 0 },
-        {
-          seite: 1,
-          front: GEHWEG + tiefste(vorneHoehen) + 4,
-          hoehen: handy ? [20] : [22, 26, 19],
-          luecke: 0.5,
-        },
-      ];
-      /*
-       * Links steht nur etwas, wenn Speicher dafür da ist: Im Hochformat -
-       * also auf dem Handy - sieht man diese Zeile ohnehin nie.
-       *
-       * Und sie muss hinter der Kamera bleiben. Die Anfahrt schaut aus 17,5
-       * Metern links der Fahrbahn zu; eine Front, die näher steht, hat die
-       * Kamera im Haus - dann sieht man zu Beginn der Jagd eine Wand von
-       * innen statt Wimpy an seinem Wagen.
-       */
-      if (!handy) zeilen.push({ seite: -1, front: 15, hoehen: [14, 18, 16], luecke: 0.33 });
-
-      const strecke = handy ? 120 : 170;
-      for (const zeile of zeilen) {
-        /*
-         * Wie weit zwei Nachbarn auseinanderstehen: so breit wie das breiteste
-         * Haus dieser Zeile, plus eine Handbreit. Dadurch stehen sie
-         * nebeneinander statt in Lücken - eine geschlossene Häuserzeile.
-         */
-        const abstand = Math.max(
-          14,
-          Math.max(...masse.map((mass) => mass.breite * Math.max(...zeile.hoehen))) + 1.5,
-        );
-        const anzahl = Math.ceil(strecke / abstand);
-        for (let i = 0; i < anzahl; i++) {
-          const vorlage = vorlagen[i % vorlagen.length];
-          const hoehe = zeile.hoehen[i % zeile.hoehen.length];
-          const haus = vorlage.clone(true);
-          einpassen(haus, hoehe);
-          const platz = new THREE.Group();
-          platz.add(haus);
-          // Die Front an die Straße: Die halbe Tiefe steht hinter ihr.
-          const tiefe = masse[i % vorlagen.length].tiefe * hoehe;
-          platz.position.set(
-            zeile.seite * (FAHRBAHN_RAND + zeile.front + tiefe / 2),
-            0,
-            (i + zeile.luecke) * abstand - 40,
-          );
-          platz.rotation.y = zeile.seite > 0 ? -Math.PI / 2 : Math.PI / 2;
-          scene.add(platz);
-          zieht(platz, -40, anzahl * abstand);
-        }
-      }
-    }
+    const bausteineLaden = () => haeuserZeilen({
+      scene, welt, gradient, loader, sammeln, zieht, abgebrochen: () => beendet,
+    });
 
     void Promise.all([laden(auto, spieler), laden(flucht, gegner)]).then(async () => {
       await figurLaden().catch(() => undefined);
@@ -837,9 +537,17 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       return streifen;
     });
 
-    const hindernisse = Array.from({ length: 5 }, (_, i) => ({
-      obj: mesh(new THREE.BoxGeometry(1.9, 0.9, 0.8), 0xf6a14b, (i % 3 - 1) * 3.4, 0.45, 65 + i * HINDERNIS_ABSTAND), getroffen: false,
-    }));
+    /** Die Klötze, denen man ausweicht - orange, damit man sie kommen sieht. */
+    const hindernisGeometrie = new THREE.BoxGeometry(1.9, 0.9, 0.8);
+    const hindernisMaterial = new THREE.MeshToonMaterial({ color: 0xf6a14b });
+    ressourcen.add(hindernisGeometrie);
+    ressourcen.add(hindernisMaterial);
+    const hindernisse = Array.from({ length: 5 }, (_, i) => {
+      const obj = new THREE.Mesh(hindernisGeometrie, hindernisMaterial);
+      obj.position.set((i % 3 - 1) * 3.4, 0.45, 65 + i * HINDERNIS_ABSTAND);
+      scene.add(obj);
+      return { obj, getroffen: false };
+    });
     let phase: 'anfahrt' | 'jagd' | 'verhaftung' = 'anfahrt', anfahrtZeit = 0, verhaftungZeit = 0;
     /** Wie die beiden standen und wie schnell sie waren, als die Jagd endete. */
     const halt = { tempo: 0, spielerX: 0, spielerZ: 0, gegnerX: 0, gegnerZ: 0 };

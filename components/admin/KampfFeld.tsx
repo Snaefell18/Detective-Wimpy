@@ -342,7 +342,7 @@ export function KampfFeld({
               ))}
             </select>
           </label>
-          <JagdWeltFeld jagd={kampf.jagd} onAendern={jagdAendern} />
+          <JagdWeltFeld welt={kampf.jagd} onAendern={jagdAendern} />
 
           <SongWahl
             wert={kampf.jagd.musik}

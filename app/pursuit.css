@@ -811,3 +811,76 @@
   transform: rotate(-1deg);
 }
 .pursuit-moduskarte[data-modus="showdown"]:hover { transform: translate(-3px, -4px) rotate(-1.6deg); }
+
+/* ------------------------------------------------------------------ */
+/* Der Abspann: die Straßenfahrt am Ende einer Saga                     */
+/* ------------------------------------------------------------------ */
+
+/* Kein Comicrahmen und kein Fahrbahn-Blau: Ein Abspann ist Kino. */
+.abspann { background: #05070d; }
+.abspann::after { border-color: #05070d; box-shadow: none; }
+
+/* Der Titel steht am Anfang im Bild und zieht sich dann still zurück. */
+.abspann-titel {
+  position: absolute;
+  z-index: 12;
+  top: max(30px, calc(var(--safe-top) + 16px));
+  left: clamp(20px, 5vw, 44px);
+  right: clamp(20px, 5vw, 44px);
+  display: grid;
+  gap: 4px;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.75);
+  transition: opacity 1.4s ease, transform 1.4s ease;
+}
+.abspann-titel strong {
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(26px, 6vw, 44px);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.abspann-titel[data-weg] { opacity: 0; transform: translateY(-12px); }
+
+/* Die Blende liegt über allem und wird zum Schluss undurchsichtig. */
+.abspann-blende {
+  position: absolute;
+  z-index: 14;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  transition: opacity 0.6s linear;
+}
+
+.abspann-leiste {
+  position: absolute;
+  z-index: 16;
+  bottom: max(22px, calc(var(--safe-bottom) + 14px));
+  left: clamp(18px, 5vw, 40px);
+  right: clamp(18px, 5vw, 40px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Und ganz am Ende: schwarz, ein Wort, ein Knopf. */
+.abspann-ende {
+  position: absolute;
+  z-index: 18;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+  animation: abspann-auf 1.2s ease both;
+}
+.abspann-ende-wort {
+  font-family: var(--font-display), Impact, sans-serif;
+  font-size: clamp(44px, 12vw, 96px);
+  letter-spacing: 0.14em;
+  color: #f4ecda;
+  text-transform: uppercase;
+}
+@keyframes abspann-auf { from { opacity: 0; } to { opacity: 1; } }

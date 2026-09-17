@@ -286,6 +286,40 @@ frei wählbaren Song und eine kurze Comic-Mutprobe mit zwei langen
 Cognacflaschen, ohne
 dass die Saga dafür gespeichert oder erzeugt werden muss.
 
+### Der Abspann: was nach dem Epilog läuft
+
+Eine Saga endete bisher mit dem Epilog: Der Erzähler sagt, wie es ausging, man
+tippt auf „Zum Hauptmenü“, fertig. Das ist ein Schluss, aber kein Ende - ein
+Ende hat Musik, und es hat ein Bild, bei dem man sitzen bleibt.
+
+Deshalb gibt es jetzt **Abspänne**, und zwar in Arten. Eingestellt werden sie
+im Saga-Editor unter **Abspann** und genauso im Finale eines **Arcs** (dort
+unter der Finale-Art „Credits“); beide benutzen dasselbe Feld, und beide haben
+darunter den Knopf **„🎬 Abspann proben“**, der ihn genau so abspielt, wie er
+später läuft - ohne dass dafür etwas gespeichert werden muss.
+
+- **Straßenfahrt** - zwei gewählte 3D-Tiere stehen am Straßenrand, gehen zu
+  einem gewählten Wagen, steigen ein und fahren los. Der Anfang ist derselbe
+  wie vor der Verfolgungsjagd: dieselben Plätze, dieselbe Gehanimation,
+  dieselbe Kamerafahrt. Danach fahren sie einfach, solange der Song läuft -
+  durch dieselbe Straße mit denselben Häusern am Rand (bis zu drei Bausteine,
+  Belag, Tageszeit und Wetter wie überall im Spiel). Ist der letzte Ton
+  verklungen, blendet das Bild auf Schwarz, darauf steht „Ende“, und ein Knopf
+  beendet die Saga.
+- **Abspannrolle** - der klassische Abspann: Text, der zur Musik hochläuft.
+  Den gab es im Arc schon; jetzt steht er neben der Fahrt und auch am Ende
+  einer einzelnen Saga zur Wahl.
+- **Kein Abspann** - wie bisher: Nach dem Epilog ist Schluss.
+
+Der Song ist die Uhr: Der Abspann endet mit seinem letzten Ton. Ohne Song
+läuft keiner - dann endet die Saga wie früher. Ältere Arcs mit einem
+Credits-Song behalten ihre Textrolle, ohne dass jemand etwas umstellen muss.
+
+Und der Weg dorthin ist jetzt vollständig: **Nach einem gewonnenen Kampf
+spielt die Siegermelodie** (`public/audio/winner.mp3`) schon auf der
+„GEWONNEN!“-Karte und läuft in den Epilog hinein - dann erst kommt der
+Abspann.
+
 ### Geschenke nach einem Kapitel
 
 Zu jedem Kapitel einer Saga (und zum Finale) lässt sich eintragen, was Wimpy
@@ -722,9 +756,37 @@ Titelkarte, Stadt, Fallakte mit Schreibmaschinentext, jeder Verdächtige einzeln
 mit seinen Werten, die fünf Schauplätze, „Wer war es?“ - und zum Schluss der
 Startschuss. So steht im Intro von der ersten Sekunde an alles fest.
 
-Das Intro ist an den Song gekoppelt (`audio.currentTime`), nicht an feste
-Sekunden: Es endet **genau** mit dem letzten Ton. Tauschst du die MP3 gegen eine
-längere oder kürzere aus, passt sich der Ablauf von selbst an.
+**Jede Tafel bleibt so lange stehen, wie ihr Text zum Vorlesen braucht.**
+Früher hatte jeder Abschnitt einen festen Anteil des Songs - die Verdächtigen
+zusammen ein Viertel, die Schauplätze ein Sechstel. Bei fünf Verdächtigen und
+fünf Schauplätzen sind das anderthalb Sekunden pro Tafel: Der Text blitzte auf,
+brach mitten in der Einblendung ab, und vorlesen ließ sich davon nichts.
+
+Jetzt sagt jede Tafel selbst, wie lange sie braucht (`lib/introTiming.ts`):
+gut elf Zeichen je Sekunde, mindestens zwei Sekunden, und ein Steckbrief mit
+drei wachsenden Balken bekommt mehr als ein einzelnes Wort. Verteilt wird erst
+danach:
+
+- Ist der Song **länger** als nötig, bekommen alle Tafeln gleichmäßig mehr Zeit
+  - das Intro endet weiterhin genau mit dem letzten Ton.
+- Ist er **kürzer**, läuft das Intro länger als der Song, und der Song
+  wiederholt sich so lange, bis die letzte Tafel steht. Lieber Musik doppelt
+  als ein Text, den niemand lesen kann.
+- Schlagworte sind Schmuck: Passen sie nicht mehr in ihr Drittel des Songs,
+  kommen eben weniger vor. Verdächtige und Schauplätze bleiben immer alle da.
+
+Dieselbe Rechnung gilt für den Vorspann einer Saga und den eines Arcs - dort
+vor allem für Überthema und Klappentext, die ganze Absätze sein können.
+
+Auch die Uhr dahinter läuft anders (`lib/introUhr.ts`): Sie beginnt erst, wenn
+die Musik wirklich spielt (oder feststeht, dass der Browser sie blockiert), und
+zählt danach nur noch vorwärts. Vorher wurde zwischen Aufnahme- und Wanduhr
+umgeschaltet - begann die Musik einen Moment später, sprang der Vorspann
+zurück, und man sah dieselbe Tafel zweimal.
+
+Erzählertexte ohne Tondatei folgen derselben Regel: Sie liefen immer in
+sechzehn Sekunden durch, egal ob zwei Zeilen oder ein Absatz dastand. Jetzt
+bekommt jeder Text die Zeit, die er zum Vorlesen braucht.
 
 Damit der Ton trotz der Wartezeit erlaubt bleibt, wird das Audio-Element schon
 im Klick selbst kurz angetippt - Browser lassen Abspielen nur als Folge einer
@@ -815,7 +877,7 @@ app/
   api/talk/route.ts     Gespräch mit einem Charakter
   api/search/route.ts   Umsehen an einem Ort
   api/accuse/route.ts   Finale Beschuldigung und Auflösung
-components/             Bildschirme, Overlays, Prolog und Intro-Sequenz
+components/             Bildschirme, Overlays, Prolog, Intro und Abspann
 components/admin/       die Bereiche des Admin-Menüs
 lib/
   firebase.ts           Firebase-Anbindung (Firestore + anonyme Anmeldung)

@@ -26,6 +26,51 @@ export const GENERIERTE_3D_LOCATIONS = [
     "datei": "/3d_locations/kikanbooffen-web.glb"
   },
   {
+    "id": "longyearbyen-brauerei",
+    "name": "Longyearbyen Brauerei",
+    "datei": "/3d_locations/longyearbyen brauerei-web.glb"
+  },
+  {
+    "id": "longyearbyenbuildings1",
+    "name": "Longyearbyenbuildings1",
+    "datei": "/3d_locations/longyearbyenbuildings1-web.glb"
+  },
+  {
+    "id": "longyearbyenbuildings2",
+    "name": "Longyearbyenbuildings2",
+    "datei": "/3d_locations/longyearbyenbuildings2-web.glb"
+  },
+  {
+    "id": "longyearbyenbuildingsreihe",
+    "name": "Longyearbyenbuildingsreihe",
+    "datei": "/3d_locations/longyearbyenbuildingsreihe-web.glb"
+  },
+  {
+    "id": "longyearbyenkirche",
+    "name": "Longyearbyenkirche",
+    "datei": "/3d_locations/longyearbyenkirche-web.glb"
+  },
+  {
+    "id": "marokko-bazaar",
+    "name": "Marokko Bazaar",
+    "datei": "/3d_locations/marokko bazaar-web.glb"
+  },
+  {
+    "id": "marokko-buildings-1",
+    "name": "Marokko Buildings 1",
+    "datei": "/3d_locations/marokko buildings 1-web.glb"
+  },
+  {
+    "id": "marokko-moschee",
+    "name": "Marokko Moschee",
+    "datei": "/3d_locations/marokko moschee-web.glb"
+  },
+  {
+    "id": "marokko-surfshop",
+    "name": "Marokko Surfshop",
+    "datei": "/3d_locations/marokko surfshop-web.glb"
+  },
+  {
     "id": "residential",
     "name": "Residential",
     "datei": "/3d_locations/residential-web.glb"
@@ -39,6 +84,11 @@ export const GENERIERTE_3D_LOCATIONS = [
     "id": "tankstelle",
     "name": "Tankstelle",
     "datei": "/3d_locations/tankstelle-web.glb"
+  },
+  {
+    "id": "tankstelle-longyearbyen",
+    "name": "Tankstelle Longyearbyen",
+    "datei": "/3d_locations/tankstelle longyearbyen-web.glb"
   },
   {
     "id": "tokyo1",

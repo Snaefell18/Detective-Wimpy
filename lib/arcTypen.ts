@@ -1,3 +1,4 @@
+import { STANDARD_ABSPANN, abspannVon, type AbspannVorgabe } from "./abspann";
 import { STANDARD_KAMPF, kampfSpielbar, type KampfVorgabe } from "./endkampf";
 import { LEERER_ERZAEHLER, type Erzaehlerteil, type Saga } from "./sagaTypen";
 
@@ -70,6 +71,26 @@ export const arcKampf = (arc: Arc | undefined): KampfVorgabe | null => {
 };
 
 /**
+ * Der Abspann dieses Arcs - oder nichts.
+ *
+ * Ältere Arcs kennen nur `creditsSong` und den Abschlusstext: Daraus wird die
+ * Textrolle, die sie immer hatten. Wer im Editor etwas anderes wählt, bekommt
+ * es; und wer die Art auf „Credits" stellt, ohne einen Song zu hinterlegen,
+ * bekommt gar keine - dann endet der Arc mit seinem Abschlusstext.
+ */
+export function arcCredits(arc: Arc | undefined): AbspannVorgabe | null {
+  if (arc?.finale.art !== "credits") return null;
+  const eigener = abspannVon(arc.finale.abspann);
+  if (eigener) return eigener;
+  return abspannVon({
+    ...STANDARD_ABSPANN,
+    art: "rolle",
+    song: arc.finale.creditsSong ?? "",
+    text: arc.finale.erzaehler.text,
+  });
+}
+
+/**
  * Der eine, der hinter dem ganzen Arc steht.
  *
  * Er wird gleich am Anfang festgelegt, damit alle Sagen auf ihn zulaufen -
@@ -130,8 +151,17 @@ export type Arc = {
     art: ArcFinaleArt;
     /** Der Abschluss nach der letzten Saga. */
     erzaehler: Erzaehlerteil;
-    /** Nur bei Credits: Der Song bestimmt ihre exakte Laufzeit. */
+    /**
+     * Nur bei Credits: Der Song bestimmt ihre exakte Laufzeit.
+     *
+     * Das war der erste Abspann, den es gab - eine Textrolle zur Musik.
+     * Inzwischen steht daneben `abspann` mit der Art: Wer dort eine
+     * Straßenfahrt wählt, bekommt sie; ohne Eintrag bleibt es bei der Rolle
+     * mit diesem Song.
+     */
     creditsSong?: string;
+    /** Welcher Abspann läuft - dieselben Arten wie am Ende einer Saga. */
+    abspann?: AbspannVorgabe;
     /** Nur beim Showdown: Arena, Gegner, Stufe und die Jagd davor. */
     kampf?: KampfVorgabe;
   };

@@ -35,6 +35,8 @@ import { useGeschenke } from "@/lib/useLaden";
 import { useStammdaten } from "@/lib/stammdaten";
 import { nenntNamen, ohneEnttarnung } from "@/lib/namenSchutz";
 import { STANDARD_KAMPF } from "@/lib/endkampf";
+import { neuerAbspann } from "@/lib/abspann";
+import { AbspannFeld } from "./AbspannFeld";
 import { ErzaehlerFeld } from "./ErzaehlerFeld";
 import { KampfFeld } from "./KampfFeld";
 import { pruefeVorgaben } from "@/lib/sagaPruefung";
@@ -629,23 +631,36 @@ export function ArcsBereich({ onMeldung, onFehler }: BereichProps) {
                 />
               )}
 
+              {/*
+                  Die Credits gibt es in Arten: die Textrolle, die es immer
+                  schon gab, und die Straßenfahrt. Ältere Arcs haben nur ihren
+                  Credits-Song; solange hier nichts gewählt ist, läuft genau
+                  das weiter wie bisher (siehe arcCredits in lib/arcTypen.ts).
+                */}
               {arc.finale.art === "credits" && (
                 <>
-                  <p className="leise klein">
-                    Jede nichtleere Zeile des Abschlusstexts erscheint als eigene
-                    Credit-Zeile. Der Abspann endet automatisch exakt mit dem Song.
-                  </p>
-                  <SongFeld
-                    wert={arc.finale.creditsSong ?? ""}
-                    beschriftung="Credits-Song"
-                    leerText="Noch keinen Credits-Song gewählt"
-                    onAendern={(creditsSong) =>
-                      void sichern({
-                        ...arc,
-                        finale: { ...arc.finale, creditsSong },
-                      })
+                  <AbspannFeld
+                    abspann={
+                      arc.finale.abspann ??
+                      (arc.finale.creditsSong
+                        ? {
+                            ...neuerAbspann("rolle"),
+                            song: arc.finale.creditsSong,
+                            text: arc.finale.erzaehler.text,
+                          }
+                        : undefined)
+                    }
+                    titel={arc.name || "Der Arc"}
+                    einleitung="So endet der Arc: eine Straßenfahrt durch die Stadt oder die Abspannrolle zur Musik. Beides läuft genau so lange wie der Song."
+                    onAendern={(abspann) =>
+                      void sichern({ ...arc, finale: { ...arc.finale, abspann } })
                     }
                   />
+                  <p className="leise klein">
+                    Bei der Rolle erscheint jede nichtleere Zeile als eigene
+                    Credit-Zeile; bleibt sie leer, wird der Abschlusstext von
+                    unten genommen.
+                  </p>
                 </>
               )}
 

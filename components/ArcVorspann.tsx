@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { spiele, stand, stoppe, type Stueck } from "@/lib/introAudio";
+import { useEffect, useMemo, useState } from "react";
+import { type Stueck } from "@/lib/introAudio";
+import { leseDauer, tafelnVerteilen } from "@/lib/introTiming";
+import { useIntroUhr } from "@/lib/introUhr";
 import { nenntNamen, ohneNamen } from "@/lib/namenSchutz";
 import { useStammdaten } from "@/lib/stammdaten";
 import type { Arc, ArcVorspannArt } from "@/lib/arcTypen";
@@ -21,10 +23,30 @@ export const themeVon = (arc: Arc): Stueck =>
 
 type Szenenbild = "praesentiert" | "titel" | "klappentext" | "stationen" | "einsatz";
 
+/**
+ * Wie lange jede Tafel steht.
+ *
+ * Vorher waren es feste Anteile des Titelsongs - der Klappentext bekam ein
+ * Viertel davon. Bei einem kurzen Song blitzte er nur auf: Ein Absatz, den
+ * jemand vorlesen soll, braucht seine Zeit, und die hängt an seiner Länge,
+ * nicht an der Aufnahme.
+ */
+function tafelnFuer(arc: Arc): { art: Szenenbild; dauer: number }[] {
+  const stationen = arc.teile.map((t) => t.name).join(", ");
+  return [
+    { art: "praesentiert", dauer: leseDauer("Detective Wimpy in") },
+    {
+      art: "titel",
+      dauer: leseDauer(`Ein Arc in ${arc.teile.length} Sagen ${arc.name}`, 3),
+    },
+    { art: "klappentext", dauer: leseDauer(arc.klappentext, 3) },
+    { art: "stationen", dauer: leseDauer(`Die Stationen ${stationen} Finale`, 3) },
+    { art: "einsatz", dauer: leseDauer(`${arc.name} Es beginnt.`, 3) },
+  ];
+}
+
 export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void }) {
-  const startRef = useRef(performance.now());
-  const [fortschritt, setFortschritt] = useState(0);
-  const [tonAn, setTonAn] = useState(true);
+  const [songDauer, setSongDauer] = useState<number | null>(null);
   const stueck = useMemo(() => themeVon(arc), [arc]);
 
   // Der Culprit steht erst in der letzten Saga auf der Bühne - im Vorspann
@@ -43,44 +65,18 @@ export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void 
     };
   }, [arc, charaktere]);
 
-  useEffect(() => {
-    let laeuftNoch = true;
-
-    void spiele(stueck).then((geklappt) => {
-      if (laeuftNoch) setTonAn(geklappt);
-    });
-
-    const tick = () => {
-      if (!laeuftNoch) return;
-      const { zeit, dauer } = stand(stueck);
-      const gesamt = dauer ?? STUMME_DAUER;
-      const vergangen = zeit > 0 ? zeit : (performance.now() - startRef.current) / 1000;
-      setFortschritt(Math.min(1, vergangen / gesamt));
-      requestAnimationFrame(tick);
-    };
-
-    const id = requestAnimationFrame(tick);
-    return () => {
-      laeuftNoch = false;
-      cancelAnimationFrame(id);
-      stoppe(stueck);
-    };
-  }, [stueck]);
+  const { plan, dauer } = useMemo(
+    () => tafelnVerteilen(tafelnFuer(gezeigt), songDauer ?? STUMME_DAUER),
+    [gezeigt, songDauer],
+  );
+  const { fortschritt, tonAn, anschalten } = useIntroUhr(stueck, dauer, setSongDauer);
 
   useEffect(() => {
     if (fortschritt >= 1) onFertig();
   }, [fortschritt, onFertig]);
 
   const szene: Szenenbild =
-    fortschritt < 0.12
-      ? "praesentiert"
-      : fortschritt < 0.4
-        ? "titel"
-        : fortschritt < 0.66
-          ? "klappentext"
-          : fortschritt < 0.9
-            ? "stationen"
-            : "einsatz";
+    (plan.find((tafel) => fortschritt >= tafel.von && fortschritt < tafel.bis) ?? plan[0]).art;
 
   const art: ArcVorspannArt = arc.vorspannArt ?? "klassisch";
 
@@ -92,7 +88,7 @@ export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void 
       // bleibt, das Grün, das kommt, das Licht, das kippt.
       style={{ ["--vorspann" as string]: fortschritt.toFixed(3) }}
       onPointerDown={() => {
-        if (!tonAn) void spiele(stueck).then(setTonAn);
+        if (!tonAn) anschalten();
       }}
     >
       <Jahreszeit art={art} />
@@ -107,7 +103,7 @@ export function ArcVorspann({ arc, onFertig }: { arc: Arc; onFertig: () => void 
         </div>
         <div className="intro-knoepfe">
           {!tonAn && (
-            <button className="intro-ton" onClick={() => void spiele(stueck).then(setTonAn)}>
+            <button className="intro-ton" onClick={anschalten}>
               🔈 Ton an
             </button>
           )}
