@@ -248,6 +248,7 @@ export function SagaVorgabenFelder({
         : taeter
           ? `Täter: ${namenVon(taeter)}`
           : "Täter: zufällig",
+      (vorgaben.kapitelMotive?.[i] ?? "").trim() ? "mit Motiv" : null,
       (vorgaben.kapitelStaedte?.[i] ?? "").trim() || null,
       dreiD && "3D-Welt",
       (vorgaben.kapitelVideos?.[i] ?? "").trim() ? "Video" : null,
@@ -288,6 +289,10 @@ export function SagaVorgabenFelder({
 
   const wunschSetzen = (i: number, text: string) =>
     onAendern({ kapitelWuensche: anStelle(vorgaben.kapitelWuensche, i, text, "") });
+
+  /** Das Motiv des Täters; der letzte Eintrag gehört zum Finale. */
+  const motivSetzen = (i: number, text: string) =>
+    onAendern({ kapitelMotive: anStelle(vorgaben.kapitelMotive, i, text, "") });
 
   /** Stadt je Kapitel; der letzte Eintrag gehört zum Finale. */
   const stadtSetzen = (i: number, stadt: string) =>
@@ -680,6 +685,39 @@ export function SagaVorgabenFelder({
                 <p className="leise klein">
                   Im Finale ist der Drahtzieher der Täter - das steht oben. Eine
                   Verwandlung gehört dort zur Besessenheit der ganzen Saga.
+                </p>
+              )}
+
+              {/*
+                Warum er es getan hat.
+
+                Es ist die einzige Vorgabe, die wörtlich im Fall landet: Was
+                hier steht, wird das Motiv, und Tathergang, Alibis und Spuren
+                werden darum herum gebaut. Leer heißt wie überall: Das Modell
+                denkt sich etwas aus, das zum Tier passt.
+              */}
+              <label className="feld">
+                <span className="leise">
+                  {istFinale ? "Motiv des Drahtziehers" : "Motiv des Täters"} ·
+                  leer = wird ausgedacht
+                </span>
+                <textarea
+                  rows={2}
+                  value={vorgaben.kapitelMotive?.[i] ?? ""}
+                  onChange={(e) => motivSetzen(i, e.target.value)}
+                  placeholder={
+                    istFinale
+                      ? "z.B. Er will die Werft zurück, die man seiner Familie genommen hat"
+                      : "z.B. Sie braucht das Geld für die Reparatur ihres Bootes"
+                  }
+                  maxLength={600}
+                />
+              </label>
+              {istFinale && (
+                <p className="leise klein">
+                  Das Motiv des Drahtziehers trägt die ganze Saga: Die Wahrheit
+                  hinter allem wird darum herum erfunden, und vor Gericht wird
+                  damit argumentiert.
                 </p>
               )}
 

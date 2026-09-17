@@ -362,7 +362,10 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         drahtzieherId: drahtzieher.id,
         drahtzieherName: drahtzieher.name,
         wahrheit: "Noch offen.",
-        drahtzieherMotiv: "Noch offen.",
+        // Steht im Formular schon ein Motiv fürs Finale, gilt es auch hier -
+        // von Hand gebaut heißt nicht, dass man es zweimal tippen soll.
+        drahtzieherMotiv:
+          (vorgaben.kapitelMotive?.[anzahl] ?? "").trim() || "Noch offen.",
         auftaktText: "Es beginnt mit einer Kleinigkeit.",
         schlagworte: ["Schatten", "Verrat", "Wahrheit"],
         kapitel: Array.from({ length: anzahl }, (_, i) => ({
@@ -395,6 +398,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
           orte: stammdaten.orte,
           items: stammdaten.items,
           stadt,
+          // Gezählt wird hier von 1 an, das Finale ist die Nummer danach -
+          // in der Motivliste steht es an genau dieser Stelle.
+          motiv: vorgaben.kapitelMotive?.[nummer - 1] ?? "",
         });
         if (!roh) throw new Error("Für diese Stadt fehlen Schauplätze, Tiere oder Gegenstände.");
         return akteSchreiben(roh);
@@ -423,9 +429,9 @@ export function SagenBereich({ onMeldung, onFehler }: BereichProps) {
         name: rohBogen.name,
         thema: rohBogen.thema,
         klappentext: rohBogen.klappentext,
-        // Ohne Drahtzieher und Kapiteltäter: Die Vorgaben liegen offen in der
-        // Datenbank, die Lösung steht im versiegelten Bogen.
-        vorgaben: { ...vorgaben, drahtzieherId: "", kapitelTaeter: [] },
+        // Ohne Drahtzieher, Kapiteltäter und Motive: Die Vorgaben liegen
+        // offen in der Datenbank, die Lösung steht im versiegelten Bogen.
+        vorgaben: { ...vorgaben, drahtzieherId: "", kapitelTaeter: [], kapitelMotive: [] },
         schlagworte: rohBogen.schlagworte,
         auftakt: { text: rohBogen.auftaktText, audio: "" },
         kapitel,

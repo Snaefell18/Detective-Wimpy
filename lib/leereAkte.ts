@@ -14,6 +14,11 @@ export function leererFall(args: {
   orte: Location[];
   items: Item[];
   stadt: string;
+  /**
+   * Das Motiv, falls es schon feststeht - in einer Saga darf es im Formular
+   * stehen. Leer heißt wie alles andere hier: „Noch offen.“
+   */
+  motiv?: string;
 }): CaseFile | null {
   const { charaktere, items, stadt } = args;
   const orte = args.orte.filter((o) => o.stadt === stadt);
@@ -38,7 +43,7 @@ export function leererFall(args: {
     schlagworte: [stadt, "Eine Spur zu viel"],
     tatort: orte[0].id,
     taeterId: taeter.id,
-    motiv: "Noch offen.",
+    motiv: (args.motiv ?? "").trim() || "Noch offen.",
     tathergang: "Noch offen.",
     verdaechtige: verdaechtige.map((c, i) => ({
       charakterId: c.id,

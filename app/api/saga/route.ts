@@ -50,6 +50,7 @@ import {
   besetzungFuerSaga,
   falscheFaehrteVon,
   kapitelTaeterFuer,
+  motivFuerKapitel,
   neuInKapitel,
   type SagaVorgaben,
 } from "@/lib/sagaTypen";
@@ -395,7 +396,14 @@ async function kernSchritt(body: Record<string, unknown>) {
     drahtzieherId: drahtzieher.id,
     drahtzieherName: drahtzieher.name,
     wahrheit: antwort.daten.wahrheit,
-    drahtzieherMotiv: antwort.daten.drahtzieherMotiv,
+    /*
+     * Wer das Motiv des Drahtziehers selbst geschrieben hat, bekommt es
+     * wörtlich zurück. Der Prompt sagt dem Modell dasselbe - aber es ist
+     * der Satz, an dem die ganze Saga hängt (er steht im Finale, in der
+     * Anhörung und im Urteil), und für den soll niemand hoffen müssen.
+     */
+    drahtzieherMotiv:
+      motivFuerKapitel(vorgaben, vorgaben.kapitelAnzahl) || antwort.daten.drahtzieherMotiv,
     auftaktText: sauber(antwort.daten.auftaktText),
     schlagworte: worteOhneNamen(antwort.daten.schlagworte, zuFrueh).slice(0, 6),
     kapitel: [],
@@ -477,6 +485,7 @@ async function kapitelSchritt(
         faehrtenRegeln: faehrtenVon(bogen),
         neueTiere: neue.map((c) => c.name),
         wunschTaeter: moeglich.find((c) => c.id === wunschTaeter)?.name ?? "",
+        wunschMotiv: motivFuerKapitel(bogen.vorgaben, nummer - 1),
         nochNichtDaTiere: zuFrueh,
       }),
       zodOutputFormat(makeKapitelSchema(dabei)),

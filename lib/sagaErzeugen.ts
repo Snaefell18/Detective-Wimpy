@@ -311,9 +311,9 @@ export async function erzeugeSaga(
     name: kern.name,
     thema: kern.thema,
     klappentext: kern.klappentext,
-    // Die Vorgaben liegen offen in der Datenbank - deshalb ohne die beiden
-    // Felder, die die Lösung verraten würden. Im versiegelten Bogen stehen
-    // sie vollständig, dort kommt niemand heran.
+    // Die Vorgaben liegen offen in der Datenbank - deshalb ohne die Felder,
+    // die die Lösung verraten würden. Im versiegelten Bogen stehen sie
+    // vollständig, dort kommt niemand heran.
     vorgaben: {
       ...eingaben.vorgaben,
       kapitel3d: (eingaben.vorgaben.kapitel3d ?? []).map((konfiguration, index) => {
@@ -322,6 +322,10 @@ export async function erzeugeSaga(
       }),
       drahtzieherId: "",
       kapitelTaeter: [],
+      // Ein Motiv verrät den Täter genauso sicher wie sein Name: Wer liest,
+      // dass es um eine verpfändete Werft geht, weiß, wer eine hat. Und das
+      // Motiv des Finales ist die Wahrheit der ganzen Saga in einem Satz.
+      kapitelMotive: [],
       // Wer im Rat undercover sitzt, ist ebenso geheim wie der
       // Drahtzieher. Die vollständige Rolle liegt weiter im BogenSiegel.
       versammlungen: oeffentlicheVersammlungen(eingaben.vorgaben.versammlungen),

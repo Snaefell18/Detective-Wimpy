@@ -105,6 +105,15 @@ Finale, in dem der Drahtzieher auffliegt. Sie entsteht im Admin-Menü unter
 **Sagas**; zwischen den Kapiteln spricht der Erzähler, wahlweise mit eigener
 Tondatei aus `public/audio`.
 
+**Das Motiv je Fall** lässt sich dabei selbst schreiben: In jedem Kapitel steht
+ein Feld „Motiv des Täters“, im Finale eines für den Drahtzieher. Was dort
+steht, wird wörtlich das Motiv des Falls - Tathergang, Alibis und Spuren werden
+darum herum gebaut, und im Finale folgt sogar die Wahrheit hinter der ganzen
+Saga daraus. Leer lassen heißt wie überall: Das Modell denkt sich einen Grund
+aus, der zum Tier passt. Gespeichert wird das Motiv nur im verschlüsselten
+Bogen - in der offen liegenden Vorgabenliste steht es nicht, sonst wäre der
+Täter mit einem Blick in die Datenbank verraten.
+
 Ein **Arc** fasst mehrere Sagas zu einer langen Reihe zusammen:
 
 1. Admin-Menü → **Arcs**. Name, Klappentext, eigener Titelsong (Pfad in
@@ -735,8 +744,9 @@ Dahinter:
   eine ganze Reihe von Fällen -, steht aber in **einklappbaren Abschnitten**:
   Die Saga, Kapitel (darin jedes Kapitel noch einmal für sich), Besetzung,
   Ton und Publikum, Finale, Abspann. Zu ist der Regelfall; in der Kopfzeile
-  steht, was drinsteckt („3 Kapitel + Finale", „Gericht & Flucht · Noch keine
-  Arena gebaut"), sodass man den Stand sieht, ohne aufzuklappen. Ein
+  steht, was drinsteckt („3 Kapitel + Finale", „Täter: Nala · mit Motiv",
+  „Gericht & Flucht · Noch keine Arena gebaut"), sodass man den Stand sieht,
+  ohne aufzuklappen. Ein
   zugeklappter Abschnitt vergisst nichts: Die Felder bleiben stehen, wo sie
   waren.
 - **Bilder** - eigene Bilder hinterlegen oder wieder entfernen (siehe oben),
