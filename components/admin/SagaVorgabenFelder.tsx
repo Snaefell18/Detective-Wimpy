@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { alsStaedte } from "@/lib/csv";
 import { useGeschenke } from "@/lib/useLaden";
 import { SongWahl } from "./SongFeld";
+import { AbspannFeld } from "./AbspannFeld";
 import { JagdWeltFeld } from "./JagdWeltFeld";
 import { KampfFeld } from "./KampfFeld";
 import { StadtplanFeld } from "./StadtplanFeld";
@@ -1143,7 +1144,7 @@ export function SagaVorgabenFelder({
                         </select>
                       </label>
                       <JagdWeltFeld
-                        jagd={jagd}
+                        welt={jagd}
                         onAendern={(teil) => jagdAendern(nachKapitel, teil)}
                       />
 
@@ -1636,6 +1637,21 @@ export function SagaVorgabenFelder({
           />
         </>
       )}
+
+      {/*
+          Der Abspann steht ganz am Schluss - nach dem Epilog und damit nach
+          allem, was die Finale-Art entscheidet. Deshalb steht er hier für
+          jede Art gleich.
+        */}
+      <h3 className="unter-abschnitt">
+        Abspann <span className="leise">· was nach dem Epilog läuft</span>
+      </h3>
+      <AbspannFeld
+        abspann={vorgaben.abspann}
+        titel={vorgaben.name || "Die Saga"}
+        einleitung="Nach dem Epilog darf noch etwas kommen: eine Straßenfahrt durch die Stadt oder eine Abspannrolle zur Musik. Beides läuft genau so lange wie der gewählte Song, danach wird das Bild schwarz und die Saga ist zu Ende."
+        onAendern={(abspann) => setzen({ abspann })}
+      />
 
       {art !== "wimpy" && art !== "gericht-wimpy" && (
       <>

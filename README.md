@@ -286,6 +286,40 @@ frei wählbaren Song und eine kurze Comic-Mutprobe mit zwei langen
 Cognacflaschen, ohne
 dass die Saga dafür gespeichert oder erzeugt werden muss.
 
+### Der Abspann: was nach dem Epilog läuft
+
+Eine Saga endete bisher mit dem Epilog: Der Erzähler sagt, wie es ausging, man
+tippt auf „Zum Hauptmenü“, fertig. Das ist ein Schluss, aber kein Ende - ein
+Ende hat Musik, und es hat ein Bild, bei dem man sitzen bleibt.
+
+Deshalb gibt es jetzt **Abspänne**, und zwar in Arten. Eingestellt werden sie
+im Saga-Editor unter **Abspann** und genauso im Finale eines **Arcs** (dort
+unter der Finale-Art „Credits“); beide benutzen dasselbe Feld, und beide haben
+darunter den Knopf **„🎬 Abspann proben“**, der ihn genau so abspielt, wie er
+später läuft - ohne dass dafür etwas gespeichert werden muss.
+
+- **Straßenfahrt** - zwei gewählte 3D-Tiere stehen am Straßenrand, gehen zu
+  einem gewählten Wagen, steigen ein und fahren los. Der Anfang ist derselbe
+  wie vor der Verfolgungsjagd: dieselben Plätze, dieselbe Gehanimation,
+  dieselbe Kamerafahrt. Danach fahren sie einfach, solange der Song läuft -
+  durch dieselbe Straße mit denselben Häusern am Rand (bis zu drei Bausteine,
+  Belag, Tageszeit und Wetter wie überall im Spiel). Ist der letzte Ton
+  verklungen, blendet das Bild auf Schwarz, darauf steht „Ende“, und ein Knopf
+  beendet die Saga.
+- **Abspannrolle** - der klassische Abspann: Text, der zur Musik hochläuft.
+  Den gab es im Arc schon; jetzt steht er neben der Fahrt und auch am Ende
+  einer einzelnen Saga zur Wahl.
+- **Kein Abspann** - wie bisher: Nach dem Epilog ist Schluss.
+
+Der Song ist die Uhr: Der Abspann endet mit seinem letzten Ton. Ohne Song
+läuft keiner - dann endet die Saga wie früher. Ältere Arcs mit einem
+Credits-Song behalten ihre Textrolle, ohne dass jemand etwas umstellen muss.
+
+Und der Weg dorthin ist jetzt vollständig: **Nach einem gewonnenen Kampf
+spielt die Siegermelodie** (`public/audio/winner.mp3`) schon auf der
+„GEWONNEN!“-Karte und läuft in den Epilog hinein - dann erst kommt der
+Abspann.
+
 ### Geschenke nach einem Kapitel
 
 Zu jedem Kapitel einer Saga (und zum Finale) lässt sich eintragen, was Wimpy
@@ -843,7 +877,7 @@ app/
   api/talk/route.ts     Gespräch mit einem Charakter
   api/search/route.ts   Umsehen an einem Ort
   api/accuse/route.ts   Finale Beschuldigung und Auflösung
-components/             Bildschirme, Overlays, Prolog und Intro-Sequenz
+components/             Bildschirme, Overlays, Prolog, Intro und Abspann
 components/admin/       die Bereiche des Admin-Menüs
 lib/
   firebase.ts           Firebase-Anbindung (Firestore + anonyme Anmeldung)

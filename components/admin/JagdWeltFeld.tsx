@@ -6,7 +6,7 @@ import {
   DREI_D_TAGESZEITEN,
   DREI_D_WETTER,
 } from "@/lib/pursuit3d";
-import { jagdWelt, type VerfolgungVorgabe } from "@/lib/verfolgung";
+import { jagdWelt, type JagdWelt } from "@/lib/verfolgung";
 
 /**
  * Die Strecke einer Verfolgungsjagd: Belag, Licht, Wetter und Bausteine.
@@ -19,15 +19,23 @@ import { jagdWelt, type VerfolgungVorgabe } from "@/lib/verfolgung";
  *
  * Alles hier ist freiwillig. Wer nichts anfasst, fährt durch die
  * Schneelandschaft, die es immer gab.
+ *
+ * Inzwischen steht dasselbe Feld an einer dritten Stelle: im Abspann, der
+ * dieselbe Straße befährt. Deshalb nimmt es nicht mehr die Jagd selbst
+ * entgegen, sondern nur ihre Welt.
  */
 export function JagdWeltFeld({
-  jagd,
+  welt: roh,
   onAendern,
+  titel = "Die Strecke · wie überall im Spiel",
+  hinweisLeer = "Nichts gewählt - dann fährt man durch die Landschaft, die zum Belag gehört.",
 }: {
-  jagd: VerfolgungVorgabe;
-  onAendern: (teil: Partial<VerfolgungVorgabe>) => void;
+  welt: Partial<JagdWelt>;
+  onAendern: (teil: Partial<JagdWelt>) => void;
+  titel?: string;
+  hinweisLeer?: string;
 }) {
-  const welt = jagdWelt(jagd);
+  const welt = jagdWelt(roh);
   /** Höchstens drei Bauarten - jede bringt ihre eigenen Texturen mit. */
   const umschalten = (id: string) =>
     onAendern({
@@ -38,15 +46,13 @@ export function JagdWeltFeld({
 
   return (
     <>
-      <span className="leise klein">Die Strecke · wie überall im Spiel</span>
+      <span className="leise klein">{titel}</span>
 
       <label className="feld">
         <span className="leise">Straßenbelag</span>
         <select
           value={welt.strassentyp}
-          onChange={(e) =>
-            onAendern({ strassentyp: e.target.value as VerfolgungVorgabe["strassentyp"] })
-          }
+          onChange={(e) => onAendern({ strassentyp: e.target.value as JagdWelt["strassentyp"] })}
         >
           {DREI_D_STRASSENTYPEN.map((typ) => (
             <option key={typ.id} value={typ.id}>
@@ -60,9 +66,7 @@ export function JagdWeltFeld({
         <span className="leise">Tageszeit</span>
         <select
           value={welt.tageszeit}
-          onChange={(e) =>
-            onAendern({ tageszeit: e.target.value as VerfolgungVorgabe["tageszeit"] })
-          }
+          onChange={(e) => onAendern({ tageszeit: e.target.value as JagdWelt["tageszeit"] })}
         >
           {DREI_D_TAGESZEITEN.map((zeit) => (
             <option key={zeit.id} value={zeit.id}>
@@ -76,7 +80,7 @@ export function JagdWeltFeld({
         <span className="leise">Wetter</span>
         <select
           value={welt.wetter}
-          onChange={(e) => onAendern({ wetter: e.target.value as VerfolgungVorgabe["wetter"] })}
+          onChange={(e) => onAendern({ wetter: e.target.value as JagdWelt["wetter"] })}
         >
           {DREI_D_WETTER.map((lage) => (
             <option key={lage.id} value={lage.id}>
@@ -107,8 +111,8 @@ export function JagdWeltFeld({
       </div>
       <p className="leise klein">
         {welt.locations.length
-          ? "Sie stehen in zwei Zeilen neben der Piste und kommen wieder, sobald sie hinten aus dem Bild gefahren sind."
-          : "Nichts gewählt - dann fährt man durch die Landschaft, die zum Belag gehört."}
+          ? "Sie stehen dicht an der Fahrbahn und kommen wieder, sobald sie hinten aus dem Bild gefahren sind."
+          : hinweisLeer}
       </p>
     </>
   );

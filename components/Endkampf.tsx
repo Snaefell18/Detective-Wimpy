@@ -7,6 +7,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { AnimationsModell } from "@/lib/animations.generated";
 import { REGEL_START, leistungsProfil, nachregeln } from "@/lib/dreiDLeistung";
+import { spiele } from "@/lib/introAudio";
 import {
   GEGNER_SCHLAG_TREFFER,
   GEGNER_SCHUSS_TEMPO,
@@ -1229,6 +1230,18 @@ export function Endkampf({
    */
   const [stufeJetzt, setStufeJetzt] = useState<KampfStufe>(stufe);
   const sanfter = leichtereStufe(stufeJetzt);
+
+  /*
+   * Die Siegermelodie.
+   *
+   * Sie beginnt auf der Karte und läuft weiter, während der Epilog erzählt
+   * wird - deshalb wird sie hier nicht wieder angehalten: Der nächste
+   * Bildschirm bringt entweder seine eigene Stimme mit (die hält alles an) oder
+   * er lässt sie ausklingen. Nach einer Niederlage bleibt es still.
+   */
+  useEffect(() => {
+    if (phase === "gewonnen") void spiele("jubel");
+  }, [phase]);
 
   const starten = (neueStufe?: KampfStufe) => {
     steuerung.current = { x: 0, z: 0 };

@@ -7,6 +7,7 @@ import { Bild } from "@/components/Bild";
 import { ArcsListe } from "@/components/ArcsListe";
 import { ArcUebersicht } from "@/components/ArcUebersicht";
 import { ArcCredits } from "@/components/ArcCredits";
+import { StrassenCredits } from "@/components/StrassenCredits";
 import { Showdown } from "@/components/Showdown";
 import { ArcVorspann, themeVon } from "@/components/ArcVorspann";
 import { BeschuldigenOverlay } from "@/components/BeschuldigenOverlay";
@@ -38,7 +39,8 @@ import { VerdaechtigeScreen } from "@/components/VerdaechtigeScreen";
 import { Versammlung } from "@/components/Versammlung";
 import { useAdmin } from "@/lib/adminStore";
 import { postJson } from "@/lib/api";
-import { arcAbspann, arcKampf, type Arc } from "@/lib/arcTypen";
+import { arcAbspann, arcCredits, arcKampf, type Arc } from "@/lib/arcTypen";
+import { abspannVon } from "@/lib/abspann";
 import { sagaKampf } from "@/lib/endkampf";
 import { mitVerhandlung } from "@/lib/sagaFinale";
 import { ladeSagas } from "@/lib/db";
@@ -951,15 +953,33 @@ export default function Home() {
           </main>
         );
       }
-      if (arcDaten.finale.art === "credits") {
+      /*
+       * Die Credits eines Arcs - inzwischen in Arten.
+       *
+       * Die Textrolle gab es zuerst und bleibt, was sie war; daneben steht
+       * die Straßenfahrt. Ältere Arcs kennen nur ihren Song und ihren
+       * Abschlusstext, und genau daraus wird bei ihnen weiterhin die Rolle
+       * (siehe arcCredits).
+       */
+      const credits = arcCredits(arcDaten);
+      if (credits) {
         return (
           <main className="app">
-            <ArcCredits
-              titel={arcDaten.name}
-              text={arcDaten.finale.erzaehler.text}
-              song={arcDaten.finale.creditsSong ?? ""}
-              onFertig={arcBeenden}
-            />
+            {credits.art === "strassenfahrt" ? (
+              <StrassenCredits
+                vorgabe={credits}
+                titel={arcDaten.name}
+                weiterText="Zum Hauptmenü ›"
+                onFertig={arcBeenden}
+              />
+            ) : (
+              <ArcCredits
+                titel={arcDaten.name}
+                text={credits.text || arcDaten.finale.erzaehler.text}
+                song={credits.song}
+                onFertig={arcBeenden}
+              />
+            )}
           </main>
         );
       }
@@ -1247,7 +1267,31 @@ export default function Home() {
       );
     }
 
-    if (lauf.phase === "epilog") {
+    /**
+     * Was nach dem Epilog kommt - und wie es endet.
+     *
+     * Ohne Abspann geht es von dort direkt zurück (in den Arc oder ins
+     * Hauptmenü); mit Abspann steht er dazwischen. Beides endet an derselben
+     * Stelle, deshalb steht der Schluss hier einmal.
+     */
+    const sagaAbspann = abspannVon(sagaDaten.vorgaben.abspann);
+    const sagaSchluss = () => {
+      if (sagaGehoertZumArc) {
+        arcWeiter();
+        return;
+      }
+      saga.beenden();
+      spiel.aufgeben();
+    };
+
+    /*
+     * Der Epilog - und die Notbremse für einen Abspann, der nicht mehr da ist.
+     *
+     * Wer mitten in einer Saga steht und im Editor den Abspann löscht, landet
+     * sonst auf einem Bildschirm, den es nicht mehr gibt. Dann steht hier
+     * wieder der Epilog, und sein Knopf führt hinaus.
+     */
+    if (lauf.phase === "epilog" || (lauf.phase === "abspann" && !sagaAbspann)) {
       // 500 ¥ für eine ganze Saga - aber nur, wenn das Finale wirklich
       // geschafft ist. Verbucht wird über die Saga-Id, also genau einmal.
       return (
@@ -1256,16 +1300,47 @@ export default function Home() {
             teil={sagaDaten.finale.epilog}
             titel={`${sagaDaten.name} - Ende`}
             musik={lauf.finaleGeschafft ? "jubel" : undefined}
-            weiterText={sagaGehoertZumArc ? "Weiter im Arc ›" : "Zum Hauptmenü ›"}
+            weiterText={
+              sagaAbspann ? "Abspann ›" : sagaGehoertZumArc ? "Weiter im Arc ›" : "Zum Hauptmenü ›"
+            }
             onWeiter={() => {
-              if (sagaGehoertZumArc) {
-                arcWeiter();
+              if (sagaAbspann) {
+                saga.setzePhase("abspann");
                 return;
               }
-              saga.beenden();
-              spiel.aufgeben();
+              sagaSchluss();
             }}
           />
+        </main>
+      );
+    }
+
+    /*
+     * Der Abspann: ganz am Ende, nach dem Epilog.
+     *
+     * Er ist Zugabe, kein Teil der Geschichte - deshalb führt jeder Weg von
+     * hier nach draußen, auch wenn etwas fehlt. Steht keiner mehr in den
+     * Vorgaben (im Editor gelöscht, während jemand mitten in der Saga war),
+     * endet sie sofort.
+     */
+    if (lauf.phase === "abspann" && sagaAbspann) {
+      return (
+        <main className="app">
+          {sagaAbspann.art === "strassenfahrt" ? (
+            <StrassenCredits
+              vorgabe={sagaAbspann}
+              titel={sagaDaten.name}
+              weiterText={sagaGehoertZumArc ? "Weiter im Arc ›" : "Saga beenden ›"}
+              onFertig={sagaSchluss}
+            />
+          ) : (
+            <ArcCredits
+              titel={sagaDaten.name}
+              text={sagaAbspann.text || sagaDaten.finale.epilog.text}
+              song={sagaAbspann.song}
+              onFertig={sagaSchluss}
+            />
+          )}
         </main>
       );
     }
