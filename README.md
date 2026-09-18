@@ -193,6 +193,13 @@ mit dem Daumen gesteuert:
 - **Ohne gebaute Arena** wird trotzdem gekämpft: Dann steht der
   Standardkampfplatz da (siehe unten bei „Gericht & Flucht"). Früher fiel der
   Showdown dann still aus - und mit ihm ein ganzes Finale.
+- **Das Ende hat eine Reihenfolge.** Erst geht der Verlierer zu Boden - mit
+  seinem Niederlagen-Clip, wenn das Modell einen hat (`Knock_Down`,
+  `Catching_Breath`, `Sleep_Normally` …), sonst kippt er einfach in Zeitlupe
+  um. Der Sieger steht dabei still. Erst knapp eine Sekunde später fängt er an
+  zu jubeln, und erst nach gut zwei Sekunden kommt die Karte - und mit ihr die
+  Siegermelodie. Vorher lief beides gleichzeitig: Wimpy tanzte los, während der
+  Gegner noch fiel.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
   „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
   Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
@@ -252,6 +259,13 @@ dieser Art auch die Jagd dazu. Alles andere - Stufe, Musik, Gegnermodell,
 Licht - bleibt, wie es eingestellt ist, und wer die Jagd bewusst abgewählt hat,
 behält sie abgewählt. Dasselbe gilt für den Showdown einer Saga und den eines
 Arcs.
+
+Der Showdown hängt dabei an nichts mehr: **Gegen wen gekämpft wird, steht im
+Spielstand** - Id und Tier kommen aus der Besetzung der Saga, die ohnehin auf
+dem Gerät liegt. Wer mitten im Kampf neu lädt, steht danach wieder demselben
+Tier gegenüber, und eine stumme Datenbank ändert daran nichts. (Sie wird
+trotzdem kurz abgewartet, falls das Tier nur dort steht - aber höchstens sechs
+Sekunden, dann geht es auch ohne los.)
 
 Und der Knopf unter dem Urteil sagt die Wahrheit: „Ihm nach ›" steht dort nur,
 wenn danach wirklich eine Verfolgung kommt. Der Twist verträgt sich damit so wenig wie mit

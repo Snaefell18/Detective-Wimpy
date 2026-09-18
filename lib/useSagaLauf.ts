@@ -93,6 +93,19 @@ export function useSagaLauf() {
     });
   }, []);
 
+  /**
+   * Gegen wen der Showdown geht - mitgeschrieben, nicht nur gemerkt.
+   *
+   * Der Kampf ist der längste Abschnitt einer Saga; ein Neuladen mittendrin
+   * darf nicht dazu führen, dass plötzlich ein anderes Tier in der Arena
+   * steht.
+   */
+  const setzeShowdownGegner = useCallback((charakterId: string) => {
+    setStand((alt) =>
+      alt ? { ...alt, lauf: { ...alt.lauf, showdownGegnerId: charakterId } } : alt,
+    );
+  }, []);
+
   const setzePhase = useCallback(
     (
       phase: SagaLauf["phase"],
@@ -188,6 +201,7 @@ export function useSagaLauf() {
     starten,
     nurFinale,
     setzePhase,
+    setzeShowdownGegner,
     kapitelGeschafft,
     versammlungGeschafft,
     verfolgungGeschafft,

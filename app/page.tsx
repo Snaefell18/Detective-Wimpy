@@ -146,6 +146,13 @@ export default function Home() {
    * dem Moment, in dem der Fall abgeräumt wird - danach wüsste sie niemand
    * mehr.
    */
+  /*
+   * Gegen wen der Showdown geht.
+   *
+   * Der Wert lebt im Spielstand der Saga, nicht nur hier: Ein Kampf dauert,
+   * und wer zwischendurch neu lädt, soll danach nicht gegen ein geratenes
+   * Tier antreten. Hier steht nur noch die Kopie für den laufenden Aufbau.
+   */
   const [showdownGegner, setShowdownGegner] = useState("");
   /** Wer gleich zum ersten Mal mitspielt - wird vor dem Kapitel angekündigt. */
   const [neuling, setNeuling] = useState<{ tiere: Character[]; finale: boolean } | null>(null);
@@ -1254,6 +1261,7 @@ export default function Home() {
                 const arena = sagaKampfFuer(sagaDaten);
                 if (geschafft && arena) {
                   setShowdownGegner(verurteilterId ?? "");
+                  saga.setzeShowdownGegner(verurteilterId ?? "");
                   saga.setzePhase("showdown", null, true);
                   return;
                 }
@@ -1278,7 +1286,17 @@ export default function Home() {
         <main className="app">
           <Showdown
             kampf={sagaKampfFuer(sagaDaten)}
-            gegnerId={showdownGegner}
+            // Nach einem Neuladen steht die Id nur noch im Spielstand.
+            gegnerId={showdownGegner || lauf.showdownGegnerId || ""}
+            /*
+             * Und das Tier gleich mit: Die Besetzung der Saga liegt im
+             * Spielstand, also braucht der Showdown dafür keine Datenbank.
+             * Ohne das stünde bei einer stummen Verbindung „Der Drahtzieher"
+             * in der Arena - und ein geratenes Modell daneben.
+             */
+            gegnerTier={sagaBesetzung(sagaDaten).find(
+              (c) => c.id === (showdownGegner || lauf.showdownGegnerId),
+            )}
             // Wer neu lädt, während der Kampf läuft, hat die Id verloren -
             // dann steht dort wenigstens, gegen wen es geht.
             name="Der Drahtzieher"
@@ -1505,11 +1523,12 @@ export default function Home() {
                      */
                     const arena = sagaKampfFuer(saga.stand.saga);
                     if (arena && geschafft) {
-                      setShowdownGegner(
+                      const gegen =
                         stand.ergebnis?.verwandlung?.daemon?.id ||
-                          stand.ergebnis?.taeterId ||
-                          "",
-                      );
+                        stand.ergebnis?.taeterId ||
+                        "";
+                      setShowdownGegner(gegen);
+                      saga.setzeShowdownGegner(gegen);
                       saga.setzePhase("showdown", null, true);
                     } else {
                       // Der Epilog kommt auch nach einer verlorenen Finalrunde -

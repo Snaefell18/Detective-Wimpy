@@ -575,6 +575,16 @@ export type SagaLauf = {
   /** Nummern der bereits gelösten Kapitel. */
   geloest: number[];
   /**
+   * Gegen wen der Showdown geht - die Charakter-Id.
+   *
+   * Sie steht hier und nicht nur im Arbeitsspeicher, weil ein Kampf lange
+   * dauern kann: Wer zwischendurch neu lädt (oder wem der Browser die Seite
+   * wegräumt), soll danach nicht gegen ein geratenes Tier antreten. Fehlt
+   * sie - bei älteren Durchgängen -, gilt wie bisher das Modell aus der
+   * Arena.
+   */
+  showdownGegnerId?: string;
+  /**
    * Wurde das Finale wirklich gelöst? Der Epilog kommt auch nach einer
    * verlorenen Finalrunde - dann aber ohne Siegermusik.
    */

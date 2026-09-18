@@ -241,6 +241,28 @@ console.log("\n9. Welche Animation wozu passt");
     karg.lauf === "Armature|Unreal Take|baselayer" && karg.schlag === karg.lauf && karg.jubel === karg.lauf);
   const leer = kampfClips([]);
   pruefe("und ganz ohne Clips gibt es keinen Absturz", leer.lauf === null && leer.wurf === null);
+
+  /*
+   * Und die Niederlage.
+   *
+   * Sie ist die einzige Kategorie ohne Ersatz: Lieber gar kein Clip - dann
+   * kippt die Figur still um - als ein Tanz, während jemand zu Boden geht.
+   */
+  const boeser = kampfClips(["Walking", "Punch_Combo_1", "Knock_Down", "Idle_3", "Cardio_Dance"]);
+  pruefe("wer am Boden liegt, wird umgehauen", boeser.besiegt === "Knock_Down", String(boeser.besiegt));
+  pruefe("und das ist nicht sein Schlag", boeser.schlag !== boeser.besiegt, String(boeser.schlag));
+  pruefe("und nicht sein Jubel", boeser.jubel !== boeser.besiegt, String(boeser.jubel));
+
+  pruefe(
+    "auch Luftschnappen zählt",
+    kampfClips(["Walking", "Catching_Breath", "Idle_3"]).besiegt === "Catching_Breath",
+  );
+  pruefe(
+    "ein Angriff mit „Down“ im Namen nicht",
+    kampfClips(["Walking", "Male_Head_Down_Charge", "Idle_3"]).besiegt === null,
+  );
+  pruefe("ohne passenden Clip bleibt es leer", karg.besiegt === null, String(karg.besiegt));
+  pruefe("und ganz ohne Clips auch", leer.besiegt === null);
 }
 
 console.log("\n10. Die Arena");
