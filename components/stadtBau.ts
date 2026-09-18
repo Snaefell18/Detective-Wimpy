@@ -620,8 +620,15 @@ function feuerwerkFeld(args: {
 }): WetterFeld {
   const { scene, merken, versatzZ, groesse } = args;
 
-  /** Der Vorrat an Funken. Mehr als tausend sieht man nicht, es kostet nur. */
-  const vorrat = Math.round(Math.min(1400, Math.max(400, args.anzahl ?? 900)));
+  /*
+   * Der Vorrat an Funken.
+   *
+   * Großzügig bemessen, denn er begrenzt, wie viele Kugeln gleichzeitig in
+   * der Luft stehen dürfen: Ist er leer, fällt die nächste Blüte kleiner aus.
+   * Zweitausend Punkte in einem einzigen Feld kosten kaum etwas - teuer wären
+   * zweitausend Objekte.
+   */
+  const vorrat = Math.round(Math.min(2400, Math.max(900, (args.anzahl ?? 900) * 2)));
 
   const positionen = new Float32Array(vorrat * 3);
   const farben = new Float32Array(vorrat * 3);
@@ -724,9 +731,17 @@ function feuerwerkFeld(args: {
     const i = freierPlatz();
     if (i < 0) return;
     const seite = Math.random() < 0.5 ? -1 : 1;
-    // Über der Fahrbahn und dem Gehweg, nicht hinter den Häuserzeilen.
-    const x = seite * (2 + Math.random() * 10);
-    const z = versatzZ - (10 + Math.random() * 34);
+    /*
+     * Über der ganzen Breite, nicht nur über der Fahrbahn.
+     *
+     * Die Hälfte steigt über der Straße auf, die andere weiter draußen -
+     * zwischen den Häusern, über den Dächern der niedrigen, hinter den
+     * hohen. So kommt das Feuerwerk aus mehreren Richtungen statt aus einer
+     * Reihe, und beim Laufen durch die Stadt steht immer irgendwo eines.
+     */
+    const weitDraussen = Math.random() < 0.5;
+    const x = seite * (weitDraussen ? 13 + Math.random() * 16 : 2 + Math.random() * 10);
+    const z = versatzZ - (8 + Math.random() * 52);
     setzen(i, x, 0.6, z, 1, 6, Math.floor(Math.random() * FEUERWERK_FARBEN.length));
     vx[i] = (Math.random() - 0.5) * 1.2;
     vy[i] = 7.5 + Math.random() * 2;
@@ -742,7 +757,7 @@ function feuerwerkFeld(args: {
      * den Autodächern. Die Rakete steigt also durch das ganze Bild und blüht
      * knapp unter dem oberen Rand.
      */
-    ziel[i] = 5.5 + Math.random() * 2.5;
+    ziel[i] = 5 + Math.random() * 3.5;
   };
 
   /** Und ihr Ende: die Kugel, die auseinanderfliegt. */
@@ -751,8 +766,9 @@ function feuerwerkFeld(args: {
     const y = positionen[i * 3 + 1];
     const z = positionen[i * 3 + 2];
     const ton = farbe[i];
-    const menge = 34 + Math.floor(Math.random() * 24);
-    const tempo = 5 + Math.random() * 3.5;
+    // Mal ein kleines Bouquet, mal eine große Kugel.
+    const menge = 28 + Math.floor(Math.random() * 40);
+    const tempo = 4.5 + Math.random() * 4.5;
     for (let k = 0; k < menge; k++) {
       const j = freierPlatz();
       if (j < 0) return;
@@ -780,9 +796,17 @@ function feuerwerkFeld(args: {
     naechste -= schritt;
     if (naechste <= 0) {
       starten();
-      // Manchmal zwei kurz hintereinander - das wirkt gefeiert statt getaktet.
-      if (Math.random() < 0.28) starten();
-      naechste = 0.4 + Math.random() * 0.85;
+      /*
+       * Und oft gleich mehrere.
+       *
+       * Ein Feuerwerk ist kein Taktgeber: Mal steigt eine einzelne Rakete,
+       * mal drei auf einmal, dann ist einen Moment Ruhe. Gewürfelt wird
+       * deshalb beides - wie viele es sind und wie lange es bis zur nächsten
+       * dauert.
+       */
+      if (Math.random() < 0.55) starten();
+      if (Math.random() < 0.25) starten();
+      naechste = 0.2 + Math.random() * 0.55;
     }
 
     for (let i = 0; i < vorrat; i++) {

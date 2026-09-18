@@ -595,12 +595,18 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   er über anderthalb Sekunden aus. Gerechnet wird alles in einem einzigen
   Punktefeld mit festem Vorrat, das auch auf einem Telefon ruhig durchläuft.
 
-  Es steigt **über der Straße** auf, zehn bis vierzig Meter voraus, und blüht
-  sechs bis acht Meter hoch - also vor den Fassaden und knapp unter dem oberen
+  Es steigt **über der Straße** auf, acht bis sechzig Meter voraus, und blüht
+  fünf bis neun Meter hoch - also vor den Fassaden und knapp unter dem oberen
   Bildrand, nicht hoch über den Dächern. Das ist ausgerechnet und nicht
   geraten: Beide Kameras schauen fast waagerecht (die Stadt aus fünf Metern
   vierzehn Grad nach unten, die Verfolgungsjagd aus sieben Metern noch
   steiler), und was höher aufblüht, liegt schlicht über dem Bild.
+
+  Die Hälfte der Raketen steigt dabei weiter draußen auf, zwischen und hinter
+  den Häusern, damit es aus mehreren Richtungen kommt statt aus einer Reihe.
+  Und es geht nicht im Takt: Mal steigt eine einzelne, mal drei auf einmal,
+  dann ist einen Moment Ruhe - alle paar Zehntelsekunden fällt die Würfelung
+  neu.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
   Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein
   Trampelpfad durch die Wiese. **Keine Spurrillen, keine Striche, keine
