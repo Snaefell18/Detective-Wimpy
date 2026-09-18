@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
 import { laufAnimation } from "@/lib/pursuit";
+import { ruheAuswahl } from "@/lib/tiermodelle";
 import { TOKYO_FASSADEN } from "@/lib/pursuit3d";
 
 type Richtung = { x: number; z: number };
@@ -163,7 +164,7 @@ function ExperimentCanvas({
         spieler.add(geladen.figur);
         spielerMixer = new THREE.AnimationMixer(geladen.figur);
         laufAktion = spielerMixer.clipAction(geladen.animationen.find((clip) => clip.name === laufAnimation(geladen.animationen.map((clip) => clip.name))) ?? geladen.animationen[0]);
-        const ruheClip = geladen.animationen.find((clip) => /idle|rest/i.test(clip.name));
+        const ruheClip = ruheAuswahl(geladen.animationen)[0];
         if (ruheClip) ruheAktion = spielerMixer.clipAction(ruheClip);
         aktiveAktion = ruheAktion ?? laufAktion;
         aktiveAktion?.play();
@@ -188,7 +189,10 @@ function ExperimentCanvas({
         scene.add(gruppe);
         npcGruppen.push({ gruppe, info: { id: modell.id, name: modell.name } });
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
-        const clip = ergebnis.value.animationen.find((kandidat) => /idle|dance|rest/i.test(kandidat.name)) ?? ergebnis.value.animationen[0];
+        // Jedes Tier bekommt einen anderen Leerlauf, wo das Modell mehrere
+        // hat - sonst steht die ganze Reihe im Gleichschritt.
+        const ruhen = ruheAuswahl(ergebnis.value.animationen);
+        const clip = ruhen[index % Math.max(1, ruhen.length)] ?? ergebnis.value.animationen[0];
         if (clip) mixer.clipAction(clip).play();
         mixers.push(mixer);
       });

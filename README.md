@@ -401,6 +401,36 @@ in der Vorschau.
 Daneben steht dort die **Ausrichtung**: Jedes Modell liegt anders in seiner
 Datei, und die Drehung rückt es so, dass die Schnauze in Fahrtrichtung zeigt.
 
+### Wie die Tiere herumstehen
+
+Die 3D-Modelle bringen ihre Animationen mit, und welche davon ein Tier im
+Stehen benutzt, entscheidet `ruheAuswahl` in `lib/tiermodelle.ts` - für alle
+Szenen dieselbe Wahl: 3D-Kapitel, Verfolgungsjagd, Abspann, Probewelt.
+
+Der Haken steckte in `restpose`. Neun der Modelle bringen sie mit, und sie ist
+keine Animation, sondern die Ruhepose des Skeletts: ein einziges Bild. Gesucht
+wurde bisher nach „idle" *oder* „rest" - und weil `restpose` darauf passt,
+stand sie gleichberechtigt neben den echten Leerläufen. Eine Figur mit vier
+schönen Idles stand deshalb in jeder dritten Pause reglos herum.
+
+Jetzt gilt der Reihe nach:
+
+1. **Echte Leerläufe** (`Idle_3`, `Idle_11` …) - viele Modelle haben mehrere,
+   dann wechseln sie sich ab. Wimpy hat vier, der Yeti zwei.
+2. Danach, **was man im Stehen tut**: tanzen, sich strecken, trinken, sich im
+   Spiegel betrachten. Davon leben die Straßen.
+3. Sonst der **einzige Clip** des Modells (die aus Unreal exportierten heißen
+   „baselayer" und sind genau das: ein ruhiges Atmen).
+4. Und erst ganz zuletzt die **Ruhepose** - besser reglos als auf der Stelle
+   rennend.
+
+Nicht dabei ist, was kein Herumstehen ist: Schläge, Blocks, Sprünge, Rollen,
+Sprints. Ein Tier, das am Straßenrand Faustschläge übt, war nie gemeint.
+
+Auch die **Spielfigur** wechselt jetzt: Wer sieben bis dreizehn Sekunden
+stehen bleibt, sieht den nächsten Leerlauf. Am Steuer bleibt es bei einem -
+wer im Wagen sitzt, soll nicht plötzlich tanzen.
+
 ## Bilder erzeugen lassen
 
 Tiere, Schauplätze, Dinge und Ladenzubehör lassen sich im Admin-Menü malen
