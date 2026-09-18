@@ -17,6 +17,7 @@ import { yen } from "@/lib/zubehoer";
 import {
   AUFTRITTS_ARTEN,
   artFuerAuftritt,
+  mitRueckkehr,
   auftrittVon,
   besessen,
   type SagaVorgaben,
@@ -1587,6 +1588,49 @@ export function SagaVorgabenFelder({
                     );
                   })}
               </div>
+
+              {/*
+                Und wie er wiederkommt.
+
+                Eine Rückkehr wird sonst genauso angekündigt wie ein erster
+                Auftritt - dieselbe Bühne, derselbe Song, nur heißt die Zeile
+                „Zurück auf dem Feld!". Beim ersten Mal ist das ein Auftritt;
+                beim dritten Mal, wenn jemand nur kurz verreist war, ist es
+                eine Unterbrechung. Die Frage steht deshalb genau dort, wo man
+                die Pause einträgt - und nur, wenn es wirklich eine gibt.
+              */}
+              {(vorgaben.abwesenheiten?.[c.id] ?? []).length > 0 && (
+                <div className="marken-reihe">
+                  <span className="leise klein">Kommt zurück</span>
+                  <button
+                    className="marke-knopf"
+                    data-aktiv={mitRueckkehr(c.id, vorgaben)}
+                    onClick={() =>
+                      setzen({
+                        stilleRueckkehr: (vorgaben.stilleRueckkehr ?? []).filter(
+                          (id) => id !== c.id,
+                        ),
+                      })
+                    }
+                  >
+                    Mit Ansage
+                  </button>
+                  <button
+                    className="marke-knopf"
+                    data-aktiv={!mitRueckkehr(c.id, vorgaben)}
+                    onClick={() =>
+                      setzen({
+                        stilleRueckkehr: [
+                          ...(vorgaben.stilleRueckkehr ?? []).filter((id) => id !== c.id),
+                          c.id,
+                        ],
+                      })
+                    }
+                  >
+                    Stillschweigend
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

@@ -544,6 +544,16 @@ wieder auftauchen; die Ansage heißt dann „Zurück auf dem Feld!“. Bliebe ei
 Kapitel dadurch ohne genug Verdächtige, rückt jemand nach - ein spielbarer
 Fall geht vor.
 
+**Die Rückkehr lässt sich einzeln abstellen.** Sie bekommt sonst dieselbe
+Bühne wie der erste Auftritt - derselbe Song, dieselbe Animation, nur eine
+andere Zeile. Beim ersten Mal ist das ein Auftritt; beim dritten Mal, wenn
+jemand zwischen zwei Kapiteln nur kurz verreist war, ist es eine
+Unterbrechung. Sobald für ein Tier eine Pause eingetragen ist, steht deshalb
+direkt darunter **„Kommt zurück: Mit Ansage / Stillschweigend"** - wer
+stillschweigend zurückkommt, steht im nächsten Kapitel einfach wieder da. Der
+erste Auftritt bleibt davon unberührt; wer ihn ganz loswerden will, stellt die
+Auftrittsart auf „Kein Auftritt" (das schaltet dann auch jede Rückkehr ab).
+
 Wer neu ist, wird nicht geplant,
 sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des
 vorherigen nicht, ist neu. Das stimmt auch bei von Hand nachbearbeiteten

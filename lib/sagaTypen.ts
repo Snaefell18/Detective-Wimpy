@@ -220,6 +220,21 @@ export type SagaVorgaben = {
    * überall: 1 ist das erste Kapitel, kapitelAnzahl + 1 das Finale.
    */
   abwesenheiten: Record<string, number[]>;
+  /**
+   * Wer nach einer Pause stillschweigend zurückkommt - Charakter-Ids.
+   *
+   * Eine Rückkehr wird sonst genauso angekündigt wie ein erster Auftritt:
+   * dieselbe Bühne, derselbe Song, nur heißt die Zeile „Zurück auf dem
+   * Feld!". Beim ersten Mal ist das ein Auftritt; beim dritten Mal, wenn
+   * jemand zwischen zwei Kapiteln nur kurz verreist war, ist es eine
+   * Unterbrechung. Wer hier steht, steht beim nächsten Kapitel einfach wieder
+   * da.
+   *
+   * Der erste Auftritt bleibt davon unberührt - der hängt an der
+   * Auftrittsart („Kein Auftritt" schaltet ihn ganz ab, und dann schweigt
+   * auch jede Rückkehr).
+   */
+  stilleRueckkehr: string[];
   schwierigkeit: Vorgaben["schwierigkeit"];
   reifegrad: Reifegrad;
   absurditaet: Absurditaet;
@@ -304,6 +319,7 @@ export const STANDARD_SAGA_VORGABEN: SagaVorgaben = {
   twist: false,
   neuzugaenge: {},
   abwesenheiten: {},
+  stilleRueckkehr: [],
   schwierigkeit: "mittel",
   reifegrad: "kindgerecht",
   absurditaet: "verspielt",
@@ -706,6 +722,19 @@ export const mitAuftritt = (
   vorgaben: Pick<SagaVorgaben, "neuzugangArten"> | undefined,
   tier?: { auftrittArt?: string },
 ): boolean => artFuerAuftritt(charakterId, vorgaben, tier) !== "ohne";
+
+/**
+ * Wird dieses Tier angekündigt, wenn es nach einer Pause zurückkommt?
+ *
+ * Standardmäßig ja - so war es immer, und so soll es bleiben: Wer nach zwei
+ * Kapiteln wieder auftaucht, verdient seine Zeile. Wer im Editor auf
+ * „stillschweigend" gestellt ist, steht beim nächsten Kapitel einfach wieder
+ * da.
+ */
+export const mitRueckkehr = (
+  charakterId: string,
+  vorgaben: Pick<SagaVorgaben, "stilleRueckkehr"> | undefined,
+): boolean => !(vorgaben?.stilleRueckkehr ?? []).includes(charakterId);
 
 /**
  * Das Stück, das im Spiel zum Auftritt gehört, wenn nirgends etwas anderes

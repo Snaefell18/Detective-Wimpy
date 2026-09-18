@@ -27,6 +27,21 @@ console.log("\n1. Die Standardvorgaben gehen durch");
   pruefe("angenommen", geprueft.success, geprueft.error?.issues[0]?.message);
 }
 
+console.log("\n1b. Die stille Rückkehr");
+{
+  const mit = SagaVorgabenSchema.safeParse(
+    uebertragen({ ...STANDARD_SAGA_VORGABEN, stilleRueckkehr: ["nala", "hut"] }),
+  );
+  pruefe("die Liste kommt durch", mit.success && mit.data.stilleRueckkehr.length === 2);
+
+  // Ältere Sagas kennen das Feld nicht - sie müssen trotzdem durchgehen.
+  const ohne = { ...STANDARD_SAGA_VORGABEN };
+  delete ohne.stilleRueckkehr;
+  const alt = SagaVorgabenSchema.safeParse(uebertragen(ohne));
+  pruefe("ohne Feld bleibt die Saga gültig", alt.success);
+  pruefe("und alle werden angekündigt", alt.success && alt.data.stilleRueckkehr.length === 0);
+}
+
 console.log("\n2. Löcher in den Listen je Kapitel");
 {
   const mitLoch = { ...STANDARD_SAGA_VORGABEN, kapitelAnzahl: 5 };

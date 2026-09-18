@@ -54,6 +54,7 @@ import {
   artFuerAuftritt,
   besessen,
   mitAuftritt,
+  mitRueckkehr,
   geschenkFuerKapitel,
   musikFuerKapitel,
   neueGesichter,
@@ -603,13 +604,24 @@ export default function Home() {
       ).filter(
         // Die Dämonenform kündigt sich nie als "neuer Spieler" an.
         (c) => c.id !== besessenheit?.daemonId,
-      ).filter(
-        // Und wer im Editor auf "Kein Auftritt" steht, wird auch nicht
-        // angekündigt: kein Song, keine Bühne, er ist beim Kapitel einfach
-        // da. Bleibt danach niemand übrig, geht es ohne Unterbrechung
-        // weiter - die Ansage wird gar nicht erst gebaut.
-        (c) => mitAuftritt(c.id, saga.stand?.saga.vorgaben, c),
-      );
+      ).filter((c) => {
+        // Wer im Editor auf "Kein Auftritt" steht, wird nicht angekündigt:
+        // kein Song, keine Bühne, er ist beim Kapitel einfach da.
+        if (!mitAuftritt(c.id, saga.stand?.saga.vorgaben, c)) return false;
+        /*
+         * Und die Rückkehr ist eine eigene Frage.
+         *
+         * Wer pausiert hat und wiederkommt, bekommt dieselbe Bühne wie beim
+         * ersten Mal - nur heißt die Zeile "Zurück auf dem Feld!". Beim
+         * ersten Mal ist das ein Auftritt; beim dritten Mal, wenn jemand
+         * zwischen zwei Kapiteln nur kurz verreist war, ist es eine
+         * Unterbrechung. Deshalb lässt sie sich einzeln abstellen.
+         */
+        const kehrtZurueck =
+          saga.stand &&
+          warFrueherDa(saga.stand.saga, finale ? -1 : saga.stand.lauf.kapitel, c.id);
+        return !kehrtZurueck || mitRueckkehr(c.id, saga.stand?.saga.vorgaben);
+      });
       if (neue.length > 0) {
         setNeuling({ tiere: neue, finale });
         return;
