@@ -592,20 +592,29 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   vierzehn Grad nach unten, die Verfolgungsjagd aus sieben Metern noch
   steiler), und was höher aufblüht, liegt schlicht über dem Bild.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
-  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
-  durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
-  nur andersherum: Wo Räder fahren, ist das Gras weg und die Erde kommt durch,
-  also sind die beiden Spurrillen *heller* als der Belag, mit einem grünen
-  Streifen dazwischen, auf dem nie ein Rad läuft. Eine Mittellinie wird dort
-  nicht gemalt.
+  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein
+  Trampelpfad durch die Wiese. **Keine Spurrillen, keine Striche, keine
+  Mittellinie:** Sie hatte einmal zwei helle Bänder, wo die Räder die Erde
+  freilegen, und das war als Feldweg gedacht; im Bild wurden daraus zwei harte
+  Striche, die die Piste zerschnitten, und im Stadtraster lag dasselbe Muster
+  auf jedem einzelnen Feld. Jetzt ist der Weg dieselbe Wiese wie ringsum, nur
+  flacher, staubiger und mit unregelmäßigen Flecken, an denen die Erde
+  durchkommt - was ihn ausmacht, ist sein Ton, nicht seine Zeichnung. Am
+  durchgehenden Straßenzug franst er obendrein aus: Der Rand blendet über
+  eine Handbreit in die Wiese, statt mit einer Kante aufzuhören.
 
   Ringsum steht, was aus einer grünen Fläche eine Wiese macht: Büsche in zwei
-  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand und ein paar Blumen
-  dazwischen (`grasLand` in `components/stadtBau.ts` - dieselbe Rechnung wie
-  das Schneeland, nur in Grün, und mit derselben festen Saat, damit die Wiese
-  im Editor so aussieht wie später im Spiel). Der Boden, das zurückgeworfene
-  Licht und die Staubfahne hinter den Reifen färben sich mit; nachts liegt die
-  Piste im Mondlicht statt im Mittagsgrün.
+  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand, Findlinge,
+  umgestürzte Stämme und Blumen in kleinen Nestern (`grasLand` in
+  `components/stadtBau.ts` - dieselbe Rechnung wie das Schneeland, nur in
+  Grün, und mit derselben festen Saat, damit die Wiese im Editor so aussieht
+  wie später im Spiel). Davon steht auf der Wiese etwa doppelt so viel wie im
+  Schnee: Dort trägt die Fläche sich selbst, hier braucht sie das Kleinzeug.
+  Und die Wiese ist nicht mehr nur eine Farbe - über ihr liegt ein fast weißes
+  Muster, das sie stellenweise abdunkelt, sodass jede Tageszeit ihre eigene
+  Wiese bekommt. Der Boden, das zurückgeworfene Licht und die Staubfahne
+  hinter den Reifen färben sich mit; nachts liegt die Piste im Mondlicht statt
+  im Mittagsgrün.
 - **Der Blizzard** ist kein stärkerer Schneesturm, sondern ein eigener
   Zustand: Die Welt endet nach wenigen Metern, der Schnee fliegt in zwei
   Schichten fast waagerecht vorbei, und Böen ziehen die Sicht immer wieder

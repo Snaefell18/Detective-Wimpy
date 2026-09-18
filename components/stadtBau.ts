@@ -88,11 +88,52 @@ export function gradientTextur() {
  * einzeln sieht, das der Fläche aber die Tiefe gibt, die weiße Farbe allein
  * nie hat.
  *
- * Die Graspiste dreht das um: Dort ist die Spur *heller* als der Belag, denn
- * wo die Räder fahren, ist das Gras weg und die blanke Erde kommt durch.
- * Genau daran erkennt man einen Feldweg - zwei erdige Bänder mit einem
- * grünen Streifen dazwischen, auf dem nie ein Rad läuft.
+ * Die Graspiste hat gar keine Spuren.
+ *
+ * Sie hatte welche - zwei helle Bänder, wo die Räder die Erde freilegen -,
+ * und das war als Feldweg gedacht. Im Bild wurden daraus zwei harte Striche,
+ * die die ganze Piste zerschnitten, und im Stadtraster lag dasselbe Muster
+ * auf jedem einzelnen Feld: ein gestreifter Teppich statt einer Wiese.
+ *
+ * Jetzt ist es ein getretener Weg: dieselbe Wiese wie ringsum, nur flacher
+ * und staubiger, mit unregelmäßigen Flecken, an denen die Erde durchkommt.
+ * Kein Strich, keine Kante, kein Rand - was die Piste ausmacht, ist ihr Ton,
+ * nicht ihre Zeichnung.
  */
+
+/**
+ * Ein Zufallswert je Gitterpunkt - für dieselben Koordinaten derselbe.
+ *
+ * Dieselbe Hash-Formel, die auch das Korn streut; hier aber nur auf ganzen
+ * Zahlen, damit dazwischen weich überblendet werden kann.
+ */
+const gitterZufall = (x: number, y: number): number => {
+  const wert = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return wert - Math.floor(wert);
+};
+
+/**
+ * Weiches Rauschen: Flecken statt Körner.
+ *
+ * Zwischen den Gitterpunkten wird sanft überblendet (smoothstep), und die
+ * Gitterweite teilt die Kachel restlos - so laufen die Flecken über die
+ * Kachelgrenze hinweg weiter, statt an jeder Naht neu anzufangen.
+ */
+const fleckenRauschen = (u: number, v: number, felderU: number, felderV: number): number => {
+  const x = u * felderU;
+  const y = v * felderV;
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const um = (n: number, m: number) => ((n % m) + m) % m;
+  const weich = (t: number) => t * t * (3 - 2 * t);
+  const a = gitterZufall(um(x0, felderU), um(y0, felderV));
+  const b = gitterZufall(um(x0 + 1, felderU), um(y0, felderV));
+  const c = gitterZufall(um(x0, felderU), um(y0 + 1, felderV));
+  const d = gitterZufall(um(x0 + 1, felderU), um(y0 + 1, felderV));
+  const sx = weich(x - x0);
+  const sy = weich(y - y0);
+  return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
+};
 
 /** Wie eine Naturstraße aussieht - Grundfarbe, Spur und Korn. */
 const NATUR_BELAG: Record<
@@ -114,11 +155,11 @@ const NATUR_BELAG: Record<
   schnee: { basis: [228, 240, 251], spur: [52, 42, 26], korn: 9, rand: 8 },
   sand: { basis: [199, 160, 105], spur: [29, 29, 29], korn: 14, rand: -22 },
   /*
-   * Gras: sattes Wiesengrün, in der Spur die trockene Erde darunter
-   * (138/116/84). Ein kräftigeres Braun wurde unter der Sonne orange - ein
-   * Feldweg ist staubig, kein Backstein.
+   * Gras: der getretene Weg. Etwas heller und olivener als die Wiese
+   * ringsum (die steht auf 0x63914a), keine Spur, kein Rand - alles Weitere
+   * machen die Erdflecken weiter unten.
    */
-  gras: { basis: [104, 140, 66], spur: [-34, 24, -18], korn: 13, rand: -16 },
+  gras: { basis: [118, 146, 80], spur: [0, 0, 0], korn: 9, rand: 0 },
 };
 
 export function naturStrassenTextur(art: "sand" | "schnee" | "gras") {
@@ -130,6 +171,7 @@ export function naturStrassenTextur(art: "sand" | "schnee" | "gras") {
   for (let y = 0; y < laenge; y++) {
     for (let x = 0; x < breite; x++) {
       const u = x / (breite - 1);
+      const v = y / laenge;
       const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
       const korn = (rauschen - Math.floor(rauschen) - 0.5) * belag.korn;
       /*
@@ -139,35 +181,151 @@ export function naturStrassenTextur(art: "sand" | "schnee" | "gras") {
        * Feldweg hat zwei ausgefahrene Spuren und dazwischen Gras, keinen
        * vierspurigen Acker.
        */
-      const mitten = gras ? [0.28, 0.72] : [0.22, 0.38, 0.62, 0.78];
-      const breiteSpur = gras ? 0.075 : 0.027;
+      const mitten = gras ? [] : [0.22, 0.38, 0.62, 0.78];
+      const breiteSpur = 0.027;
       const spur = mitten.reduce((summe, mitte) =>
         summe + Math.exp(-(((u - mitte - Math.sin(y * 0.035) * 0.003) / breiteSpur) ** 2)), 0);
       const rand = Math.pow(Math.abs(u - 0.5) * 2, 8);
-      const riffeln = Math.sin(y * 0.7 + u * 22) * (schnee ? 2 : 3);
+      // Das Riffeln ist die Spur der Räder im losen Belag - auf der Wiese
+      // gibt es das nicht, dort wäre es ein Kord-Muster.
+      const riffeln = gras ? 0 : Math.sin(y * 0.7 + u * 22) * 3;
       // Einzelne Kristalle blitzen auf - selten, klein, hell.
       const funkeln = schnee && (rauschen - Math.floor(rauschen)) > 0.985 ? 22 : 0;
       /*
-       * Grashalme: ein kurzwelliges Muster quer und längs, damit die Wiese
-       * nicht wie ein grüner Teppich aussieht. Nur dort, wo Gras steht - in
-       * der ausgefahrenen Spur wächst nichts mehr.
+       * Die Wiese selbst: zwei Lagen feines Rauschen übereinander.
+       *
+       * Vorher waren es zwei Sinuswellen - und die ergaben ein Gewebe mit
+       * sichtbaren Diagonalen, also genau den grünen Teppich, den sie
+       * verhindern sollten. Rauschen hat keine Richtung.
        */
       const halme = gras
-        ? Math.sin(x * 1.9) * Math.sin(y * 0.8 + x * 0.3) * 13 * Math.max(0, 1 - spur)
+        ? (fleckenRauschen(u, v, 16, 64) - 0.5) * 17 +
+          (fleckenRauschen(u, v, 32, 128) - 0.5) * 11
         : 0;
-      const farbe = belag.basis.map((v, kanal) => THREE.MathUtils.clamp(
-        v + korn + riffeln + funkeln + (kanal === 1 ? halme : halme * 0.35)
-          - spur * belag.spur[kanal] + rand * belag.rand,
-        0,
-        255,
-      ));
+      /*
+       * Und die Erde, die auf einem getretenen Weg durchkommt.
+       *
+       * Zwei Lagen Flecken übereinander: große, in denen der Weg blank
+       * liegt, und kleinere darin, damit die Kanten nicht rund und weich
+       * bleiben. Es ist genau das, was vorher die zwei Striche taten - nur
+       * eben so, wie ein Weg wirklich aussieht.
+       */
+      const erdeAnteil = gras
+        ? THREE.MathUtils.clamp(
+            (fleckenRauschen(u, v, 5, 20) * 0.62 + fleckenRauschen(u, v, 11, 44) * 0.38 - 0.53) * 3.6,
+            0,
+            1,
+          )
+        : 0;
+      const erde = [148, 134, 104];
+      const farbe = belag.basis.map((wert, kanal) => {
+        const grund = wert + (erde[kanal] - wert) * erdeAnteil * 0.55;
+        return THREE.MathUtils.clamp(
+          grund + korn + riffeln + funkeln
+            + (kanal === 1 ? halme : halme * 0.35) * (1 - erdeAnteil)
+            - spur * belag.spur[kanal] + rand * belag.rand,
+          0,
+          255,
+        );
+      });
       pixel.set([...farbe, 255], (y * breite + x) * 4);
     }
   }
   const textur = new THREE.DataTexture(pixel, breite, laenge, THREE.RGBAFormat);
   textur.colorSpace = THREE.SRGBColorSpace;
   textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
+  // Wie oft sich das Bild wiederholt. Für die Graspiste setzt es
+  // fahrbahnMaterial noch einmal neu - dort hängt es daran, ob die Fläche
+  // ein Straßenzug von neunzig Metern ist oder ein Feld von neun.
   textur.repeat.set(1, 6);
+  textur.magFilter = THREE.LinearFilter;
+  textur.needsUpdate = true;
+  return textur;
+}
+
+/**
+ * Der ausgefranste Rand eines Trampelpfads - als eigene Maske.
+ *
+ * Sie sitzt nicht in der Belagstextur, sondern daneben (als `alphaMap`), und
+ * das hat einen Grund: Der Belag wiederholt sich über die Breite mehrfach,
+ * damit man Halme und Erde überhaupt erkennt. Ein Rand in derselben Textur
+ * wiederholte sich mit - und dann lägen mitten auf dem Weg zwei ausgeblendete
+ * Streifen. Genau die sollten ja verschwinden.
+ *
+ * Die Maske liegt deshalb genau einmal quer über der Fahrbahn: in der Mitte
+ * deckend, zu den Seiten hin in einem unregelmäßigen Saum auslaufend.
+ */
+export function wegKanteTextur(): THREE.DataTexture {
+  const breite = 64;
+  const laenge = 256;
+  const pixel = new Uint8Array(breite * laenge * 4);
+  for (let y = 0; y < laenge; y++) {
+    for (let x = 0; x < breite; x++) {
+      const u = x / (breite - 1);
+      const v = y / laenge;
+      // Wo der Weg aufhört - die Grenze selbst wackelt, sonst wäre es ein
+      // Lineal. Dahinter blendet er über eine Handbreit aus.
+      const grenze = 0.4 + (fleckenRauschen(u, v, 2, 9) - 0.5) * 0.08;
+      const weg = Math.abs(u - 0.5);
+      const anteil = THREE.MathUtils.clamp((0.5 - weg) / Math.max(0.01, 0.5 - grenze), 0, 1);
+      const deckung = Math.round(anteil * anteil * (3 - 2 * anteil) * 255);
+      pixel.set([deckung, deckung, deckung, 255], (y * breite + x) * 4);
+    }
+  }
+  const textur = new THREE.DataTexture(pixel, breite, laenge, THREE.RGBAFormat);
+  textur.wrapS = textur.wrapT = THREE.ClampToEdgeWrapping;
+  textur.magFilter = THREE.LinearFilter;
+  textur.needsUpdate = true;
+  return textur;
+}
+
+/**
+ * Die Wiese neben dem Weg - eine Maske, kein Bild.
+ *
+ * Der Boden war eine einzige Farbe, und genau so sah er aus: eine grüne
+ * Fläche, auf der ein paar Büsche standen. Was fehlte, war das Kleinzeug -
+ * die hellen und dunklen Stellen, die eine Wiese erst zur Wiese machen.
+ *
+ * Deshalb liegt hier kein fertiges Grün, sondern ein fast weißes Muster:
+ * Die Farbe des Bodens bleibt, wo sie war (sie hängt an Tageszeit und
+ * Wetter), und dieses Bild dunkelt sie nur stellenweise ab. So bekommt jede
+ * Tageszeit ihre eigene Wiese, ohne dass es dafür vier Texturen braucht.
+ */
+export function wiesenTextur(): THREE.DataTexture {
+  const kante = 256;
+  const pixel = new Uint8Array(kante * kante * 4);
+  for (let y = 0; y < kante; y++) {
+    for (let x = 0; x < kante; x++) {
+      const u = x / kante;
+      const v = y / kante;
+      const rauschen = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+      const korn = (rauschen - Math.floor(rauschen) - 0.5) * 7;
+      // Zwei Lagen: breite Flecken, in denen das Gras höher oder trockener
+      // steht, und feines Gekräusel darin.
+      const hell =
+        240 +
+        // Große Bahnen: wo die Wiese höher steht und wo sie gemäht wirkt.
+        (fleckenRauschen(u, v, 3, 3) - 0.5) * 46 +
+        (fleckenRauschen(u, v, 8, 8) - 0.5) * 34 +
+        (fleckenRauschen(u, v, 21, 21) - 0.5) * 20 +
+        korn;
+      const wert = THREE.MathUtils.clamp(hell, 130, 255);
+      // Eine Spur grünlicher als neutral - sonst wirkt die Wiese bei Nacht
+      // wie Beton unter einem grünen Licht.
+      pixel.set(
+        [
+          THREE.MathUtils.clamp(wert * 0.93, 0, 255),
+          wert,
+          THREE.MathUtils.clamp(wert * 0.88, 0, 255),
+          255,
+        ],
+        (y * kante + x) * 4,
+      );
+    }
+  }
+  const textur = new THREE.DataTexture(pixel, kante, kante, THREE.RGBAFormat);
+  textur.colorSpace = THREE.SRGBColorSpace;
+  textur.wrapS = textur.wrapT = THREE.RepeatWrapping;
   textur.magFilter = THREE.LinearFilter;
   textur.needsUpdate = true;
   return textur;
@@ -921,13 +1079,15 @@ export function grasLand(args: {
   ];
   const halmMaterial = gruen(nacht ? 0x2c4a33 : abend ? 0x6c8348 : 0x7aa64c);
   const stammMaterial = gruen(nacht ? 0x2a2119 : 0x6b4f33);
+  /** Findlinge: dieselbe Kugel, nur grau und plattgedrückt. */
+  const steinMaterial = gruen(nacht ? 0x3a4048 : abend ? 0x7b7568 : 0x8d8f86);
   /** Die Blumen: Weiß, Gelb und Rot - nachts bleiben sie aus. */
   const blumen = [0xf6f2e2, 0xffd75e, 0xe8615c].map(
     (farbe) => new THREE.MeshBasicMaterial({ color: farbe }),
   );
   for (const stueck of [
     kugelGeometrie, buschelGeometrie, stammGeometrie,
-    ...laub, halmMaterial, stammMaterial, ...blumen,
+    ...laub, halmMaterial, stammMaterial, steinMaterial, ...blumen,
   ]) {
     merken(stueck);
   }
@@ -997,20 +1157,71 @@ export function grasLand(args: {
     const wuerfel = zufall();
 
     // Nah am Weg: Gras und Blumen, nichts, was die Sicht nimmt.
-    if (amRand(x) || wuerfel < 0.3) {
+    if (amRand(x) || wuerfel < 0.32) {
       buschel(x, z, 0.8 + zufall() * 0.6);
-      if (!nacht && zufall() < 0.55) {
-        const blume = new THREE.Mesh(kugelGeometrie, blumen[Math.floor(zufall() * blumen.length)]);
-        const gross = 0.07 + zufall() * 0.05;
-        blume.scale.setScalar(gross);
-        blume.position.set(x + (zufall() - 0.5) * 1.2, 0.5 + zufall() * 0.2, z + (zufall() - 0.5) * 1.2);
-        scene.add(blume);
+      /*
+       * Blumen kommen in Nestern, nicht einzeln.
+       *
+       * Eine einzelne Blume neben einem Grasbüschel sieht aus wie ein
+       * Versehen; drei oder vier zusammen sehen aus wie eine Wiese. Nachts
+       * bleiben sie aus - da ist ohnehin keine Farbe zu sehen.
+       */
+      if (!nacht && zufall() < 0.7) {
+        const ton = blumen[Math.floor(zufall() * blumen.length)];
+        const nest = 2 + Math.floor(zufall() * 3);
+        for (let b = 0; b < nest; b++) {
+          const blume = new THREE.Mesh(kugelGeometrie, ton);
+          const gross = 0.07 + zufall() * 0.05;
+          blume.scale.setScalar(gross);
+          blume.position.set(
+            x + (zufall() - 0.5) * 1.4,
+            0.45 + zufall() * 0.25,
+            z + (zufall() - 0.5) * 1.4,
+          );
+          scene.add(blume);
+        }
       }
       continue;
     }
 
+    /*
+     * Ein Findling: dieselbe Kugel, plattgedrückt und schief in den Boden
+     * gesetzt. Ein paar davon machen aus einer Wiese eine Landschaft - und
+     * sie kosten nichts, weil Geometrie und Toon-Material längst stehen.
+     */
+    if (wuerfel < 0.46) {
+      const stein = new THREE.Mesh(kugelGeometrie, steinMaterial);
+      const gross = 0.3 + zufall() * 0.55;
+      stein.scale.set(gross, gross * (0.4 + zufall() * 0.3), gross * (0.8 + zufall() * 0.5));
+      stein.rotation.set(zufall() * 0.6, zufall() * Math.PI, zufall() * 0.6);
+      stein.position.set(x, gross * 0.22, z);
+      stein.castShadow = true;
+      stein.receiveShadow = true;
+      scene.add(stein);
+      // Und meistens wächst Gras daran hoch.
+      if (zufall() < 0.6) buschel(x + 0.5 + zufall() * 0.4, z + (zufall() - 0.5) * 0.8, 0.5 + zufall() * 0.4);
+      continue;
+    }
+
+    /*
+     * Ein umgestürzter Stamm - der Zylinder des Baums, nur liegend. Er ist
+     * das einzige Stück, das nicht senkrecht steht, und genau deshalb fällt
+     * er auf.
+     */
+    if (wuerfel < 0.54) {
+      const lang = 1.6 + zufall() * 1.6;
+      const stamm = new THREE.Mesh(stammGeometrie, stammMaterial);
+      stamm.scale.set(0.9 + zufall() * 0.5, lang, 0.9 + zufall() * 0.5);
+      stamm.rotation.set(Math.PI / 2, 0, zufall() * Math.PI);
+      stamm.position.set(x, 0.2, z);
+      stamm.castShadow = true;
+      scene.add(stamm);
+      if (zufall() < 0.7) buschel(x + (zufall() - 0.5) * 1.6, z + (zufall() - 0.5) * 1.6, 0.6 + zufall() * 0.4);
+      continue;
+    }
+
     // Ein Busch: flach, breit, in einem der beiden Grüntöne.
-    if (wuerfel < 0.68) {
+    if (wuerfel < 0.78) {
       const busch = new THREE.Mesh(kugelGeometrie, laub[Math.floor(zufall() * laub.length)]);
       const groesse = 0.7 + zufall() * 1.1;
       busch.scale.set(groesse, groesse * (0.55 + zufall() * 0.35), groesse * (0.85 + zufall() * 0.4));
@@ -1309,15 +1520,44 @@ export function fahrbahnMaterial(args: {
   wetter: DreiDWetter;
   /** true für den gelegten Plan, false für den alten Straßenzug. */
   imRaster: boolean;
+  /**
+   * Franst der Rand der Piste aus?
+   *
+   * Nur für eine durchgehende, flache Fläche gedacht - den Straßenzug im
+   * 3D-Kapitel. Ein Trampelpfad hat keinen Bordstein, und die schnurgerade
+   * Kante war das Unschönste an der Graspiste. Im Raster bleibt sie hart
+   * (dort stoßen Felder aneinander, zwei weiche Ränder ergäben eine Naht),
+   * und in der Verfolgungsjagd ist die Fahrbahn ein Quader, kein Blatt
+   * Papier - dort hätte die Maske auch die Seitenflächen erwischt.
+   */
+  weicherRand?: boolean;
   merken: Merken;
 }): THREE.MeshToonMaterial {
   const { gradient, strassentyp, tageszeit, wetter, imRaster, merken } = args;
   const asphalt = imRaster && strassentyp === "asphalt" ? asphaltTextur(tageszeit === "nacht") : null;
   if (asphalt) merken(asphalt);
+  const weicheKante = Boolean(args.weicherRand) && strassentyp === "gras";
   const natur = strassentyp !== "asphalt" ? naturStrassenTextur(strassentyp) : null;
   if (natur) merken(natur);
+  /*
+   * Die Graspiste braucht ein feineres Bild als Sand und Schnee: Über neun
+   * Meter Breite einmal gespannt, ist von Halmen und Erdflecken nichts mehr
+   * zu erkennen - dann liegt dort eine grüne Fläche und keine Piste.
+   *
+   * Und die Länge hängt daran, worauf es liegt: Der Straßenzug ist neunzig
+   * Meter lang, ein Feld im Raster neun. Dieselbe Zahl für beides ergäbe
+   * einmal eine Fläche und einmal ein Streifenmuster - beides war schon zu
+   * sehen.
+   */
+  if (natur && strassentyp === "gras") natur.repeat.set(3, imRaster ? 1 : 8);
+  const kante = weicheKante ? wegKanteTextur() : null;
+  if (kante) merken(kante);
   const material = new THREE.MeshToonMaterial({
     map: natur ?? asphalt,
+    alphaMap: kante,
+    // Nur der ausgefranste Wegrand braucht das - sonst bleibt alles
+    // undurchsichtig und wird in einem Rutsch gezeichnet.
+    transparent: weicheKante,
     /*
      * Im Sandsturm liegt auf allem eine Schicht Sand - auch auf dem Asphalt.
      * Ohne diesen Ton stünde eine blaugraue Straße in einer ockerfarbenen

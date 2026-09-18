@@ -312,7 +312,9 @@ function ArenaCanvas({
         merken,
         ausmass: { breite: ausmass.breite + 24, tiefe: ausmass.tiefe + 24 },
         plan,
-        menge: profil.schatten ? 26 : 14,
+        // Auf der Wiese steht mehr als im Schnee - dort trägt die Fläche
+        // sich selbst, hier braucht sie das Kleinzeug.
+        menge: profil.schatten ? (grasLand3D ? 44 : 26) : grasLand3D ? 22 : 14,
         tageszeit,
       });
     }

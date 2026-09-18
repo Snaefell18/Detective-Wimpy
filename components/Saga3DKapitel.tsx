@@ -14,6 +14,7 @@ import {
   einpassen,
   fahrbahnMaterial,
   grasLand,
+  wiesenTextur,
   gradientTextur,
   haeuserBauen,
   sandDunst,
@@ -409,9 +410,30 @@ function KapitelCanvas({
           : strassentyp === "gras"
             ? (tageszeit === "nacht" ? 0x223425 : tageszeit === "tag" ? 0x5b8a45 : 0x4a6438)
             : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
+    /*
+     * Auf der Wiese liegt ein Muster, sonst nur Farbe.
+     *
+     * Eine einzige grüne Fläche sieht auch nach genau dem aus. Das Muster ist
+     * fast weiß und dunkelt die Bodenfarbe nur stellenweise ab - so bleibt
+     * jede Tageszeit und jedes Wetter, wie es war, und die Wiese bekommt ihr
+     * Kleinzeug. Etwa eine Kachel je sechs Meter: groß genug, dass man die
+     * Wiederholung nicht liest, klein genug, dass man die Flecken sieht.
+     */
+    const wiese = grasLand3D ? wiesenTextur() : null;
+    if (wiese) {
+      wiese.repeat.set(
+        Math.max(2, Math.round(ausmass.breite / 6)),
+        Math.max(2, Math.round(ausmass.tiefe / 6)),
+      );
+      ressourcen.add(wiese);
+    }
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
-      new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({
+        color: bodenFarbe,
+        map: wiese,
+        gradientMap: gradient,
+      }),
     );
     boden.rotation.x = -Math.PI / 2;
     boden.position.z = stadtplan ? 0 : -8;
@@ -452,7 +474,10 @@ function KapitelCanvas({
         mitteZ: stadtplan ? 0 : -8,
         plan: stadtplan,
         startPunkt: { x: 0, z: 0 },
-        menge: profil.schatten ? 30 : 16,
+        // Mehr Kleinzeug als im Schnee: Die Wiese ist die einzige
+        // Landschaft, in der außer dem Weg nichts steht - da darf ruhig
+        // etwas los sein.
+        menge: profil.schatten ? 58 : 28,
         tageszeit,
       });
     }
@@ -462,6 +487,9 @@ function KapitelCanvas({
       tageszeit,
       wetter,
       imRaster: Boolean(stadtplan),
+      // Der durchgehende Straßenzug ist eine flache Fläche - nur dort darf
+      // die Graspiste am Rand in die Wiese auslaufen.
+      weicherRand: !stadtplan,
       merken: (wert) => ressourcen.add(wert),
     });
     if (stadtplan) {
