@@ -7,6 +7,7 @@ import {
   warFrueherDa,
   STANDARD_AUFTRITT_TON,
   mitAuftritt,
+  mitRueckkehr,
   neueGesichter,
   tonFuerAuftritt,
   artFuerAuftritt,
@@ -181,6 +182,35 @@ console.log("\n5. Wer gar nicht angekündigt werden soll");
   // Die Wahl muss auch als Art durchkommen - sonst stünde im Editor ein
   // Knopf, den niemand gedrückt bekommt.
   pruefe("„ohne“ ist eine gültige Art", artFuerAuftritt("hut", { neuzugangArten: { hut: "ohne" } }) === "ohne");
+}
+
+console.log("\n6. Die Rückkehr nach einer Pause");
+{
+  /*
+   * Wer pausiert und wiederkommt, steht wieder als „neues Gesicht" da - der
+   * Vergleich läuft über die Besetzung des vorherigen Kapitels, und dort war
+   * er nicht. Genau daran hängt die Ansage „Zurück auf dem Feld!".
+   */
+  const s = saga(
+    [fall("nala", "mikkeli"), fall("nala"), fall("nala", "mikkeli")],
+    fall("nala", "mikkeli", "boss"),
+  );
+  pruefe("in Kapitel 2 ist niemand neu", neueGesichter(s, 1).length === 0);
+  pruefe("in Kapitel 3 kommt Mikkeli zurück", ids(neueGesichter(s, 2)) === "mikkeli");
+  pruefe("und er war früher schon da", warFrueherDa(s, 2, "mikkeli") === true);
+  pruefe("ein echter Neuzugang war es nicht", warFrueherDa(s, -1, "boss") === false);
+
+  // Und ob die Rückkehr angekündigt wird, ist eine eigene Einstellung.
+  pruefe("ohne Eintrag wird sie angekündigt", mitRueckkehr("mikkeli", {}) === true);
+  pruefe("gar keine Vorgaben auch", mitRueckkehr("mikkeli", undefined) === true);
+  pruefe(
+    "wer stillschweigend zurückkommt, wird übergangen",
+    mitRueckkehr("mikkeli", { stilleRueckkehr: ["mikkeli"] }) === false,
+  );
+  pruefe(
+    "und es gilt nur für ihn",
+    mitRueckkehr("nala", { stilleRueckkehr: ["mikkeli"] }) === true,
+  );
 }
 
 console.log(

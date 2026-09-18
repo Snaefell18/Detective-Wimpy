@@ -16,6 +16,7 @@ import {
   cellShading,
   einpassen,
   fahrbahnMaterial,
+  wiesenTextur,
   sandDunst,
   texturenVerkleinern,
   wetterFeld,
@@ -172,7 +173,27 @@ export function strasseBauen({
    * Stadt auf, und dahinter klaffte der Himmel bis zum Boden. Der Nebel nimmt
    * einem den Rand lange vorher ab; die paar Dreiecke mehr kosten nichts.
    */
-  mesh(new THREE.BoxGeometry(locations.length ? 200 : 34, 0.2, 130), landFarbe, 0, -0.22, 24);
+  const grund = mesh(
+    new THREE.BoxGeometry(locations.length ? 200 : 34, 0.2, 130),
+    landFarbe,
+    0,
+    -0.22,
+    24,
+  );
+  /*
+   * Auf der Wiese liegt ein Muster, sonst nur Farbe.
+   *
+   * Eine einzige grüne Fläche neben einer gefleckten Piste sieht aus wie ein
+   * Fehler - erst recht, seit der Weg selbst Halme und Erde zeigt. Das Bild
+   * ist fast weiß und dunkelt die Farbe nur stellenweise ab, also bleibt
+   * jede Tageszeit, wie sie war (components/stadtBau.ts).
+   */
+  if (strassentyp === "gras") {
+    const wiese = wiesenTextur();
+    wiese.repeat.set(locations.length ? 30 : 6, 22);
+    merken(wiese);
+    (grund.material as THREE.MeshToonMaterial).map = wiese;
+  }
 
   /*
    * Die Fahrbahn ist dieselbe wie in der Stadt: derselbe Belag, dieselben
@@ -187,9 +208,13 @@ export function strasseBauen({
     imRaster: false,
     merken,
   });
-  // Die Naturtextur ist für ein kurzes Stück gedacht; über 130 Meter muss sie
-  // sich öfter wiederholen, sonst zieht sie sich zu langen Schlieren.
-  belag.map?.repeat.set(1, 26);
+  /*
+   * Die Naturtextur ist für ein kurzes Stück gedacht; über 130 Meter muss sie
+   * sich öfter wiederholen, sonst zieht sie sich zu langen Schlieren. Die
+   * Graspiste auch quer: Über zehn Meter einmal gespannt, ist von Halmen und
+   * Erde nichts mehr zu sehen.
+   */
+  belag.map?.repeat.set(strassentyp === "gras" ? 3 : 1, 26);
   const fahrbahn = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.1, 130), belag);
   fahrbahn.position.set(0, -0.05, 24);
   scene.add(fahrbahn);
@@ -271,8 +296,17 @@ export function strasseBauen({
   const stammMaterial = gras
     ? new THREE.MeshToonMaterial({ color: nacht ? 0x2a2119 : 0x6b4f33, gradientMap: gradient })
     : null;
-  if (stammGeometrie) merken(stammGeometrie);
-  if (stammMaterial) merken(stammMaterial);
+  /** Dazu Grasbüschel und Findlinge - dasselbe Kleinzeug wie im Kapitel. */
+  const halmGeometrie = gras ? new THREE.ConeGeometry(0.34, 0.9, 5) : null;
+  const halmMaterial = gras
+    ? new THREE.MeshToonMaterial({ color: nacht ? 0x2c4a33 : 0x7aa64c, gradientMap: gradient })
+    : null;
+  const steinMaterial = gras
+    ? new THREE.MeshToonMaterial({ color: nacht ? 0x3a4048 : 0x8d8f86, gradientMap: gradient })
+    : null;
+  for (const stueck of [stammGeometrie, stammMaterial, halmGeometrie, halmMaterial, steinMaterial]) {
+    if (stueck) merken(stueck);
+  }
 
   for (let i = 0; !locations.length && i < 28; i++) {
     const seite = i % 2 ? -1 : 1;
@@ -294,7 +328,7 @@ export function strasseBauen({
     const z = i * 4 - 25;
     const imWeg = freiHalten?.(x, z) ?? false;
     const stueck = new THREE.Mesh(landGeometrie, landMaterialien[i % landMaterialien.length]);
-    if (gras && stammGeometrie && stammMaterial) {
+    if (gras && stammGeometrie && stammMaterial && halmGeometrie && halmMaterial && steinMaterial) {
       /*
        * An der Graspiste steht ein Baum auf einem Stamm - und jeder dritte
        * ist ein Busch, damit die Zeile nicht wie eine Allee aussieht.
@@ -310,6 +344,31 @@ export function strasseBauen({
         stamm.scale.set(hoehe, hoehe, hoehe);
         stamm.position.y = 1.3 * hoehe;
         gruppe.add(stamm);
+      }
+      /*
+       * Und um den Baum herum das Kleinzeug: ein paar Büschel und, bei jedem
+       * zweiten, ein Findling. Ein Feldweg, an dem nur Bäume in Reih und
+       * Glied stehen, sieht aus wie eine Allee auf einer leeren Fläche.
+       */
+      for (let b = 0; b < 3; b++) {
+        const halm = new THREE.Mesh(halmGeometrie, halmMaterial);
+        const gross = 0.7 + ((i + b) % 3) * 0.25;
+        halm.scale.set(gross, gross * (0.9 + ((i * 7 + b) % 5) * 0.12), gross);
+        halm.rotation.set(0, (i + b) * 1.7, ((b % 3) - 1) * 0.12);
+        halm.position.set(
+          (b - 1) * 1.3 + ((i % 3) - 1) * 0.6,
+          0.45 * gross,
+          (b % 2 ? 1.6 : -1.4) + ((i % 4) - 1.5) * 0.7,
+        );
+        gruppe.add(halm);
+      }
+      if (i % 2 === 0) {
+        const stein = new THREE.Mesh(landGeometrie, steinMaterial);
+        const gross = 0.22 + (i % 3) * 0.08;
+        stein.scale.set(gross, gross * 0.5, gross * 1.2);
+        stein.rotation.set(0.3, i * 0.9, 0.2);
+        stein.position.set(seite * -1.8, gross * 0.4, 2.2);
+        gruppe.add(stein);
       }
       gruppe.position.set(x, 0, imWeg ? z + 56 : z);
       scene.add(gruppe);

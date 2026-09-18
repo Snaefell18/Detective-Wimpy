@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { ANIMATIONS_MODELLE } from "@/lib/animations.generated";
 import { kampfSpielbar, kampfSpruch, type KampfVorgabe } from "@/lib/endkampf";
 import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
+import type { Character } from "@/lib/types";
 import { useStammdaten } from "@/lib/stammdaten";
 import { kampfDateien, vorladen } from "@/lib/vorladen";
 
@@ -38,6 +39,7 @@ const Endkampf = dynamic(() => import("./Endkampf").then((modul) => modul.Endkam
 export function Showdown({
   kampf,
   gegnerId,
+  gegnerTier,
   name,
   titel,
   autoId,
@@ -55,6 +57,14 @@ export function Showdown({
    * gilt schlicht, was in der Vorgabe steht.
    */
   gegnerId?: string;
+  /**
+   * Das Tier selbst, wenn der Aufrufer es schon hat.
+   *
+   * In einer Saga steht die ganze Besetzung im Spielstand - also auch dann,
+   * wenn die Datenbank gerade schweigt. Damit hängt der Showdown an nichts
+   * mehr: Name und Modell stehen fest, bevor irgendetwas geladen wird.
+   */
+  gegnerTier?: Character;
   /** Wie er heißt, solange (oder falls) er nicht in den Stammdaten steht. */
   name?: string;
   titel: string;
@@ -72,7 +82,8 @@ export function Showdown({
   const jagd = spielbar?.jagd ?? null;
   const [phase, setPhase] = useState<"jagd" | "kampf">(jagd ? "jagd" : "kampf");
 
-  const gegner = gegnerId ? stammdaten.charaktere.find((c) => c.id === gegnerId) : undefined;
+  const gegner =
+    (gegnerId ? stammdaten.charaktere.find((c) => c.id === gegnerId) : undefined) ?? gegnerTier;
   const detektiv = stammdaten.charaktere.find((c) => c.istDetektiv);
   const held =
     ANIMATIONS_MODELLE.find((modell) => modell.id === spielerModellId) ?? spielerModell(detektiv);
@@ -113,6 +124,18 @@ export function Showdown({
    * oder in den Epilog der Saga. Gemeldet wird das im Effekt, nicht mitten im
    * Zeichnen; niemand soll vor einer leeren Szene stehen.
    */
+  /**
+   * Wie lange auf die Stammdaten gewartet wird, bevor es auch ohne losgeht.
+   * Sechs Sekunden sind mehr, als eine Antwort je braucht - und weniger, als
+   * jemand vor einem hängenden Bildschirm sitzen sollte.
+   */
+  const [zuLange, setZuLange] = useState(false);
+  useEffect(() => {
+    if (stammdaten.geladen) return;
+    const uhr = window.setTimeout(() => setZuLange(true), 6000);
+    return () => window.clearTimeout(uhr);
+  }, [stammdaten.geladen]);
+
   const fertig = useRef(onFertig);
   fertig.current = onFertig;
   useEffect(() => {
@@ -120,10 +143,17 @@ export function Showdown({
   }, [spielbar]);
   if (!spielbar) return null;
 
-  // Wer der Gegner ist, steht in der Datenbank. Solange sie noch antwortet,
-  // wäre jedes Modell geraten - und geraten steht am Ende das falsche Tier in
-  // der Arena. Im Labor gibt es kein Tier, dort geht es sofort los.
-  if (gegnerId && !stammdaten.geladen) {
+  /*
+   * Wer der Gegner ist, steht in der Datenbank. Solange sie noch antwortet,
+   * wäre jedes Modell geraten - und geraten steht am Ende das falsche Tier in
+   * der Arena. Im Labor gibt es kein Tier, dort geht es sofort los.
+   *
+   * Aber nur für ein paar Sekunden: Eine Datenbank, die gar nicht antwortet,
+   * darf das Finale nicht anhalten. Dann wird eben mit dem Modell gekämpft,
+   * das in der Arena eingestellt ist - lieber ein geratenes Tier als ein
+   * Bildschirm, auf dem für immer „wird vorbereitet" steht.
+   */
+  if (gegnerId && !gegner && !stammdaten.geladen && !zuLange) {
     return (
       <div className="jagd kampf">
         <div className="auto-jagd-laden" role="status">Der Showdown wird vorbereitet …</div>

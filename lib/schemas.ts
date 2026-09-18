@@ -501,6 +501,8 @@ export const SagaVorgabenSchema = z.object({
   kapitelTaeter: luecken(z.string().max(40), "").max(8).default([]),
   // Ein Motiv je Kapitel - und eines mehr, denn das Finale hat auch eins.
   kapitelMotive: luecken(z.string().max(600), "").max(9).default([]),
+  // Wer nach einer Pause ohne Ansage zurückkommt.
+  stilleRueckkehr: z.array(z.string().max(40)).max(40).default([]).catch([]),
   kapitelStaedte: luecken(z.string().max(60), "").max(9).default([]),
   kapitelVideos: luecken(z.string().max(200), "").max(9).default([]),
   kapitelGeschenke: luecken(z.string().max(40), "").max(9).default([]),

@@ -492,6 +492,14 @@ export type KampfClips = {
   wurf: string | null;
   /** Nach dem Sieg wird getanzt. */
   jubel: string | null;
+  /**
+   * Und wenn einer am Boden liegt.
+   *
+   * Nicht jedes Modell hat so etwas - viele kennen nur Laufen und Tanzen.
+   * Fehlt der Clip, kippt die Figur trotzdem um: Das macht die Szene selbst,
+   * mit Drehung und Absacken. Der Clip ist die Kür, das Umkippen die Pflicht.
+   */
+  besiegt: string | null;
 };
 
 const MUSTER = {
@@ -501,6 +509,12 @@ const MUSTER = {
   wurf: /(pitch|throw|baseball|golf|cast|magic|zauber|wurf|shoot)/i,
   schlag: /(punch|kick|attack|stomp|slam|swing|hit|charge|angry|smash|shuffle)/i,
   jubel: /(dance|ymca|shake|funny|breakdance|muscle|heart|cheer|salsa|samba|rumba)/i,
+  /*
+   * Was nach einer verlorenen Runde aussieht: umgehauen werden, nach Luft
+   * ringen, einschlafen, zusammensacken. Bewusst eng gefasst - „down" allein
+   * stünde auch in „Male_Head_Down_Charge", und das ist ein Angriff.
+   */
+  besiegt: /(knock.?down|defeat|death|dying|\bdie\b|faint|\bko\b|catching.?breath|sleep|collaps|stunned|hurt)/i,
 };
 
 export function kampfClips(namen: string[]): KampfClips {
@@ -509,15 +523,19 @@ export function kampfClips(namen: string[]): KampfClips {
 
   const lauf = finde(MUSTER.lauf) ?? finde(MUSTER.gehen);
   const ruhe = finde(MUSTER.ruhe);
-  const wurf = finde(MUSTER.wurf, [lauf, ruhe]);
-  const schlag = finde(MUSTER.schlag, [lauf, ruhe, wurf]) ?? wurf;
-  const jubel = finde(MUSTER.jubel, [lauf, ruhe]) ?? ruhe;
+  const besiegt = finde(MUSTER.besiegt, [lauf, ruhe]);
+  const wurf = finde(MUSTER.wurf, [lauf, ruhe, besiegt]);
+  const schlag = finde(MUSTER.schlag, [lauf, ruhe, wurf, besiegt]) ?? wurf;
+  const jubel = finde(MUSTER.jubel, [lauf, ruhe, besiegt]) ?? ruhe;
   return {
     lauf: lauf ?? namen[0] ?? null,
     ruhe: ruhe ?? namen[0] ?? null,
     schlag: schlag ?? lauf ?? namen[0] ?? null,
     wurf: wurf ?? schlag ?? lauf ?? namen[0] ?? null,
     jubel: jubel ?? namen[0] ?? null,
+    // Hier ausdrücklich ohne Ersatz: Lieber gar kein Clip als ein Tanz,
+    // während der Verlierer zu Boden geht.
+    besiegt,
   };
 }
 

@@ -193,6 +193,13 @@ mit dem Daumen gesteuert:
 - **Ohne gebaute Arena** wird trotzdem gekämpft: Dann steht der
   Standardkampfplatz da (siehe unten bei „Gericht & Flucht"). Früher fiel der
   Showdown dann still aus - und mit ihm ein ganzes Finale.
+- **Das Ende hat eine Reihenfolge.** Erst geht der Verlierer zu Boden - mit
+  seinem Niederlagen-Clip, wenn das Modell einen hat (`Knock_Down`,
+  `Catching_Breath`, `Sleep_Normally` …), sonst kippt er einfach in Zeitlupe
+  um. Der Sieger steht dabei still. Erst knapp eine Sekunde später fängt er an
+  zu jubeln, und erst nach gut zwei Sekunden kommt die Karte - und mit ihr die
+  Siegermelodie. Vorher lief beides gleichzeitig: Wimpy tanzte los, während der
+  Gegner noch fiel.
 - **Verlieren** kostet nichts: Man darf sofort neu anfangen oder weitergehen.
   „Noch einmal" baut die Arena neu auf, füllt beide Lebensbalken und lässt den
   Gegner dort stehen, wo er stand - beliebig oft. Wer zweimal im Staub lag,
@@ -252,6 +259,13 @@ dieser Art auch die Jagd dazu. Alles andere - Stufe, Musik, Gegnermodell,
 Licht - bleibt, wie es eingestellt ist, und wer die Jagd bewusst abgewählt hat,
 behält sie abgewählt. Dasselbe gilt für den Showdown einer Saga und den eines
 Arcs.
+
+Der Showdown hängt dabei an nichts mehr: **Gegen wen gekämpft wird, steht im
+Spielstand** - Id und Tier kommen aus der Besetzung der Saga, die ohnehin auf
+dem Gerät liegt. Wer mitten im Kampf neu lädt, steht danach wieder demselben
+Tier gegenüber, und eine stumme Datenbank ändert daran nichts. (Sie wird
+trotzdem kurz abgewartet, falls das Tier nur dort steht - aber höchstens sechs
+Sekunden, dann geht es auch ohne los.)
 
 Und der Knopf unter dem Urteil sagt die Wahrheit: „Ihm nach ›" steht dort nur,
 wenn danach wirklich eine Verfolgung kommt. Der Twist verträgt sich damit so wenig wie mit
@@ -401,6 +415,36 @@ in der Vorschau.
 Daneben steht dort die **Ausrichtung**: Jedes Modell liegt anders in seiner
 Datei, und die Drehung rückt es so, dass die Schnauze in Fahrtrichtung zeigt.
 
+### Wie die Tiere herumstehen
+
+Die 3D-Modelle bringen ihre Animationen mit, und welche davon ein Tier im
+Stehen benutzt, entscheidet `ruheAuswahl` in `lib/tiermodelle.ts` - für alle
+Szenen dieselbe Wahl: 3D-Kapitel, Verfolgungsjagd, Abspann, Probewelt.
+
+Der Haken steckte in `restpose`. Neun der Modelle bringen sie mit, und sie ist
+keine Animation, sondern die Ruhepose des Skeletts: ein einziges Bild. Gesucht
+wurde bisher nach „idle" *oder* „rest" - und weil `restpose` darauf passt,
+stand sie gleichberechtigt neben den echten Leerläufen. Eine Figur mit vier
+schönen Idles stand deshalb in jeder dritten Pause reglos herum.
+
+Jetzt gilt der Reihe nach:
+
+1. **Echte Leerläufe** (`Idle_3`, `Idle_11` …) - viele Modelle haben mehrere,
+   dann wechseln sie sich ab. Wimpy hat vier, der Yeti zwei.
+2. Danach, **was man im Stehen tut**: tanzen, sich strecken, trinken, sich im
+   Spiegel betrachten. Davon leben die Straßen.
+3. Sonst der **einzige Clip** des Modells (die aus Unreal exportierten heißen
+   „baselayer" und sind genau das: ein ruhiges Atmen).
+4. Und erst ganz zuletzt die **Ruhepose** - besser reglos als auf der Stelle
+   rennend.
+
+Nicht dabei ist, was kein Herumstehen ist: Schläge, Blocks, Sprünge, Rollen,
+Sprints. Ein Tier, das am Straßenrand Faustschläge übt, war nie gemeint.
+
+Auch die **Spielfigur** wechselt jetzt: Wer sieben bis dreizehn Sekunden
+stehen bleibt, sieht den nächsten Leerlauf. Am Steuer bleibt es bei einem -
+wer im Wagen sitzt, soll nicht plötzlich tanzen.
+
 ## Bilder erzeugen lassen
 
 Tiere, Schauplätze, Dinge und Ladenzubehör lassen sich im Admin-Menü malen
@@ -544,6 +588,16 @@ wieder auftauchen; die Ansage heißt dann „Zurück auf dem Feld!“. Bliebe ei
 Kapitel dadurch ohne genug Verdächtige, rückt jemand nach - ein spielbarer
 Fall geht vor.
 
+**Die Rückkehr lässt sich einzeln abstellen.** Sie bekommt sonst dieselbe
+Bühne wie der erste Auftritt - derselbe Song, dieselbe Animation, nur eine
+andere Zeile. Beim ersten Mal ist das ein Auftritt; beim dritten Mal, wenn
+jemand zwischen zwei Kapiteln nur kurz verreist war, ist es eine
+Unterbrechung. Sobald für ein Tier eine Pause eingetragen ist, steht deshalb
+direkt darunter **„Kommt zurück: Mit Ansage / Stillschweigend"** - wer
+stillschweigend zurückkommt, steht im nächsten Kapitel einfach wieder da. Der
+erste Auftritt bleibt davon unberührt; wer ihn ganz loswerden will, stellt die
+Auftrittsart auf „Kein Auftritt" (das schaltet dann auch jede Rückkehr ab).
+
 Wer neu ist, wird nicht geplant,
 sondern verglichen: Wer in der Besetzung dieses Falls steht und in der des
 vorherigen nicht, ist neu. Das stimmt auch bei von Hand nachbearbeiteten
@@ -585,27 +639,42 @@ Kleine Momente, die nichts am Ablauf ändern und niemanden aufhalten:
   er über anderthalb Sekunden aus. Gerechnet wird alles in einem einzigen
   Punktefeld mit festem Vorrat, das auch auf einem Telefon ruhig durchläuft.
 
-  Es steigt **über der Straße** auf, zehn bis vierzig Meter voraus, und blüht
-  sechs bis acht Meter hoch - also vor den Fassaden und knapp unter dem oberen
+  Es steigt **über der Straße** auf, acht bis sechzig Meter voraus, und blüht
+  fünf bis neun Meter hoch - also vor den Fassaden und knapp unter dem oberen
   Bildrand, nicht hoch über den Dächern. Das ist ausgerechnet und nicht
   geraten: Beide Kameras schauen fast waagerecht (die Stadt aus fünf Metern
   vierzehn Grad nach unten, die Verfolgungsjagd aus sieben Metern noch
   steiler), und was höher aufblüht, liegt schlicht über dem Bild.
+
+  Die Hälfte der Raketen steigt dabei weiter draußen auf, zwischen und hinter
+  den Häusern, damit es aus mehreren Richtungen kommt statt aus einer Reihe.
+  Und es geht nicht im Takt: Mal steigt eine einzelne, mal drei auf einmal,
+  dann ist einen Moment Ruhe - alle paar Zehntelsekunden fällt die Würfelung
+  neu.
 - **Die Graspiste** (Städte, 3D-Kapitel, Arena, Verfolgungsjagd, Abspann,
-  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein Feldweg
-  durch die Wiese. Die Fahrbahn ist gerechnet wie die anderen Naturstraßen,
-  nur andersherum: Wo Räder fahren, ist das Gras weg und die Erde kommt durch,
-  also sind die beiden Spurrillen *heller* als der Belag, mit einem grünen
-  Streifen dazwischen, auf dem nie ein Rad läuft. Eine Mittellinie wird dort
-  nicht gemalt.
+  Probewelt): der vierte Belag neben Asphalt, Sand und Schnee - ein
+  Trampelpfad durch die Wiese. **Keine Spurrillen, keine Striche, keine
+  Mittellinie:** Sie hatte einmal zwei helle Bänder, wo die Räder die Erde
+  freilegen, und das war als Feldweg gedacht; im Bild wurden daraus zwei harte
+  Striche, die die Piste zerschnitten, und im Stadtraster lag dasselbe Muster
+  auf jedem einzelnen Feld. Jetzt ist der Weg dieselbe Wiese wie ringsum, nur
+  flacher, staubiger und mit unregelmäßigen Flecken, an denen die Erde
+  durchkommt - was ihn ausmacht, ist sein Ton, nicht seine Zeichnung. Am
+  durchgehenden Straßenzug franst er obendrein aus: Der Rand blendet über
+  eine Handbreit in die Wiese, statt mit einer Kante aufzuhören.
 
   Ringsum steht, was aus einer grünen Fläche eine Wiese macht: Büsche in zwei
-  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand und ein paar Blumen
-  dazwischen (`grasLand` in `components/stadtBau.ts` - dieselbe Rechnung wie
-  das Schneeland, nur in Grün, und mit derselben festen Saat, damit die Wiese
-  im Editor so aussieht wie später im Spiel). Der Boden, das zurückgeworfene
-  Licht und die Staubfahne hinter den Reifen färben sich mit; nachts liegt die
-  Piste im Mondlicht statt im Mittagsgrün.
+  Grüntönen, Laubbäume mit Stamm, Grasbüschel am Wegrand, Findlinge,
+  umgestürzte Stämme und Blumen in kleinen Nestern (`grasLand` in
+  `components/stadtBau.ts` - dieselbe Rechnung wie das Schneeland, nur in
+  Grün, und mit derselben festen Saat, damit die Wiese im Editor so aussieht
+  wie später im Spiel). Davon steht auf der Wiese etwa doppelt so viel wie im
+  Schnee: Dort trägt die Fläche sich selbst, hier braucht sie das Kleinzeug.
+  Und die Wiese ist nicht mehr nur eine Farbe - über ihr liegt ein fast weißes
+  Muster, das sie stellenweise abdunkelt, sodass jede Tageszeit ihre eigene
+  Wiese bekommt. Der Boden, das zurückgeworfene Licht und die Staubfahne
+  hinter den Reifen färben sich mit; nachts liegt die Piste im Mondlicht statt
+  im Mittagsgrün.
 - **Der Blizzard** ist kein stärkerer Schneesturm, sondern ein eigener
   Zustand: Die Welt endet nach wenigen Metern, der Schnee fliegt in zwei
   Schichten fast waagerecht vorbei, und Böen ziehen die Sicht immer wieder

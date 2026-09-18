@@ -7,7 +7,7 @@
  * das Tier im fertigen Fall wieder ohne Zuordnung da.
  */
 import { ANIMATIONS_MODELLE } from "../lib/animations.generated.ts";
-import { modellFuerTier, spielerModell } from "../lib/tiermodelle.ts";
+import { laufClipVon, modellFuerTier, ruheAuswahl, spielerModell } from "../lib/tiermodelle.ts";
 import { CharacterSchema } from "../lib/schemas.ts";
 
 let fehlgeschlagen = 0;
@@ -96,6 +96,66 @@ console.log("\n4. Die Zuordnung übersteht das Versiegeln");
   pruefe("und behält es", geprueft.data?.modell3d === ersteFremde);
   const ohne = CharacterSchema.safeParse(tier());
   pruefe("ältere Tiere ohne Feld bleiben gültig", ohne.success && ohne.data?.modell3d === undefined);
+}
+
+console.log("\nWomit eine Figur herumsteht");
+{
+  const clips = (namen) => namen.map((name) => ({ name }));
+  const namen = (liste) => liste.map((c) => c.name);
+
+  // Der eigentliche Anlass: „restpose" ist keine Animation, sondern ein
+  // einziges Bild. Wer sie mitlost, steht in jeder dritten Pause still.
+  const wimpyArtig = clips(["Running", "Walking", "Idle_11", "Idle_3", "Shake_It_Off_Dance", "restpose"]);
+  const lauf = laufClipVon(wimpyArtig);
+  const ruhe = ruheAuswahl(wimpyArtig, lauf);
+  pruefe("gelaufen wird mit Walking", lauf?.name === "Walking");
+  pruefe("die Ruhepose bleibt draußen", !namen(ruhe).includes("restpose"), namen(ruhe).join(", "));
+  pruefe("der Leerlauf steht vorn", ruhe[0]?.name.startsWith("Idle"), namen(ruhe).join(", "));
+  pruefe("der Tanz ist dabei", namen(ruhe).includes("Shake_It_Off_Dance"));
+  pruefe("gelaufen wird nicht im Stehen", !namen(ruhe).some((n) => /^(Walking|Running)$/.test(n)));
+
+  // Modelle mit einem einzigen Clip: Der ist ihr Leerlauf, auch wenn er
+  // nirgends "idle" heißt.
+  const ausUnreal = clips(["Armature|Unreal Take|baselayer"]);
+  pruefe(
+    "ein einzelner Clip zählt als Leerlauf",
+    namen(ruheAuswahl(ausUnreal, laufClipVon(ausUnreal))).join() === "Armature|Unreal Take|baselayer",
+  );
+
+  // Und wer wirklich nichts anderes hat, bekommt die Ruhepose - besser
+  // reglos als auf der Stelle rennend.
+  const nurLaufen = clips(["Running", "Walking", "restpose"]);
+  pruefe(
+    "sonst bleibt die Ruhepose",
+    namen(ruheAuswahl(nurLaufen, laufClipVon(nurLaufen))).join() === "restpose",
+  );
+  pruefe("gar keine Clips: gar keine Wahl", ruheAuswahl([], undefined).length === 0);
+
+  // Keine Faustschläge am Straßenrand.
+  const kaempfer = clips(["Walking", "Attack", "Punch_Combo_1", "Knock_Down", "Idle_3"]);
+  pruefe(
+    "Kampfbewegungen sind kein Herumstehen",
+    namen(ruheAuswahl(kaempfer, laufClipVon(kaempfer))).join() === "Idle_3",
+  );
+
+  /*
+   * Und dasselbe für alle Modelle, die wirklich im Projekt liegen: Wer
+   * überhaupt etwas mitbringt, darf nicht ohne Wahl dastehen.
+   */
+  for (const modell of ANIMATIONS_MODELLE) {
+    if (!modell.animationen.length) continue;
+    const eigene = clips(modell.animationen);
+    const auswahl = ruheAuswahl(eigene, laufClipVon(eigene));
+    pruefe(`${modell.id} hat eine Ruhe`, auswahl.length > 0);
+    const echteLeerlaeufe = modell.animationen.filter((n) => /idle/i.test(n));
+    if (echteLeerlaeufe.length) {
+      pruefe(
+        `${modell.id} steht nicht in der Ruhepose`,
+        !namen(auswahl).includes("restpose"),
+      );
+      pruefe(`${modell.id} fängt mit einem Leerlauf an`, /idle/i.test(auswahl[0].name), auswahl[0].name);
+    }
+  }
 }
 
 console.log(fehlgeschlagen === 0 ? "\nAlles sauber.\n" : `\n${fehlgeschlagen} Fehler.\n`);

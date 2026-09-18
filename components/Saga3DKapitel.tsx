@@ -14,6 +14,7 @@ import {
   einpassen,
   fahrbahnMaterial,
   grasLand,
+  wiesenTextur,
   gradientTextur,
   haeuserBauen,
   sandDunst,
@@ -24,7 +25,7 @@ import {
   type StadtBlock,
 } from "./stadtBau";
 import { ANIMATIONS_MODELLE, type AnimationsModell } from "@/lib/animations.generated";
-import { modellFuerTier, spielerModell } from "@/lib/tiermodelle";
+import { laufClipVon, modellFuerTier, ruheAuswahl, spielerModell } from "@/lib/tiermodelle";
 import { vergessen } from "@/lib/vorladen";
 import {
   STILLSTAND,
@@ -409,9 +410,30 @@ function KapitelCanvas({
           : strassentyp === "gras"
             ? (tageszeit === "nacht" ? 0x223425 : tageszeit === "tag" ? 0x5b8a45 : 0x4a6438)
             : wetter === "regen" ? 0x263647 : tageszeit === "tag" ? 0x4b5868 : 0x293448;
+    /*
+     * Auf der Wiese liegt ein Muster, sonst nur Farbe.
+     *
+     * Eine einzige grüne Fläche sieht auch nach genau dem aus. Das Muster ist
+     * fast weiß und dunkelt die Bodenfarbe nur stellenweise ab - so bleibt
+     * jede Tageszeit und jedes Wetter, wie es war, und die Wiese bekommt ihr
+     * Kleinzeug. Etwa eine Kachel je sechs Meter: groß genug, dass man die
+     * Wiederholung nicht liest, klein genug, dass man die Flecken sieht.
+     */
+    const wiese = grasLand3D ? wiesenTextur() : null;
+    if (wiese) {
+      wiese.repeat.set(
+        Math.max(2, Math.round(ausmass.breite / 6)),
+        Math.max(2, Math.round(ausmass.tiefe / 6)),
+      );
+      ressourcen.add(wiese);
+    }
     const boden = new THREE.Mesh(
       new THREE.PlaneGeometry(ausmass.breite, ausmass.tiefe),
-      new THREE.MeshToonMaterial({ color: bodenFarbe, gradientMap: gradient }),
+      new THREE.MeshToonMaterial({
+        color: bodenFarbe,
+        map: wiese,
+        gradientMap: gradient,
+      }),
     );
     boden.rotation.x = -Math.PI / 2;
     boden.position.z = stadtplan ? 0 : -8;
@@ -452,7 +474,10 @@ function KapitelCanvas({
         mitteZ: stadtplan ? 0 : -8,
         plan: stadtplan,
         startPunkt: { x: 0, z: 0 },
-        menge: profil.schatten ? 30 : 16,
+        // Mehr Kleinzeug als im Schnee: Die Wiese ist die einzige
+        // Landschaft, in der außer dem Weg nichts steht - da darf ruhig
+        // etwas los sein.
+        menge: profil.schatten ? 58 : 28,
         tageszeit,
       });
     }
@@ -462,6 +487,9 @@ function KapitelCanvas({
       tageszeit,
       wetter,
       imRaster: Boolean(stadtplan),
+      // Der durchgehende Straßenzug ist eine flache Fläche - nur dort darf
+      // die Graspiste am Rand in die Wiese auslaufen.
+      weicherRand: !stadtplan,
       merken: (wert) => ressourcen.add(wert),
     });
     if (stadtplan) {
@@ -589,6 +617,14 @@ function KapitelCanvas({
     let spielerMixer: THREE.AnimationMixer | null = null;
     let laufAktion: THREE.AnimationAction | null = null;
     let ruheAktion: THREE.AnimationAction | null = null;
+    /**
+     * Alle Leerläufe der Spielfigur - Wimpy hat vier davon, dazu ein paar
+     * Tänze. Wer eine Weile stehen bleibt, sieht sie der Reihe nach: Nach ein
+     * paar Sekunden wechselt die Figur von selbst zur nächsten, statt
+     * dieselbe Schleife bis zum Sanktnimmerleinstag zu drehen.
+     */
+    let ruheAktionen: THREE.AnimationAction[] = [];
+    let ruheWechsel = 0;
     let aktiveAktion: THREE.AnimationAction | null = null;
     let letzteNaehe = "";
 
@@ -743,11 +779,15 @@ function KapitelCanvas({
         if (beendet) return;
         spieler.add(geladen.figur);
         wimpyFigur = geladen.figur;
-        spielerMixer = new THREE.AnimationMixer(geladen.figur);
+        const mischer = new THREE.AnimationMixer(geladen.figur);
+        spielerMixer = mischer;
         const laufClip = geladen.animationen.find((clip) => clip.name === laufAnimation(geladen.animationen.map((c) => c.name))) ?? geladen.animationen[0];
-        const idleClip = geladen.animationen.find((clip) => /idle|rest/i.test(clip.name));
-        if (laufClip) laufAktion = spielerMixer.clipAction(laufClip);
-        if (idleClip) ruheAktion = spielerMixer.clipAction(idleClip);
+        if (laufClip) laufAktion = mischer.clipAction(laufClip);
+        // Alle Leerläufe, die das Modell mitbringt - Wimpy hat vier.
+        ruheAktionen = ruheAuswahl(geladen.animationen, laufClip).map((clip) =>
+          mischer.clipAction(clip),
+        );
+        ruheAktion = ruheAktionen[0] ?? null;
         aktiveAktion = ruheAktion ?? laufAktion;
         aktiveAktion?.play();
       }
@@ -774,9 +814,15 @@ function KapitelCanvas({
         scene.add(gruppe);
         const mixer = new THREE.AnimationMixer(ergebnis.value.figur);
         const clips = ergebnis.value.animationen;
-        const laufClip = clips.find((c) => /walk/i.test(c.name)) ?? clips.find((c) => /run|sprint|charge/i.test(c.name));
-        const ruheClips = clips.filter((c) => /idle|rest|dance|shuffle|ymca|salsa|samba|hip.?hop|rumba|twist/i.test(c.name) && c !== laufClip);
-        if (!ruheClips.length && !laufClip && clips[0]) ruheClips.push(clips[0]);
+        /*
+         * Womit die Figur läuft und womit sie herumsteht - beides kommt aus
+         * lib/tiermodelle.ts, damit überall dieselbe Wahl getroffen wird.
+         * Wichtig daran: Die Ruhepose („restpose") steht dort ganz hinten.
+         * Sie ist keine Animation, sondern ein einziges Bild, und solange sie
+         * gleichberechtigt mitgelost wurde, stand jede dritte Pause still.
+         */
+        const laufClip = laufClipVon(clips);
+        const ruheClips = ruheAuswahl(clips, laufClip);
         const lauf = laufClip ? mixer.clipAction(laufClip) : undefined;
         const ruheAktionen = ruheClips.map((clip) => mixer.clipAction(clip));
         const ruhe = ruheAktionen[index % Math.max(1, ruheAktionen.length)];
@@ -1050,7 +1096,29 @@ function KapitelCanvas({
         bewegt = Math.hypot(ziel.x - vorherX, ziel.z - vorherZ) > 0.0001;
         spieler.rotation.y = Math.atan2(x, z);
       }
-      const gewuenscht = amSteuer ? ruheAktion : bewegt ? laufAktion : (ruheAktion ?? laufAktion);
+      /*
+       * Steht die Figur länger, wechselt der Leerlauf.
+       *
+       * Sonst dreht sie dieselben zwei Sekunden, solange man das Handy
+       * weglegt - und das fällt gerade bei den Modellen auf, die vier
+       * verschiedene mitbringen. Am Steuer bleibt es bei einem: Wer im Wagen
+       * sitzt, soll nicht plötzlich tanzen.
+       */
+      if (!bewegt && !amSteuer && ruheAktionen.length > 1) {
+        ruheWechsel -= dt;
+        if (ruheWechsel <= 0) {
+          ruheWechsel = 7 + Math.random() * 6;
+          ruheAktion = ruheAktionen[Math.floor(Math.random() * ruheAktionen.length)];
+        }
+      } else if (bewegt || amSteuer) {
+        // Beim nächsten Halt fängt die Uhr von vorn an.
+        ruheWechsel = 7 + Math.random() * 6;
+      }
+      const gewuenscht = amSteuer
+        ? (ruheAktionen[0] ?? ruheAktion)
+        : bewegt
+          ? laufAktion
+          : (ruheAktion ?? laufAktion);
       if (gewuenscht && gewuenscht !== aktiveAktion) {
         aktiveAktion?.fadeOut(0.14);
         gewuenscht.reset().fadeIn(0.14).play();

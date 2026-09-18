@@ -10,6 +10,7 @@ import { AUTO_MODELLE, autoLaenge, type Auto } from "@/lib/autos";
 import { useAutos } from "@/lib/useAutos";
 import { tonQuelle } from "@/lib/stimme";
 import type { JagdWelt } from "@/lib/verfolgung";
+import { laufClipVon, ruheAuswahl } from "@/lib/tiermodelle";
 import { einpassen, gradientTextur } from "./stadtBau";
 import { haeuserZeilen, strasseBauen } from "./strassenWelt";
 
@@ -215,10 +216,9 @@ function AbspannCanvas({
       wer.gruppe.add(figur);
       const mixer = new THREE.AnimationMixer(figur);
       wer.mixer = mixer;
-      const ruhe = gltf.animations.find((c) => /idle|rest/i.test(c.name)) ?? gltf.animations[0];
-      const geh =
-        gltf.animations.find((c) => /walk/i.test(c.name)) ??
-        gltf.animations.find((c) => /run/i.test(c.name));
+      const geh = laufClipVon(gltf.animations);
+      // Dieselbe Wahl wie überall - und die Ruhepose erst ganz zuletzt.
+      const ruhe = ruheAuswahl(gltf.animations, geh)[0] ?? gltf.animations[0];
       wer.stehen = ruhe ? mixer.clipAction(ruhe) : null;
       wer.gehen = geh ? mixer.clipAction(geh) : null;
       wer.stehen?.play();

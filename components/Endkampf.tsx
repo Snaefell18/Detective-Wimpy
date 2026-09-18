@@ -120,6 +120,15 @@ const LEERE_ANZEIGE: KampfAnzeige = {
 };
 
 /** Die Farben des Kampfes: Wimpy zaubert türkis, der Culprit violett. */
+/**
+ * Der Takt des Schlussbildes, in Sekunden nach dem letzten Treffer.
+ *
+ * Erst fällt der Verlierer, dann jubelt der Sieger, dann kommt die Karte -
+ * und mit ihr die Siegermelodie. Wer das zusammenzieht, nimmt dem Moment
+ * seine Reihenfolge; wer es streckt, lässt den Spieler warten.
+ */
+const ENDE = { jubelAb: 0.9, karteAb: 2.2 };
+
 const WIMPY_FARBE = 0x5ce1ff;
 const GEGNER_FARBE = 0xc45cff;
 
@@ -312,7 +321,9 @@ function ArenaCanvas({
         merken,
         ausmass: { breite: ausmass.breite + 24, tiefe: ausmass.tiefe + 24 },
         plan,
-        menge: profil.schatten ? 26 : 14,
+        // Auf der Wiese steht mehr als im Schnee - dort trägt die Fläche
+        // sich selbst, hier braucht sie das Kleinzeug.
+        menge: profil.schatten ? (grasLand3D ? 44 : 26) : grasLand3D ? 22 : 14,
         tageszeit,
       });
     }
@@ -585,7 +596,10 @@ function ArenaCanvas({
     /** Eine Figur samt ihrer Aktionen - beide Kämpfer sind gleich gebaut. */
     type Kaempfer = {
       mixer: THREE.AnimationMixer | null;
-      aktionen: Record<"lauf" | "ruhe" | "schlag" | "wurf" | "jubel", THREE.AnimationAction | null>;
+      aktionen: Record<
+        "lauf" | "ruhe" | "schlag" | "wurf" | "jubel" | "besiegt",
+        THREE.AnimationAction | null
+      >;
       aktiv: THREE.AnimationAction | null;
       /** Restzeit, in der die laufende Aktion nicht unterbrochen wird. */
       festRest: number;
@@ -595,7 +609,7 @@ function ArenaCanvas({
     };
     const leererKaempfer = (): Kaempfer => ({
       mixer: null,
-      aktionen: { lauf: null, ruhe: null, schlag: null, wurf: null, jubel: null },
+      aktionen: { lauf: null, ruhe: null, schlag: null, wurf: null, jubel: null, besiegt: null },
       aktiv: null,
       festRest: 0,
       materialien: [],
@@ -638,6 +652,7 @@ function ArenaCanvas({
         schlag: hole(clips.schlag),
         wurf: hole(clips.wurf),
         jubel: hole(clips.jubel),
+        besiegt: hole(clips.besiegt),
       };
       kaempfer.aktiv = kaempfer.aktionen.ruhe ?? kaempfer.aktionen.lauf;
       kaempfer.aktiv?.play();
@@ -645,7 +660,22 @@ function ArenaCanvas({
 
     /** Weich von einer Bewegung in die nächste. */
     const zeigen = (kaempfer: Kaempfer, welche: keyof Kaempfer["aktionen"], tempo = 1) => {
-      const ziel = kaempfer.aktionen[welche] ?? kaempfer.aktionen.ruhe ?? kaempfer.aktionen.lauf;
+      /*
+       * „besiegt" hat absichtlich keinen Ersatz.
+       *
+       * Hat das Modell keinen passenden Clip, soll die Figur die Bewegung
+       * behalten, in der sie gerade steht, und still umkippen - eine
+       * Leerlauf-Animation unter einem Umfallenden sieht aus, als wäre nur
+       * die Schwerkraft kaputt.
+       */
+      const ziel =
+        welche === "besiegt"
+          ? kaempfer.aktionen.besiegt
+          : (kaempfer.aktionen[welche] ?? kaempfer.aktionen.ruhe ?? kaempfer.aktionen.lauf);
+      if (welche === "besiegt" && !ziel) {
+        if (kaempfer.aktiv) kaempfer.aktiv.setEffectiveTimeScale(0.25);
+        return;
+      }
       if (!ziel || ziel === kaempfer.aktiv) {
         if (ziel) ziel.setEffectiveTimeScale(tempo);
         return;
@@ -1107,23 +1137,33 @@ function ArenaCanvas({
 
       anzeigeMelden(abstand);
       /*
-       * Das Ende bekommt seinen Moment.
+       * Das Ende bekommt seinen Moment - und zwar der Reihe nach.
        *
-       * Eine Sekunde Zeitlupe, in der der Gegner umkippt oder Wimpy tanzt -
-       * erst danach kommt die Karte. Ohne diese Sekunde wäre der schönste
-       * Treffer des Spiels nur ein Bildwechsel.
+       * Erst geht der Verlierer zu Boden: sein Niederlagen-Clip, wenn das
+       * Modell einen hat, dazu das Umkippen in Zeitlupe. Der Sieger steht
+       * dabei einfach da. Erst eine knappe Sekunde später fängt er an zu
+       * jubeln, und erst danach kommt die Karte.
+       *
+       * Vorher lief beides gleichzeitig: Wimpy tanzte los, während der
+       * Gegner noch fiel. Der Sieg gehört aber hinter die Niederlage, nicht
+       * daneben - sonst jubelt jemand einem Stehenden ins Gesicht.
        */
       if (stand.ergebnis !== "laeuft") {
+        const sieger = stand.ergebnis === "gewonnen" ? held : boese;
+        const geschlagen = stand.ergebnis === "gewonnen" ? boese : held;
         if (abspann === 0) {
-          zeigen(stand.ergebnis === "gewonnen" ? held : boese, "jubel", 1);
-          zeigen(stand.ergebnis === "gewonnen" ? boese : held, "ruhe", 0.4);
+          zeigen(geschlagen, "besiegt", 0.9);
+          zeigen(sieger, "ruhe", 0.8);
         }
+        const vorher = abspann;
         abspann += echt;
+        // Der Jubel kommt nach, nicht mit.
+        if (vorher < ENDE.jubelAb && abspann >= ENDE.jubelAb) zeigen(sieger, "jubel", 1);
         const verlierer = stand.ergebnis === "gewonnen" ? gegner : spieler;
         // Wer verliert, sinkt in die Knie und kippt zur Seite.
         verlierer.rotation.z = THREE.MathUtils.damp(verlierer.rotation.z, 1.35, 2.4, echt);
         verlierer.position.y = THREE.MathUtils.damp(verlierer.position.y, -0.35, 2, echt);
-        if (abspann > 1.4 && !gemeldet) {
+        if (abspann > ENDE.karteAb && !gemeldet) {
           gemeldet = true;
           callbacks.current.onEnde(stand.ergebnis === "gewonnen" ? "gewonnen" : "verloren");
         }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { modellFuerTier, spielerModell } from '@/lib/tiermodelle';
+import { laufClipVon, modellFuerTier, ruheAuswahl, spielerModell } from '@/lib/tiermodelle';
 import { ANIMATIONS_MODELLE } from '@/lib/animations.generated';
 import { AUTO_MODELLE, FLUCHT_RUECKSTAND, REMPLER, START_AUTO_ID, autoLaenge, fluchtTempo, type Auto } from '@/lib/autos';
 import { useAutos } from '@/lib/useAutos';
@@ -374,8 +374,11 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       figur.position.set(-mitte.x, -neu.min.y, -mitte.z);
       wimpy.add(figur);
       mixer = new THREE.AnimationMixer(figur);
-      const ruheClip = gltf.animations.find(c => /idle|rest/i.test(c.name)) ?? gltf.animations[0];
-      const gehClip = gltf.animations.find(c => /walk/i.test(c.name)) ?? gltf.animations.find(c => /run/i.test(c.name));
+      const gehClip = laufClipVon(gltf.animations);
+      // Die Ruhepose steht in ruheAuswahl ganz hinten: Sie ist ein einziges
+      // Bild, und wer am Straßenrand wartet, soll nicht wie eingefroren
+      // dastehen, solange das Modell etwas Besseres mitbringt.
+      const ruheClip = ruheAuswahl(gltf.animations, gehClip)[0] ?? gltf.animations[0];
       stehen = ruheClip ? mixer.clipAction(ruheClip) : null;
       gehen = gehClip ? mixer.clipAction(gehClip) : null;
       stehen?.play();
@@ -415,8 +418,11 @@ function RennCanvas({ auto, flucht, spur, drehung, welt, figur: figurModell, flu
       figur.position.set(-mitte.x, -neu.min.y, -mitte.z);
       fluechtiger.add(figur);
       taeterMixer = new THREE.AnimationMixer(figur);
-      const ruheClip = gltf.animations.find(c => /idle|rest/i.test(c.name)) ?? gltf.animations[0];
-      const gehClip = gltf.animations.find(c => /walk/i.test(c.name)) ?? gltf.animations.find(c => /run/i.test(c.name));
+      const gehClip = laufClipVon(gltf.animations);
+      // Die Ruhepose steht in ruheAuswahl ganz hinten: Sie ist ein einziges
+      // Bild, und wer am Straßenrand wartet, soll nicht wie eingefroren
+      // dastehen, solange das Modell etwas Besseres mitbringt.
+      const ruheClip = ruheAuswahl(gltf.animations, gehClip)[0] ?? gltf.animations[0];
       taeterStehen = ruheClip ? taeterMixer.clipAction(ruheClip) : null;
       taeterGehen = gehClip ? taeterMixer.clipAction(gehClip) : null;
       taeterDa = true;
